@@ -15,7 +15,7 @@ export type ImportKeyField = "content_id" | "url" | "title" | "platform" | "publ
 export type ImportField = ImportKeyField | MetricKey
 
 export const IMPORT_KEY_FIELDS: { key: ImportKeyField; label: string; description: string }[] = [
-  { key: "content_id", label: "Content ID", description: "The id column of a Personal Brand OS export — the most reliable match." },
+  { key: "content_id", label: "Content ID", description: "The id column of an Orbi export — the most reliable match." },
   { key: "url", label: "Post URL", description: "Matched against each post's published URL." },
   { key: "title", label: "Title", description: "Matched against content titles; captions that start with the title match too." },
   { key: "platform", label: "Platform", description: "Tells apart posts that share a title across platforms." },

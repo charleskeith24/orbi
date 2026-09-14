@@ -1,40 +1,19 @@
 "use client"
 
-import {
-  BookOpen,
-  CalendarDays,
-  CircleAlert,
-  Layers,
-  Lightbulb,
-  Megaphone,
-  PenLine,
-  Sparkles,
-  Target,
-  UserRound,
-} from "lucide-react"
+import { BookOpen, CalendarDays, CircleAlert, Compass, Layers, Lightbulb, Megaphone, PenLine, Sparkles, Target, UserRound } from "lucide-react"
 import { useMemo } from "react"
 import { toast } from "sonner"
-import {
-  AiButton,
-  catVar,
-  ColorDot,
-  EmptyState,
-  FunnelBadge,
-  InlineText,
-  PlatformIcon,
-  PlatformLabel,
-  ProviderBadge,
-} from "@/components/common"
+import { AiButton, catVar, ColorDot, EmptyState, FunnelBadge, InlineText, PlatformIcon, PlatformLabel, ProviderBadge } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
-import { Textarea } from "@/components/ui/textarea"
 import type { AiError } from "@/lib/ai"
-import { GOAL_CATEGORIES, GOAL_METRIC_MAP, GOAL_PERIODS, PLATFORMS } from "@/lib/constants"
+import { GOAL_CATEGORIES, GOAL_METRIC_MAP, PLATFORMS } from "@/lib/constants"
 import type { CategoricalColor, ContentPillar } from "@/lib/types"
 import { cn, formatNumber } from "@/lib/utils"
+import { useCopy } from "./copy"
 import type { PillarSuggestion, StrategyResult } from "./onboarding-draft"
 import { effectivePillars, type IdeaDraft } from "./onboarding-ideas"
 import {
@@ -44,17 +23,18 @@ import {
   LIMITS,
   norm,
   parsePositioning,
+  personaNameOf,
   pillarColors,
   pillarTotal,
   platformsInOrder,
   positioningOf,
   rebalancePillars,
-  stepIndex,
   weeklyTotal,
   type OnboardingAnswers,
   type PillarDraft,
   type StepKey,
 } from "./onboarding-model"
+import { PanelTextarea } from "./steps-profile"
 
 export interface StrategyStepProps {
   answers: OnboardingAnswers
@@ -67,7 +47,7 @@ export interface StrategyStepProps {
   pending: boolean
   error: AiError | null
   onGenerate: () => void
-  onEditStep: (index: number) => void
+  onEdit: (key: StepKey) => void
   existingPillars: Pick<ContentPillar, "name" | "color">[]
 }
 
@@ -122,17 +102,28 @@ function Panel({
   )
 }
 
+function EditButton({ label, onClick }: { label: string; onClick: () => void }) {
+  const copy = useCopy()
+  return (
+    <Button type="button" variant="ghost" size="xs" onClick={onClick} aria-label={copy.summary.editAria(label)}>
+      <PenLine aria-hidden />
+      {copy.common.edit}
+    </Button>
+  )
+}
+
 function Suggestion({ text, onUse, note }: { text: string; onUse?: () => void; note?: string }) {
+  const copy = useCopy()
   return (
     <div className="mt-3 rounded-md border border-dashed bg-muted/40 p-3">
       <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
         <Sparkles className="size-3.5 text-brand" aria-hidden />
-        Suggested
+        {copy.strategy.suggested}
       </p>
       <p className="mt-1 text-sm whitespace-pre-line text-pretty">{text}</p>
       {onUse ? (
         <Button type="button" variant="outline" size="xs" className="mt-2" onClick={onUse}>
-          Use this
+          {copy.strategy.useThis}
         </Button>
       ) : note ? (
         <p className="mt-1.5 text-xs text-muted-foreground">{note}</p>
@@ -157,80 +148,54 @@ function MixBar({ pillars, colors }: { pillars: PillarDraft[]; colors: Map<strin
 
 /* ------------------------------ Setup summary ----------------------------- */
 
-function SetupSummary({
-  answers: a,
-  ideaCount,
-  onEdit,
-}: {
-  answers: OnboardingAnswers
-  ideaCount: number
-  onEdit: (key: StepKey) => void
-}) {
+function SetupSummary({ answers: a, ideaCount, onEdit }: { answers: OnboardingAnswers; ideaCount: number; onEdit: (key: StepKey) => void }) {
+  const copy = useCopy()
+  const t = copy.summary
   const goals = chosenGoals(a)
   const pillars = a.pillars.filter((p) => p.selected)
   const platforms = platformsInOrder(a.platforms)
   const slots = finalSchedule(a).length
   const rows: { icon: typeof UserRound; title: string; detail: React.ReactNode; step: StepKey | null }[] = [
-    {
-      icon: UserRound,
-      title: "Brand HQ",
-      detail: `${[a.name.trim(), a.brand_name.trim()].filter(Boolean).join(" · ") || "Your profile"} — positioning, voice and brand rules`,
-      step: "identity",
-    },
+    { icon: Compass, title: t.niche, detail: a.niche.trim() || "—", step: "niche" },
+    { icon: UserRound, title: t.brandHq, detail: t.brandHqDetail([a.name.trim(), a.brand_name.trim()].filter(Boolean).join(" · ")), step: "identity" },
     {
       icon: Target,
-      title: goals.length > 1 ? "Goals" : "Goal",
+      title: goals.length > 1 ? t.goals : t.goal,
       detail: goals.length
         ? goals
             .map((category, index) => {
               const target = goalTargetFor(a, category)
               const metric = GOAL_METRIC_MAP[GOAL_CATEGORIES[category].metric].label.toLowerCase()
-              const period = GOAL_PERIODS.find((p) => p.id === target.period)?.label ?? ""
-              return `${index === 0 ? "Primary" : "Secondary"}: ${GOAL_CATEGORIES[category].label}${target.value !== null ? ` — ${formatNumber(target.value)} ${metric} ${period}` : ""}`
+              return `${index === 0 ? t.primary : t.secondary}: ${copy.goals[category]}${target.value !== null ? ` — ${formatNumber(target.value)} ${metric} · ${copy.periods[target.period].toLowerCase()}` : ""}`
             })
             .join(" · ")
-        : "Choose a primary goal",
-      step: "goals",
+        : t.chooseGoal,
+      step: "para_saan",
     },
-    {
-      icon: Layers,
-      title: "Content pillars",
-      detail: pillars.map((p) => `${p.name} ${p.target}%`).join(" · "),
-      step: "pillars",
-    },
-    {
-      icon: UserRound,
-      title: "Primary persona",
-      detail: `${a.persona_name.trim() || "Unnamed"} · ${a.persona_problems.filter((p) => p.trim()).length} problems for your Problem Bank`,
-      step: "audience",
-    },
+    { icon: Layers, title: t.pillars, detail: pillars.map((p) => `${p.name} ${p.target}%`).join(" · "), step: "pillars" },
+    { icon: UserRound, title: t.persona, detail: t.personaDetail(personaNameOf(a), a.persona_problems.filter((p) => p.trim()).length), step: "kanino" },
     {
       icon: Megaphone,
-      title: "Platforms",
+      title: t.platforms,
       detail: (
         <span className="inline-flex flex-wrap items-center gap-1.5">
           {platforms.map((p) => (
             <PlatformIcon key={p} platform={p} label className="size-3.5" />
           ))}
           <span>
-            {platforms.map((p) => PLATFORMS[p].label).join(", ")} · {weeklyTotal(a)} posts / week
+            {platforms.map((p) => PLATFORMS[p].label).join(", ")} · {t.postsPerWeek(weeklyTotal(a))}
           </span>
         </span>
       ),
       step: "platforms",
     },
-    {
-      icon: CalendarDays,
-      title: "Posting schedule",
-      detail: `${slots} weekly ${slots === 1 ? "slot" : "slots"} · ${a.schedule_mode === "custom" ? "custom" : "recommended strategy"}`,
-      step: "posting",
-    },
-    { icon: Lightbulb, title: "Idea Bank", detail: `${ideaCount} starter ${ideaCount === 1 ? "idea" : "ideas"}`, step: null },
+    { icon: CalendarDays, title: t.schedule, detail: t.scheduleDetail(slots, a.schedule_mode === "custom"), step: "platforms" },
+    { icon: Lightbulb, title: t.ideaBank, detail: t.ideaDetail(ideaCount), step: null },
   ]
-  if (a.story.trim()) rows.push({ icon: BookOpen, title: "Story Vault", detail: "Your story from step 4", step: "expertise" })
+  if (a.story.trim()) rows.push({ icon: BookOpen, title: t.storyVault, detail: t.storyDetail, step: "galing" })
 
   return (
-    <Panel title="What Finish setup creates" description="Everything is saved to your workspace and stays editable.">
+    <Panel title={t.title} description={t.description}>
       <ul className="-my-1 divide-y">
         {rows.map((row) => {
           const Icon = row.icon
@@ -241,12 +206,7 @@ function SetupSummary({
                 <p className="text-sm font-medium">{row.title}</p>
                 <div className="text-xs text-pretty text-muted-foreground">{row.detail}</div>
               </div>
-              {row.step ? (
-                <Button type="button" variant="ghost" size="xs" onClick={() => onEdit(row.step!)} aria-label={`Edit ${row.title}`}>
-                  <PenLine aria-hidden />
-                  Edit
-                </Button>
-              ) : null}
+              {row.step ? <EditButton label={row.title} onClick={() => onEdit(row.step!)} /> : null}
             </li>
           )
         })}
@@ -270,23 +230,13 @@ function IdeaRow({
   colorOf: (name: string | null) => CategoricalColor | null
   onChange: (patch: Partial<IdeaDraft>) => void
 }) {
+  const copy = useCopy()
+  const t = copy.strategy
   return (
     <li className={cn("flex gap-3 px-4 py-3 transition-opacity", !idea.selected && "opacity-60")}>
-      <Checkbox
-        checked={idea.selected}
-        onCheckedChange={(value) => onChange({ selected: value === true })}
-        aria-label={`Keep “${idea.title}”`}
-        className="mt-1"
-      />
+      <Checkbox checked={idea.selected} onCheckedChange={(value) => onChange({ selected: value === true })} aria-label={t.keepIdea(idea.title)} className="mt-1" />
       <div className="min-w-0 flex-1 space-y-1">
-        <InlineText
-          value={idea.title}
-          onSave={(title) => onChange({ title })}
-          required
-          maxLength={200}
-          aria-label="Idea title"
-          className="font-medium"
-        />
+        <InlineText value={idea.title} onSave={(title) => onChange({ title })} required maxLength={200} aria-label={t.ideaTitle} className="font-medium" />
         {idea.hook ? <p className="line-clamp-2 text-xs text-muted-foreground">“{idea.hook}”</p> : null}
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-muted-foreground">
           <PlatformLabel platform={idea.platform} className="text-xs" />
@@ -294,14 +244,8 @@ function IdeaRow({
           <FunnelBadge stage={idea.funnel_stage} />
           <span className="inline-flex items-center gap-1.5">
             <ColorDot color={colorOf(pillar)} />
-            <NativeSelect
-              size="sm"
-              value={pillar ?? ""}
-              onChange={(event) => onChange({ pillar: event.target.value || null })}
-              aria-label={`Pillar for “${idea.title}”`}
-              className="max-w-44"
-            >
-              <NativeSelectOption value="">No pillar</NativeSelectOption>
+            <NativeSelect size="sm" value={pillar ?? ""} onChange={(event) => onChange({ pillar: event.target.value || null })} aria-label={t.ideaPillar(idea.title)} className="max-w-44">
+              <NativeSelectOption value="">{t.noPillar}</NativeSelectOption>
               {pillars.map((p) => (
                 <NativeSelectOption key={p.key} value={p.name}>
                   {p.name}
@@ -332,10 +276,11 @@ function IdeasPanel({
   editStrategy: StrategyStepProps["editStrategy"]
   onGenerate: () => void
 }) {
+  const copy = useCopy()
+  const t = copy.strategy
   const ideas = strategy.ideas
   const selected = ideas.filter((i) => i.selected).length
-  const setIdea = (key: string, patch: Partial<IdeaDraft>) =>
-    editStrategy((s) => ({ ...s, ideas: s.ideas.map((i) => (i.key === key ? { ...i, ...patch } : i)) }))
+  const setIdea = (key: string, patch: Partial<IdeaDraft>) => editStrategy((s) => ({ ...s, ideas: s.ideas.map((i) => (i.key === key ? { ...i, ...patch } : i)) }))
   const setAll = (value: boolean) => editStrategy((s) => ({ ...s, ideas: s.ideas.map((i) => ({ ...i, selected: value })) }))
 
   return (
@@ -343,43 +288,34 @@ function IdeasPanel({
       <header className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
         <div className="min-w-0">
           <h2 id="ob-ideas-title" className="text-sm font-semibold">
-            Initial content ideas
+            {t.ideas}
           </h2>
-          <p className="text-xs text-muted-foreground num">
-            {selected} of {ideas.length} selected · saved to your Idea Bank · click a title to edit
-          </p>
+          <p className="text-xs text-muted-foreground num">{t.ideasCount(selected, ideas.length)}</p>
         </div>
         <div className="flex items-center gap-1">
           <Button type="button" variant="ghost" size="xs" disabled={!ideas.length || selected === ideas.length} onClick={() => setAll(true)}>
-            Select all
+            {t.selectAll}
           </Button>
           <Button type="button" variant="ghost" size="xs" disabled={!selected} onClick={() => setAll(false)}>
-            Clear
+            {t.clear}
           </Button>
         </div>
       </header>
       {ideas.length ? (
         <ul className={cn("divide-y", pending && "opacity-70")} aria-busy={pending || undefined}>
           {ideas.map((idea, index) => (
-            <IdeaRow
-              key={idea.key}
-              idea={idea}
-              pillar={pillarNames[index] ?? null}
-              pillars={pillars}
-              colorOf={colorOf}
-              onChange={(patch) => setIdea(idea.key, patch)}
-            />
+            <IdeaRow key={idea.key} idea={idea} pillar={pillarNames[index] ?? null} pillars={pillars} colorOf={colorOf} onChange={(patch) => setIdea(idea.key, patch)} />
           ))}
         </ul>
       ) : (
         <EmptyState
           compact
           icon={Lightbulb}
-          title="No ideas in this draft"
-          description="Regenerate to get starter ideas grounded in your audience's problems."
+          title={t.noIdeas}
+          description={t.noIdeasText}
           action={
             <AiButton type="button" size="sm" pending={pending} onClick={onGenerate}>
-              Regenerate
+              {t.regenerate}
             </AiButton>
           }
         />
@@ -388,62 +324,47 @@ function IdeasPanel({
   )
 }
 
-/* ------------------------------- Step 10 view ------------------------------ */
+/* ------------------------------ Strategy step ------------------------------ */
 
-export function StrategyStep({
-  answers: a,
-  update,
-  strategy,
-  editStrategy,
-  stale,
-  pending,
-  error,
-  onGenerate,
-  onEditStep,
-  existingPillars,
-}: StrategyStepProps) {
+export function StrategyStep({ answers: a, update, strategy, editStrategy, stale, pending, error, onGenerate, onEdit, existingPillars }: StrategyStepProps) {
+  const copy = useCopy()
+  const t = copy.strategy
   const selected = useMemo(() => a.pillars.filter((p) => p.selected), [a.pillars])
   const colors = useMemo(() => pillarColors(a.pillars, existingPillars), [a.pillars, existingPillars])
-  const targets = useMemo(
-    () => selected.map((p) => ({ name: p.name, description: p.description, examples: p.examples, target: p.target })),
-    [selected]
-  )
+  const targets = useMemo(() => selected.map((p) => ({ name: p.name, description: p.description, examples: p.examples, target: p.target })), [selected])
   const ideas = strategy?.ideas
   const pillarNames = useMemo(() => effectivePillars(ideas ?? [], targets), [ideas, targets])
   const colorOf = (name: string | null) => {
     const pillar = name ? selected.find((p) => norm(p.name) === norm(name)) : undefined
     return pillar ? (colors.get(pillar.key) ?? null) : null
   }
-  const edit = (key: StepKey) => onEditStep(stepIndex(key))
   const ideaCount = strategy?.ideas.filter((i) => i.selected).length ?? 0
 
   function applySuggestion(patch: Partial<OnboardingAnswers>, message: string) {
     const previous = Object.fromEntries(Object.keys(patch).map((k) => [k, a[k as keyof OnboardingAnswers]])) as Partial<OnboardingAnswers>
     update(patch)
-    toast.success(message, { action: { label: "Undo", onClick: () => update(previous) } })
+    toast.success(message, { action: { label: t.toasts.undo, onClick: () => update(previous) } })
   }
 
   if (!strategy) {
     return (
       <div className="flex flex-col gap-4">
         {error && !pending ? (
-          <Panel title="Couldn't generate your strategy">
+          <Panel title={t.errorTitle}>
             <p className="flex items-start gap-2 text-sm text-pretty">
               <CircleAlert className="mt-0.5 size-4 shrink-0 text-critical-fg" aria-hidden />
               <span>{error.message}</span>
             </p>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Try again, or finish setup now and generate ideas later in the Idea Generator — your answers are saved either way.
-            </p>
+            <p className="mt-2 text-xs text-muted-foreground">{t.errorHint}</p>
             <AiButton type="button" size="sm" className="mt-3" onClick={onGenerate}>
-              Try again
+              {t.tryAgain}
             </AiButton>
           </Panel>
         ) : (
           <section aria-live="polite" aria-busy="true" className="rounded-lg border bg-card p-4 dark:bg-input/20">
             <p className="flex items-center gap-2 text-sm font-medium">
               <Spinner className="text-brand" />
-              Drafting your positioning, pillar mix and up to 30 starter ideas…
+              {t.drafting}
             </p>
             <div className="mt-4 space-y-2.5">
               <Skeleton className="h-4 w-4/5" />
@@ -453,7 +374,7 @@ export function StrategyStep({
             </div>
           </section>
         )}
-        <SetupSummary answers={a} ideaCount={0} onEdit={edit} />
+        <SetupSummary answers={a} ideaCount={0} onEdit={onEdit} />
       </div>
     )
   }
@@ -472,95 +393,55 @@ export function StrategyStep({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <ProviderBadge provider={strategy.provider} model={strategy.model} />
-          <span className="text-xs text-muted-foreground">
-            {strategy.provider === "offline"
-              ? "Assembled from your answers with offline templates — edit anything."
-              : "Drafted from your answers — edit anything before you finish."}
-          </span>
+          <span className="text-xs text-muted-foreground">{strategy.provider === "offline" ? t.offlineNote : t.aiNote}</span>
         </div>
-        <AiButton type="button" size="sm" pending={pending} pendingLabel="Regenerating…" onClick={onGenerate}>
-          Regenerate
+        <AiButton type="button" size="sm" pending={pending} pendingLabel={t.regenerating} onClick={onGenerate}>
+          {t.regenerate}
         </AiButton>
       </div>
       {stale && !pending ? (
         <p className="flex items-start gap-1.5 rounded-lg border bg-card px-3 py-2 text-sm dark:bg-input/20">
           <CircleAlert className="mt-0.5 size-4 shrink-0 text-warning-fg" aria-hidden />
           <span>
-            <span className="font-medium">Out of date</span> — your answers changed since this strategy was drafted. Regenerate to
-            refresh the ideas.
+            <span className="font-medium">{t.outOfDate}</span> {t.outOfDateText}
           </span>
         </p>
       ) : null}
       {error && !pending ? (
         <p role="alert" className="flex items-start gap-1.5 text-sm text-destructive">
           <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-          {error.message} Your previous draft is still here.
+          {error.message} {t.previousDraft}
         </p>
       ) : null}
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] xl:items-start">
         <div className="flex min-w-0 flex-col gap-4">
-          <Panel
-            title="Positioning statement"
-            action={
-              <Button type="button" variant="ghost" size="xs" onClick={() => edit("positioning")} aria-label="Edit positioning">
-                <PenLine aria-hidden />
-                Edit
-              </Button>
-            }
-          >
-            <p className="text-sm font-medium text-pretty">{current || "Add who you help and the result you deliver in step 2."}</p>
+          <Panel title={t.niche} action={<EditButton label={t.niche} onClick={() => onEdit("niche")} />}>
+            <p className="text-sm font-medium text-pretty">{a.niche}</p>
+          </Panel>
+
+          <Panel title={t.positioning} action={<EditButton label={t.positioning} onClick={() => onEdit("niche")} />}>
+            <p className="text-sm text-pretty">{current || t.positioningEmpty}</p>
             {suggested && norm(suggested) !== norm(current) ? (
-              <Suggestion
-                text={suggested}
-                onUse={parsed ? () => applySuggestion(parsed, "Positioning updated") : undefined}
-                note={parsed ? undefined : "Edit step 2 if you'd like to use this wording."}
-              />
+              <Suggestion text={suggested} onUse={parsed ? () => applySuggestion(parsed, t.toasts.positioning) : undefined} note={parsed ? undefined : t.editToUse} />
             ) : null}
           </Panel>
 
-          <Panel title="Known for">
-            <Textarea
-              aria-label="Known for"
-              value={a.known_for}
-              rows={2}
-              maxLength={LIMITS.longText}
-              onChange={(event) => update({ known_for: event.target.value })}
-              className="min-h-16"
-            />
+          <Panel title={t.knownFor}>
+            <PanelTextarea label={t.knownFor} value={a.known_for} onChange={(known_for) => update({ known_for })} />
             {strategy.known_for.trim() && norm(strategy.known_for) !== norm(a.known_for) ? (
-              <Suggestion text={strategy.known_for} onUse={() => applySuggestion({ known_for: strategy.known_for }, "Known-for updated")} />
+              <Suggestion text={strategy.known_for} onUse={() => applySuggestion({ known_for: strategy.known_for }, t.toasts.knownFor)} />
             ) : null}
           </Panel>
 
-          <Panel title="Point of view" description="Beliefs you'll keep coming back to.">
-            <Textarea
-              aria-label="Point of view"
-              value={a.point_of_view}
-              rows={3}
-              maxLength={LIMITS.longText}
-              placeholder="What do you believe that others in your space don't?"
-              onChange={(event) => update({ point_of_view: event.target.value })}
-              className="min-h-20"
-            />
+          <Panel title={t.pov} description={t.povDescription}>
+            <PanelTextarea label={t.pov} value={a.point_of_view} rows={3} placeholder={t.povPlaceholder} onChange={(point_of_view) => update({ point_of_view })} />
             {strategy.point_of_view.trim() && norm(strategy.point_of_view) !== norm(a.point_of_view) ? (
-              <Suggestion
-                text={strategy.point_of_view}
-                onUse={() => applySuggestion({ point_of_view: strategy.point_of_view }, "Point of view updated")}
-              />
+              <Suggestion text={strategy.point_of_view} onUse={() => applySuggestion({ point_of_view: strategy.point_of_view }, t.toasts.pov)} />
             ) : null}
           </Panel>
 
-          <Panel
-            title="Content pillars"
-            description={`${selected.length} pillars · ${total}% total`}
-            action={
-              <Button type="button" variant="ghost" size="xs" onClick={() => edit("pillars")} aria-label="Edit pillars">
-                <PenLine aria-hidden />
-                Edit
-              </Button>
-            }
-          >
+          <Panel title={t.pillars} description={t.pillarsDescription(selected.length, total)} action={<EditButton label={t.pillars} onClick={() => onEdit("pillars")} />}>
             <MixBar pillars={selected} colors={colors} />
             <ul className="mt-3 space-y-1.5">
               {selected.map((p) => (
@@ -575,7 +456,7 @@ export function StrategyStep({
               <div className="mt-3 rounded-md border border-dashed bg-muted/40 p-3">
                 <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                   <Sparkles className="size-3.5 text-brand" aria-hidden />
-                  Suggested mix — weighted toward your goals
+                  {t.suggestedMix}
                 </p>
                 <ul className="mt-2 space-y-1.5">
                   {suggestions.map((s) => (
@@ -588,31 +469,17 @@ export function StrategyStep({
                     </li>
                   ))}
                 </ul>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  className="mt-2"
-                  onClick={() => applySuggestion({ pillars: applyPillarSuggestions(a.pillars, suggestions) }, "Suggested pillar mix applied")}
-                >
-                  Use suggested mix
+                <Button type="button" variant="outline" size="xs" className="mt-2" onClick={() => applySuggestion({ pillars: applyPillarSuggestions(a.pillars, suggestions) }, t.toasts.mix)}>
+                  {t.useSuggestedMix}
                 </Button>
               </div>
             ) : null}
           </Panel>
 
-          <SetupSummary answers={a} ideaCount={ideaCount} onEdit={edit} />
+          <SetupSummary answers={a} ideaCount={ideaCount} onEdit={onEdit} />
         </div>
 
-        <IdeasPanel
-          strategy={strategy}
-          pillarNames={pillarNames}
-          pillars={selected}
-          colorOf={colorOf}
-          pending={pending}
-          editStrategy={editStrategy}
-          onGenerate={onGenerate}
-        />
+        <IdeasPanel strategy={strategy} pillarNames={pillarNames} pillars={selected} colorOf={colorOf} pending={pending} editStrategy={editStrategy} onGenerate={onGenerate} />
       </div>
     </div>
   )

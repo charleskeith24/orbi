@@ -8,6 +8,7 @@ import {
   type ContentHealth,
   type WeeklyProgress,
 } from "@/lib/analytics"
+import { hasPublishedContent } from "@/components/features/dashboard/first-run"
 import { positioningStatement } from "@/lib/ai"
 import type { AppSettings, Database, ID, PlatformId, Row } from "@/lib/types"
 
@@ -23,6 +24,10 @@ export interface StrategistKnowledge {
   problemCount: number
   questionCount: number
   health: ContentHealth
+  /** Nothing published yet — the health score would only measure an empty workspace. */
+  hasPublished: boolean
+  /** Any content item at all (the buffer means nothing before the first one). */
+  hasContent: boolean
   buffer: ContentBuffer
   week: WeeklyProgress
   /** Best pillar by average ratio to platform baseline (90 days, 3+ measured posts). */
@@ -57,6 +62,8 @@ export function strategistKnowledge(db: Database, now: Date, settings: AppSettin
     problemCount: db.audience_problems.length,
     questionCount: db.audience_questions.filter((q) => q.status !== "dismissed").length,
     health: contentHealthScore(db, now, settings),
+    hasPublished: hasPublishedContent(db.content_items),
+    hasContent: db.content_items.length > 0,
     buffer: contentBuffer(db, now, settings),
     week: weeklyPostingProgress(db, now, settings),
     topPillar: top?.pillar ? { pillar: top.pillar, posts: top.measured, avgViews: top.avgViews, ratio: top.avgRatio } : null,

@@ -8,6 +8,9 @@ import type { BrandProfile, Database, GoalCategory, UpdateRow } from "@/lib/type
 
 /** Every Brand HQ field the page edits, in page order. */
 export const BRAND_FORM_FIELDS = [
+  "niche",
+  "interests",
+  "niche_fit",
   "name",
   "brand_name",
   "role",
@@ -49,6 +52,8 @@ export type BrandTextField = Exclude<
 
 /** Characters of each text field the AI actually reads (buildBrandContext clips the rest). */
 export const CONTEXT_LIMITS: Partial<Record<BrandTextField, number>> = {
+  niche: 200,
+  niche_fit: 600,
   name: 120,
   brand_name: 120,
   role: 160,
@@ -70,7 +75,7 @@ export const CONTEXT_LIMITS: Partial<Record<BrandTextField, number>> = {
 }
 
 /** Items of each list the AI reads. */
-export const LIST_LIMITS = { expertise_areas: 12, phrases_used: 12, phrases_avoid: 15 } as const
+export const LIST_LIMITS = { interests: 12, expertise_areas: 12, phrases_used: 12, phrases_avoid: 15 } as const
 
 /** DOM id of a field's control (used for labels, focus and "complete next" jumps). */
 export function fieldId(field: BrandField): string {
@@ -112,6 +117,9 @@ export function cleanList(values: readonly string[]): string[] {
 export function brandPatch(values: BrandFormValues): UpdateRow<"brand_profiles"> {
   const years = values.years_experience
   return {
+    niche: values.niche.replace(/\s+/g, " ").trim(),
+    interests: cleanList(values.interests),
+    niche_fit: values.niche_fit.trim(),
     name: values.name.trim(),
     brand_name: values.brand_name.trim(),
     role: values.role.trim(),
@@ -153,7 +161,15 @@ export function validateBrand(values: BrandFormValues): BrandErrors {
 
 /* ------------------------------ Sections -------------------------------- */
 
-export type BrandSectionKey = "identity" | "positioning" | "statement" | "expertise" | "personality" | "communication" | "rules"
+export type BrandSectionKey =
+  | "niche"
+  | "identity"
+  | "positioning"
+  | "statement"
+  | "expertise"
+  | "personality"
+  | "communication"
+  | "rules"
 
 export interface BrandSectionMeta {
   key: BrandSectionKey
@@ -166,6 +182,13 @@ export interface BrandSectionMeta {
 }
 
 export const BRAND_SECTIONS: BrandSectionMeta[] = [
+  {
+    key: "niche",
+    title: "Niche",
+    navLabel: "Niche",
+    description: "What you talk about, the interests behind it and why it's yours to own.",
+    fields: ["niche", "interests", "niche_fit"],
+  },
   {
     key: "identity",
     title: "Identity",
@@ -233,6 +256,9 @@ interface CheckSpec {
 }
 
 const CHECKS: CheckSpec[] = [
+  { field: "niche", label: "Your niche" },
+  { field: "interests", label: "At least 3 interests", min: 3 },
+  { field: "niche_fit", label: "Why your niche fits" },
   { field: "name", label: "Your name" },
   { field: "brand_name", label: "Brand name" },
   { field: "role", label: "Role / profession" },

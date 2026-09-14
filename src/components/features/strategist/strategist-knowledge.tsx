@@ -84,20 +84,30 @@ function KnowledgeBody({ data }: { data: StrategistKnowledge }) {
         <KnowledgeRow href="/strategy/goals" label="Primary goal">
           <span className={cn("block truncate", !data.goal && "font-normal text-muted-foreground")}>{data.goal?.name || "Not set"}</span>
         </KnowledgeRow>
-        <KnowledgeRow
-          href="/"
-          label="Content Health Score"
-          detail={weakest ? `Weakest: ${weakest.label} — ${weakest.detail}` : undefined}
-          aside={<ScoreRing value={health.score} size={32} strokeWidth={3} tone="auto" label="Content Health Score" />}
-        >
-          <span className="num">{health.score}</span>
-          <span className="font-normal text-muted-foreground"> / 100 · {health.band.label}</span>
-        </KnowledgeRow>
+        {data.hasPublished ? (
+          <KnowledgeRow
+            href="/"
+            label="Content Health Score"
+            detail={weakest ? `Weakest: ${weakest.label} — ${weakest.detail}` : undefined}
+            aside={<ScoreRing value={health.score} size={32} strokeWidth={3} tone="auto" label="Content Health Score" />}
+          >
+            <span className="num">{health.score}</span>
+            <span className="font-normal text-muted-foreground"> / 100 · {health.band.label}</span>
+          </KnowledgeRow>
+        ) : (
+          <KnowledgeRow href="/" label="Content Health Score" detail="Scored from your first published post onward.">
+            <span className="font-normal text-muted-foreground">Not scored yet</span>
+          </KnowledgeRow>
+        )}
         <KnowledgeRow
           href="/pipeline"
           label="Content Buffer"
-          detail={`${plural(buffer.readyCount, "piece")} ready to publish at ${plural(postsPerWeek, "post")} a week`}
-          aside={<StatusPill tone={BUFFER_TONE[buffer.status]}>{BUFFER_STATUS_LABELS[buffer.status]}</StatusPill>}
+          detail={
+            data.hasContent
+              ? `${plural(buffer.readyCount, "piece")} ready to publish at ${plural(postsPerWeek, "post")} a week`
+              : "Nothing in production yet — the buffer fills as content moves toward ready to post."
+          }
+          aside={data.hasContent ? <StatusPill tone={BUFFER_TONE[buffer.status]}>{BUFFER_STATUS_LABELS[buffer.status]}</StatusPill> : undefined}
         >
           <span className="num">{buffer.days}</span> days
         </KnowledgeRow>

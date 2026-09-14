@@ -262,10 +262,10 @@ export function QuestionBankView() {
             />
             <StatTile label="Turned into ideas" icon={Lightbulb} value={formatNumber(stats.ideas)} sublabel={`${shareOf(stats.ideas)} of questions`} />
             <StatTile
-              label="Answered in content"
+              label="Answered"
               icon={CircleCheck}
               value={formatNumber(stats.answered)}
-              sublabel={`${shareOf(stats.answered)} of questions`}
+              sublabel={`${shareOf(stats.answered)} have content`}
             />
           </div>
 

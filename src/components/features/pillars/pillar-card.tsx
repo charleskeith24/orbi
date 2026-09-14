@@ -100,7 +100,7 @@ export function PillarCard({
       {examples.length ? (
         <div className="mt-auto flex min-w-0 flex-wrap items-center gap-1">
           {examples.map((example, i) => (
-            <Token key={`${example}-${i}`} className="max-w-40 font-normal text-foreground/85">
+            <Token key={`${example}-${i}`} title={example} className="max-w-40 font-normal text-foreground/85">
               <span className="truncate">{example}</span>
             </Token>
           ))}

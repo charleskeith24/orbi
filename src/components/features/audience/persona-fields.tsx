@@ -34,8 +34,8 @@ function listPatch(key: PersonaListKey, value: string[]): UpdateRow<"audience_pe
   return patch
 }
 
-const TEXT_FIELDS: { key: PersonaTextKey; label: string; placeholder: string }[] = [
-  { key: "age_range", label: "Age range", placeholder: "e.g. 28–42" },
+/** Full-width rows: these values are often a long phrase ("Metro Manila, Cebu, Davao — plus founders across SEA"). */
+const TEXT_FIELDS: { key: Exclude<PersonaTextKey, "age_range">; label: string; placeholder: string }[] = [
   { key: "profession", label: "Profession", placeholder: "e.g. Founder of a DTC brand" },
   { key: "industry", label: "Industry", placeholder: "e.g. E-commerce — beauty, fashion" },
   { key: "experience_level", label: "Experience level", placeholder: "e.g. 3–7 years in business" },
@@ -107,7 +107,7 @@ export function PersonaProfileFields({ persona }: { persona: AudiencePersona }) 
   const id = useId()
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <FormRow>
+      <FormRow className="sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <FormField label="Name" htmlFor={`${id}-name`} required>
           <AutosaveInput
             id={`${id}-name`}
@@ -118,18 +118,27 @@ export function PersonaProfileFields({ persona }: { persona: AudiencePersona }) 
             onCommit={(name) => save(persona.id, { name })}
           />
         </FormField>
-        {TEXT_FIELDS.map((field) => (
-          <FormField key={field.key} label={field.label} htmlFor={`${id}-${field.key}`}>
-            <AutosaveInput
-              id={`${id}-${field.key}`}
-              value={persona[field.key]}
-              maxLength={200}
-              placeholder={field.placeholder}
-              onCommit={(value) => save(persona.id, textPatch(field.key, value))}
-            />
-          </FormField>
-        ))}
+        <FormField label="Age range" htmlFor={`${id}-age_range`}>
+          <AutosaveInput
+            id={`${id}-age_range`}
+            value={persona.age_range}
+            maxLength={40}
+            placeholder="e.g. 28–42"
+            onCommit={(age_range) => save(persona.id, { age_range })}
+          />
+        </FormField>
       </FormRow>
+      {TEXT_FIELDS.map((field) => (
+        <FormField key={field.key} label={field.label} htmlFor={`${id}-${field.key}`}>
+          <AutosaveInput
+            id={`${id}-${field.key}`}
+            value={persona[field.key]}
+            maxLength={200}
+            placeholder={field.placeholder}
+            onCommit={(value) => save(persona.id, textPatch(field.key, value))}
+          />
+        </FormField>
+      ))}
       <FormField label="Colour" description="Identifies this persona in badges, filters and charts.">
         <ColorSwatchPicker value={persona.color} onChange={(color) => save(persona.id, { color })} aria-label="Persona colour" />
       </FormField>

@@ -7,11 +7,13 @@ import {
   MessageSquareQuote,
   Quote,
   ShieldCheck,
+  Target,
   type LucideIcon,
 } from "lucide-react"
 import type { BrandSectionKey } from "./brand-model"
 
 export const SECTION_ICONS: Record<BrandSectionKey, LucideIcon> = {
+  niche: Target,
   identity: IdCard,
   positioning: Crosshair,
   statement: Quote,

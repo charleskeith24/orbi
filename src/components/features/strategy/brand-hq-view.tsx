@@ -28,6 +28,7 @@ import { BrandSectionNav, CompletenessCard } from "./brand-nav"
 import { IdentitySection, PositioningSection } from "./brand-sections"
 import { CommunicationSection, ExpertiseSection, PersonalitySection, RulesSection } from "./brand-style-sections"
 import { BrandVoicePreview } from "./brand-voice-preview"
+import { NicheSection } from "./niche-section"
 import { StatementSection } from "./positioning-builder"
 import { PositioningSuggestions, type SuggestionField, type SuggestionValues } from "./positioning-suggestions"
 import { SaveBar } from "./save-bar"
@@ -186,6 +187,7 @@ export function BrandHqView() {
         </aside>
 
         <form ref={formRef} onSubmit={save} noValidate aria-label="Brand HQ" className="flex min-w-0 flex-col gap-4">
+          <NicheSection {...sectionProps} dirty={dirty} now={now} />
           <IdentitySection {...sectionProps} />
           <PositioningSection
             {...sectionProps}

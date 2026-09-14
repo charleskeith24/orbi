@@ -23,16 +23,19 @@ const formatDays = (days: number) => (Number.isInteger(days) ? formatNumber(days
 export function PipelineSummary({
   counts,
   buffer,
+  empty = false,
   onJump,
 }: {
   counts: PipelineCounts
   buffer: ContentBuffer
+  /** No content in the workspace yet: the buffer is neutral, not an alarm. */
+  empty?: boolean
   onJump: (stage: PipelineStage) => void
 }) {
   return (
     <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,27rem)]">
       <StageGroups counts={counts} onJump={onJump} />
-      <BufferPanel buffer={buffer} onJump={onJump} />
+      <BufferPanel buffer={buffer} empty={empty} onJump={onJump} />
     </div>
   )
 }
@@ -96,11 +99,12 @@ type BufferCell = { key: string; label: string; value: number; title: string } &
   | { stage: PipelineStage }
 )
 
-function BufferPanel({ buffer, onJump }: { buffer: ContentBuffer; onJump: (stage: PipelineStage) => void }) {
-  const tone = BUFFER_TONE[buffer.status]
+function BufferPanel({ buffer, empty, onJump }: { buffer: ContentBuffer; empty: boolean; onJump: (stage: PipelineStage) => void }) {
+  const tone = empty ? "neutral" : BUFFER_TONE[buffer.status]
   const days = formatDays(buffer.days)
-  const hint =
-    buffer.status === "low"
+  const hint = empty
+    ? `fills as content gets ready · target ${buffer.targetDays} days`
+    : buffer.status === "low"
       ? `under your ${buffer.warningDays}-day warning line`
       : buffer.status === "ok"
         ? `below your ${buffer.targetDays}-day target`
@@ -119,7 +123,7 @@ function BufferPanel({ buffer, onJump }: { buffer: ContentBuffer; onJump: (stage
         <h2 id="pipeline-buffer-title" className="text-xs font-medium text-muted-foreground">
           Content Buffer
         </h2>
-        <StatusPill tone={tone}>{buffer.label}</StatusPill>
+        <StatusPill tone={tone}>{empty ? "Nothing in production yet" : buffer.label}</StatusPill>
       </div>
       <div className="flex min-w-0 items-center gap-3">
         <p className="shrink-0 leading-7">

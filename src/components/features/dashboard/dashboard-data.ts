@@ -22,6 +22,7 @@ import {
 import { weekRange } from "@/lib/dates"
 import type { AppSettings, Database } from "@/lib/types"
 import { buildWeekDays, platformGrowthRows, strategistPrompts } from "./dashboard-utils"
+import { firstSteps, hasPublishedContent, workspaceStartKey } from "./first-run"
 
 /** Trailing window for performance sections (top content, pillars, platforms). */
 export const PERFORMANCE_DAYS = 30
@@ -62,6 +63,11 @@ export function computeDashboard(db: Database, settings: AppSettings, now: Date)
     insights: strategicInsights(db, now, settings),
     weekDays: buildWeekDays(db, now, settings.week_starts_on),
     prompts: strategistPrompts({ mixWarning: mix.warnings[0], pillars, top: top[0], weekly }),
+    /** Nothing published yet: Home shows first steps instead of scores built on zeros. */
+    hasPublished: hasPublishedContent(db.content_items),
+    hasContent: db.content_items.length > 0,
+    startKey: workspaceStartKey(db),
+    steps: firstSteps(db),
   }
 }
 

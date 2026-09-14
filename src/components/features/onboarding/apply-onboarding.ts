@@ -45,6 +45,7 @@ export function applyOnboardingPlan(plan: OnboardingPlan): void {
     const updates = plan.updates[table]
     if (updates?.length) updateRows(table, updates as never)
   }
-  updateSettings(plan.settings)
+  // A Niche Discovery re-run plans no settings change.
+  if (Object.keys(plan.settings).length) updateSettings(plan.settings)
   updateBrand(plan.brand)
 }

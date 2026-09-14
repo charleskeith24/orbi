@@ -32,6 +32,20 @@ const settle = Number(args.wait ?? 600)
 const errors = []
 const logs = []
 const browser = await chromium.launch({ channel: "chrome", headless: true })
+
+// New browser profiles start empty (first run → onboarding). QA runs seed the sample brand through a
+// dev-only flag by default: --seed=demo (default), --seed=fresh (onboarded but empty), --seed=none (true first run).
+const SEED = String(args.seed ?? "demo")
+const newContextRaw = browser.newContext.bind(browser)
+browser.newContext = async (options) => {
+  const context = await newContextRaw(options)
+  if (SEED !== "none") {
+    await context.addInitScript((seed) => {
+      if (!localStorage.getItem("pbos:dev-seed")) localStorage.setItem("pbos:dev-seed", seed)
+    }, SEED)
+  }
+  return context
+}
 const context = await browser.newContext({
   viewport: { width, height },
   colorScheme: args.dark ? "dark" : "light",

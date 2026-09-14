@@ -5,6 +5,7 @@
  * load time. Screenshots go to --dir (default /tmp/route-audit).
  *
  *   node scripts/route-audit.mjs
+ *   node scripts/route-audit.mjs --dynamic            (detail pages only: /studio/<id>, /campaigns/<id>, unknown id)
  *   node scripts/route-audit.mjs --only=/ideas,/pipeline --modes=light,mobile --dir=/tmp/ra
  */
 import fs from "node:fs"
@@ -34,13 +35,27 @@ const STATIC_ROUTES = [
 
 const browser = await chromium.launch({ channel: "chrome", headless: true })
 
+// New browser profiles start empty (first run → onboarding). QA runs seed the sample brand through a
+// dev-only flag by default: --seed=demo (default), --seed=fresh (onboarded but empty), --seed=none (true first run).
+const SEED = String(args.seed ?? "demo")
+const newContextRaw = browser.newContext.bind(browser)
+browser.newContext = async (options) => {
+  const context = await newContextRaw(options)
+  if (SEED !== "none") {
+    await context.addInitScript((seed) => {
+      if (!localStorage.getItem("pbos:dev-seed")) localStorage.setItem("pbos:dev-seed", seed)
+    }, SEED)
+  }
+  return context
+}
+
 async function dynamicRoutes() {
   const context = await browser.newContext()
   const page = await context.newPage()
   await page.goto(BASE + "/", { waitUntil: "domcontentloaded" })
-  await page.waitForFunction(() => !!localStorage.getItem("pbos:workspace:v1"), null, { timeout: 60000 })
+  await page.waitForFunction(() => !!localStorage.getItem("pbos:workspace:v2"), null, { timeout: 60000 })
   const ids = await page.evaluate(() => {
-    const db = JSON.parse(localStorage.getItem("pbos:workspace:v1")).db
+    const db = JSON.parse(localStorage.getItem("pbos:workspace:v2")).db
     const published = db.content_items.find((i) => i.stage === "published")
     const draft = db.content_items.find((i) => i.stage === "scripting") ?? db.content_items[0]
     return { published: published?.id, draft: draft?.id, campaign: db.content_campaigns[0]?.id }
@@ -54,7 +69,11 @@ async function dynamicRoutes() {
   ].filter(Boolean)
 }
 
-const routes = args.only ? String(args.only).split(",") : [...STATIC_ROUTES, ...(await dynamicRoutes())]
+const routes = args.only
+  ? String(args.only).split(",")
+  : args.dynamic
+    ? await dynamicRoutes()
+    : [...STATIC_ROUTES, ...(await dynamicRoutes())]
 const report = []
 
 for (const mode of modes) {

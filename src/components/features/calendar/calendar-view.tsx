@@ -7,7 +7,8 @@ import { useCallback, useMemo, useState } from "react"
 import { PageContainer, PageHeader } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { uiActions, useLookup, useSettings, useTable } from "@/lib/store"
+import { workspaceStartKey } from "@/components/features/dashboard/first-run"
+import { uiActions, useBrand, useLookup, useSettings, useTable } from "@/lib/store"
 import type { ContentItem } from "@/lib/types"
 import { pluralize } from "@/lib/utils"
 import { CalendarActionsProvider, useCalendarActions } from "./calendar-actions"
@@ -78,17 +79,24 @@ function CalendarScreen() {
   const filtering = hasFilters(filters)
   const dnd = !isMobile
 
+  const brand = useBrand()
+  const ideas = useTable("content_ideas")
+  // Posting slots before the workspace existed were never missed.
+  const startKey = useMemo(
+    () => workspaceStartKey({ app_settings: [settings], brand_profiles: [brand], content_items: items, content_ideas: ideas }),
+    [settings, brand, items, ideas]
+  )
   const byDay = useMemo(() => placementsByDay(items), [items])
   const dayDates = useMemo(() => visibleDays(view, anchor, weekStartsOn), [view, anchor, weekStartsOn])
   // An item opened via ?open= stays visible whatever the filters say.
   const visible = useCallback((item: ContentItem) => item.id === nav.openId || matchesFilters(item, filters), [filters, nav.openId])
   const days = useMemo(
-    () => buildCalendarDays(dayDates, byDay, slots, now, { month: view === "month" ? anchor : undefined, visible }),
-    [dayDates, byDay, slots, now, view, anchor, visible]
+    () => buildCalendarDays(dayDates, byDay, slots, now, { month: view === "month" ? anchor : undefined, visible, startKey }),
+    [dayDates, byDay, slots, now, view, anchor, visible, startKey]
   )
   const stripDays = useMemo(
-    () => (view === "day" ? buildCalendarDays(visibleDays("week", anchor, weekStartsOn), byDay, slots, now, { visible }) : []),
-    [view, anchor, weekStartsOn, byDay, slots, now, visible]
+    () => (view === "day" ? buildCalendarDays(visibleDays("week", anchor, weekStartsOn), byDay, slots, now, { visible, startKey }) : []),
+    [view, anchor, weekStartsOn, byDay, slots, now, visible, startKey]
   )
   const stats = useMemo(() => periodStats(days), [days])
   const selectedDay = days.find((d) => d.key === nav.dateKey) ?? days[0]
@@ -215,6 +223,17 @@ function CalendarScreen() {
           </p>
           <Button asChild size="sm" variant="outline">
             <Link href="/calendar/schedule">Set up Posting Schedule</Link>
+          </Button>
+        </div>
+      ) : !items.length && showSlots ? (
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-dashed bg-card/50 px-3 py-2.5 text-sm">
+          <CalendarDays className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <p className="min-w-0 flex-1 text-pretty text-muted-foreground">
+            Nothing on the calendar yet — your Posting Schedule shows as open slots. Click + on an upcoming slot to fill your first
+            one, or plan the whole week at once.
+          </p>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/calendar/planner">Plan the week</Link>
           </Button>
         </div>
       ) : null}

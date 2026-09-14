@@ -76,6 +76,17 @@ describe("offline engine — shown verbatim, so never broken", () => {
     for (const story of ctx.stories) if (!answers.includes(story.title)) expect(text).not.toContain(story.title)
   })
 
+  it("onboarding_strategy returns the full 30 ideas even from sparse answers", async () => {
+    const res = await run("onboarding_strategy", { name: "Ana", idea_count: 30 })
+    const ideas = (res.output as { ideas: { title: string }[] }).ideas
+    expect(ideas).toHaveLength(30)
+    expect(new Set(ideas.map((i) => i.title.toLowerCase())).size).toBe(30)
+    // Format words and roles must never become the subject of a title.
+    const sparse = await run("onboarding_strategy", { name: "Ana Cruz", role: "Bookkeeper", industry: "Accounting", expertise_areas: ["Bookkeeping"], audience: "small business owners", idea_count: 30 })
+    const titles = [...ideas, ...(sparse.output as { ideas: { title: string }[] }).ideas].map((i) => i.title.toLowerCase())
+    for (const title of titles) expect(title).not.toMatch(/\b(how-to|tutorials|frameworks myths|industry opinions|bookkeeper (advice|right|myths|checklist))\b/)
+  })
+
   it("monthly_review names the month it reviews", async () => {
     const input = INPUTS.monthly_review as { report: { month: string } }
     const res = await run("monthly_review", input)

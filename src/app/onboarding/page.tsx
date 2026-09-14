@@ -3,6 +3,9 @@ import { OnboardingView } from "@/components/features/onboarding/onboarding-view
 
 export const metadata: Metadata = { title: "Set up your brand" }
 
-export default function Page() {
-  return <OnboardingView />
+/** `?step=niche` re-runs only Niche Discovery on a finished workspace. */
+export default async function Page(props: PageProps<"/onboarding">) {
+  const { step } = await props.searchParams
+  const entry = step === "niche" ? "niche" : null
+  return <OnboardingView key={entry ?? "setup"} entry={entry} />
 }

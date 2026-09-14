@@ -14,10 +14,10 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: { default: "Personal Brand OS", template: "%s · Personal Brand OS" },
+  title: { default: "Orbi", template: "%s · Orbi" },
   description:
-    "Strategy → Create → Publish → Analyze → Improve. The operating system for growing a personal brand with content.",
-  applicationName: "Personal Brand OS",
+    "Orbi — the personal brand content OS. Strategy → Create → Publish → Analyze → Improve.",
+  applicationName: "Orbi",
 }
 
 export const viewport: Viewport = {

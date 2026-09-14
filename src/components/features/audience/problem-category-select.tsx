@@ -1,7 +1,6 @@
 "use client"
 
-import { OptionSelect, type SelectOption } from "@/components/common"
-import type { ControlSize } from "@/components/common"
+import { OptionSelect, type ControlSize, type SelectOption } from "@/components/common"
 import { PROBLEM_CATEGORIES } from "@/lib/constants"
 import type { ProblemCategory } from "@/lib/types"
 

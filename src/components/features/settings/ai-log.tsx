@@ -43,6 +43,7 @@ const TASK_LABELS: Partial<Record<AiTaskName, string>> = {
   weekly_plan: "Weekly Planner",
   strategist_chat: "Content Strategist",
   onboarding_strategy: "Onboarding strategy",
+  niche_discovery: "Niche Discovery",
 }
 
 export function taskLabel(task: string): string {

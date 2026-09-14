@@ -6,6 +6,7 @@ import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { EmptyState, PageContainer, PageHeader, PageSection, useConfirm } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { hasPublishedContent } from "@/components/features/dashboard/first-run"
 import { dataActions, updateBrand, useBrand, useDataStore, useDb, useSettings } from "@/lib/store"
 import type { ContentGoal, GoalCategory, ID } from "@/lib/types"
 import { pluralize } from "@/lib/utils"
@@ -37,7 +38,9 @@ export function GoalsView() {
 
   const summary = useMemo(() => goalsSummary(db, now, settings), [db, now, settings])
   const withTargets = summary.rows.filter((r) => r.goal.is_active && r.progress.target !== null)
-  const behind = withTargets.filter((r) => goalPace(r.progress) === "behind").length
+  // Before the first published post, goals haven't fallen behind — they haven't started.
+  const started = useMemo(() => hasPublishedContent(db.content_items), [db.content_items])
+  const behind = withTargets.filter((r) => goalPace(r.progress, started) === "behind").length
   const activeCount = summary.rows.filter((r) => r.goal.is_active).length
 
   // `?open=<id>` edits a goal; "new" is local state. Keep the last form mounted while the dialog animates out.
@@ -149,11 +152,16 @@ export function GoalsView() {
           <GoalFocusCard summary={summary} brand={brand} onChange={setRole} />
           <PageSection
             title="Your goals"
-            description={`${pluralize(activeCount, "active goal")} · ${withTargets.length - behind} of ${withTargets.length} with a target on pace · progress counts content published this period`}
+            description={
+              started
+                ? `${pluralize(activeCount, "active goal")} · ${withTargets.length - behind} of ${withTargets.length} with a target on pace · progress counts content published this period`
+                : `${pluralize(activeCount, "active goal")} · progress starts with your first published post and counts content published each period`
+            }
           >
             <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
               {summary.rows.map((row) => (
                 <GoalCard
+                  started={started}
                   key={row.goal.id}
                   row={row}
                   actions={{

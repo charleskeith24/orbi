@@ -1,4 +1,4 @@
-# Personal Brand Content OS — Architecture & Engineering Contract
+# Orbi (Personal Brand Content OS) — Architecture & Engineering Contract
 
 > Strategy → Create → Publish → Analyze → Improve.
 > A strategic content operating system for a personal brand — **not** a social media calendar.
@@ -15,7 +15,7 @@ Content is never created in isolation from strategy (Brand HQ, audience, pillars
 | Framework | **Next.js 16** App Router, Turbopack | **Breaking changes vs. training data.** Read `node_modules/next/dist/docs/` before using an API. `middleware.ts` is now **`src/proxy.ts`** (export `proxy`). `params`/`searchParams` are **Promises** (`PageProps<"/route/[id]">`). `next lint` is gone — run `npx eslint`. |
 | UI | React 19.2, TypeScript (strict), Tailwind CSS 4, **shadcn/ui (radix-nova)** in `src/components/ui` | Do not edit `src/components/ui/*` except to fix a real bug. `cn()` from `@/lib/utils`. |
 | State | Zustand 5 (`src/lib/store`) | Whole workspace held in memory; adapters persist. |
-| Persistence | Local adapter (browser localStorage, demo seed) **or** Supabase (Postgres + RLS + Auth) | Supabase is used when `NEXT_PUBLIC_SUPABASE_URL` + key are set. |
+| Persistence | Local adapter (browser localStorage, Starter Kit + onboarding) **or** Supabase (Postgres + RLS + Auth) | Supabase is used when `NEXT_PUBLIC_SUPABASE_URL` + key are set. |
 | Charts | Recharts 3 via `src/components/charts` | Follow §6 chart rules. |
 | Icons | lucide-react 1.x | **No brand icons** in lucide — use `PlatformIcon` from `@/components/common/platform-icon`. |
 | Dates | date-fns 4 + `@/lib/dates` | |
@@ -73,6 +73,8 @@ Client views read `useSearchParams()` — wrap them in `<Suspense>` in the page 
 ---
 
 ## 3. Data layer
+
+New workspaces are created from the **Starter Kit** (`src/lib/data/starter.ts`: formats, angles, hook templates, goals, platform strategies, posting schedule, tags, settings, blank brand) and go through onboarding, which starts with Niche Discovery. The demo workspace (`src/lib/data/seed.ts`) is a **test fixture and dev-only QA seed** (`localStorage["pbos:dev-seed"]` = `demo` | `fresh`, set by the scripts' `--seed` flag) — never shown to users.
 
 ### Model
 `src/lib/types.ts` defines 29 tables. Field names are snake_case and identical to Postgres columns. Text defaults to `''`, lists to `[]`, optional FKs are `ID | null`.
@@ -137,6 +139,7 @@ uiActions.askStrategist("Why are my educational posts underperforming?")
 
 **Direction:** modern, premium, minimal, dense-but-calm — think Linear / Stripe / Notion. Dashboard-oriented.
 **Avoid:** gradients, huge empty space, oversized text, cartoonish dashboards, decorative animation, overloaded cards, generic card grids everywhere.
+**Logo:** `OrbiLogo` (wordmark) / `OrbiMark` (the "O") from `@/components/app-shell/orbi-logo`; favicon is `src/app/icon.svg`. The orbit's sky → indigo gradient is a fixed brand asset — the one allowed gradient and hard-coded color pair. Ring and letters use `currentColor` (set it with a text class). Inside shadcn buttons/menus, which force `[&_svg]:size-4`, size the logo with `!` (e.g. `h-[22px]!`).
 
 - **Type:** body `text-sm` (14px); secondary `text-xs text-muted-foreground`; page titles `text-lg font-semibold` (never larger than `text-xl`); numbers in tables `num` (tabular); hero stat ≤ `text-3xl font-semibold`.
 - **Spacing:** page padding `p-4 md:p-6`; section gap `gap-4`/`gap-6`; cards `rounded-lg border bg-card`; inner padding `p-4`. Max content width `max-w-[1400px]` for dashboards.

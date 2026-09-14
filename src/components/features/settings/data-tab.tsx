@@ -1,7 +1,7 @@
 "use client"
 
 import { formatDistanceStrict } from "date-fns"
-import { CircleAlert, Cloud, Download, FileBraces, HardDrive, RotateCcw, Sparkles, Upload } from "lucide-react"
+import { CircleAlert, Cloud, Download, FileBraces, HardDrive, RotateCcw, Upload } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
@@ -9,7 +9,7 @@ import { ConfirmDialog, CopyButton, Meter, SectionCard } from "@/components/comm
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { normalizeDatabase } from "@/lib/data/defaults"
-import { createDemoDatabase, createStarterDatabase } from "@/lib/data/seed"
+import { createStarterDatabase } from "@/lib/data/starter"
 import { formatDateTime, parseDate } from "@/lib/dates"
 import { useDataStatus, useDataStore, useDb } from "@/lib/store"
 import type { TableName } from "@/lib/types"
@@ -26,7 +26,7 @@ import {
   type WorkspaceParseResult,
 } from "./workspace-io"
 
-type Action = "import" | "demo" | "fresh"
+type Action = "import" | "fresh"
 type ParsedImport = Extract<WorkspaceParseResult, { ok: true }> & { name: string }
 
 const HEADLINE_TABLES: { table: TableName; label: string }[] = [
@@ -87,15 +87,9 @@ export function DataTab({ now }: { now: Date }) {
       await store.replaceWorkspace(normalizeDatabase(pending.db))
       toast.success("Workspace imported", { description: `${pluralize(pending.totalRows, "row")} from ${pending.name}` })
       setPending(null)
-    } else if (action === "demo") {
-      await store.replaceWorkspace(createDemoDatabase(store.userId, new Date()))
-      toast.success("Demo workspace loaded", {
-        description: "Northbound Commerce — a complete example brand.",
-        action: { label: "Open dashboard", onClick: () => router.push("/") },
-      })
     } else if (action === "fresh") {
       await store.replaceWorkspace(createStarterDatabase(store.userId, new Date()))
-      toast.success("Fresh workspace ready", { description: "Let's set up your brand." })
+      toast.success("Fresh workspace ready", { description: "Let's find your niche and set up your brand." })
       router.push("/onboarding")
     }
   }
@@ -116,22 +110,12 @@ export function DataTab({ now }: { now: Date }) {
       ),
       confirmLabel: "Replace workspace",
     },
-    demo: {
-      title: "Load the demo workspace?",
-      description: (
-        <>
-          Everything here — {pluralize(rows, "row")} — is replaced by the Northbound Commerce demo brand. This can&apos;t be undone.{" "}
-          {backupLink}.
-        </>
-      ),
-      confirmLabel: "Load demo",
-    },
     fresh: {
       title: "Start fresh?",
       description: (
         <>
-          All {pluralize(rows, "row")} are deleted and replaced with an empty workspace plus the starter library. Onboarding starts
-          next. This can&apos;t be undone. {backupLink}.
+          All {pluralize(rows, "row")} are deleted and replaced with an empty workspace plus the starter library. Onboarding opens
+          next, starting with Niche Discovery. This can&apos;t be undone. {backupLink}.
         </>
       ),
       confirmLabel: "Delete and start fresh",
@@ -170,7 +154,7 @@ export function DataTab({ now }: { now: Date }) {
           {mode === "local" && usage ? (
             <p className="-mt-2 text-xs text-muted-foreground">
               {savedAt ? `Last saved ${formatDistanceStrict(savedAt, savedAt > now ? savedAt : now, { addSuffix: true })} · ` : ""}
-              key <code className="font-mono">pbos:workspace:v1</code>
+              key <code className="font-mono">pbos:workspace:v2</code>
               {usage.recoveryCopies ? ` · ${pluralize(usage.recoveryCopies, "recovery copy", "recovery copies")} kept from a failed load` : ""}
             </p>
           ) : null}
@@ -257,34 +241,19 @@ export function DataTab({ now }: { now: Date }) {
         </div>
       </SectionCard>
 
-      <SectionCard title="Start over" description="Both replace everything in this workspace — export a backup first." className="border-destructive/25">
-        <div className="flex flex-col divide-y">
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
-            <div className="min-w-0 max-w-xl">
-              <p className="text-sm font-medium">Load the demo workspace</p>
-              <p className="text-xs text-pretty text-muted-foreground">
-                Northbound Commerce, a complete example brand: content across every pipeline stage, analytics, campaigns, stories and
-                reviews.
-              </p>
-            </div>
-            <Button type="button" variant="outline" size="sm" onClick={() => setAction("demo")}>
-              <Sparkles aria-hidden />
-              Load demo…
-            </Button>
+      <SectionCard title="Start over" description="Replaces everything in this workspace — export a backup first." className="border-destructive/25">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0 max-w-xl">
+            <p className="text-sm font-medium">Start fresh</p>
+            <p className="text-xs text-pretty text-muted-foreground">
+              Deletes your brand, ideas, content and analytics and keeps only the starter library (formats, angles, hook templates, goals,
+              posting schedule). Onboarding runs again — Niche Discovery first, then a pre-filled setup.
+            </p>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-3">
-            <div className="min-w-0 max-w-xl">
-              <p className="text-sm font-medium">Start fresh</p>
-              <p className="text-xs text-pretty text-muted-foreground">
-                An empty workspace with the starter library (formats, angles, hook templates, goals, posting schedule). Onboarding
-                runs next.
-              </p>
-            </div>
-            <Button type="button" variant="destructive" size="sm" onClick={() => setAction("fresh")}>
-              <RotateCcw aria-hidden />
-              Start fresh…
-            </Button>
-          </div>
+          <Button type="button" variant="destructive" size="sm" onClick={() => setAction("fresh")}>
+            <RotateCcw aria-hidden />
+            Start fresh…
+          </Button>
         </div>
       </SectionCard>
 

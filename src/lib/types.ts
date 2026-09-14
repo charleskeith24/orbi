@@ -286,6 +286,13 @@ export interface BrandProfile extends BaseRow {
   positioning_result: string
   positioning_method: string
   expertise_areas: string[]
+  // Niche (from Niche Discovery)
+  /** One-line niche, e.g. "Bookkeeping systems for Filipino online sellers". */
+  niche: string
+  /** Topics the creator loves talking about — the "hilig" behind the niche. */
+  interests: string[]
+  /** Why the niche fits: passion × expertise × audience demand. */
+  niche_fit: string
   personality_traits: PersonalityTrait[]
   // Communication style
   language: BrandLanguage

@@ -1,8 +1,13 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
+import { WeeklyReportView } from "@/components/features/reports/weekly-report-view"
 
 export const metadata: Metadata = { title: "Weekly Report" }
 
-// STUB — replaced by the feature builder.
 export default function Page() {
-  return <div className="p-6 text-sm text-muted-foreground">Weekly Report</div>
+  return (
+    <Suspense>
+      <WeeklyReportView />
+    </Suspense>
+  )
 }

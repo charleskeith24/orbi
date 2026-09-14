@@ -117,6 +117,12 @@ const brandSchema = z.object({
   positioning_result: text(200),
   positioning_method: text(200),
   expertise_areas: strings(12, 60),
+  /** One-line niche from Niche Discovery — every generation stays inside it. */
+  niche: text(200),
+  /** Topics the creator loves (their "hilig") — seeds for ideas inside the niche. */
+  interests: strings(12, 60),
+  /** Why the niche fits: passion × expertise × demand. */
+  niche_fit: text(600),
   personality: strings(10, 40),
   language: z.enum(["english", "tagalog", "taglish"]).catch("english"),
   tones: strings(6, 40),
@@ -562,6 +568,9 @@ export function buildBrandContext(db: Database, now: Date, options: BuildContext
       positioning_result: brand.positioning_result,
       positioning_method: brand.positioning_method,
       expertise_areas: brand.expertise_areas,
+      niche: brand.niche ?? "",
+      interests: brand.interests ?? [],
+      niche_fit: brand.niche_fit ?? "",
       personality: brand.personality_traits.map((t) => PERSONALITY_TRAIT_MAP[t]?.label ?? t),
       language: brand.language,
       tones: brand.tones.map((t) => TONE_MAP[t]?.label ?? t),

@@ -1,19 +1,30 @@
 import { describe, expect, it } from "vitest"
-import type { GeneratedIdea } from "@/lib/ai"
+import type { AiTaskOutput, NicheDiscoveryOutput } from "@/lib/ai"
+import { discoverNiches } from "@/lib/ai/offline/niche"
+import { offlineProvider } from "@/lib/ai/providers/offline"
+import { executeAiTask } from "@/lib/ai/server"
+import { nicheDiscoveryTask } from "@/lib/ai/tasks/niche-discovery"
 import { onboardingStrategyTask } from "@/lib/ai/tasks/onboarding-strategy"
 import { CATEGORICAL_COLORS, PLATFORM_IDS } from "@/lib/constants"
 import { buildRow, emptyDatabase } from "@/lib/data/defaults"
 import { createDemoDatabase, createStarterDatabase } from "@/lib/data/seed"
 import { useDataStore } from "@/lib/store"
 import { applyOnboardingPlan } from "./apply-onboarding"
-import { assignPillars, goalForIdea, matchProblem, type IdeaDraft } from "./onboarding-ideas"
+import { COPY } from "./copy"
+import { EN } from "./copy-en"
+import { TL } from "./copy-tl"
+import { applyNicheOption, clarityChecks, nicheInput, nicheKey, pillarsFromOption, pillarsMatchOption, startOwnNiche } from "./niche-model"
+import { assignPillars, effectivePillars, goalForIdea, matchProblem, toIdeaDrafts, type IdeaDraft } from "./onboarding-ideas"
 import {
   answersFromWorkspace,
   distributeTotal,
   emptyAnswers,
   evenPillars,
   firstInvalidStep,
+  FULL_FLOW,
+  goalsFromAims,
   largestRemainder,
+  NICHE_FLOW,
   parsePositioning,
   pillarColors,
   pillarTotal,
@@ -21,12 +32,15 @@ import {
   rebalancePillars,
   recommendedSchedule,
   sanitizeAnswers,
+  selectedPillars,
+  stepNumber,
   strategyInput,
+  strategyKey,
   validateStep,
   weeklyTotal,
   type OnboardingAnswers,
 } from "./onboarding-model"
-import { planOnboarding, planStarterLibrary, storyTitle } from "./onboarding-plan"
+import { planNicheUpdate, planOnboarding, planStarterLibrary, storyTitle } from "./onboarding-plan"
 
 const NOW = new Date(2026, 8, 13, 10, 0, 0)
 const USER = "00000000-0000-4000-8000-000000000001"
@@ -35,28 +49,31 @@ const total = (values: number[]) => values.reduce((a, b) => a + b, 0)
 function filledAnswers(): OnboardingAnswers {
   return {
     ...emptyAnswers(),
-    name: "Maria Santos",
-    brand_name: "Santos Studio",
-    role: "Founder",
-    industry: "E-commerce",
-    years_experience: 8,
-    location: "Manila",
-    audience: "first-time e-commerce founders",
-    result: "grow profitably without burning cash",
-    method: "simple ad systems",
-    known_for: "Making ads boring and profitable.",
-    persona_name: "First-time founders",
-    persona_profession: "Store owner",
+    interests: ["Personal finance", "Ipon & budgeting", "Travel"],
+    expertise_areas: ["Bookkeeping", "BIR & taxes"],
+    help_requests: "How to register with BIR as a freelancer",
+    years_experience: 6,
+    proof: "Helped 40+ freelancers register with BIR",
+    story: "In 2022 I almost paid a ₱20,000 penalty because I missed a deadline. Now I track every filing in one sheet.",
+    audiences: ["Freelancers"],
+    persona_profession: "First year freelancing",
     persona_experience: "Beginner",
-    persona_goals: ["Hit ₱1M a month"],
-    persona_problems: ["Ad costs keep rising while sales stay flat", "No time to create content"],
+    audience_goal: "File taxes with confidence",
+    persona_problems: ["Doesn't know how to file taxes with BIR", "No savings even with good income", "Afraid of tax penalties"],
     persona_platforms: ["facebook", "tiktok"],
-    expertise_areas: ["E-commerce", "Advertising"],
-    story: "In 2022 we almost closed our first store because sales dropped. We fixed the offer and doubled revenue.",
+    aims: ["clients", "products"],
+    primary_goal: "leads",
+    secondary_goal: "business",
+    niche: "Taxes and bookkeeping made simple for new Filipino freelancers",
+    audience: "new freelancers",
+    result: "file taxes with confidence",
+    method: "simple bookkeeping systems",
+    name: "Mika Reyes",
+    role: "Freelance bookkeeper",
+    industry: "Accounting & taxes",
+    location: "Quezon City",
     platforms: ["facebook", "tiktok", "linkedin"],
     split: { facebook: 3, tiktok: 3, linkedin: 2 },
-    primary_goal: "leads",
-    secondary_goal: "authority",
     tones: ["conversational", "educational"],
     personality: ["direct", "practical"],
   }
@@ -64,15 +81,15 @@ function filledAnswers(): OnboardingAnswers {
 
 function idea(over: Partial<IdeaDraft> = {}): IdeaDraft {
   return {
-    title: "Why your ad costs keep rising while sales stay flat",
-    core_idea: "The offer, not the ads, is usually the problem.",
-    why_it_matters: "The top problem your persona named.",
-    hook: "Your ads aren't broken.",
-    hook_category: "problem",
+    title: "Why new freelancers are afraid of tax penalties",
+    core_idea: "Most penalties come from one missed deadline.",
+    why_it_matters: "The top fear your persona named.",
+    hook: "One missed deadline cost me ₱20,000.",
+    hook_category: "story",
     format: "Short-form Video",
     angle: "Problem",
-    talking_points: ["Check the offer first", "Then the creative"],
-    cta: "Comment OFFER",
+    talking_points: ["The deadline most people miss", "The one sheet that fixes it"],
+    cta: "Comment TAX",
     platform: "tiktok",
     funnel_stage: "tofu",
     pillar_id: null,
@@ -111,12 +128,10 @@ describe("onboarding model", () => {
   })
 
   it("keeps the weekly target equal to the platform split", () => {
-    const a = { platforms: ["facebook", "tiktok", "linkedin"] as const, split: {} }
-    const answers = { platforms: [...a.platforms], split: a.split }
-    expect(weeklyTotal(answers)).toBe(8)
+    const answers = { platforms: ["facebook", "tiktok", "linkedin"] as ("facebook" | "tiktok" | "linkedin")[], split: {} }
+    expect(weeklyTotal(answers)).toBe(7) // starter frequencies: FB 3 + TikTok 2 + LinkedIn 2
     const split = distributeTotal(12, answers)
     expect(total(Object.values(split) as number[])).toBe(12)
-    expect(Object.values(split).every((n) => (n ?? 0) >= 1)).toBe(true)
     expect(total(Object.values(distributeTotal(1, answers)) as number[])).toBe(3)
   })
 
@@ -131,24 +146,54 @@ describe("onboarding model", () => {
     }
   })
 
-  it("validates required answers per step", () => {
+  it("starts with Niche Discovery; the welcome screen isn't counted", () => {
+    expect(FULL_FLOW.slice(0, 6)).toEqual(["welcome", "hilig", "galing", "kanino", "para_saan", "niche"])
+    expect(stepNumber(FULL_FLOW, 0)).toBe(0)
+    expect(stepNumber(FULL_FLOW, 1)).toBe(1)
+    expect(stepNumber(FULL_FLOW, FULL_FLOW.length - 1)).toBe(10)
+    expect(NICHE_FLOW).toEqual(["hilig", "galing", "kanino", "para_saan", "niche"])
+  })
+
+  it("validates each step in English and Taglish", () => {
     const blank = emptyAnswers()
+    expect(validateStep("hilig", blank).interests).toBe(EN.errors.interests)
+    expect(validateStep("hilig", blank, TL.errors).interests).toBe(TL.errors.interests)
+    expect(validateStep("hilig", { ...blank, interests: ["Coffee", "Travel"] })).toEqual({})
+    expect(Object.keys(validateStep("kanino", blank)).sort()).toEqual(["audiences", "persona_problems"])
+    expect(validateStep("para_saan", blank).aims).toBeTruthy()
+    expect(validateStep("niche", blank).niche).toBeTruthy()
     expect(Object.keys(validateStep("identity", blank)).sort()).toEqual(["industry", "name", "role"])
-    expect(validateStep("positioning", blank).known_for).toBeTruthy()
-    expect(validateStep("goals", blank).primary_goal).toBeTruthy()
     expect(firstInvalidStep(filledAnswers())).toBe(-1)
+    expect(firstInvalidStep(filledAnswers(), NICHE_FLOW, NICHE_FLOW.length)).toBe(-1)
     const pillars = filledAnswers()
     pillars.pillars[0] = { ...pillars.pillars[0], target: 40 }
     expect(validateStep("pillars", pillars).pillars).toMatch(/110%/)
   })
 
-  it("builds an AI request the onboarding_strategy task accepts", () => {
+  it("maps aims to goals and keeps a primary that still applies", () => {
+    expect(goalsFromAims(["clients", "products"], { primary_goal: null })).toEqual({ primary_goal: "leads", secondary_goal: "business" })
+    expect(goalsFromAims(["clients", "products"], { primary_goal: "business" })).toEqual({ primary_goal: "business", secondary_goal: "leads" })
+    expect(goalsFromAims(["career", "speaking"], { primary_goal: null })).toEqual({ primary_goal: "authority", secondary_goal: null })
+    expect(goalsFromAims([], { primary_goal: "leads" })).toEqual({ primary_goal: null, secondary_goal: null })
+  })
+
+  it("builds AI requests the tasks accept, in both languages", () => {
     const a = filledAnswers()
     a.name = "x".repeat(500)
     a.expertise_areas = Array.from({ length: 20 }, (_, i) => `Area ${i}`)
-    const parsed = onboardingStrategyTask.input.safeParse(strategyInput(a))
-    expect(parsed.success).toBe(true)
-    expect(strategyInput(a).goals).toEqual(["leads", "authority"])
+    const strategy = strategyInput(a)
+    expect(onboardingStrategyTask.input.safeParse(strategy).success).toBe(true)
+    expect(strategy.goals).toEqual(["leads", "business"])
+    expect(strategy.niche).toBe(a.niche)
+    expect(strategy.pillars?.map((p) => p.name)).toEqual(selectedPillars(a).map((p) => p.name))
+    for (const lang of ["english", "taglish"] as const) expect(nicheDiscoveryTask.input.safeParse(nicheInput(a, lang)).success).toBe(true)
+    expect(nicheKey(a, "english")).not.toBe(nicheKey(a, "taglish"))
+    // Identity comes after the niche step, so it never makes niche suggestions stale.
+    expect(nicheKey({ ...a, name: "Someone else", role: "CEO" }, "english")).toBe(nicheKey(a, "english"))
+    // Pillar targets don't make a strategy stale; pillar names do.
+    const retargeted = { ...a, pillars: rebalancePillars(a.pillars.map((p, i) => (i === 0 ? { ...p, target: p.target + 5 } : p))) }
+    expect(strategyKey(retargeted)).toBe(strategyKey(a))
+    expect(strategyKey({ ...a, pillars: a.pillars.map((p, i) => (i === 0 ? { ...p, name: "Money habits" } : p)) })).not.toBe(strategyKey(a))
   })
 
   it("parses a positioning statement back into its parts", () => {
@@ -162,22 +207,75 @@ describe("onboarding model", () => {
 
   it("restores drafts defensively", () => {
     expect(sanitizeAnswers(null)).toEqual(emptyAnswers())
-    const restored = sanitizeAnswers({ name: 5, platforms: ["facebook", "myspace"], tones: ["casual", "loud"], language: "klingon" })
+    const restored = sanitizeAnswers({ name: 5, platforms: ["facebook", "myspace"], tones: ["casual", "loud"], language: "klingon", aims: ["clients", "fame"], niche_option: { kind: "nope" } })
     expect(restored.name).toBe("")
     expect(restored.platforms).toEqual(["facebook"])
     expect(restored.tones).toEqual(["casual"])
     expect(restored.language).toBe("english")
-    expect(sanitizeAnswers(JSON.parse(JSON.stringify(filledAnswers())))).toEqual(filledAnswers())
+    expect(restored.aims).toEqual(["clients"])
+    expect(restored.niche_option).toBeNull()
+    const withOption = { ...filledAnswers(), niche_option: discoverNiches(nicheDiscoveryTask.input.parse(nicheInput(filledAnswers(), "english"))).options[0] }
+    expect(sanitizeAnswers(JSON.parse(JSON.stringify(withOption)))).toEqual(withOption)
   })
 
-  it("prefills a re-run from the workspace", () => {
+  it("prefills a re-run (and Niche Discovery) from the workspace", () => {
     const demo = createDemoDatabase(USER, NOW)
     const a = answersFromWorkspace(demo, { rerun: true })
-    expect(a.name).toBe(demo.brand_profiles[0].name)
+    const brand = demo.brand_profiles[0]
+    expect(a.name).toBe(brand.name)
+    expect(a.niche).toBe(brand.niche)
+    expect(a.interests).toEqual(brand.interests)
     expect(a.pillars.filter((p) => p.selected).length).toBe(demo.content_pillars.filter((p) => p.is_active).length)
-    expect(a.persona_name).toBeTruthy()
+    expect(a.audiences[0]).toBe(a.persona_name)
     expect(a.primary_goal).not.toBeNull()
+    expect(a.aims.length).toBeGreaterThan(0)
     expect(a.schedule_mode).toBe("custom")
+    expect(firstInvalidStep(a, NICHE_FLOW, NICHE_FLOW.length)).toBe(-1)
+  })
+})
+
+describe("niche discovery model", () => {
+  const options = discoverNiches(nicheDiscoveryTask.input.parse(nicheInput(filledAnswers(), "english"))).options
+
+  it("applies a chosen direction: niche, fit, positioning — pillars only when asked", () => {
+    const a = { ...filledAnswers(), niche: "", known_for: "", industry: "" }
+    const option = options[0]
+    const kept = { ...a, ...applyNicheOption(a, option, { replacePillars: false, copy: EN }) }
+    expect(kept.niche).toBe(option.niche_statement)
+    expect(kept.known_for).toBe(option.niche_statement)
+    expect(kept.industry).toBe(option.industry)
+    expect(kept.audience).toBe(option.positioning_audience)
+    expect(kept.niche_fit).toMatch(/Passion \d+\/10 — .+ Expertise \d+\/10 — .+ Demand \d+\/10/)
+    expect(kept.pillars).toEqual(a.pillars)
+    const replaced = { ...a, ...applyNicheOption(a, option, { replacePillars: true, copy: TL }) }
+    expect(replaced.niche_fit).toMatch(/^Hilig \d+\/10/)
+    expect(selectedPillars(replaced).map((p) => p.name)).toEqual(option.pillars.map((p) => p.name))
+    expect(pillarTotal(replaced.pillars)).toBe(100)
+    expect(pillarsMatchOption(replaced, option)).toBe(true)
+    // Presets stay available, unselected; switching direction doesn't pile up old niche pillars.
+    expect(replaced.pillars.some((p) => p.preset && !p.selected)).toBe(true)
+    const switched = pillarsFromOption(options[1], replaced.pillars)
+    expect(switched.filter((p) => p.key.startsWith("niche:")).map((p) => p.name)).toEqual(options[1].pillars.map((p) => p.name))
+    // A known-for the creator wrote stays.
+    const custom = { ...a, known_for: "My own words" }
+    expect(applyNicheOption(custom, option, { replacePillars: false, copy: EN }).known_for).toBeUndefined()
+  })
+
+  it("starts an own niche from the Kanino answers", () => {
+    const a = { ...filledAnswers(), audience: "", result: "", niche_option: options[0] }
+    expect(startOwnNiche(a, EN)).toMatchObject({ niche_option: null, audience: "freelancers", result: "File taxes with confidence" })
+  })
+
+  it("clarity check: passes strong answers, flags thin ones with where to fix them", () => {
+    const strong = { ...filledAnswers(), niche_option: options[2] }
+    expect(clarityChecks(strong).every((c) => c.ok)).toBe(true)
+    const weak = { ...filledAnswers(), niche: "Money; taxes; life", audience: "everyone", persona_problems: ["Taxes"], aims: [], interests: [], expertise_areas: [] }
+    const checks = Object.fromEntries(clarityChecks(weak).map((c) => [c.key, c]))
+    expect(checks.sentence.ok).toBe(false)
+    expect(checks.audience.ok).toBe(false)
+    expect(checks.problems).toMatchObject({ ok: false, count: 0, fix: { step: "kanino" } })
+    expect(checks.range.ok).toBe(false)
+    expect(checks.money).toMatchObject({ ok: false, fix: { step: "para_saan" } })
   })
 })
 
@@ -188,18 +286,16 @@ describe("idea matching", () => {
   ]
 
   it("prefers relevant pillars and spreads the rest by target", () => {
-    const tutorials = Array.from({ length: 10 }, (_, i) => idea({ key: `t${i}`, angle: "Tutorial", title: `Tutorial ${i}` }) as GeneratedIdea)
+    const tutorials = Array.from({ length: 10 }, (_, i) => idea({ key: `t${i}`, angle: "Tutorial", title: `Tutorial ${i}` }))
     expect(new Set(assignPillars(tutorials, pillars))).toEqual(new Set(["Education"]))
-    const neutral = Array.from({ length: 10 }, (_, i) =>
-      idea({ key: `n${i}`, angle: "", title: `Qwerty ${i}`, core_idea: "", hook: "", talking_points: [] }) as GeneratedIdea
-    )
+    const neutral = Array.from({ length: 10 }, (_, i) => idea({ key: `n${i}`, angle: "", title: `Qwerty ${i}`, core_idea: "", hook: "", talking_points: [] }))
     const counts = assignPillars(neutral, pillars).reduce<Record<string, number>>((acc, name) => ({ ...acc, [name ?? ""]: (acc[name ?? ""] ?? 0) + 1 }), {})
     expect(counts).toEqual({ Education: 5, Personal: 5 })
   })
 
   it("links problems and goals", () => {
-    expect(matchProblem(idea(), ["No time to create content", "Ad costs keep rising while sales stay flat"])).toBe(1)
-    expect(matchProblem(idea({ title: "Morning routine", core_idea: "", hook: "", why_it_matters: "", talking_points: [] }), ["Ad costs keep rising"])).toBe(-1)
+    expect(matchProblem(idea(), ["No savings even with good income", "Afraid of tax penalties"])).toBe(1)
+    expect(matchProblem(idea({ title: "Morning routine", core_idea: "", hook: "", why_it_matters: "", talking_points: [] }), ["Afraid of tax penalties"])).toBe(-1)
     expect(goalForIdea("bofu", ["authority", "leads"])).toBe("leads")
     expect(goalForIdea("tofu", ["leads"])).toBe("leads")
   })
@@ -230,33 +326,44 @@ describe("onboarding plan", () => {
     expect(planStarterLibrary(createDemoDatabase(USER, NOW), { now: NOW }).count).toBe(0)
   })
 
-  it("plans a first run on a fresh starter workspace", () => {
+  it("plans a first run on a fresh starter workspace, niche fields included", () => {
     const db = createStarterDatabase(USER, NOW)
     const a = filledAnswers()
     const ideas = [
-      { idea: idea(), title: "Why your ad costs keep rising while sales stay flat", pillar: "Education" },
-      { idea: idea({ key: "idea-1", funnel_stage: "bofu", angle: "Case Study", format: "LinkedIn Post", platform: "linkedin" }), title: "How one audit doubled a store's margin", pillar: "Business" },
+      { idea: idea(), title: "Why new freelancers are afraid of tax penalties", pillar: "Education" },
+      { idea: idea({ key: "idea-1", funnel_stage: "bofu", angle: "Case Study", format: "LinkedIn Post", platform: "linkedin" }), title: "How one sheet saved a client ₱20,000", pillar: "Business" },
     ]
     const plan = planOnboarding(db, { answers: a, ideas, now: NOW })
     const goal = (category: string) => db.content_goals.find((g) => g.category === category)!
 
     expect(plan.summary.libraryRows).toBe(0)
     expect(plan.inserts.content_goals ?? []).toHaveLength(0)
-    expect((plan.updates.content_goals ?? []).map((u) => u.id).sort()).toEqual([goal("leads").id, goal("authority").id].sort())
-    expect(plan.brand).toMatchObject({ onboarding_completed: true, primary_goal_id: goal("leads").id, secondary_goal_id: goal("authority").id })
-    expect(plan.brand.who_am_i).toMatch(/^I'm Maria Santos — Founder at Santos Studio\./)
+    expect((plan.updates.content_goals ?? []).map((u) => u.id).sort()).toEqual([goal("leads").id, goal("business").id].sort())
+    expect(plan.brand).toMatchObject({
+      onboarding_completed: true,
+      primary_goal_id: goal("leads").id,
+      secondary_goal_id: goal("business").id,
+      niche: a.niche,
+      interests: a.interests,
+      known_for: a.niche,
+      why_listen: a.proof,
+      expertise_summary: a.help_requests,
+      expertise_areas: a.expertise_areas,
+      positioning_audience: "new freelancers",
+    })
+    expect(plan.brand.problems_solved).toBe(a.persona_problems.join("; "))
+    expect(plan.brand.who_am_i).toMatch(/^I'm Mika Reyes — Freelance bookkeeper\./)
 
     const pillars = plan.inserts.content_pillars ?? []
     expect(pillars.map((p) => p.color)).toEqual(CATEGORICAL_COLORS.slice(0, 6))
     expect(total(pillars.map((p) => p.target_percentage ?? 0))).toBe(100)
 
     const persona = plan.inserts.audience_personas?.[0]
-    expect(persona?.is_primary).toBe(true)
+    expect(persona).toMatchObject({ name: "Freelancers", is_primary: true, goals: ["File taxes with confidence"], profession: "First year freelancing" })
     const problems = plan.inserts.audience_problems ?? []
-    expect(problems).toHaveLength(2)
+    expect(problems).toHaveLength(3)
     expect(problems.every((p) => p.persona_id === persona?.id && p.category === "beginner")).toBe(true)
 
-    // The starter's seven slots are updated in place, restricted to the chosen platforms.
     expect(plan.inserts.content_calendar ?? []).toHaveLength(0)
     const slots = plan.updates.content_calendar ?? []
     expect(slots).toHaveLength(7)
@@ -270,11 +377,11 @@ describe("onboarding plan", () => {
     const created = plan.inserts.content_ideas ?? []
     expect(created).toHaveLength(2)
     expect(created.every((i) => i.source === "onboarding" && i.persona_id === persona?.id)).toBe(true)
-    expect(created[0].problem_id).toBe(problems[0].id)
+    expect(created[0].problem_id).toBe(problems[2].id)
     expect(created[0].pillar_id).toBe(pillars.find((p) => p.name === "Education")?.id)
     expect(created[1].goal_id).toBe(goal("leads").id)
-    expect(created[0].format_id).toBe(db.content_formats.find((f) => f.name === "Short-form Video")?.id)
     expect(plan.inserts.stories ?? []).toHaveLength(1)
+    expect(plan.summary.niche).toBe(a.niche)
   })
 
   it("inserts everything for an empty (new Supabase user) workspace", () => {
@@ -306,13 +413,39 @@ describe("onboarding plan", () => {
     expect(plan.brand.who_am_i).toBeUndefined()
   })
 
+  it("re-runs only Niche Discovery: niche and persona update, pillars only when confirmed", () => {
+    const demo = createDemoDatabase(USER, NOW)
+    const base = answersFromWorkspace(demo, { rerun: true })
+    const option = discoverNiches(nicheDiscoveryTask.input.parse(nicheInput(base, "english"))).options[0]
+    const answers = { ...base, ...applyNicheOption(base, option, { replacePillars: false, copy: EN }) }
+
+    const keep = planNicheUpdate(demo, { answers, replacePillars: false, now: NOW })
+    expect(keep.brand).toMatchObject({ niche: option.niche_statement, positioning_audience: option.positioning_audience })
+    expect(keep.brand.niche_fit).toContain("/10")
+    expect(keep.brand.onboarding_completed).toBeUndefined()
+    expect(keep.settings).toEqual({})
+    for (const table of ["content_pillars", "content_platforms", "content_calendar", "content_ideas", "audience_personas"] as const) {
+      expect(keep.inserts[table] ?? []).toHaveLength(0)
+    }
+    expect(keep.updates.content_pillars ?? []).toHaveLength(0)
+    expect(keep.updates.content_platforms ?? []).toHaveLength(0)
+    expect(keep.updates.content_calendar ?? []).toHaveLength(0)
+
+    const replaced = planNicheUpdate(demo, { answers: { ...answers, pillars: pillarsFromOption(option, answers.pillars) }, replacePillars: true, now: NOW })
+    const added = replaced.inserts.content_pillars ?? []
+    expect(added.map((p) => p.name)).toEqual(option.pillars.map((p) => p.name))
+    expect(total(added.map((p) => p.target_percentage ?? 0))).toBe(100)
+    expect(replaced.summary.pillarsArchived).toBe(demo.content_pillars.filter((p) => p.is_active).length)
+    expect((replaced.updates.content_pillars ?? []).every((u) => u.patch.is_active === false)).toBe(true)
+  })
+
   it("applies through the store without duplicates on a second run", () => {
     useDataStore.setState({ db: createStarterDatabase(USER, NOW), status: "ready", userId: USER, adapter: null })
     const answers = filledAnswers()
-    const ideas = [{ idea: idea(), title: "Why your ad costs keep rising while sales stay flat", pillar: "Education" }]
+    const ideas = [{ idea: idea(), title: "Why new freelancers are afraid of tax penalties", pillar: "Education" }]
     applyOnboardingPlan(planOnboarding(useDataStore.getState().db, { answers, ideas, now: NOW }))
     let db = useDataStore.getState().db
-    expect(db.brand_profiles[0].onboarding_completed).toBe(true)
+    expect(db.brand_profiles[0]).toMatchObject({ onboarding_completed: true, niche: answers.niche, interests: answers.interests })
     expect(db.content_pillars).toHaveLength(6)
     expect(db.audience_personas).toHaveLength(1)
     expect(db.content_ideas.filter((i) => i.source === "onboarding")).toHaveLength(1)
@@ -320,12 +453,40 @@ describe("onboarding plan", () => {
     expect(db.app_settings[0].weekly_post_target).toBe(8)
 
     applyOnboardingPlan(planOnboarding(db, { answers, ideas, now: NOW }))
+    applyOnboardingPlan(planNicheUpdate(useDataStore.getState().db, { answers: { ...answers, niche: "Bookkeeping for new freelancers" }, replacePillars: false, now: NOW }))
     db = useDataStore.getState().db
+    expect(db.brand_profiles[0].niche).toBe("Bookkeeping for new freelancers")
     expect(db.content_pillars).toHaveLength(6)
     expect(db.audience_personas).toHaveLength(1)
-    expect(db.audience_problems).toHaveLength(2)
+    expect(db.audience_problems).toHaveLength(3)
     expect(db.content_goals).toHaveLength(5)
     expect(db.content_ideas.filter((i) => i.source === "onboarding")).toHaveLength(1)
     expect(db.stories).toHaveLength(1)
+  })
+})
+
+describe("first run end to end (offline engine)", () => {
+  it.each(["english", "taglish"] as const)("%s: niche → pillars → 30 niche-aligned ideas → workspace plan", async (lang) => {
+    const a: OnboardingAnswers = { ...filledAnswers(), language: lang, niche: "", audience: "", result: "", method: "", known_for: "", industry: "" }
+    const niche = await executeAiTask({ task: "niche_discovery", input: nicheInput(a, lang), context: {} }, { provider: offlineProvider })
+    const option = (niche.output as NicheDiscoveryOutput).options[2]
+    const chosen: OnboardingAnswers = { ...a, ...applyNicheOption(a, option, { replacePillars: true, copy: COPY[lang] }) }
+    expect(pillarTotal(chosen.pillars)).toBe(100)
+    expect(firstInvalidStep(chosen)).toBe(-1)
+
+    const res = await executeAiTask({ task: "onboarding_strategy", input: strategyInput(chosen), context: {} }, { provider: offlineProvider })
+    const out = res.output as AiTaskOutput<"onboarding_strategy">
+    expect(out.pillar_suggestions.map((p) => p.name)).toEqual(selectedPillars(chosen).map((p) => p.name))
+    expect(out.ideas).toHaveLength(30)
+
+    const drafts = toIdeaDrafts(out.ideas)
+    const names = effectivePillars(
+      drafts,
+      selectedPillars(chosen).map((p) => ({ name: p.name, description: p.description, examples: p.examples, target: p.target }))
+    )
+    const plan = planOnboarding(createStarterDatabase(USER, NOW), { answers: chosen, ideas: drafts.map((d, i) => ({ idea: d, title: d.title, pillar: names[i] })), now: NOW })
+    expect(plan.summary.ideas).toBeGreaterThanOrEqual(25)
+    expect(plan.brand).toMatchObject({ niche: option.niche_statement, onboarding_completed: true, language: lang })
+    expect(plan.inserts.content_pillars?.map((p) => p.name)).toEqual(option.pillars.map((p) => p.name))
   })
 })

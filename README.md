@@ -1,4 +1,4 @@
-# Personal Brand Content OS
+# Orbi — Personal Brand Content OS
 
 **Strategy → Create → Publish → Analyze → Improve**
 
@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. With no configuration the app runs in **local mode**: a realistic demo workspace is created in your browser (localStorage) so every dashboard is meaningful immediately. Use **Settings → Data** to export/import your workspace, reload the demo, or *Start fresh* (runs the 10-step onboarding).
+Open http://localhost:3000. With no configuration the app runs in **local mode** (your workspace is saved in this browser). A new workspace starts empty and opens the **onboarding**, which begins with **Niche Discovery**: your interests (*hilig*), skills, audience and goals → three niche directions → a strategy, pillars and 30 starter ideas aligned to the niche you pick. Onboarding runs in English or Taglish. **Settings → Data** exports/imports your workspace or starts fresh.
 
 ### Optional: Claude for AI features
 
@@ -55,6 +55,9 @@ Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, run t
 | `node scripts/smoke.mjs <route>` | Headless smoke test of one route (uses local Google Chrome) |
 | `node scripts/route-audit.mjs` | Every route in light / dark / mobile — errors, overflow, screenshots |
 | `node scripts/click-audit.mjs <route>` | Clicks every control on a page and flags controls with no effect |
+| `node scripts/e2e-flow.mjs` | Cross-feature flow: Quick Capture → Idea Bank → convert → Studio → Pipeline → publish → analytics → Calendar → Dashboard |
+
+The QA scripts seed a sample workspace in dev by default (`--seed=demo`); use `--seed=fresh` for an onboarded but empty workspace or `--seed=none` for a true first run. The sample workspace is a test fixture only — real users never see it.
 
 ## Documentation
 

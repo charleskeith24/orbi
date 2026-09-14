@@ -206,7 +206,7 @@ export function compareText(a: string, b: string): number {
 
 /** 1.83 → "1.8x". */
 export function formatMultiple(value: number): string {
-  return `${roundTo(value, 1).toFixed(1)}x`
+  return `${roundTo(value, 1).toFixed(1)}×`
 }
 
 const STOPWORDS = new Set(

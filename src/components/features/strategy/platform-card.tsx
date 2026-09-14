@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button"
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { dataActions } from "@/lib/store"
+import { hasPublishedContent } from "@/components/features/dashboard/first-run"
+import { dataActions, useTable } from "@/lib/store"
 import type { PlatformStrategy } from "@/lib/types"
 import { cn, formatCompact, formatNumber, formatPercent } from "@/lib/utils"
 import {
@@ -117,7 +118,10 @@ export function PlatformCard({
   const errors = validatePlatform(values)
   const invalid = Object.keys(errors).length > 0
   const id = (field: string) => `platform-${strategy.platform}-${field}`
-  const behind = paceVsPlan(row) === "behind"
+  const items = useTable("content_items")
+  // Nothing published anywhere yet: every platform is at zero by definition, not behind.
+  const started = useMemo(() => hasPublishedContent(items), [items])
+  const behind = started && paceVsPlan(row) === "behind"
 
   function set<K extends keyof PlatformFormValues>(key: K, value: PlatformFormValues[K]) {
     setEdits((current) => ({ ...current, [key]: value }))

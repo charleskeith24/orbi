@@ -259,9 +259,9 @@ export function ProblemBankView() {
               href="/audience/problems?untapped=1"
             />
             <StatTile
-              label="High severity"
+              label="Severity 4–5"
               value={formatNumber(stats.severe)}
-              sublabel={`Severity 4–5 · ${formatNumber(stats.severeUntapped)} untapped`}
+              sublabel={`${formatNumber(stats.severeUntapped)} of them untapped`}
               href="/audience/problems?severity=4,5"
             />
             <StatTile

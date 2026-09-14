@@ -268,26 +268,26 @@ Tabs (`?tab=`):
 - **Engagement** (§53) — daily engagement tasks editor with targets.
 - **AI** — `useAiStatus` (provider, model, configured), how to enable Claude (`ANTHROPIC_API_KEY`, `AI_MODEL`, `AI_EFFORT` in `.env.local`), what Brand Context is sent, recent generations log (task, provider, duration, status) with *Clear log*.
 - **Integrations** (§58 Phase 4) — Meta/Facebook, Instagram, TikTok, YouTube, LinkedIn, Google Drive, Canva, Buffer, Metricool, Later, other social analytics APIs: cards with capabilities (import analytics, publish, assets) and an honest status "Not connected — requires OAuth app credentials". Built on a real adapter interface in `src/lib/integrations` (`IntegrationAdapter { id, name, category, capabilities, status(), connect() }` where `connect()` reports it isn't configured) — **no fake connections**. Include a working **CSV analytics import** (map columns → `logMetrics` for matched items by URL or title) as the manual path.
-- **Data** — mode indicator (local / Supabase); **Export workspace** (JSON download), **Import workspace** (validate, confirm replace → `replaceWorkspace`), **Load demo workspace** (confirm), **Start fresh** (confirm → `createStarterDatabase` → `/onboarding`), local storage usage; pointer to `docs/SUPABASE.md`.
+- **Data** — mode indicator (local / Supabase); **Export workspace** (JSON download), **Import workspace** (validate, confirm replace → `replaceWorkspace`), **Start fresh** (confirm → `createStarterDatabase` → `/onboarding`), local storage usage; pointer to `docs/SUPABASE.md`.
 
 ---
 
 ## F18 · Onboarding — `/onboarding`
 
-**Owns:** `src/app/onboarding/page.tsx`, `src/components/features/onboarding/**` (the layout already exists) · **Spec:** §48
+**Owns:** `src/app/onboarding/page.tsx`, `src/components/features/onboarding/**` · **Spec:** §48 (reshaped: niche first)
 
-Full-screen wizard (no app shell) with a 10-step progress indicator, Back / Continue, keyboard support, mobile layout, and a localStorage draft so a refresh doesn't lose answers:
-1. Who are you? (name, brand name, role, industry, years of experience, location)
-2. What do you want to be known for? (known for, problems you solve, why listen, point of view)
-3. Who do you want to reach? (primary persona: name, profession, experience level, goals, problems, platforms)
-4. What are your expertise areas? (chips + suggestions)
-5. Choose your content pillars (presets + custom, target % summing to 100)
-6. Choose platforms (main platforms; activates platform strategies)
-7. Set posting targets (weekly post target; posting schedule: recommended weekly strategy or custom per day)
-8. Choose your personal brand goals (primary + secondary, with targets)
-9. Configure your tone (language English / Tagalog / Taglish, tones, personality traits, CTA style)
-10. Generate Initial Strategy — `onboarding_strategy` → positioning statement, known-for, point of view, pillar suggestions, **30 initial content ideas** (select/deselect) → *Finish setup* writes brand profile (`onboarding_completed: true`), goals, pillars, persona + problems, platform strategies, posting slots, settings and ideas (source `onboarding`) → `/` with a welcome toast.
-- Works from a fresh starter workspace and for new Supabase users (insert any missing starter-library rows from `createStarterDatabase` first). If onboarding is already complete, say so and allow re-running (updates Brand HQ) or going back.
+Every new workspace starts empty and lands here. The onboarding first helps the user **find their niche**, then pre-fills the rest of the setup from it so the whole OS — pillars, audience, hooks, ideas and the AI's voice — is aligned from day one.
+
+0. **Language** — English or Taglish for the whole onboarding (switchable at any step); pre-selects the brand's content language.
+1. **Hilig** — topics they could talk about for hours (suggestion chips + free text).
+2. **Galing** — skills, what people ask them for help with, experience, results/proof (optional proof story → Story Vault).
+3. **Kanino** — who they want to help, where those people are now, their problems.
+4. **Para saan** — what the brand should do for them (clients, career, audience, products, speaking, community).
+5. **Niche suggestions** — `niche_discovery` AI task → 3 distinct directions, each with a one-line niche, audience, positioning statement, niche-specific pillars, 5 sample ideas, monetization paths, passion / expertise / demand fit scores with reasons, and one honest risk. Pick one, edit it, or write your own.
+6. **Clarity check** — one clear sentence, a specific audience, ≥3 real problems, enough range for 30 ideas, a monetization path (warns, never blocks).
+7. **Confirm the pre-filled setup** — identity basics, platforms + posting targets + schedule, voice, pillars (sum 100) → **Generate initial strategy** (`onboarding_strategy` with the niche) → 30 niche-aligned starter ideas → *Finish setup* writes Brand HQ (incl. `niche`, `interests`, `niche_fit`), goals, pillars, persona + problems, platforms, slots, settings and ideas → `/`.
+
+`/onboarding?step=niche` re-runs Niche Discovery for an existing workspace (Brand HQ links here). Works offline (template engine) and with Claude.
 
 ---
 

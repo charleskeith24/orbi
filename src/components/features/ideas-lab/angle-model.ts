@@ -71,11 +71,12 @@ export function sortAngles(angles: readonly ContentAngle[], sort: AngleSort, sta
   })
 }
 
-/** Angles never used in an idea or content item — defaults first. */
-export function untriedAngles(angles: readonly ContentAngle[], stats: Map<ID, AngleStats>): ContentAngle[] {
-  return angles
-    .filter((angle) => (stats.get(angle.id)?.uses ?? 0) === 0)
-    .sort((a, b) => Number(b.is_default) - Number(a.is_default) || a.name.localeCompare(b.name))
+/** Angles to rotate in: never used first, then the least used (defaults before custom on ties). */
+export function anglesToRotate(angles: readonly ContentAngle[], stats: Map<ID, AngleStats>, limit = 8): ContentAngle[] {
+  const uses = (angle: ContentAngle) => stats.get(angle.id)?.uses ?? 0
+  return [...angles]
+    .sort((a, b) => uses(a) - uses(b) || Number(b.is_default) - Number(a.is_default) || a.name.localeCompare(b.name))
+    .slice(0, limit)
 }
 
 /** Required, at most 40 characters, unique (ignoring case and punctuation). */

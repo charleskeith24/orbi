@@ -1,20 +1,13 @@
 /**
- * Onboarding wizard model (spec §48): the answers collected in steps 1–9, their defaults and
- * validation, and the pure helpers behind the steps — pillar rebalancing, the posts-per-platform
- * split, the recommended weekly posting strategy (§49) and the `onboarding_strategy` AI input.
- * No React and no store access, so it is unit-tested directly.
+ * Onboarding wizard model (spec §48): the flows (first run, re-run, Niche Discovery only), the answers
+ * each step collects, their defaults and validation, and the pure helpers behind the steps — pillar
+ * rebalancing, the posts-per-platform split, the recommended weekly posting strategy (§49), aims → goals
+ * and the `onboarding_strategy` AI input. No React and no store access, so it is unit-tested directly.
  */
+import type { NicheAim, NicheOption } from "@/lib/ai"
 import { positioningStatement } from "@/lib/ai/context"
 import type { AiTaskInput } from "@/lib/ai/tasks"
-import {
-  CATEGORICAL_COLORS,
-  GOAL_CATEGORY_IDS,
-  LANGUAGES,
-  PERSONALITY_TRAITS,
-  PILLAR_PRESETS,
-  PLATFORM_IDS,
-  TONES,
-} from "@/lib/constants"
+import { CATEGORICAL_COLORS, GOAL_CATEGORY_IDS, LANGUAGES, PERSONALITY_TRAITS, PILLAR_PRESETS, PLATFORM_IDS, TONES } from "@/lib/constants"
 import { GOALS, PLATFORM_STRATEGIES, POSTING_SLOTS, type FormatName } from "@/lib/data/seed/starter-data"
 import type {
   BrandLanguage,
@@ -28,102 +21,47 @@ import type {
   PlatformId,
   ProblemCategory,
 } from "@/lib/types"
+import { EN, type Copy } from "./copy-en"
 
 /* ---------------------------------- Steps --------------------------------- */
 
 export type StepKey =
+  | "welcome"
+  | "hilig"
+  | "galing"
+  | "kanino"
+  | "para_saan"
+  | "niche"
   | "identity"
-  | "positioning"
-  | "audience"
-  | "expertise"
-  | "pillars"
   | "platforms"
-  | "posting"
-  | "goals"
   | "voice"
+  | "pillars"
   | "strategy"
 
-export interface StepMeta {
-  key: StepKey
-  /** Label under the progress segment. */
-  short: string
-  title: string
-  description: string
+/** first = a new workspace · rerun = setup again from Brand HQ · niche = only Niche Discovery (`/onboarding?step=niche`). */
+export type WizardMode = "first" | "rerun" | "niche"
+
+/** Niche Discovery first, then the setup it pre-fills. The welcome screen picks the language and isn't counted. */
+export const FULL_FLOW: readonly StepKey[] = ["welcome", "hilig", "galing", "kanino", "para_saan", "niche", "identity", "platforms", "voice", "pillars", "strategy"]
+export const NICHE_FLOW: readonly StepKey[] = ["hilig", "galing", "kanino", "para_saan", "niche"]
+export const DISCOVERY_STEPS: ReadonlySet<StepKey> = new Set<StepKey>(NICHE_FLOW)
+
+export const flowFor = (mode: WizardMode): readonly StepKey[] => (mode === "niche" ? NICHE_FLOW : FULL_FLOW)
+export const countedSteps = (flow: readonly StepKey[]) => flow.filter((k) => k !== "welcome")
+export const stepIndex = (flow: readonly StepKey[], key: StepKey) => flow.indexOf(key)
+
+/** 1-based number shown for a step (0 for the welcome screen). */
+export function stepNumber(flow: readonly StepKey[], index: number): number {
+  const key = flow[index]
+  return key && key !== "welcome" ? countedSteps(flow).indexOf(key) + 1 : 0
 }
 
-export const STEPS: StepMeta[] = [
-  {
-    key: "identity",
-    short: "You",
-    title: "Who are you?",
-    description: "The basics your audience should know — every idea, hook and script is written from here.",
-  },
-  {
-    key: "positioning",
-    short: "Known for",
-    title: "What do you want to be known for?",
-    description: "Your positioning is the filter for everything you post. Be specific — specific is memorable.",
-  },
-  {
-    key: "audience",
-    short: "Audience",
-    title: "Who do you want to reach?",
-    description: "Describe your primary persona: the one kind of person your content is really for.",
-  },
-  {
-    key: "expertise",
-    short: "Expertise",
-    title: "What are your expertise areas?",
-    description: "Pick the topics you can talk about from real experience, not just research.",
-  },
-  {
-    key: "pillars",
-    short: "Pillars",
-    title: "Choose your content pillars",
-    description: "The themes you rotate through. Targets set your content mix and must add up to 100%.",
-  },
-  {
-    key: "platforms",
-    short: "Platforms",
-    title: "Choose your platforms",
-    description: "Where you'll show up. A few platforms done consistently beat every platform done occasionally.",
-  },
-  {
-    key: "posting",
-    short: "Posting",
-    title: "Set your posting targets",
-    description: "A weekly target and a posting schedule you can actually sustain.",
-  },
-  {
-    key: "goals",
-    short: "Goals",
-    title: "Choose your personal brand goals",
-    description: "What should all this content achieve? Pick one primary goal and, if you like, a secondary one.",
-  },
-  {
-    key: "voice",
-    short: "Voice",
-    title: "Configure your tone",
-    description: "How you sound. The Content Strategist and every AI draft follow these choices.",
-  },
-  {
-    key: "strategy",
-    short: "Strategy",
-    title: "Your initial strategy",
-    description: "A starting strategy built from your answers. Edit anything, choose your ideas, then finish setup.",
-  },
-]
-
-export const STEP_COUNT = STEPS.length
-export const LAST_STEP = STEP_COUNT - 1
-/** The voice step — its primary action generates the strategy. */
-export const GENERATE_STEP = STEP_COUNT - 2
-
-export const stepIndex = (key: StepKey) => STEPS.findIndex((s) => s.key === key)
+/** The pillars step — its primary action generates the strategy. */
+export const GENERATE_KEY: StepKey = "pillars"
 
 /* ---------------------------------- Limits -------------------------------- */
 
-/** Text limits match the `onboarding_strategy` input schema so the gateway never rejects answers. */
+/** Text limits match the AI task input schemas so the gateway never rejects answers. */
 export const LIMITS = {
   name: 120,
   brandName: 120,
@@ -134,8 +72,20 @@ export const LIMITS = {
   longText: 1000,
   expertise: 60,
   expertiseMax: 10,
+  interest: 60,
+  interestsMin: 2,
+  interestsMax: 12,
+  audience: 80,
+  audiencesMax: 6,
+  aimsMax: 3,
+  help: 600,
+  proof: 600,
+  audienceGoal: 300,
+  niche: 200,
+  nicheFit: 600,
   problem: 200,
   problemsMax: 10,
+  problemsGood: 3,
   personaGoal: 200,
   personaGoalsMax: 8,
   story: 2000,
@@ -154,12 +104,7 @@ export const LIMITS = {
 
 /* ---------------------------------- Options ------------------------------- */
 
-export const EXPERIENCE_LEVELS = [
-  { id: "Beginner", label: "Beginner" },
-  { id: "Intermediate", label: "Intermediate" },
-  { id: "Advanced", label: "Advanced" },
-  { id: "Mixed", label: "Mixed levels" },
-] as const
+export const EXPERIENCE_LEVELS = ["Beginner", "Intermediate", "Advanced", "Mixed"] as const
 
 export function problemCategoryFor(level: string): ProblemCategory {
   const l = level.trim().toLowerCase()
@@ -168,22 +113,37 @@ export function problemCategoryFor(level: string): ProblemCategory {
   return "intermediate"
 }
 
-export const LANGUAGE_NOTES: Record<BrandLanguage, string> = {
-  english: "Clear, conversational English.",
-  tagalog: "Natural Filipino — the way you'd explain it to a friend.",
-  taglish: "English and Tagalog mixed, the way you actually talk.",
-}
+/** "Para saan": what the brand should do for the creator. */
+export const AIM_IDS = ["clients", "career", "audience", "products", "speaking", "community"] as const satisfies readonly NicheAim[]
 
-export const CTA_PRESETS: { label: string; text: string }[] = [
-  { label: "Soft", text: "Soft by default — comment a keyword to get the resource, or DM me your situation." },
-  { label: "Conversation", text: "End with a question people can answer from their own experience." },
-  { label: "Direct", text: "Direct on conversion posts only — book a call or grab the offer through the link." },
-]
+/** Each aim becomes the goal category it's measured by. */
+export const AIM_GOAL: Record<NicheAim, GoalCategory> = {
+  clients: "leads",
+  career: "authority",
+  audience: "awareness",
+  products: "business",
+  speaking: "authority",
+  community: "community",
+}
+const GOAL_AIM: Record<GoalCategory, NicheAim> = { leads: "clients", authority: "speaking", awareness: "audience", business: "products", community: "community" }
+
+/** Goal categories the aims point to, in pick order. */
+export const aimGoals = (aims: readonly NicheAim[]): GoalCategory[] => [...new Set(aims.map((aim) => AIM_GOAL[aim]))]
+
+/** Primary and secondary goal after the aims change — a primary that's still among them is kept. */
+export function goalsFromAims(
+  aims: readonly NicheAim[],
+  current: Pick<OnboardingAnswers, "primary_goal">
+): Pick<OnboardingAnswers, "primary_goal" | "secondary_goal"> {
+  const categories = aimGoals(aims)
+  const primary = current.primary_goal && categories.includes(current.primary_goal) ? current.primary_goal : (categories[0] ?? null)
+  return { primary_goal: primary, secondary_goal: categories.find((c) => c !== primary) ?? null }
+}
 
 /* ---------------------------------- Answers ------------------------------- */
 
 export interface PillarDraft {
-  /** Stable local key: "preset:<name>" or "custom:<n>". */
+  /** Stable local key: "preset:<name>", "niche:<n>-<slug>", "existing:<id>" or "custom:<n>". */
   key: string
   name: string
   description: string
@@ -215,46 +175,60 @@ export interface GoalTarget {
 }
 
 export interface OnboardingAnswers {
-  // 1 · Who are you?
+  // Hilig
+  interests: string[]
+  // Galing
+  expertise_areas: string[]
+  help_requests: string
+  years_experience: number | null
+  proof: string
+  /** Optional proof story — saved to the Story Vault. */
+  story: string
+  // Kanino
+  audiences: string[]
+  /** "Where are they now?" — saved as the persona's profession/situation. */
+  persona_profession: string
+  persona_experience: string
+  /** "Where do they want to be?" — the persona's first goal. */
+  audience_goal: string
+  persona_problems: string[]
+  persona_platforms: PlatformId[]
+  // Para saan
+  aims: NicheAim[]
+  primary_goal: GoalCategory | null
+  secondary_goal: GoalCategory | null
+  goal_targets: Partial<Record<GoalCategory, GoalTarget>>
+  // Niche
+  niche: string
+  niche_fit: string
+  /** The suggested direction the niche came from (null = written by the creator). */
+  niche_option: NicheOption | null
+  audience: string
+  result: string
+  method: string
+  // Identity
   name: string
   brand_name: string
   role: string
   industry: string
-  years_experience: number | null
   location: string
-  // 2 · Known for
-  audience: string
-  result: string
-  method: string
+  // Carried over from Brand HQ on a re-run; edited in the strategy step or Brand HQ
   known_for: string
   problems_solved: string
   why_listen: string
   point_of_view: string
-  // 3 · Primary persona
-  persona_name: string
-  persona_profession: string
-  persona_experience: string
-  persona_goals: string[]
-  persona_problems: string[]
-  persona_platforms: PlatformId[]
-  // 4 · Expertise
-  expertise_areas: string[]
   expertise_summary: string
-  story: string
-  // 5 · Pillars
+  persona_name: string
+  persona_goals: string[]
+  // Pillars
   pillars: PillarDraft[]
-  // 6 · Platforms
+  // Platforms & schedule
   platforms: PlatformId[]
-  // 7 · Posting
   /** Posts per week per main platform; the weekly post target is their sum. */
   split: Partial<Record<PlatformId, number>>
   schedule_mode: "recommended" | "custom"
   custom_schedule: ScheduleDay[]
-  // 8 · Goals
-  primary_goal: GoalCategory | null
-  secondary_goal: GoalCategory | null
-  goal_targets: Partial<Record<GoalCategory, GoalTarget>>
-  // 9 · Voice
+  // Voice
   language: BrandLanguage
   tones: BrandTone[]
   personality: PersonalityTrait[]
@@ -278,36 +252,45 @@ export function presetPillars(): PillarDraft[] {
 
 export function emptyAnswers(): OnboardingAnswers {
   return {
+    interests: [],
+    expertise_areas: [],
+    help_requests: "",
+    years_experience: null,
+    proof: "",
+    story: "",
+    audiences: [],
+    persona_profession: "",
+    persona_experience: "",
+    audience_goal: "",
+    persona_problems: [],
+    persona_platforms: [],
+    aims: [],
+    primary_goal: null,
+    secondary_goal: null,
+    goal_targets: {},
+    niche: "",
+    niche_fit: "",
+    niche_option: null,
+    audience: "",
+    result: "",
+    method: "",
     name: "",
     brand_name: "",
     role: "",
     industry: "",
-    years_experience: null,
     location: "",
-    audience: "",
-    result: "",
-    method: "",
     known_for: "",
     problems_solved: "",
     why_listen: "",
     point_of_view: "",
-    persona_name: "",
-    persona_profession: "",
-    persona_experience: "",
-    persona_goals: [],
-    persona_problems: [],
-    persona_platforms: [],
-    expertise_areas: [],
     expertise_summary: "",
-    story: "",
+    persona_name: "",
+    persona_goals: [],
     pillars: presetPillars(),
     platforms: [],
     split: {},
     schedule_mode: "recommended",
     custom_schedule: [],
-    primary_goal: null,
-    secondary_goal: null,
-    goal_targets: {},
     language: "english",
     tones: ["conversational"],
     personality: [],
@@ -319,8 +302,16 @@ export function emptyAnswers(): OnboardingAnswers {
 
 export const norm = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ")
 
+const upperFirst = (value: string) => (value ? value.charAt(0).toUpperCase() + value.slice(1) : value)
+
 export function firstName(name: string): string {
   return name.trim().split(/\s+/)[0]?.replace(/["“”']/g, "") ?? ""
+}
+
+/** The primary persona's name: kept from Brand HQ on a re-run, else the first audience from "Kanino". */
+export function personaNameOf(a: Pick<OnboardingAnswers, "persona_name" | "audiences" | "audience">): string {
+  const first = a.audiences.find((x) => x.trim()) ?? a.audience
+  return (a.persona_name.trim() || upperFirst(first.trim())).slice(0, 80)
 }
 
 /* ------------------------------- Math helpers ----------------------------- */
@@ -609,82 +600,88 @@ export function parsePositioning(
 
 /** Field id → message. Ids double as DOM ids (`ob-<field>`) so the first invalid field can be focused. */
 export type StepErrors = Partial<Record<string, string>>
+export type ErrorCopy = Copy["errors"]
 
-export function validateStep(key: StepKey, a: OnboardingAnswers): StepErrors {
+const filled = (list: readonly string[]) => list.filter((x) => x.trim()).length
+
+export function validateStep(key: StepKey, a: OnboardingAnswers, e: ErrorCopy = EN.errors): StepErrors {
   const errors: StepErrors = {}
   const need = (field: keyof OnboardingAnswers, message: string) => {
     const value = a[field]
     if (typeof value === "string" && !value.trim()) errors[field] = message
   }
+  const years = () => {
+    if (a.years_experience !== null && (a.years_experience < 0 || a.years_experience > LIMITS.years)) errors.years_experience = e.years(LIMITS.years)
+  }
   switch (key) {
-    case "identity":
-      need("name", "Add your name.")
-      need("role", "Add your role — e.g. Founder, Marketing lead, Coach.")
-      need("industry", "Add your industry.")
-      if (a.years_experience !== null && (a.years_experience < 0 || a.years_experience > LIMITS.years)) {
-        errors.years_experience = `Use a number between 0 and ${LIMITS.years}.`
-      }
+    case "welcome":
+    case "strategy":
       break
-    case "positioning":
-      need("audience", "Who do you help?")
-      need("result", "What result do you help them get?")
-      need("known_for", "Say what you want to be known for.")
+    case "hilig":
+      if (filled(a.interests) < LIMITS.interestsMin) errors.interests = e.interests
       break
-    case "audience":
-      need("persona_name", "Name your primary persona.")
-      if (!a.persona_problems.some((p) => p.trim())) errors.persona_problems = "Add at least one problem they're struggling with."
+    case "galing":
+      if (!filled(a.expertise_areas) && !a.help_requests.trim()) errors.expertise_areas = e.skills
+      years()
       break
-    case "expertise":
-      if (!a.expertise_areas.length) errors.expertise_areas = "Pick at least one expertise area."
+    case "kanino":
+      if (!filled(a.audiences)) errors.audiences = e.audiences
+      if (!filled(a.persona_problems)) errors.persona_problems = e.problems
       break
-    case "pillars": {
-      const selected = selectedPillars(a)
-      const total = pillarTotal(a.pillars)
-      if (selected.length < LIMITS.pillarsMin) errors.pillars = `Choose at least ${LIMITS.pillarsMin} pillars — a mix needs contrast.`
-      else if (selected.length > LIMITS.pillarsMax) errors.pillars = `Choose at most ${LIMITS.pillarsMax} pillars.`
-      else if (selected.some((p) => !p.name.trim())) errors.pillars = "Every pillar needs a name."
-      else if (new Set(selected.map((p) => norm(p.name))).size !== selected.length) errors.pillars = "Pillar names must be unique."
-      else if (selected.some((p) => !Number.isInteger(p.target) || p.target < 1)) errors.pillars = "Give every pillar a whole-number target of at least 1%."
-      else if (total !== 100) errors.pillars = `Targets add up to ${total}% — they need to total 100%.`
-      break
-    }
-    case "platforms":
-      if (!a.platforms.length) errors.platforms = "Choose at least one platform."
-      break
-    case "posting": {
-      if (a.schedule_mode === "custom") {
-        const days = normalizeSchedule(a.custom_schedule, a.platforms)
-        if (!days.some((d) => d.enabled)) errors.schedule = "Turn on at least one posting day."
-        else if (days.some((d) => d.enabled && !d.platforms.length)) errors.schedule = "Every posting day needs a platform."
-      }
-      break
-    }
-    case "goals": {
-      if (!a.primary_goal) errors.primary_goal = "Choose your primary goal."
+    case "para_saan":
+      if (!a.aims.length) errors.aims = e.aims
       for (const category of chosenGoals(a)) {
         const target = goalTargetFor(a, category)
-        if (target.value !== null && (!Number.isFinite(target.value) || target.value < 1)) {
-          errors[`goal_${category}`] = "Use a target of at least 1, or leave it empty."
-        }
+        if (target.value !== null && (!Number.isFinite(target.value) || target.value < 1)) errors[`goal_${category}`] = e.goalTarget
+      }
+      break
+    case "niche":
+      if (!a.niche.trim()) errors.niche = e.niche
+      else {
+        need("audience", e.audience)
+        need("result", e.result)
+      }
+      break
+    case "identity":
+      need("name", e.name)
+      need("role", e.role)
+      need("industry", e.industry)
+      years()
+      break
+    case "platforms": {
+      if (!a.platforms.length) errors.platforms = e.platforms
+      else if (a.schedule_mode === "custom") {
+        const days = normalizeSchedule(a.custom_schedule, a.platforms)
+        if (!days.some((d) => d.enabled)) errors.schedule = e.scheduleDay
+        else if (days.some((d) => d.enabled && !d.platforms.length)) errors.schedule = e.schedulePlatform
       }
       break
     }
     case "voice":
-      if (!a.tones.length) errors.tones = "Pick at least one tone."
-      if (!a.personality.length) errors.personality = "Pick at least one personality trait."
+      if (!a.tones.length) errors.tones = e.tones
+      if (!a.personality.length) errors.personality = e.personality
       break
-    case "strategy":
+    case "pillars": {
+      const selected = selectedPillars(a)
+      const total = pillarTotal(a.pillars)
+      if (selected.length < LIMITS.pillarsMin) errors.pillars = e.pillarsMin(LIMITS.pillarsMin)
+      else if (selected.length > LIMITS.pillarsMax) errors.pillars = e.pillarsMax(LIMITS.pillarsMax)
+      else if (selected.some((p) => !p.name.trim())) errors.pillars = e.pillarNames
+      else if (new Set(selected.map((p) => norm(p.name))).size !== selected.length) errors.pillars = e.pillarsUnique
+      else if (selected.some((p) => !Number.isInteger(p.target) || p.target < 1)) errors.pillars = e.pillarsWhole
+      else if (total !== 100) errors.pillars = e.pillarsTotal(total)
       break
+    }
   }
   return errors
 }
 
 export const hasErrors = (errors: StepErrors) => Object.keys(errors).length > 0
 
-/** Index of the first step (before `upTo`) whose answers are invalid, or -1. */
-export function firstInvalidStep(a: OnboardingAnswers, upTo = LAST_STEP): number {
-  for (let i = 0; i < Math.min(upTo, STEP_COUNT); i++) {
-    if (hasErrors(validateStep(STEPS[i].key, a))) return i
+/** Index of the first step in `flow` (before `upTo`) whose answers are invalid, or -1. */
+export function firstInvalidStep(a: OnboardingAnswers, flow: readonly StepKey[] = FULL_FLOW, upTo = flow.length - 1, e: ErrorCopy = EN.errors): number {
+  for (let i = 0; i < Math.min(upTo, flow.length); i++) {
+    if (hasErrors(validateStep(flow[i], a, e))) return i
   }
   return -1
 }
@@ -703,7 +700,7 @@ export function strategyInput(a: OnboardingAnswers): AiTaskInput<"onboarding_str
     years_experience:
       a.years_experience === null || !Number.isFinite(a.years_experience) ? null : clampInt(a.years_experience, 0, LIMITS.years),
     expertise_areas: a.expertise_areas.map((x) => clip(x, LIMITS.expertise)).filter(Boolean).slice(0, 15),
-    audience: clip(a.audience || a.persona_name, LIMITS.positioning),
+    audience: clip(a.audience || personaNameOf(a), LIMITS.positioning),
     result: clip(a.result, LIMITS.positioning),
     method: clip(a.method, LIMITS.positioning),
     audience_problems: a.persona_problems.map((p) => clip(p, LIMITS.problem)).filter(Boolean).slice(0, LIMITS.problemsMax),
@@ -714,17 +711,27 @@ export function strategyInput(a: OnboardingAnswers): AiTaskInput<"onboarding_str
     personality: a.personality.slice(0, 10),
     story: clip(a.story, LIMITS.story),
     idea_count: LIMITS.ideaCount,
+    niche: clip(a.niche, LIMITS.niche),
+    interests: a.interests.map((x) => clip(x, LIMITS.interest)).filter(Boolean).slice(0, LIMITS.interestsMax),
+    niche_fit: clip(a.niche_fit, LIMITS.nicheFit),
+    pillars: selectedPillars(a)
+      .filter((p) => p.name.trim())
+      .slice(0, LIMITS.pillarsMax)
+      .map((p) => ({ name: clip(p.name, LIMITS.pillarName), description: clip(p.description, LIMITS.pillarDescription), target_percentage: clampInt(p.target || 0, 0, 100) })),
   }
 }
 
-/** Identifies the answers a strategy was generated from (changes → the strategy is out of date). */
-export const strategyKey = (a: OnboardingAnswers) => JSON.stringify(strategyInput(a))
+/** Identifies the answers a strategy was generated from (changes → the strategy is out of date). Pillar targets don't count. */
+export const strategyKey = (a: OnboardingAnswers) => {
+  const input = strategyInput(a)
+  return JSON.stringify({ ...input, pillars: (input.pillars ?? []).map((p) => p.name) })
+}
 
 /* ------------------------------ From the workspace ------------------------ */
 
 /**
  * Answers pre-filled from whatever the workspace already holds — blank for a fresh workspace,
- * the current Brand HQ when setup is re-run (so re-running edits rather than retypes).
+ * the current Brand HQ when setup (or Niche Discovery) is re-run, so re-running edits rather than retypes.
  */
 export function answersFromWorkspace(db: Database, options: { rerun?: boolean } = {}): OnboardingAnswers {
   const a = emptyAnswers()
@@ -742,10 +749,15 @@ export function answersFromWorkspace(db: Database, options: { rerun?: boolean } 
       method: brand.positioning_method,
       known_for: brand.known_for,
       problems_solved: brand.problems_solved,
+      help_requests: brand.problems_solved.slice(0, LIMITS.help),
       why_listen: brand.why_listen,
+      proof: brand.why_listen.slice(0, LIMITS.proof),
       point_of_view: brand.point_of_view,
       expertise_areas: [...brand.expertise_areas].slice(0, LIMITS.expertiseMax),
       expertise_summary: brand.expertise_summary,
+      niche: (brand.niche ?? "").slice(0, LIMITS.niche),
+      niche_fit: brand.niche_fit ?? "",
+      interests: [...(brand.interests ?? [])].slice(0, LIMITS.interestsMax),
       platforms: platformsInOrder(brand.main_platforms),
       language: brand.language,
       tones: brand.tones.length ? brand.tones.slice(0, LIMITS.tonesMax) : a.tones,
@@ -761,9 +773,11 @@ export function answersFromWorkspace(db: Database, options: { rerun?: boolean } 
     const problems = db.audience_problems.filter((p) => p.persona_id === persona.id).map((p) => p.problem)
     Object.assign(a, {
       persona_name: persona.name,
+      audiences: [persona.name.slice(0, LIMITS.audience)],
       persona_profession: persona.profession,
       persona_experience: persona.experience_level,
-      persona_goals: persona.goals.slice(0, LIMITS.personaGoalsMax),
+      audience_goal: (persona.goals[0] ?? "").slice(0, LIMITS.audienceGoal),
+      persona_goals: persona.goals.slice(1, LIMITS.personaGoalsMax),
       persona_problems: (problems.length ? problems : persona.problems).slice(0, LIMITS.problemsMax),
       persona_platforms: platformsInOrder(persona.platforms),
     } satisfies Partial<OnboardingAnswers>)
@@ -825,6 +839,7 @@ export function answersFromWorkspace(db: Database, options: { rerun?: boolean } 
     for (const goal of [primary, secondary]) {
       if (goal) a.goal_targets[goal.category] = { value: goal.target_value, period: goal.period }
     }
+    a.aims = [...new Set(chosenGoals(a).map((c) => GOAL_AIM[c]))]
   }
   return a
 }
@@ -832,23 +847,28 @@ export function answersFromWorkspace(db: Database, options: { rerun?: boolean } 
 /* -------------------------------- Draft safety ---------------------------- */
 
 const STRING_FIELDS = [
+  "help_requests",
+  "proof",
+  "story",
+  "persona_profession",
+  "persona_experience",
+  "audience_goal",
+  "niche",
+  "niche_fit",
+  "audience",
+  "result",
+  "method",
   "name",
   "brand_name",
   "role",
   "industry",
   "location",
-  "audience",
-  "result",
-  "method",
   "known_for",
   "problems_solved",
   "why_listen",
   "point_of_view",
-  "persona_name",
-  "persona_profession",
-  "persona_experience",
   "expertise_summary",
-  "story",
+  "persona_name",
   "cta_style",
   "always_do",
   "never_do",
@@ -864,16 +884,58 @@ function oneOf<T extends string>(value: unknown, allowed: readonly T[]): value i
 const listOf = <T extends string>(value: unknown, allowed: readonly T[]): T[] =>
   Array.isArray(value) ? value.filter((x): x is T => oneOf(x, allowed)) : []
 
+const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value)
+const text = (value: unknown) => (typeof value === "string" ? value : "")
+const NICHE_KINDS = ["expertise", "passion", "audience"] as const
+
+/** A stored niche direction, or null when it's malformed. */
+export function sanitizeNicheOption(raw: unknown): NicheOption | null {
+  if (!isRecord(raw) || !oneOf(raw.kind, NICHE_KINDS) || typeof raw.name !== "string" || typeof raw.niche_statement !== "string") return null
+  const fitRaw = isRecord(raw.fit) ? raw.fit : {}
+  const fit = (value: unknown) => {
+    const f = isRecord(value) ? value : {}
+    return { score: typeof f.score === "number" && Number.isFinite(f.score) ? clampInt(f.score, 1, 10) : 5, reason: text(f.reason) }
+  }
+  const rows = (value: unknown) => (Array.isArray(value) ? value.filter(isRecord) : [])
+  return {
+    kind: raw.kind,
+    name: raw.name,
+    niche_statement: raw.niche_statement,
+    audience: text(raw.audience),
+    industry: text(raw.industry),
+    positioning_statement: text(raw.positioning_statement),
+    positioning_audience: text(raw.positioning_audience),
+    positioning_result: text(raw.positioning_result),
+    positioning_method: text(raw.positioning_method),
+    pillars: rows(raw.pillars)
+      .filter((p) => typeof p.name === "string")
+      .slice(0, LIMITS.pillarsMax)
+      .map((p) => ({ name: String(p.name), description: text(p.description), target_percentage: typeof p.target_percentage === "number" && Number.isFinite(p.target_percentage) ? p.target_percentage : 0 })),
+    sample_posts: rows(raw.sample_posts)
+      .filter((p) => typeof p.title === "string")
+      .slice(0, 8)
+      .map((p) => ({ title: String(p.title), hook: text(p.hook) })),
+    monetization: strings(raw.monetization, 8),
+    fit: { passion: fit(fitRaw.passion), expertise: fit(fitRaw.expertise), demand: fit(fitRaw.demand) },
+    why_it_fits: text(raw.why_it_fits),
+    risk: text(raw.risk),
+  }
+}
+
 /** Answers restored from a stored draft, with anything malformed replaced by its default. */
 export function sanitizeAnswers(raw: unknown): OnboardingAnswers {
   const out = emptyAnswers()
-  if (!raw || typeof raw !== "object") return out
-  const r = raw as Record<string, unknown>
+  if (!isRecord(raw)) return out
+  const r = raw
   for (const field of STRING_FIELDS) {
     const value = r[field]
     if (typeof value === "string") out[field] = value
   }
   if (typeof r.years_experience === "number" && Number.isFinite(r.years_experience)) out.years_experience = r.years_experience
+  out.interests = strings(r.interests, LIMITS.interestsMax)
+  out.audiences = strings(r.audiences, LIMITS.audiencesMax)
+  out.aims = listOf(r.aims, AIM_IDS).slice(0, LIMITS.aimsMax)
+  out.niche_option = sanitizeNicheOption(r.niche_option)
   out.persona_goals = strings(r.persona_goals, LIMITS.personaGoalsMax)
   out.persona_problems = strings(r.persona_problems, LIMITS.problemsMax)
   out.persona_platforms = listOf(r.persona_platforms, PLATFORM_IDS)
@@ -882,7 +944,7 @@ export function sanitizeAnswers(raw: unknown): OnboardingAnswers {
 
   if (Array.isArray(r.pillars)) {
     const pillars = r.pillars
-      .filter((p): p is Record<string, unknown> => Boolean(p) && typeof p === "object")
+      .filter(isRecord)
       .filter((p) => typeof p.name === "string" && typeof p.key === "string")
       .map(
         (p): PillarDraft => ({
@@ -899,9 +961,9 @@ export function sanitizeAnswers(raw: unknown): OnboardingAnswers {
     if (pillars.length) out.pillars = pillars
   }
 
-  if (r.split && typeof r.split === "object") {
+  if (isRecord(r.split)) {
     const split: Partial<Record<PlatformId, number>> = {}
-    for (const [key, value] of Object.entries(r.split as Record<string, unknown>)) {
+    for (const [key, value] of Object.entries(r.split)) {
       if (oneOf(key, PLATFORM_IDS) && typeof value === "number" && Number.isFinite(value)) split[key] = value
     }
     out.split = normalizeSplit(split, out.platforms)
@@ -911,7 +973,7 @@ export function sanitizeAnswers(raw: unknown): OnboardingAnswers {
   out.schedule_mode = r.schedule_mode === "custom" ? "custom" : "recommended"
   if (Array.isArray(r.custom_schedule)) {
     out.custom_schedule = r.custom_schedule
-      .filter((d): d is Record<string, unknown> => Boolean(d) && typeof d === "object" && typeof d.day === "number")
+      .filter((d): d is Record<string, unknown> => isRecord(d) && typeof d.day === "number")
       .map((d) => ({
         day: clampInt(d.day as number, 0, 6),
         enabled: d.enabled === true,
@@ -924,24 +986,22 @@ export function sanitizeAnswers(raw: unknown): OnboardingAnswers {
 
   out.primary_goal = oneOf(r.primary_goal, GOAL_CATEGORY_IDS) ? r.primary_goal : null
   out.secondary_goal = oneOf(r.secondary_goal, GOAL_CATEGORY_IDS) ? r.secondary_goal : null
-  if (r.goal_targets && typeof r.goal_targets === "object") {
-    for (const [key, value] of Object.entries(r.goal_targets as Record<string, unknown>)) {
-      if (!oneOf(key, GOAL_CATEGORY_IDS) || !value || typeof value !== "object") continue
-      const target = value as Record<string, unknown>
+  if (isRecord(r.goal_targets)) {
+    for (const [key, value] of Object.entries(r.goal_targets)) {
+      if (!oneOf(key, GOAL_CATEGORY_IDS) || !isRecord(value)) continue
       out.goal_targets[key] = {
-        value: typeof target.value === "number" && Number.isFinite(target.value) ? target.value : null,
-        period: target.period === "weekly" || target.period === "quarterly" ? target.period : "monthly",
+        value: typeof value.value === "number" && Number.isFinite(value.value) ? value.value : null,
+        period: value.period === "weekly" || value.period === "quarterly" ? value.period : "monthly",
       }
     }
   }
 
   const languages = LANGUAGES.map((l) => l.id)
   out.language = oneOf(r.language, languages) ? r.language : "english"
-  const tones = listOf(
+  out.tones = listOf(
     r.tones,
     TONES.map((t) => t.id)
-  )
-  out.tones = tones.slice(0, LIMITS.tonesMax)
+  ).slice(0, LIMITS.tonesMax)
   out.personality = listOf(
     r.personality,
     PERSONALITY_TRAITS.map((t) => t.id)

@@ -1,7 +1,8 @@
 "use client"
 
-import { Check, CircleAlert, CircleCheck, Plus, X } from "lucide-react"
+import { Check, CircleAlert, CircleCheck, Plus, Sparkles, X } from "lucide-react"
 import { useMemo, useState } from "react"
+import { toast } from "sonner"
 import {
   catVar,
   chipVariants,
@@ -18,32 +19,18 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  DAYS_OF_WEEK,
-  GOAL_CATEGORIES,
-  GOAL_CATEGORY_IDS,
-  GOAL_METRIC_MAP,
-  GOAL_PERIODS,
-  LANGUAGES,
-  PERSONALITY_TRAITS,
-  PLATFORM_IDS,
-  PLATFORMS,
-  TONES,
-} from "@/lib/constants"
-import { PLATFORM_STRATEGIES } from "@/lib/data/seed/starter-data"
-import type { ContentPillar, GoalCategory, GoalPeriod, PlatformId } from "@/lib/types"
+import type { NicheOption } from "@/lib/ai"
+import { LANGUAGES, PERSONALITY_TRAITS, PLATFORM_IDS, PLATFORMS, TONES } from "@/lib/constants"
+import type { ContentPillar, PlatformId } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { useCopy } from "./copy"
+import { pillarsFromOption, pillarsMatchOption } from "./niche-model"
 import {
-  chosenGoals,
-  CTA_PRESETS,
   distributeTotal,
   evenPillars,
-  goalTargetFor,
-  LANGUAGE_NOTES,
   LIMITS,
   normalizeSchedule,
   normalizeSplit,
@@ -57,12 +44,11 @@ import {
   schedulePosts,
   weekOrder,
   weeklyTotal,
+  type PillarDraft,
   type ScheduleDay,
 } from "./onboarding-model"
 import { fid, TextField, type StepProps } from "./steps-profile"
 import { StepSection } from "./wizard-chrome"
-
-const dayLabel = (day: number) => DAYS_OF_WEEK.find((d) => d.value === day)?.short ?? ""
 
 /** Keep the most recent picks when a capped multi-select overflows. */
 function capped<T extends string>(previous: T[], next: T[], max: number): T[] {
@@ -71,31 +57,42 @@ function capped<T extends string>(previous: T[], next: T[], max: number): T[] {
   return [...kept, ...added].slice(-max)
 }
 
-/* ------------------------------- 5 · Pillars ------------------------------- */
+/* --------------------------------- Pillars --------------------------------- */
+
+function badgeFor(p: PillarDraft, copy: ReturnType<typeof useCopy>): string | null {
+  if (p.key.startsWith("niche:")) return copy.pillars.nicheBadge
+  if (p.key.startsWith("custom:")) return copy.pillars.customBadge
+  return null
+}
 
 export function PillarsStep({
   answers: a,
   update,
   errors,
   existing,
-}: StepProps & { existing: Pick<ContentPillar, "name" | "color">[] }) {
+  nicheOption,
+}: StepProps & { existing: Pick<ContentPillar, "name" | "color">[]; nicheOption: NicheOption | null }) {
+  const copy = useCopy()
+  const t = copy.pillars
   const colors = useMemo(() => pillarColors(a.pillars, existing), [a.pillars, existing])
   const selected = a.pillars.filter((p) => p.selected)
   const total = pillarTotal(a.pillars)
   const atMax = selected.length >= LIMITS.pillarsMax
+  const listed = a.pillars.filter((p) => p.selected || !p.preset)
+  const general = a.pillars.filter((p) => !p.selected && p.preset)
+  const offerNiche = nicheOption && nicheOption.pillars.length >= LIMITS.pillarsMin && !pillarsMatchOption(a, nicheOption) ? nicheOption : null
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [addError, setAddError] = useState<string | null>(null)
 
-  const setPillar = (key: string, patch: Partial<(typeof a.pillars)[number]>) =>
-    update({ pillars: a.pillars.map((p) => (p.key === key ? { ...p, ...patch } : p)) })
+  const setPillar = (key: string, patch: Partial<PillarDraft>) => update({ pillars: a.pillars.map((p) => (p.key === key ? { ...p, ...patch } : p)) })
 
   function addPillar() {
     const clean = name.trim()
-    if (!clean) return setAddError("Name the pillar.")
-    if (a.pillars.some((p) => norm(p.name) === norm(clean))) return setAddError("You already have a pillar with that name.")
-    if (atMax) return setAddError(`You can choose up to ${LIMITS.pillarsMax} pillars.`)
+    if (!clean) return setAddError(t.nameMissing)
+    if (a.pillars.some((p) => norm(p.name) === norm(clean))) return setAddError(t.nameTaken)
+    if (atMax) return setAddError(t.tooMany(LIMITS.pillarsMax))
     update({
       pillars: [
         ...a.pillars,
@@ -130,26 +127,47 @@ export function PillarsStep({
 
   return (
     <div className="flex flex-col gap-4">
+      {offerNiche ? (
+        <div className="flex flex-col gap-2 rounded-lg border border-dashed bg-muted/40 p-3 sm:p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="flex items-center gap-1.5 text-sm font-medium">
+              <Sparkles className="size-4 text-brand" aria-hidden />
+              {t.fromNiche}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                update({ pillars: pillarsFromOption(offerNiche, a.pillars) })
+                toast.success(t.applied)
+              }}
+            >
+              {t.useNiche}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t.fromNicheText} {offerNiche.pillars.map((p) => `${p.name} ${p.target_percentage}%`).join(" · ")}
+          </p>
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 sm:p-4 dark:bg-input/20">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="flex items-center gap-1.5 text-sm">
-            {total === 100 ? (
-              <CircleCheck className="size-4 text-good-fg" aria-hidden />
-            ) : (
-              <CircleAlert className="size-4 text-warning-fg" aria-hidden />
-            )}
-            <span className="font-medium num">Total {total}%</span>
+            {total === 100 ? <CircleCheck className="size-4 text-good-fg" aria-hidden /> : <CircleAlert className="size-4 text-warning-fg" aria-hidden />}
+            <span className="font-medium num">{t.total(total)}</span>
             <span className="text-muted-foreground">
-              · {selected.length} {selected.length === 1 ? "pillar" : "pillars"}
-              {total !== 100 ? ` · ${total < 100 ? `${100 - total}% left to assign` : `${total - 100}% over`}` : ""}
+              · {t.count(selected.length)}
+              {total !== 100 ? ` · ${total < 100 ? t.left(100 - total) : t.over(total - 100)}` : ""}
             </span>
           </p>
           <div className="flex items-center gap-1">
             <Button type="button" variant="ghost" size="sm" disabled={total === 100 || !selected.length} onClick={() => update({ pillars: rebalancePillars(a.pillars) })}>
-              Rebalance to 100%
+              {t.rebalance}
             </Button>
             <Button type="button" variant="ghost" size="sm" disabled={!selected.length} onClick={() => update({ pillars: evenPillars(a.pillars) })}>
-              Split evenly
+              {t.even}
             </Button>
           </div>
         </div>
@@ -164,9 +182,11 @@ export function PillarsStep({
         </div>
       </div>
 
-      <ul id={fid("pillars")} tabIndex={-1} className="divide-y rounded-lg border bg-card outline-none dark:bg-input/20" aria-label="Content pillars">
-        {a.pillars.map((p, index) => {
-          const checkboxId = `ob-pillar-${index}`
+      <ul id={fid("pillars")} tabIndex={-1} className="divide-y rounded-lg border bg-card outline-none dark:bg-input/20" aria-label={t.listAria}>
+        {listed.map((p) => {
+          const checkboxId = `ob-pillar-${p.key.replace(/[^a-z0-9]+/gi, "-")}`
+          const badge = badgeFor(p, copy)
+          const removable = p.key.startsWith("niche:") || p.key.startsWith("custom:")
           return (
             <li key={p.key} className={cn("flex items-start gap-3 px-3 py-3 sm:px-4", !p.selected && "text-muted-foreground")}>
               <Checkbox
@@ -180,14 +200,14 @@ export function PillarsStep({
                 <label htmlFor={checkboxId} className="flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground">
                   <ColorDot color={p.selected ? colors.get(p.key) : null} />
                   <span className="truncate">{p.name}</span>
-                  {!p.preset ? (
+                  {badge ? (
                     <Badge variant="outline" className="font-normal">
-                      Custom
+                      {badge}
                     </Badge>
                   ) : null}
                 </label>
                 <p className="text-xs text-pretty text-muted-foreground">
-                  {p.description || "No description"}
+                  {p.description || t.noDescription}
                   {p.examples.length ? <span className="hidden sm:inline"> · {p.examples.slice(0, 4).join(", ")}</span> : null}
                 </p>
               </div>
@@ -201,17 +221,11 @@ export function PillarsStep({
                   suffix="%"
                   size="sm"
                   className="w-20 shrink-0"
-                  aria-label={`${p.name} target percentage`}
+                  aria-label={t.targetAria(p.name)}
                 />
               ) : null}
-              {!p.preset ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`Remove ${p.name}`}
-                  onClick={() => update({ pillars: a.pillars.filter((x) => x.key !== p.key) })}
-                >
+              {removable ? (
+                <Button type="button" variant="ghost" size="icon-sm" aria-label={copy.common.remove(p.name)} onClick={() => update({ pillars: a.pillars.filter((x) => x.key !== p.key) })}>
                   <X aria-hidden />
                 </Button>
               ) : null}
@@ -225,27 +239,47 @@ export function PillarsStep({
         </p>
       ) : null}
 
+      {general.length ? (
+        <StepSection title={t.general}>
+          <div className="flex flex-wrap gap-1.5">
+            {general.map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                disabled={atMax}
+                title={p.description}
+                onClick={() => setPillar(p.key, { selected: true, target: p.target < 1 ? 10 : p.target })}
+                className={chipVariants({ size: "default", selected: false })}
+              >
+                <Plus aria-hidden />
+                {p.name}
+              </button>
+            ))}
+          </div>
+        </StepSection>
+      ) : null}
+
       {adding ? (
         <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 sm:p-4 dark:bg-input/20">
           <FormRow>
-            <FormField label="Pillar name" htmlFor="ob-new-pillar" required error={addError ?? undefined}>
+            <FormField label={t.name} htmlFor="ob-new-pillar" required error={addError ?? undefined}>
               <Input
                 id="ob-new-pillar"
                 autoFocus
                 value={name}
                 maxLength={LIMITS.pillarName}
-                placeholder="e.g. AI for operators"
+                placeholder={t.namePlaceholder}
                 aria-invalid={addError ? true : undefined}
                 onChange={(event) => setName(event.target.value)}
                 onKeyDown={onAddKey}
               />
             </FormField>
-            <FormField label="Description" htmlFor="ob-new-pillar-description">
+            <FormField label={t.description} htmlFor="ob-new-pillar-description">
               <Input
                 id="ob-new-pillar-description"
                 value={description}
                 maxLength={LIMITS.pillarDescription}
-                placeholder="e.g. Practical AI workflows for small teams"
+                placeholder={t.descriptionPlaceholder}
                 onChange={(event) => setDescription(event.target.value)}
                 onKeyDown={onAddKey}
               />
@@ -253,106 +287,33 @@ export function PillarsStep({
           </FormRow>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" size="sm" onClick={() => setAdding(false)}>
-              Cancel
+              {copy.common.cancel}
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={addPillar}>
               <Plus aria-hidden />
-              Add pillar
+              {t.addPillar}
             </Button>
           </div>
         </div>
       ) : (
         <Button type="button" variant="outline" size="sm" className="self-start" disabled={atMax} onClick={() => setAdding(true)}>
           <Plus aria-hidden />
-          Add a custom pillar
+          {t.addCustom}
         </Button>
       )}
     </div>
   )
 }
 
-/* ------------------------------ 6 · Platforms ------------------------------ */
-
-export function PlatformsStep({ answers: a, update, errors }: StepProps) {
-  const setPlatforms = (next: PlatformId[]) => {
-    const platforms = platformsInOrder(next)
-    update({
-      platforms,
-      split: normalizeSplit(a.split, platforms),
-      custom_schedule: a.custom_schedule.length ? normalizeSchedule(a.custom_schedule, platforms) : a.custom_schedule,
-    })
-  }
-  const toggle = (p: PlatformId) => setPlatforms(a.platforms.includes(p) ? a.platforms.filter((x) => x !== p) : [...a.platforms, p])
-  const personaMatches = platformsInOrder(a.persona_platforms)
-  const sameAsPersona = personaMatches.length > 0 && personaMatches.join() === platformsInOrder(a.platforms).join()
-
-  return (
-    <div className="flex flex-col gap-4">
-      {personaMatches.length && !sameAsPersona ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card px-3 py-2 text-sm dark:bg-input/20">
-          <span className="flex min-w-0 items-center gap-2 text-muted-foreground">
-            Your persona spends time on
-            <span className="flex items-center gap-1">
-              {personaMatches.map((p) => (
-                <PlatformIcon key={p} platform={p} colored label />
-              ))}
-            </span>
-          </span>
-          <Button type="button" variant="ghost" size="sm" onClick={() => setPlatforms(personaMatches)}>
-            Use these
-          </Button>
-        </div>
-      ) : null}
-      <div role="group" aria-label="Main platforms" className="grid gap-2 sm:grid-cols-2">
-        {PLATFORM_IDS.map((p, index) => {
-          const on = a.platforms.includes(p)
-          return (
-            <button
-              key={p}
-              id={index === 0 ? fid("platforms") : undefined}
-              type="button"
-              aria-pressed={on}
-              onClick={() => toggle(p)}
-              className={cn(
-                "flex items-start gap-3 rounded-lg border p-3 text-left transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                on ? "border-brand/45 bg-brand-soft" : "bg-card hover:bg-muted/60 dark:bg-input/20"
-              )}
-            >
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-background">
-                <PlatformIcon platform={p} colored={on} className="size-4.5" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium">{PLATFORMS[p].label}</span>
-                  {on ? <Check className="size-4 text-brand" aria-hidden /> : null}
-                </span>
-                <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground">{PLATFORM_STRATEGIES[p].audience}</span>
-              </span>
-            </button>
-          )
-        })}
-      </div>
-      {errors.platforms ? (
-        <p role="alert" className="text-xs text-destructive">
-          {errors.platforms}
-        </p>
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          Chosen platforms get an active platform strategy; the rest are switched off until you turn them on in Strategy → Platforms.
-        </p>
-      )}
-    </div>
-  )
-}
-
-/* ------------------------------- 7 · Posting ------------------------------- */
+/* ------------------------------ Platforms & posting ----------------------------- */
 
 function SchedulePreview({ days }: { days: ScheduleDay[] }) {
+  const copy = useCopy()
   return (
-    <ul className="divide-y rounded-lg border bg-card dark:bg-input/20" aria-label="Recommended weekly schedule">
+    <ul className="divide-y rounded-lg border bg-card dark:bg-input/20" aria-label={copy.posting.recommendedAria}>
       {days.map((d) => (
         <li key={d.day} className="grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 sm:px-4">
-          <span className="text-xs font-medium text-muted-foreground">{dayLabel(d.day)}</span>
+          <span className="text-xs font-medium text-muted-foreground">{copy.days.short[d.day]}</span>
           <span className="min-w-0">
             <span className="block truncate text-sm">{d.label}</span>
             <span className="block truncate text-xs text-muted-foreground">
@@ -371,23 +332,17 @@ function SchedulePreview({ days }: { days: ScheduleDay[] }) {
   )
 }
 
-function CustomSchedule({
-  days,
-  platforms,
-  onChange,
-}: {
-  days: ScheduleDay[]
-  platforms: PlatformId[]
-  onChange: (day: number, patch: Partial<ScheduleDay>) => void
-}) {
+function CustomSchedule({ days, platforms, onChange }: { days: ScheduleDay[]; platforms: PlatformId[]; onChange: (day: number, patch: Partial<ScheduleDay>) => void }) {
+  const copy = useCopy()
+  const t = copy.posting
   return (
-    <ul className="divide-y rounded-lg border bg-card dark:bg-input/20" aria-label="Custom weekly schedule">
+    <ul className="divide-y rounded-lg border bg-card dark:bg-input/20" aria-label={t.customAria}>
       {days.map((d) => {
-        const name = DAYS_OF_WEEK.find((x) => x.value === d.day)?.label ?? ""
+        const name = copy.days.long[d.day]
         return (
           <li key={d.day} className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3 sm:px-4">
-            <label className="flex w-28 shrink-0 cursor-pointer items-center gap-2 text-sm">
-              <Switch checked={d.enabled} onCheckedChange={(enabled) => onChange(d.day, { enabled })} aria-label={`Post on ${name}`} />
+            <label className="flex w-32 shrink-0 cursor-pointer items-center gap-2 text-sm">
+              <Switch checked={d.enabled} onCheckedChange={(enabled) => onChange(d.day, { enabled })} aria-label={t.postOn(name)} />
               <span className={cn(!d.enabled && "text-muted-foreground")}>{name}</span>
             </label>
             {d.enabled ? (
@@ -395,12 +350,12 @@ function CustomSchedule({
                 <Input
                   value={d.label}
                   maxLength={LIMITS.label}
-                  placeholder="Theme, e.g. Tutorial"
-                  aria-label={`${name} theme`}
+                  placeholder={t.themePlaceholder}
+                  aria-label={t.themeAria(name)}
                   onChange={(event) => onChange(d.day, { label: event.target.value })}
                   className="h-7 min-w-32 flex-1"
                 />
-                <div role="group" aria-label={`${name} platforms`} className="flex flex-wrap gap-1">
+                <div role="group" aria-label={t.platformsAria(name)} className="flex flex-wrap gap-1">
                   {platforms.map((p) => {
                     const on = d.platforms.includes(p)
                     return (
@@ -409,9 +364,7 @@ function CustomSchedule({
                         type="button"
                         aria-pressed={on}
                         title={PLATFORMS[p].label}
-                        onClick={() =>
-                          onChange(d.day, { platforms: platformsInOrder(on ? d.platforms.filter((x) => x !== p) : [...d.platforms, p]) })
-                        }
+                        onClick={() => onChange(d.day, { platforms: platformsInOrder(on ? d.platforms.filter((x) => x !== p) : [...d.platforms, p]) })}
                         className={cn(chipVariants({ size: "sm", selected: on }), "aspect-square justify-center px-0")}
                       >
                         <PlatformIcon platform={p} colored={on} />
@@ -420,10 +373,10 @@ function CustomSchedule({
                     )
                   })}
                 </div>
-                <TimeInput value={d.time} onChange={(time) => onChange(d.day, { time })} size="sm" aria-label={`${name} time`} />
+                <TimeInput value={d.time} onChange={(time) => onChange(d.day, { time })} size="sm" aria-label={t.timeAria(name)} />
               </div>
             ) : (
-              <span className="text-xs text-muted-foreground">No post</span>
+              <span className="text-xs text-muted-foreground">{t.noPost}</span>
             )}
           </li>
         )
@@ -432,7 +385,9 @@ function CustomSchedule({
   )
 }
 
-export function PostingStep({ answers: a, update, errors, weekStartsOn }: StepProps & { weekStartsOn: 0 | 1 }) {
+function PostingSection({ answers: a, update, errors, weekStartsOn }: StepProps & { weekStartsOn: 0 | 1 }) {
+  const copy = useCopy()
+  const t = copy.posting
   const platforms = platformsInOrder(a.platforms)
   const split = platformSplit(a)
   const total = weeklyTotal(a)
@@ -451,12 +406,12 @@ export function PostingStep({ answers: a, update, errors, weekStartsOn }: StepPr
     update({ custom_schedule: normalizeSchedule(a.custom_schedule, platforms).map((d) => (d.day === day ? { ...d, ...patch } : d)) })
 
   return (
-    <div className="flex flex-col gap-6">
-      <StepSection title="Weekly post target" description="One post on one platform counts as one. Change the total or the split — they stay in sync.">
+    <>
+      <StepSection title={t.weekly} description={t.weeklyDescription}>
         <div className="rounded-lg border bg-card dark:bg-input/20">
           <div className="flex items-center justify-between gap-3 border-b px-3 py-3 sm:px-4">
             <label htmlFor={fid("weekly")} className="text-sm font-medium">
-              Posts per week
+              {t.perWeekLabel}
             </label>
             <NumberField
               id={fid("weekly")}
@@ -470,7 +425,7 @@ export function PostingStep({ answers: a, update, errors, weekStartsOn }: StepPr
               className="w-24"
             />
           </div>
-          <ul className="divide-y" aria-label="Posts per week by platform">
+          <ul className="divide-y" aria-label={t.perWeekLabel}>
             {platforms.map((p) => (
               <li key={p} className="flex items-center justify-between gap-3 px-3 py-2 sm:px-4">
                 <PlatformLabel platform={p} colored />
@@ -483,9 +438,9 @@ export function PostingStep({ answers: a, update, errors, weekStartsOn }: StepPr
                   min={1}
                   max={LIMITS.platformMax}
                   size="sm"
-                  suffix="/ wk"
-                  className="w-24"
-                  aria-label={`${PLATFORMS[p].label} posts per week`}
+                  suffix={t.perWeekSuffix}
+                  className="w-28"
+                  aria-label={t.perPlatformAria(PLATFORMS[p].label)}
                 />
               </li>
             ))}
@@ -494,32 +449,23 @@ export function PostingStep({ answers: a, update, errors, weekStartsOn }: StepPr
         {total > 14 ? (
           <p className="flex items-start gap-1.5 text-xs text-warning-fg">
             <CircleAlert className="mt-px size-3.5 shrink-0" aria-hidden />
-            <span>That&apos;s two or more posts a day. Start lower and raise it once your content buffer keeps up.</span>
+            <span>{t.tooMany}</span>
           </p>
         ) : null}
       </StepSection>
 
-      <StepSection
-        title="Posting schedule"
-        description="Recurring weekly slots — your calendar and What-to-post use them."
-        action={<span className="text-xs text-muted-foreground num">{posts} posts / week</span>}
-      >
-        <RadioGroup value={a.schedule_mode} onValueChange={setMode} className="grid gap-2 sm:grid-cols-2" aria-label="Schedule type">
-          {(
-            [
-              { value: "recommended", title: "Recommended weekly strategy", text: "A themed day for each pillar type, adapted to your platforms." },
-              { value: "custom", title: "Custom per day", text: "Choose the days, themes, platforms and times yourself." },
-            ] as const
-          ).map((option) => (
+      <StepSection title={t.schedule} description={t.scheduleDescription} action={<span className="text-xs text-muted-foreground num">{t.postsPerWeek(posts)}</span>}>
+        <RadioGroup value={a.schedule_mode} onValueChange={setMode} className="grid gap-2 sm:grid-cols-2" aria-label={t.typeAria}>
+          {(["recommended", "custom"] as const).map((value) => (
             <label
-              key={option.value}
-              htmlFor={`ob-schedule-${option.value}`}
+              key={value}
+              htmlFor={`ob-schedule-${value}`}
               className="flex cursor-pointer items-start gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-muted/50 has-data-checked:border-brand/45 has-data-checked:bg-brand-soft dark:bg-input/20"
             >
-              <RadioGroupItem id={`ob-schedule-${option.value}`} value={option.value} className="mt-0.5" />
+              <RadioGroupItem id={`ob-schedule-${value}`} value={value} className="mt-0.5" />
               <span className="min-w-0">
-                <span className="block text-sm font-medium">{option.title}</span>
-                <span className="block text-xs text-muted-foreground">{option.text}</span>
+                <span className="block text-sm font-medium">{t.modes[value].title}</span>
+                <span className="block text-xs text-muted-foreground">{t.modes[value].text}</span>
               </span>
             </label>
           ))}
@@ -531,128 +477,97 @@ export function PostingStep({ answers: a, update, errors, weekStartsOn }: StepPr
           </p>
         ) : null}
       </StepSection>
-    </div>
+    </>
   )
 }
 
-/* -------------------------------- 8 · Goals -------------------------------- */
-
-export function GoalsStep({ answers: a, update, errors }: StepProps) {
-  const goals = chosenGoals(a)
-  const setTarget = (category: GoalCategory, patch: { value?: number | null; period?: GoalPeriod }) =>
-    update({ goal_targets: { ...a.goal_targets, [category]: { ...goalTargetFor(a, category), ...patch } } })
+/** Platforms, then the weekly target and schedule for them. */
+export function PlatformsStep(props: StepProps & { weekStartsOn: 0 | 1 }) {
+  const { answers: a, update, errors } = props
+  const copy = useCopy()
+  const t = copy.platforms
+  const setPlatforms = (next: PlatformId[]) => {
+    const platforms = platformsInOrder(next)
+    update({
+      platforms,
+      split: normalizeSplit(a.split, platforms),
+      custom_schedule: a.custom_schedule.length ? normalizeSchedule(a.custom_schedule, platforms) : a.custom_schedule,
+    })
+  }
+  const toggle = (p: PlatformId) => setPlatforms(a.platforms.includes(p) ? a.platforms.filter((x) => x !== p) : [...a.platforms, p])
+  const personaMatches = platformsInOrder(a.persona_platforms)
+  const sameAsPersona = personaMatches.length > 0 && personaMatches.join() === platformsInOrder(a.platforms).join()
 
   return (
     <div className="flex flex-col gap-6">
-      <StepSection title="Primary goal" description="The one outcome everything else is measured against.">
-        <RadioGroup
-          id={fid("primary_goal")}
-          value={a.primary_goal ?? ""}
-          onValueChange={(value) => {
-            const primary = value as GoalCategory
-            update({ primary_goal: primary, secondary_goal: a.secondary_goal === primary ? null : a.secondary_goal })
-          }}
-          className="grid gap-2 sm:grid-cols-2"
-          aria-label="Primary goal"
-        >
-          {GOAL_CATEGORY_IDS.map((category) => {
-            const meta = GOAL_CATEGORIES[category]
+      <div className="flex flex-col gap-4">
+        {personaMatches.length && !sameAsPersona ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card px-3 py-2 text-sm dark:bg-input/20">
+            <span className="flex min-w-0 items-center gap-2 text-muted-foreground">
+              {t.audienceUses}
+              <span className="flex items-center gap-1">
+                {personaMatches.map((p) => (
+                  <PlatformIcon key={p} platform={p} colored label />
+                ))}
+              </span>
+            </span>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setPlatforms(personaMatches)}>
+              {t.useThese}
+            </Button>
+          </div>
+        ) : null}
+        <div role="group" aria-label={t.group} className="grid gap-2 sm:grid-cols-2">
+          {PLATFORM_IDS.map((p, index) => {
+            const on = a.platforms.includes(p)
             return (
-              <label
-                key={category}
-                htmlFor={`ob-goal-${category}`}
-                className="flex cursor-pointer items-start gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-muted/50 has-data-checked:border-brand/45 has-data-checked:bg-brand-soft dark:bg-input/20"
+              <button
+                key={p}
+                id={index === 0 ? fid("platforms") : undefined}
+                type="button"
+                aria-pressed={on}
+                onClick={() => toggle(p)}
+                className={cn(
+                  "flex items-start gap-3 rounded-lg border p-3 text-left transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  on ? "border-brand/45 bg-brand-soft" : "bg-card hover:bg-muted/60 dark:bg-input/20"
+                )}
               >
-                <RadioGroupItem id={`ob-goal-${category}`} value={category} className="mt-0.5" />
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium">{meta.label}</span>
-                  <span className="block text-xs text-pretty text-muted-foreground">{meta.description}</span>
-                  <span className="mt-1 block text-xs text-muted-foreground">{meta.kpis.slice(0, 3).join(" · ")}</span>
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-background">
+                  <PlatformIcon platform={p} colored={on} className="size-4.5" />
                 </span>
-              </label>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium">{PLATFORMS[p].label}</span>
+                    {on ? <Check className="size-4 text-brand" aria-hidden /> : null}
+                  </span>
+                  <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground">{t.hints[p]}</span>
+                </span>
+              </button>
             )
           })}
-        </RadioGroup>
-        {errors.primary_goal ? (
+        </div>
+        {errors.platforms ? (
           <p role="alert" className="text-xs text-destructive">
-            {errors.primary_goal}
+            {errors.platforms}
           </p>
-        ) : null}
-      </StepSection>
-
-      <StepSection title="Secondary goal" description="Optional — a supporting outcome.">
-        <ChipToggleGroup
-          aria-label="Secondary goal"
-          size="default"
-          options={GOAL_CATEGORY_IDS.filter((c) => c !== a.primary_goal).map((c) => ({ value: c, label: GOAL_CATEGORIES[c].label }))}
-          value={a.secondary_goal}
-          onChange={(secondary_goal) => update({ secondary_goal })}
-        />
-      </StepSection>
-
-      {goals.length ? (
-        <StepSection title="Targets" description="What success looks like. Refine them any time in Strategy → Goals.">
-          <ul className="divide-y rounded-lg border bg-card dark:bg-input/20">
-            {goals.map((category, index) => {
-              const target = goalTargetFor(a, category)
-              const metric = GOAL_METRIC_MAP[GOAL_CATEGORIES[category].metric].label
-              const error = errors[`goal_${category}`]
-              return (
-                <li key={category} className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
-                  <span className="min-w-0 text-sm">
-                    <span className="font-medium">{GOAL_CATEGORIES[category].label}</span>
-                    <span className="text-muted-foreground"> · {index === 0 ? "Primary" : "Secondary"}</span>
-                  </span>
-                  <span className="flex flex-wrap items-center gap-2">
-                    <NumberField
-                      id={fid(`goal_${category}`)}
-                      value={target.value}
-                      onChange={(value) => setTarget(category, { value })}
-                      integer
-                      min={1}
-                      placeholder="No target"
-                      size="sm"
-                      className="w-28"
-                      aria-label={`${GOAL_CATEGORIES[category].label} target (${metric})`}
-                      aria-invalid={error ? true : undefined}
-                    />
-                    <span className="text-xs text-muted-foreground">{metric.toLowerCase()}</span>
-                    <NativeSelect
-                      size="sm"
-                      value={target.period}
-                      onChange={(event) => setTarget(category, { period: event.target.value as GoalPeriod })}
-                      aria-label={`${GOAL_CATEGORIES[category].label} period`}
-                    >
-                      {GOAL_PERIODS.map((p) => (
-                        <NativeSelectOption key={p.id} value={p.id}>
-                          {p.label}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
-                  </span>
-                  {error ? (
-                    <p role="alert" className="text-xs text-destructive sm:basis-full">
-                      {error}
-                    </p>
-                  ) : null}
-                </li>
-              )
-            })}
-          </ul>
-        </StepSection>
-      ) : null}
+        ) : (
+          <p className="text-xs text-muted-foreground">{t.note}</p>
+        )}
+      </div>
+      {a.platforms.length ? <PostingSection {...props} /> : null}
     </div>
   )
 }
 
-/* -------------------------------- 9 · Voice -------------------------------- */
+/* ---------------------------------- Voice ---------------------------------- */
 
 export function VoiceStep({ answers: a, update, errors }: StepProps) {
+  const copy = useCopy()
+  const t = copy.voice
   return (
     <div className="flex flex-col gap-6">
-      <StepSection title="Language">
+      <StepSection title={t.language}>
         <ChipToggleGroup
-          aria-label="Language"
+          aria-label={t.language}
           size="default"
           required
           options={LANGUAGES.map((l) => ({ value: l.id, label: l.label }))}
@@ -661,20 +576,16 @@ export function VoiceStep({ answers: a, update, errors }: StepProps) {
             if (language) update({ language })
           }}
         />
-        <p className="text-xs text-muted-foreground">{LANGUAGE_NOTES[a.language]}</p>
+        <p className="text-xs text-muted-foreground">{t.languageNotes[a.language]}</p>
       </StepSection>
 
-      <StepSection
-        title="Tone"
-        description={`Pick up to ${LIMITS.tonesMax}. Picking another replaces the oldest.`}
-        action={<span className="text-xs text-muted-foreground num">{a.tones.length}/{LIMITS.tonesMax}</span>}
-      >
+      <StepSection title={t.tone} description={t.toneDescription(LIMITS.tonesMax)} action={<span className="text-xs text-muted-foreground num">{a.tones.length}/{LIMITS.tonesMax}</span>}>
         <div id={fid("tones")} tabIndex={-1} className="outline-none">
           <ChipToggleGroup
             multiple
-            aria-label="Tone"
+            aria-label={t.tone}
             size="default"
-            options={TONES.map((t) => ({ value: t.id, label: t.label }))}
+            options={TONES.map((x) => ({ value: x.id, label: x.label }))}
             value={a.tones}
             onChange={(tones) => update({ tones: capped(a.tones, tones, LIMITS.tonesMax) })}
           />
@@ -687,16 +598,16 @@ export function VoiceStep({ answers: a, update, errors }: StepProps) {
       </StepSection>
 
       <StepSection
-        title="Personality"
-        description={`Up to ${LIMITS.traitsMax} traits people should feel in your content.`}
+        title={t.personality}
+        description={t.personalityDescription(LIMITS.traitsMax)}
         action={<span className="text-xs text-muted-foreground num">{a.personality.length}/{LIMITS.traitsMax}</span>}
       >
         <div id={fid("personality")} tabIndex={-1} className="outline-none">
           <ChipToggleGroup
             multiple
-            aria-label="Personality traits"
+            aria-label={t.personality}
             size="default"
-            options={PERSONALITY_TRAITS.map((t) => ({ value: t.id, label: t.label }))}
+            options={PERSONALITY_TRAITS.map((x) => ({ value: x.id, label: x.label }))}
             value={a.personality}
             onChange={(personality) => update({ personality: capped(a.personality, personality, LIMITS.traitsMax) })}
           />
@@ -708,9 +619,9 @@ export function VoiceStep({ answers: a, update, errors }: StepProps) {
         ) : null}
       </StepSection>
 
-      <StepSection title="Call-to-action style" description="How you usually ask for action at the end of a post.">
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="CTA style presets">
-          {CTA_PRESETS.map((preset) => (
+      <StepSection title={t.cta} description={t.ctaDescription}>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label={t.ctaPresetsAria}>
+          {t.ctaPresets.map((preset) => (
             <button
               key={preset.label}
               type="button"
@@ -724,36 +635,36 @@ export function VoiceStep({ answers: a, update, errors }: StepProps) {
         </div>
         <Textarea
           id={fid("cta_style")}
-          aria-label="Call-to-action style"
+          aria-label={t.cta}
           value={a.cta_style}
           maxLength={LIMITS.longText}
           rows={2}
-          placeholder="Or write your own — e.g. Comment GUIDE and I'll send you the template."
+          placeholder={t.ctaPlaceholder}
           onChange={(event) => update({ cta_style: event.target.value })}
           className="min-h-16"
         />
       </StepSection>
 
-      <StepSection title="Brand rules" description="Optional guardrails every draft follows.">
+      <StepSection title={t.rules} description={t.rulesDescription}>
         <FormRow>
           <TextField
             multiline
             rows={2}
             field="always_do"
-            label="Always"
+            label={t.always}
             value={a.always_do}
             onChange={(always_do) => update({ always_do })}
-            placeholder="e.g. Use real numbers. Admit what I got wrong."
+            placeholder={t.alwaysPlaceholder}
             maxLength={LIMITS.longText}
           />
           <TextField
             multiline
             rows={2}
             field="never_do"
-            label="Never"
+            label={t.never}
             value={a.never_do}
             onChange={(never_do) => update({ never_do })}
-            placeholder="e.g. Promise overnight results. Name clients."
+            placeholder={t.neverPlaceholder}
             maxLength={LIMITS.longText}
           />
         </FormRow>

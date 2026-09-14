@@ -17,14 +17,14 @@ export function IdentitySection({ values, set, errors }: BrandSectionProps) {
           autoComplete="name"
           value={values.name}
           error={errors.name}
-          placeholder="e.g. Rafael “Raf” Mendoza"
+          placeholder="e.g. Maria Santos"
           onChange={(value) => set("name", value)}
         />
         <BrandTextField
           field="brand_name"
           label="Brand name"
           value={values.brand_name}
-          placeholder="e.g. Northbound Commerce"
+          placeholder="e.g. Santos Studio"
           onChange={(value) => set("brand_name", value)}
         />
       </FormRow>

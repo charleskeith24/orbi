@@ -46,6 +46,10 @@ export const BRAND: InsertRow<"brand_profiles"> = {
     "Team Management",
     "Entrepreneurship",
   ],
+  niche: "Performance-marketing systems for Southeast Asian e-commerce founders",
+  interests: ["E-commerce growth", "Paid ads", "Business systems", "AI in operations", "Leadership"],
+  niche_fit:
+    "Eleven years running ads and operations for online sellers (expertise), a real obsession with systems and numbers (passion), and founders scaling past ₱1M a month keep asking the same questions (demand).",
   personality_traits: ["direct", "strategic", "practical", "story_driven", "authentic"],
   language: "taglish",
   tones: ["conversational", "educational", "challenging"],

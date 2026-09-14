@@ -152,7 +152,7 @@ describe("strategicInsights", () => {
     const insights = strategicInsights(db, NOW, settingsOf(db))
     const texts = insights.map((i) => i.text)
     expect(texts).toContain("Buffer is 3 days — below your 7-day target")
-    expect(texts).toContain("Journey posts average 1.8x the views of Education — make more of them")
+    expect(texts).toContain("Journey posts average 1.8× the views of Education — make more of them")
     expect(insights.length).toBeLessThanOrEqual(8)
     expect(insights.map((i) => i.priority)).toEqual([...insights.map((i) => i.priority)].sort((a, b) => b - a))
     expect(insights.find((i) => i.id === "pillar-double-down")?.href).toBe(`/pillars?open=${journey.id}`)

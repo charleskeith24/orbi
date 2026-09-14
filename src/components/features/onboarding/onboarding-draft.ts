@@ -1,11 +1,13 @@
 /**
  * The wizard's work in progress, kept in this browser per user so a refresh never loses answers, the
- * generated strategy or idea edits. A draft belongs to one workspace: after "Start fresh" (a new brand
- * row) an old draft is ignored.
+ * chosen language, the niche suggestions, the generated strategy or idea edits. A draft belongs to one
+ * workspace: after "Start fresh" (a new brand row) an old draft is ignored.
  */
 import type { AiProviderId, BrandProfile } from "@/lib/types"
+import { ONBOARDING_LANGS, type OnboardingLang } from "./copy"
+import { sanitizeNicheResult, type NicheResult } from "./niche-model"
 import { sanitizeIdeaDrafts, type IdeaDraft } from "./onboarding-ideas"
-import { LAST_STEP, sanitizeAnswers, type OnboardingAnswers } from "./onboarding-model"
+import { flowFor, sanitizeAnswers, type OnboardingAnswers, type WizardMode } from "./onboarding-model"
 
 export interface PillarSuggestion {
   name: string
@@ -28,30 +30,35 @@ export interface StrategyResult {
 }
 
 export interface OnboardingDraft {
-  version: 1
+  version: 2
   /** workspaceKey() of the brand row when the draft started. */
   workspace: string
-  mode: "first" | "rerun"
+  mode: WizardMode
+  /** The onboarding UI language (also the language niche suggestions come back in). */
+  lang: OnboardingLang
+  /** Index into flowFor(mode). */
   step: number
   /** Furthest step reached — progress segments up to here are clickable. */
   maxStep: number
   answers: OnboardingAnswers
+  niche: NicheResult | null
   strategy: StrategyResult | null
   updatedAt: string
 }
 
 const PROVIDERS: AiProviderId[] = ["anthropic", "openai", "offline"]
-const storageKey = (userId: string) => `pbos:onboarding:v1:${userId || "local"}`
+const MODES: WizardMode[] = ["first", "rerun", "niche"]
+const storageKey = (userId: string) => `pbos:onboarding:v2:${userId || "local"}`
 
 /** "Start fresh" creates a new brand row (new created_at), so drafts never leak across workspaces. */
 export const workspaceKey = (brand: Pick<BrandProfile, "id" | "created_at">) => `${brand.id}|${brand.created_at}`
 
-export function createDraft(workspace: string, mode: OnboardingDraft["mode"], answers: OnboardingAnswers): OnboardingDraft {
-  return { version: 1, workspace, mode, step: 0, maxStep: 0, answers, strategy: null, updatedAt: new Date().toISOString() }
+export function createDraft(workspace: string, mode: WizardMode, answers: OnboardingAnswers, lang: OnboardingLang): OnboardingDraft {
+  return { version: 2, workspace, mode, lang, step: 0, maxStep: 0, answers, niche: null, strategy: null, updatedAt: new Date().toISOString() }
 }
 
-const clampStep = (value: unknown) =>
-  typeof value === "number" && Number.isFinite(value) ? Math.min(LAST_STEP, Math.max(0, Math.round(value))) : 0
+const clampStep = (value: unknown, last: number) =>
+  typeof value === "number" && Number.isFinite(value) ? Math.min(last, Math.max(0, Math.round(value))) : 0
 
 function sanitizeStrategy(raw: unknown): StrategyResult | null {
   if (!raw || typeof raw !== "object") return null
@@ -82,15 +89,19 @@ export function loadDraft(userId: string, workspace: string): OnboardingDraft | 
     const raw = window.localStorage.getItem(storageKey(userId))
     if (!raw) return null
     const parsed = JSON.parse(raw) as Partial<OnboardingDraft> | null
-    if (!parsed || parsed.version !== 1 || parsed.workspace !== workspace) return null
-    const step = clampStep(parsed.step)
+    if (!parsed || parsed.version !== 2 || parsed.workspace !== workspace) return null
+    const mode = MODES.includes(parsed.mode as WizardMode) ? (parsed.mode as WizardMode) : "first"
+    const last = flowFor(mode).length - 1
+    const step = clampStep(parsed.step, last)
     return {
-      version: 1,
+      version: 2,
       workspace,
-      mode: parsed.mode === "rerun" ? "rerun" : "first",
+      mode,
+      lang: ONBOARDING_LANGS.includes(parsed.lang as OnboardingLang) ? (parsed.lang as OnboardingLang) : "english",
       step,
-      maxStep: Math.max(step, clampStep(parsed.maxStep)),
+      maxStep: Math.max(step, clampStep(parsed.maxStep, last)),
       answers: sanitizeAnswers(parsed.answers),
+      niche: sanitizeNicheResult(parsed.niche),
       strategy: sanitizeStrategy(parsed.strategy),
       updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : new Date().toISOString(),
     }

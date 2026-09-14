@@ -1,8 +1,13 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
+import { MatrixView } from "@/components/features/pillars/matrix-view"
 
 export const metadata: Metadata = { title: "Content Matrix" }
 
-// STUB — replaced by the feature builder.
 export default function Page() {
-  return <div className="p-6 text-sm text-muted-foreground">Content Matrix</div>
+  return (
+    <Suspense>
+      <MatrixView />
+    </Suspense>
+  )
 }

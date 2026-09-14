@@ -97,7 +97,7 @@ export function parseWorkspaceFile(text: string, options: { requireUuids?: boole
   }
   if (!isRecord(data)) return fail("This file doesn't contain a workspace.")
   if (typeof data.format === "string" && data.format !== WORKSPACE_FORMAT) {
-    return fail(`This is a “${truncate(data.format, 40)}” file, not a Personal Brand OS workspace export.`)
+    return fail(`This is a “${truncate(data.format, 40)}” file, not an Orbi workspace export.`)
   }
   if (typeof data.version === "number" && data.version > WORKSPACE_VERSION) {
     return fail(`It was exported by a newer version of the app (format v${data.version}). Update the app, then import it.`)

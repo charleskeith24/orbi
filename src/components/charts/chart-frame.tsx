@@ -49,15 +49,15 @@ export function ChartFrame({
         className
       )}
     >
-      <header className="flex items-start gap-3">
-        <div className="min-w-0 flex-1">
+      <header className="flex flex-wrap items-start gap-x-3 gap-y-2">
+        <div className="min-w-0 flex-1 basis-48">
           <h3 id={titleId} className="text-sm leading-5 font-medium">
             {title}
           </h3>
           {description ? <p className="mt-0.5 text-xs text-muted-foreground">{description}</p> : null}
         </div>
         {actions || table ? (
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex shrink-0 flex-wrap items-center gap-1.5">
             {actions}
             {table ? (
               <ToggleGroup

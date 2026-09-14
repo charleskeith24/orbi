@@ -1,8 +1,13 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
+import { PillarsView } from "@/components/features/pillars/pillars-view"
 
 export const metadata: Metadata = { title: "Content Pillars" }
 
-// STUB — replaced by the feature builder.
 export default function Page() {
-  return <div className="p-6 text-sm text-muted-foreground">Content Pillars</div>
+  return (
+    <Suspense>
+      <PillarsView />
+    </Suspense>
+  )
 }

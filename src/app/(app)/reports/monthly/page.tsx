@@ -1,8 +1,13 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
+import { MonthlyReviewView } from "@/components/features/reports/monthly-review-view"
 
 export const metadata: Metadata = { title: "Monthly Review" }
 
-// STUB — replaced by the feature builder.
 export default function Page() {
-  return <div className="p-6 text-sm text-muted-foreground">Monthly Review</div>
+  return (
+    <Suspense>
+      <MonthlyReviewView />
+    </Suspense>
+  )
 }

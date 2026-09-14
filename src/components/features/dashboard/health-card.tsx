@@ -1,6 +1,9 @@
+import { HeartPulse } from "lucide-react"
 import Link from "next/link"
-import { Meter, ScoreRing, SectionCard, TONE_ICON, TONE_TEXT, toneForScore } from "@/components/common"
+import { EmptyState, Meter, ScoreRing, SectionCard, TONE_ICON, TONE_TEXT, toneForScore } from "@/components/common"
+import { Button } from "@/components/ui/button"
 import type { ContentHealth, HealthComponent } from "@/lib/analytics"
+import { uiActions } from "@/lib/store"
 import { cn } from "@/lib/utils"
 
 function formatPoints(value: number): string {
@@ -35,8 +38,29 @@ function HealthRow({ component }: { component: HealthComponent }) {
   )
 }
 
-/** Score ring, band and the six weighted components with their explanations. */
-export function HealthCard({ health, className }: { health: ContentHealth; className?: string }) {
+/**
+ * Score ring, band and the six weighted components with their explanations. Before anything is
+ * published (`scored` false) a score would only measure an empty workspace, so none is shown.
+ */
+export function HealthCard({ health, scored = true, className }: { health: ContentHealth; scored?: boolean; className?: string }) {
+  if (!scored) {
+    const parts = health.components.map((c) => c.label.toLowerCase())
+    return (
+      <SectionCard title="Content Health Score" className={className}>
+        <EmptyState
+          compact
+          icon={HeartPulse}
+          title="Not scored yet"
+          description={`Your score starts with your first published post. It weighs ${new Intl.ListFormat("en", { type: "conjunction" }).format(parts)}.`}
+          action={
+            <Button type="button" size="sm" variant="outline" onClick={() => uiActions.openDialog({ type: "log-post" })}>
+              Log a published post
+            </Button>
+          }
+        />
+      </SectionCard>
+    )
+  }
   const weakest = [...health.components].sort((a, b) => a.score / a.max - b.score / b.max)[0]
   const BandIcon = TONE_ICON[health.band.tone]
   return (

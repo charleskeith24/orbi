@@ -137,12 +137,14 @@ export function goalTargetText(goal: Pick<ContentGoal, "category" | "target_metr
   return `${formatNumber(goal.target_value)} ${metricLabel(goalMetric(goal))} ${periodLabel(goal.period)}`.trim()
 }
 
-export type GoalPace = "hit" | "on_track" | "behind" | "no_target"
+export type GoalPace = "hit" | "on_track" | "behind" | "not_started" | "no_target"
 
-export function goalPace(progress: GoalProgress): GoalPace {
+/** `started` false (nothing published in the workspace yet): a zero hasn't fallen behind — it hasn't begun. */
+export function goalPace(progress: GoalProgress, started = true): GoalPace {
   if (progress.target === null) return "no_target"
   if (progress.current >= progress.target) return "hit"
-  return progress.onTrack ? "on_track" : "behind"
+  if (progress.onTrack) return "on_track"
+  return !started && progress.current === 0 ? "not_started" : "behind"
 }
 
 /* ------------------------------ Strategic focus ----------------------------- */

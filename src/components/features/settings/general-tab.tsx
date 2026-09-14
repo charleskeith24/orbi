@@ -125,7 +125,7 @@ export function GeneralTab({ draft, now }: { draft: SettingsDraft<GeneralValues>
               id="settings-default-owner"
               value={values.default_owner}
               maxLength={LIMITS.ownerLength + 20}
-              placeholder="e.g. Raf"
+              placeholder="e.g. Maria"
               className="max-w-xs"
               aria-invalid={Boolean(errors.default_owner) || undefined}
               onChange={(event) => set("default_owner", event.target.value)}

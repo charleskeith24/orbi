@@ -111,12 +111,16 @@ function Wheel({ summary }: { summary: FlywheelSummary }) {
       <div className="pointer-events-none absolute top-1/2 left-1/2 flex w-[34%] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 text-center">
         <RefreshCw className="size-5 text-brand" aria-hidden />
         <p className="text-sm leading-5 font-semibold text-balance">Personal Brand Flywheel</p>
-        <p className="text-xs text-muted-foreground">
-          <span className="font-medium text-foreground num">
-            {summary.growing} of {summary.measured}
-          </span>{" "}
-          steps growing
-        </p>
+        {summary.measured ? (
+          <p className="text-xs text-muted-foreground">
+            <span className="font-medium text-foreground num">
+              {summary.growing} of {summary.measured}
+            </span>{" "}
+            steps growing
+          </p>
+        ) : (
+          <p className="text-xs text-pretty text-muted-foreground">Not enough history to compare yet</p>
+        )}
         <p className="text-[11px] text-muted-foreground">Last 30 days vs the 30 before</p>
       </div>
 

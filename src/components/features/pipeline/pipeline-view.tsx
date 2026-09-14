@@ -229,7 +229,7 @@ function PipelineScreen() {
         }
       />
 
-      <PipelineSummary counts={counts} buffer={buffer} onJump={jumpToStage} />
+      <PipelineSummary counts={counts} buffer={buffer} empty={items.length === 0} onJump={jumpToStage} />
 
       {items.length === 0 ? (
         <EmptyState

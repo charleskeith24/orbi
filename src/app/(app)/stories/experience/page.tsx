@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
+import { ExperienceView } from "@/components/features/stories/experience-view"
 
-export const metadata: Metadata = { title: "Experience to Content" }
+export const metadata: Metadata = { title: "Turn Experience Into Content" }
 
-// STUB — replaced by the feature builder.
 export default function Page() {
-  return <div className="p-6 text-sm text-muted-foreground">Experience to Content</div>
+  return <ExperienceView />
 }

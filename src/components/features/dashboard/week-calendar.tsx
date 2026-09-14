@@ -4,7 +4,7 @@ import Link from "next/link"
 import { ColorDot, PlatformIcon, SectionCard } from "@/components/common"
 import { isPublishedItem } from "@/lib/analytics"
 import { formatTime } from "@/lib/dates"
-import type { ContentItem } from "@/lib/types"
+import type { ContentItem, ISODate } from "@/lib/types"
 import { cn, pluralize } from "@/lib/utils"
 import { CardLink } from "./card-link"
 import { formatSlotTime, type SlotStatus, type WeekDay, type WeekSlot } from "./dashboard-utils"
@@ -71,9 +71,11 @@ function WeekItem({ item }: { item: ContentItem }) {
   )
 }
 
-function DayCell({ day }: { day: WeekDay }) {
+function DayCell({ day, beforeStart }: { day: WeekDay; beforeStart: boolean }) {
   const shown = day.items.slice(0, ITEMS_PER_DAY)
   const more = day.items.length - shown.length
+  // Slots before the workspace existed were never missed.
+  const slots = beforeStart ? [] : day.slots
   return (
     <li
       aria-label={format(day.date, "EEEE, MMM d")}
@@ -88,10 +90,12 @@ function DayCell({ day }: { day: WeekDay }) {
         {day.isToday ? <span className="text-[11px] font-medium text-brand">Today</span> : null}
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        {day.slots.map((weekSlot) => (
+        {slots.map((weekSlot) => (
           <SlotChip key={weekSlot.slot.id} weekSlot={weekSlot} />
         ))}
-        {shown.length ? (
+        {beforeStart && !shown.length ? (
+          <p className="px-1 text-xs text-muted-foreground">Before you started</p>
+        ) : shown.length ? (
           <ul className="flex min-w-0 flex-col gap-px">
             {shown.map((item) => (
               <li key={item.id}>
@@ -113,7 +117,7 @@ function DayCell({ day }: { day: WeekDay }) {
 }
 
 /** Mini calendar: posting slots vs scheduled / published posts for each day of this week. */
-export function WeekCalendar({ days, className }: { days: WeekDay[]; className?: string }) {
+export function WeekCalendar({ days, startKey = null, className }: { days: WeekDay[]; startKey?: ISODate | null; className?: string }) {
   const posts = days.reduce((total, day) => total + day.items.length, 0)
   const open = days.reduce((total, day) => total + day.slots.filter((s) => s.status === "open").length, 0)
   return (
@@ -125,7 +129,7 @@ export function WeekCalendar({ days, className }: { days: WeekDay[]; className?:
     >
       <ol className="grid grid-cols-1 gap-1.5 @4xl:grid-cols-7">
         {days.map((day) => (
-          <DayCell key={day.key} day={day} />
+          <DayCell key={day.key} day={day} beforeStart={Boolean(startKey && day.key < startKey)} />
         ))}
       </ol>
     </SectionCard>

@@ -30,12 +30,12 @@ import { AngleDetailSheet } from "./angle-detail-sheet"
 import { AngleFormDialog } from "./angle-form-dialog"
 import {
   ANGLE_SORTS,
+  anglesToRotate,
   angleStats,
   emptyAngleStats,
   filterAngles,
   generatorHref,
   sortAngles,
-  untriedAngles,
   type AngleKind,
   type AngleSort,
 } from "./angle-model"
@@ -71,7 +71,8 @@ export function AngleLibraryView() {
   const overall = useMemo(() => overallPerformance(db, now), [db, now])
   const performance = useMemo(() => anglePerformance(db, now).filter((a) => a.measured > 0), [db, now])
   const visible = useMemo(() => sortAngles(filterAngles(angles, { q, kind }), sort, stats), [angles, q, kind, sort, stats])
-  const untried = useMemo(() => untriedAngles(angles, stats), [angles, stats])
+  const rotate = useMemo(() => anglesToRotate(angles, stats), [angles, stats])
+  const untried = useMemo(() => angles.filter((a) => (stats.get(a.id)?.uses ?? 0) === 0).length, [angles, stats])
   const customCount = useMemo(() => angles.filter((a) => !a.is_default).length, [angles])
 
   const angleById = useMemo(() => new Map(angles.map((a) => [a.id, a])), [angles])
@@ -82,7 +83,9 @@ export function AngleLibraryView() {
 
   const chartItems = performance.flatMap((aggregate) => {
     const value = hookMetricValue(aggregate, metric)
-    return value === null ? [] : [{ id: aggregate.angle.id, label: aggregate.label, value, secondary: pluralize(aggregate.measured, "post"), href: `/ideas/angles?open=${aggregate.angle.id}` }]
+    return value === null
+      ? []
+      : [{ id: aggregate.angle.id, label: aggregate.label, value, secondary: pluralize(aggregate.measured, "post"), href: `/ideas/angles?open=${aggregate.angle.id}` }]
   })
   const best = performance.filter((a) => a.measured >= 2 && a.avgViews !== null).sort((a, b) => (b.avgViews ?? 0) - (a.avgViews ?? 0))[0]
   const bestLift = best?.avgViews && overall.avgViews ? best.avgViews / overall.avgViews : null
@@ -126,7 +129,7 @@ export function AngleLibraryView() {
         </div>
       ) : null}
 
-      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:items-start">
         <ChartFrame
           title="Which angles work best"
           description={`${metricMeta?.description ?? ""} · published posts with analytics, all time`}
@@ -162,20 +165,38 @@ export function AngleLibraryView() {
           </div>
         </ChartFrame>
 
-        <SectionCard title="Untried angles" description="Never used in an idea or content yet — one click generates ideas with it." icon={Compass}>
-          {untried.length ? (
+        <SectionCard
+          title="Angles to rotate in"
+          description={
+            untried
+              ? `${pluralize(untried, "angle")} never used yet, then your least used. One click generates ideas with it.`
+              : "You've used every angle — these are your least used. One click generates ideas with it."
+          }
+          icon={Compass}
+        >
+          {rotate.length ? (
             <ul className="flex flex-wrap gap-1.5">
-              {untried.map((angle) => (
-                <li key={angle.id}>
-                  <Link href={generatorHref(angle.id)} className={chipVariants({ size: "sm" })} title={angle.description || undefined}>
-                    <Sparkles className="text-brand" aria-hidden />
-                    {angle.name || "Untitled angle"}
-                  </Link>
-                </li>
-              ))}
+              {rotate.map((angle) => {
+                const uses = stats.get(angle.id)?.uses ?? 0
+                const name = angle.name || "Untitled angle"
+                return (
+                  <li key={angle.id}>
+                    <Link
+                      href={generatorHref(angle.id)}
+                      className={chipVariants({ size: "sm" })}
+                      title={angle.description || undefined}
+                      aria-label={`Generate ideas with the ${name} angle (${uses ? pluralize(uses, "use") : "never used"})`}
+                    >
+                      <Sparkles className="text-brand" aria-hidden />
+                      {name}
+                      <span className="font-normal text-muted-foreground num">{uses ? formatNumber(uses) : "new"}</span>
+                    </Link>
+                  </li>
+                )
+              })}
             </ul>
           ) : (
-            <p className="text-sm text-pretty text-muted-foreground">You&apos;ve used every angle in the library. Add a custom one to keep your range growing.</p>
+            <p className="text-sm text-pretty text-muted-foreground">Add angles to see which ones to rotate in.</p>
           )}
         </SectionCard>
       </div>
@@ -183,7 +204,9 @@ export function AngleLibraryView() {
       <section aria-label="Angles" className="flex min-w-0 flex-col gap-3">
         {angles.length ? (
           <>
-            <FilterBar actions={<OptionSelect size="sm" options={SORT_OPTIONS} value={sort} onChange={(next) => next && setSort(next)} aria-label="Sort angles" className="w-40" />}>
+            <FilterBar
+              actions={<OptionSelect size="sm" options={SORT_OPTIONS} value={sort} onChange={(next) => next && setSort(next)} aria-label="Sort angles" className="w-40" />}
+            >
               <SearchInput value={q} onChange={setQ} placeholder="Search angles…" />
               <ChipToggleGroup options={KIND_OPTIONS} value={kind} onChange={(next) => next && setKind(next)} required aria-label="Default or custom angles" />
             </FilterBar>
@@ -204,7 +227,11 @@ export function AngleLibraryView() {
                   compact
                   icon={SearchX}
                   title={kind === "custom" && !q.trim() ? "No custom angles yet" : "No angles match"}
-                  description={kind === "custom" && !q.trim() ? "Add a lens of your own — a format you keep coming back to, or a signature take." : "Try a different search or show all angles."}
+                  description={
+                    kind === "custom" && !q.trim()
+                      ? "Add a lens of your own — a format you keep coming back to, or a signature take."
+                      : "Try a different search or show all angles."
+                  }
                   action={
                     kind === "custom" && !q.trim() ? (
                       <Button type="button" size="sm" onClick={() => setNewOpen(true)}>

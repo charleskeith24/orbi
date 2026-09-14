@@ -111,7 +111,7 @@ export function PersonaCard({
             detail={stats.questions ? `${formatNumber(stats.openQuestions)} open` : "None yet"}
           />
           <div className="flex min-w-0 flex-col gap-0.5 px-3 py-2" title={`Content dated in the last ${RECENT_DAYS} days`}>
-            <span className="truncate text-xs text-muted-foreground">Recent content</span>
+            <span className="truncate text-xs text-muted-foreground">Content share</span>
             <span className="text-base leading-6 font-semibold num">{share === null ? "—" : formatPercent(share, 0)}</span>
             <Meter
               size="sm"

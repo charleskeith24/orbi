@@ -74,7 +74,7 @@ export function QuestionQuickAdd({ defaults, onOpen }: { defaults: QuestionDefau
         value={text}
         maxLength={300}
         enterKeyHint="done"
-        placeholder="Add a question your audience asked — Enter to save"
+        placeholder="Log a question your audience asked…"
         className="min-w-0 flex-1"
         onChange={(event) => setText(event.target.value)}
       />

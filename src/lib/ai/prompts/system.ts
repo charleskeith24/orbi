@@ -41,6 +41,9 @@ export function renderBrandContext(ctx: BrandContext, options: { voice?: boolean
     block("Brand HQ", [
       line("Creator", `${identity}${b.brand_name && !identity.includes(b.brand_name) ? ` (${b.brand_name})` : ""}`),
       line("Industry", [b.industry, b.location, b.years_experience ? `${b.years_experience} years of experience` : ""].filter(Boolean).join(" · ")),
+      line("Niche", b.niche),
+      line("Interests (hilig)", b.interests.join(", ")),
+      line("Why this niche fits", b.niche_fit),
       line("Positioning", b.positioning_statement),
       line("Who I am", b.who_am_i),
       line("Known for", b.known_for),
@@ -253,7 +256,7 @@ export function renderSnapshot(snapshot: AnalyticsSnapshot, ctx: BrandContext): 
 
 function hasBrand(ctx: BrandContext): boolean {
   const b = ctx.brand
-  return Boolean(b.name || b.brand_name || b.positioning_statement || b.point_of_view || ctx.pillars.length)
+  return Boolean(b.name || b.brand_name || b.niche || b.positioning_statement || b.point_of_view || ctx.pillars.length)
 }
 
 /**
@@ -281,6 +284,9 @@ export function brandVoiceSystemPrompt(ctx: BrandContext): string {
     b.storytelling_style ? `- Storytelling style: ${b.storytelling_style}` : "",
     "",
     "# How to write",
+    b.niche
+      ? "- Stay inside the niche in Brand HQ: every topic should serve it (use the interests listed there). If a request drifts outside it, steer it back or say plainly why it doesn't fit."
+      : "",
     `- Be specific, personal and opinionated where it fits. Sound like ${first}, not like a brand account: concrete numbers, real situations, the audience's own words.`,
     "- No generic corporate copy or clichés (“in today's fast-paced world”, “unlock your potential”, “game-changer”, “level up”, “take it to the next level”, “dive in”). No emoji walls, no hashtag spam.",
     "- Ground ideas in real audience problems and questions from the Problem Bank, Question Bank and personas, and in what has actually worked for this brand (recent winners, hook performance).",

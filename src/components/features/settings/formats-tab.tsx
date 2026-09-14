@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { FORMAT_CATEGORY_MAP, SCRIPT_FORMATS } from "@/lib/constants"
-import { createStarterDatabase } from "@/lib/data/seed"
+import { createStarterDatabase } from "@/lib/data/starter"
 import { dataActions, useDataStore, useDb, useTable } from "@/lib/store"
 import type { ContentFormat, Database, ID } from "@/lib/types"
 import { matchesQuery, pluralize } from "@/lib/utils"

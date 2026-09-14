@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
+import { FunnelView } from "@/components/features/pillars/funnel-view"
 
 export const metadata: Metadata = { title: "Content Funnel" }
 
-// STUB — replaced by the feature builder.
 export default function Page() {
-  return <div className="p-6 text-sm text-muted-foreground">Content Funnel</div>
+  return <FunnelView />
 }

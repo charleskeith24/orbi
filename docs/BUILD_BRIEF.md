@@ -35,7 +35,7 @@ You are a senior product engineer on the team building **Personal Brand Content 
 - Every route you own: `node scripts/smoke.mjs <route> --out=/tmp/<name>.png`, plus `--dark` and `--width=390 --height=844` variants (`--full` for long pages). **Look at the key screenshots** with the Read tool and fix what looks off (alignment, overflow, truncation, contrast, empty areas, density, dark mode).
 - Exercise interactions with `smoke --actions='[...]'` (open sheets, dialogs, menus, filters, AI actions, keyboard) and check the resulting screenshots.
 - `node scripts/click-audit.mjs <route>` — every control must have an effect; fix each `noEffect` entry (except controls wired to a teammate still building) and every runtime error. `--fast` while iterating (it can mis-name controls after the local-workspace banner is dismissed); full mode once at the end.
-- Test `?open=<id>`, `?tab=`, `?q=` and any other URL params your brief mentions. Real ids: `node scripts/smoke.mjs / --actions='[{"eval":"JSON.parse(localStorage.getItem(\"pbos:workspace:v1\")).db.stories.slice(0,3).map(s=>s.id)"}]'`.
+- Test `?open=<id>`, `?tab=`, `?q=` and any other URL params your brief mentions. Real ids: `node scripts/smoke.mjs / --actions='[{"eval":"JSON.parse(localStorage.getItem(\"pbos:workspace:v2\")).db.stories.slice(0,3).map(s=>s.id)"}]'`.
 
 ## Final answer (returned to the lead engineer)
 

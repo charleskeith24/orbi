@@ -30,4 +30,5 @@ export {
 export type { AiTaskInput, AiTaskName, AiTaskOutput } from "./tasks"
 export type { ExperienceAngleType } from "./tasks/experience-to-content"
 export type { GeneratedIdea } from "./tasks/generate-ideas"
+export type { NicheAim, NicheDiscoveryInput, NicheDiscoveryOutput, NicheKind, NicheOption } from "./tasks/niche-discovery"
 export type { MonthlyReportSummary, WeeklyReportSummary } from "./tasks/reviews"

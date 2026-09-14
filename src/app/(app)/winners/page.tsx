@@ -1,8 +1,13 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
+import { WinnersView } from "@/components/features/winners/winners-view"
 
-export const metadata: Metadata = { title: "Winning Content" }
+export const metadata: Metadata = { title: "Winning Content Library" }
 
-// STUB — replaced by the feature builder.
 export default function Page() {
-  return <div className="p-6 text-sm text-muted-foreground">Winning Content</div>
+  return (
+    <Suspense>
+      <WinnersView />
+    </Suspense>
+  )
 }

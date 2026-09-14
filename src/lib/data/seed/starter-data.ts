@@ -354,7 +354,7 @@ export const PLATFORM_STRATEGIES: Record<
   },
   tiktok: {
     active: true,
-    frequency: 3,
+    frequency: 2,
     goal: "awareness",
     formats: ["Short-form Video", "Behind-the-scenes"],
     audience: "Cold audience discovering you for the first time. They decide in two seconds whether you're worth their time.",
@@ -408,14 +408,17 @@ export const PLATFORM_STRATEGIES: Record<
   },
 }
 
-/** Sample weekly posting strategy (spec §49). */
+/**
+ * Sample weekly posting strategy (spec §49). Per-platform slot counts match PLATFORM_STRATEGIES frequencies
+ * (FB 3 · TikTok 2 · IG 2 · YouTube 1 · LinkedIn 2 = 10 = the starter weekly_post_target).
+ */
 export const POSTING_SLOTS: { day: number; label: string; format: FormatName; platforms: PlatformId[]; time: string }[] = [
   { day: 1, label: "Educational / Authority", format: "Short-form Video", platforms: ["tiktok", "facebook"], time: "18:30" },
   { day: 2, label: "Story / Journey", format: "Facebook Post", platforms: ["facebook"], time: "20:00" },
   { day: 3, label: "Tutorial / Framework", format: "Carousel", platforms: ["instagram", "linkedin"], time: "12:00" },
   { day: 4, label: "Opinion / Leadership", format: "LinkedIn Post", platforms: ["linkedin"], time: "08:30" },
   { day: 5, label: "Behind the Scenes", format: "Behind-the-scenes", platforms: ["tiktok", "instagram"], time: "21:00" },
-  { day: 6, label: "Personal / Lifestyle", format: "Short-form Video", platforms: ["instagram"], time: "19:00" },
+  { day: 6, label: "Personal / Lifestyle", format: "Short-form Video", platforms: ["youtube"], time: "19:00" },
   { day: 0, label: "Reflection / Community", format: "Facebook Post", platforms: ["facebook"], time: "21:00" },
 ]
 

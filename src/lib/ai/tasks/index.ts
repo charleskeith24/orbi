@@ -11,6 +11,7 @@ import { experienceToContentTask } from "./experience-to-content"
 import { generateHooksTask } from "./generate-hooks"
 import { generateIdeasTask } from "./generate-ideas"
 import { generateScriptTask } from "./generate-script"
+import { nicheDiscoveryTask } from "./niche-discovery"
 import { onboardingStrategyTask } from "./onboarding-strategy"
 import { repurposeTask } from "./repurpose"
 import { monthlyReviewTask, weeklyReviewTask } from "./reviews"
@@ -41,6 +42,7 @@ export const AI_TASKS = {
   weekly_plan: weeklyPlanTask,
   strategist_chat: strategistChatTask,
   onboarding_strategy: onboardingStrategyTask,
+  niche_discovery: nicheDiscoveryTask,
 } as const
 
 export type AiTaskName = keyof typeof AI_TASKS

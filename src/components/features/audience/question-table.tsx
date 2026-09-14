@@ -31,18 +31,20 @@ export function QuestionTable({
       id: "question",
       header: "Question",
       sortValue: (q) => q.question.toLowerCase(),
-      className: "min-w-52 whitespace-normal",
+      // Plain wrapping text (no nowrap/truncate) keeps the column's min-content small, so the
+      // table fits a 360px screen with the count and +1 visible.
+      className: "min-w-40 whitespace-normal sm:min-w-52",
       cell: (q) => (
         <div className="min-w-0">
           <p className={cn("line-clamp-2 text-sm leading-snug", q.status === "dismissed" && "text-muted-foreground")}>
             {q.question || "Untitled question"}
           </p>
-          <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-            {q.topic ? <span className="shrink-0 font-medium text-foreground/75">{q.topic}</span> : null}
-            {q.topic && q.source_person ? <span aria-hidden>·</span> : null}
-            {q.source_person ? <span className="min-w-0 truncate">{q.source_person}</span> : null}
-            <span className="shrink-0 sm:hidden">
-              {q.topic || q.source_person ? "· " : ""}
+          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+            {q.topic ? <span className="font-medium text-foreground/75">{q.topic}</span> : null}
+            {q.topic && q.source_person ? " · " : null}
+            {q.source_person}
+            <span className="sm:hidden">
+              {q.topic || q.source_person ? " · " : ""}
               {questionStatusLabel(q.status)}
             </span>
           </p>

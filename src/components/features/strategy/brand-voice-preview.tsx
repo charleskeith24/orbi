@@ -104,6 +104,9 @@ export function BrandVoicePreview({
   const writesAs = [b.role, brandInRole ? "" : b.brand_name, b.years_experience !== null ? years(b.years_experience) : "", b.location]
     .filter(Boolean)
     .join(" · ")
+  // Exactly what the Brand Context sends (clipped there), like every other row.
+  const niche = b.niche
+  const interests = b.interests
   const primary = context.goals.find((g) => g.is_primary)
   const alsoSent: { label: string; href: string }[] = [
     { label: pluralize(context.goals.length, "goal"), href: "/strategy/goals" },
@@ -139,6 +142,14 @@ export function BrandVoicePreview({
       </div>
 
       <dl className="flex flex-col gap-3 px-4 pt-3 pb-4">
+        <VoiceRow label="Niche" field="niche" empty={!niche && !interests.length}>
+          {niche ? <span className="font-medium">{niche}</span> : <span className="text-muted-foreground italic">No niche line yet</span>}
+          {interests.length ? (
+            <span className="mt-1.5 block">
+              <Tokens values={interests} />
+            </span>
+          ) : null}
+        </VoiceRow>
         <VoiceRow label="Writes as" field="name" empty={!b.name}>
           <span className="font-medium">{b.name}</span>
           {writesAs ? <span className="text-muted-foreground"> — {writesAs}</span> : null}

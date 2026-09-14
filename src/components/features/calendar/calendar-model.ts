@@ -236,15 +236,18 @@ export function buildCalendarDays(
   byDay: Map<ISODate, Placement[]>,
   slots: PostingSlot[],
   now: Date,
-  options: { month?: Date; visible?: (item: ContentItem) => boolean } = {}
+  /** `startKey`: the workspace's first day — posting slots before it never existed, so they aren't shown or missed. */
+  options: { month?: Date; visible?: (item: ContentItem) => boolean; startKey?: ISODate | null } = {}
 ): CalendarDay[] {
   const todayKey = toISODate(now)
   const visible = options.visible ?? (() => true)
+  const startKey = options.startKey ?? null
   return days.map((date) => {
     const key = toISODate(date)
     const placements = byDay.get(key) ?? []
     const allPosts = placements.filter((p) => p.kind !== "due").sort(byTime)
-    const { slots: daySlots, used } = fillSlots(slotsForWeekday(slots, date.getDay()), allPosts, date, todayKey)
+    const daySlotsBefore = startKey && key < startKey ? [] : slotsForWeekday(slots, date.getDay())
+    const { slots: daySlots, used } = fillSlots(daySlotsBefore, allPosts, date, todayKey)
     const posts = allPosts.filter((p) => visible(p.item))
     return {
       key,

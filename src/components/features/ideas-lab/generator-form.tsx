@@ -49,6 +49,17 @@ export function GeneratorBriefForm({
   const [brief, setBrief] = useState<GeneratorBrief>(initialBrief)
   const [count, setCount] = useState<number | null>(initialBrief.count)
   const countOk = isValidCount(count)
+  const pristine =
+    !brief.pillarId &&
+    !brief.personaId &&
+    !brief.problemId &&
+    !brief.platform &&
+    !brief.goalId &&
+    !brief.topic.trim() &&
+    !brief.funnel &&
+    !brief.angleId &&
+    !brief.formatId &&
+    count === EMPTY_BRIEF.count
   const set = (patch: Partial<GeneratorBrief>) => setBrief((current) => ({ ...current, ...patch }))
 
   /** A problem that belongs to another persona no longer fits — clear it with the persona change. */
@@ -88,7 +99,15 @@ export function GeneratorBriefForm({
       title="Brief"
       description="Every filter is optional — leave one on “Any” and the generator balances it using your strategy."
       action={
-        <Button type="button" variant="ghost" size="xs" className="text-muted-foreground" onClick={reset}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          className="text-muted-foreground"
+          disabled={pristine}
+          title={pristine ? "The brief is already empty" : "Clear every filter"}
+          onClick={reset}
+        >
           <RotateCcw aria-hidden />
           Reset
         </Button>

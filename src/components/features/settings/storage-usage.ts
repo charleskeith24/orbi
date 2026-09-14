@@ -12,7 +12,7 @@ export interface StorageUsage {
   /** Characters across every key this site stores. */
   total: number
   savedAt: string | null
-  /** Snapshots kept aside after a failed load (`pbos:workspace:v1:corrupt:*`). */
+  /** Snapshots kept aside after a failed load (`pbos:workspace:v2:corrupt:*`). */
   recoveryCopies: number
 }
 

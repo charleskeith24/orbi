@@ -1,8 +1,13 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
+import { ExperimentsView } from "@/components/features/experiments/experiments-view"
 
 export const metadata: Metadata = { title: "Experiments" }
 
-// STUB — replaced by the feature builder.
 export default function Page() {
-  return <div className="p-6 text-sm text-muted-foreground">Experiments</div>
+  return (
+    <Suspense>
+      <ExperimentsView />
+    </Suspense>
+  )
 }

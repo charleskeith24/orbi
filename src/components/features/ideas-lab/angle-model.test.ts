@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { anglePerformance } from "@/lib/analytics"
 import { buildRow, emptyDatabase } from "@/lib/data/defaults"
 import type { Database } from "@/lib/types"
-import { angleStats, filterAngles, generatorHref, sortAngles, untriedAngles, validateAngleName } from "./angle-model"
+import { anglesToRotate, angleStats, filterAngles, generatorHref, sortAngles, validateAngleName } from "./angle-model"
 
 const USER = "user-1"
 const NOW = new Date("2026-09-10T10:00:00.000Z")
@@ -60,9 +60,11 @@ describe("filters, sorting and untried angles", () => {
     expect(sortAngles(db.angles, "az", stats).map((a) => a.id)).toEqual(["a-teardown", "a-myth", "a-story"])
   })
 
-  it("lists angles never used", () => {
+  it("suggests never-used angles first, then the least used", () => {
     const db = workspace()
-    expect(untriedAngles(db.angles, angleStats(db, NOW)).map((a) => a.id)).toEqual(["a-myth"])
+    const stats = angleStats(db, NOW)
+    expect(anglesToRotate(db.angles, stats).map((a) => a.id)).toEqual(["a-myth", "a-story", "a-teardown"])
+    expect(anglesToRotate(db.angles, stats, 1).map((a) => a.id)).toEqual(["a-myth"])
   })
 })
 

@@ -94,7 +94,11 @@ export function coreLoop(db: Database, now: Date, settings: AppSettings, brandCo
     { label: "Create", href: "/studio", stat: `${count(["brief", "scripting"])} in brief & script` },
     { label: "Produce", href: "/pipeline", stat: `${count([...PRODUCTION_STAGES, ...REVIEW_STAGES])} in production` },
     { label: "Publish", href: "/calendar", stat: `${count(["scheduled"])} scheduled` },
-    { label: "Measure", href: "/analytics", stat: `${rows30.filter((r) => r.metric).length}/${rows30.length} posts measured` },
+    {
+      label: "Measure",
+      href: "/analytics",
+      stat: rows30.length ? `${rows30.filter((r) => r.metric).length}/${rows30.length} posts measured` : "No posts in 30 days",
+    },
     { label: "Learn", href: "/reports", stat: pluralize(db.weekly_reviews.length, "weekly report") },
     { label: "New strategy", href: "/reports/monthly", stat: pluralize(db.monthly_reviews.length, "monthly review") },
   ]

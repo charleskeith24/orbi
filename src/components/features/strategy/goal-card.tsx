@@ -32,6 +32,7 @@ const PACE: Record<GoalPace, { label: string; tone: StatusTone; meter: MeterTone
   hit: { label: "Target hit", tone: "good", meter: "good", icon: Trophy },
   on_track: { label: "On track", tone: "good", meter: "brand", icon: CircleCheck },
   behind: { label: "Behind pace", tone: "warning", meter: "warning", icon: TriangleAlert },
+  not_started: { label: "Starts with your first post", tone: "neutral", meter: "neutral", icon: CircleDashed },
   no_target: { label: "No target", tone: "neutral", meter: "neutral", icon: CircleDashed },
 }
 
@@ -98,9 +99,9 @@ function GoalMenu({ name, role, active, actions }: { name: string; role: GoalRol
 }
 
 /** One goal: category, focus role, progress toward its target this period and the content serving it. */
-export function GoalCard({ row, actions }: { row: GoalRow; actions: GoalCardActions }) {
+export function GoalCard({ row, actions, started = true }: { row: GoalRow; actions: GoalCardActions; started?: boolean }) {
   const { goal, progress: p, role } = row
-  const pace = PACE[goalPace(p)]
+  const pace = PACE[goalPace(p, started)]
   const name = goal.name || "Untitled goal"
   const unit = metricLabel(p.metric)
   const period = periodNoun(goal.period)

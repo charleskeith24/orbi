@@ -4,6 +4,7 @@ import { ChevronRight, Cloud, HardDrive } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
+import { OrbiLogo, OrbiMark } from "@/components/app-shell/orbi-logo"
 import { UserMenu } from "@/components/app-shell/user-menu"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
@@ -26,20 +27,11 @@ import {
 import { isNavActive, NAV_SECTIONS, type NavItem } from "@/lib/navigation"
 import { useBrand, useDataStatus } from "@/lib/store"
 
-export function BrandMark({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden className={className} fill="none">
-      <path d="M5 19V5h7a4.5 4.5 0 0 1 0 9H5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="17.5" cy="18" r="2" fill="currentColor" />
-    </svg>
-  )
-}
-
 export function AppSidebar() {
   const pathname = usePathname()
   const brand = useBrand()
   const { mode } = useDataStatus()
-  const { isMobile, setOpenMobile } = useSidebar()
+  const { isMobile, setOpenMobile, state } = useSidebar()
   const onNavigate = () => {
     if (isMobile) setOpenMobile(false)
   }
@@ -49,17 +41,20 @@ export function AppSidebar() {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild tooltip="Personal Brand OS">
+            <SidebarMenuButton size="lg" asChild tooltip="Orbi">
+              {/* `!` sizes beat the menu button's `[&_svg]:size-4`. */}
               <Link href="/" onClick={onNavigate}>
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                  <BrandMark className="size-4.5" />
-                </span>
-                <span className="grid flex-1 text-left leading-tight">
-                  <span className="truncate text-sm font-semibold">Personal Brand OS</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {brand.brand_name || brand.name || "Your brand"}
-                  </span>
-                </span>
+                {state === "collapsed" && !isMobile ? (
+                  <OrbiMark className="size-8! text-sidebar-foreground" />
+                ) : (
+                  <>
+                    <OrbiLogo className="h-[22px]! w-auto! text-sidebar-foreground" />
+                    <span aria-hidden className="h-4 w-px shrink-0 bg-sidebar-border" />
+                    <span className="min-w-0 truncate text-xs text-muted-foreground">
+                      {brand.brand_name || brand.name || "Your brand"}
+                    </span>
+                  </>
+                )}
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

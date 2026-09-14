@@ -45,6 +45,20 @@ const CLICKABLE = [
 
 const browser = await chromium.launch({ channel: "chrome", headless: true })
 
+// New browser profiles start empty (first run → onboarding). QA runs seed the sample brand through a
+// dev-only flag by default: --seed=demo (default), --seed=fresh (onboarded but empty), --seed=none (true first run).
+const SEED = String(args.seed ?? "demo")
+const newContextRaw = browser.newContext.bind(browser)
+browser.newContext = async (options) => {
+  const context = await newContextRaw(options)
+  if (SEED !== "none") {
+    await context.addInitScript((seed) => {
+      if (!localStorage.getItem("pbos:dev-seed")) localStorage.setItem("pbos:dev-seed", seed)
+    }, SEED)
+  }
+  return context
+}
+
 async function openPage() {
   const context = await browser.newContext({ viewport: { width, height }, acceptDownloads: true })
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: BASE }).catch(() => {})
@@ -134,7 +148,7 @@ async function probe(page, index, errors, getDownloads) {
         "[role='dialog'],[role='alertdialog'],[role='menu'],[role='listbox'],[data-radix-popper-content-wrapper],[data-slot='popover-content'],[data-slot='sheet-content'],[data-slot='dropdown-menu-content']"
       ).length,
       toasts: document.querySelectorAll("[data-sonner-toast]").length,
-      data: (localStorage.getItem("pbos:workspace:v1") ?? "").length,
+      data: (localStorage.getItem("pbos:workspace:v2") ?? "").length,
       focusInput: ["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName ?? "") || document.activeElement?.isContentEditable,
     }))
   const before = await snapshot()
@@ -152,7 +166,7 @@ async function probe(page, index, errors, getDownloads) {
   const audit = (await page.evaluate(() => window.__audit).catch(() => null)) ?? { mutations: 1, clipboard: false }
   // Flush the debounced local save before comparing data.
   await page.waitForTimeout(350)
-  const dataAfter = await page.evaluate(() => (localStorage.getItem("pbos:workspace:v1") ?? "").length).catch(() => after.data)
+  const dataAfter = await page.evaluate(() => (localStorage.getItem("pbos:workspace:v2") ?? "").length).catch(() => after.data)
 
   // Client navigations to not-yet-compiled dev routes can take seconds: give quiet clicks a second chance.
   if (after.url === before.url && after.overlays === before.overlays && after.toasts === before.toasts && dataAfter === before.data) {

@@ -5,9 +5,11 @@
  * Re-running setup updates instead of duplicating: goals match by name, then category; pillars and the
  * primary persona by name; problems by text; platform strategies by platform; posting slots by day;
  * ideas by title. Pillars and slots left out of the new answers are deactivated — never deleted.
+ * `planNicheUpdate` writes only what Niche Discovery owns (niche, positioning, goals, persona, story and,
+ * when the creator confirms it, pillars).
  */
 import { CATEGORICAL_COLORS, GOAL_CATEGORIES, PLATFORM_IDS } from "@/lib/constants"
-import { createStarterDatabase } from "@/lib/data/seed"
+import { createStarterDatabase } from "@/lib/data/starter"
 import { GOALS } from "@/lib/data/seed/starter-data"
 import type { Database, GoalCategory, ID, InsertRow, Row, TableName, UpdateRow } from "@/lib/types"
 import { uid } from "@/lib/utils"
@@ -17,6 +19,7 @@ import {
   finalSchedule,
   goalTargetFor,
   norm,
+  personaNameOf,
   pillarColors,
   pillarForLabel,
   platformSplit,
@@ -46,6 +49,7 @@ export interface PlanSummary {
   /** Selected ideas skipped because an idea with the same title already exists. */
   ideasSkipped: number
   story: boolean
+  niche: string
 }
 
 export interface OnboardingPlan {
@@ -68,6 +72,14 @@ export interface OnboardingInput {
   answers: OnboardingAnswers
   /** The ideas the creator kept, in order. */
   ideas: PlannedIdea[]
+  now?: Date
+  newId?: () => ID
+}
+
+export interface NicheUpdateInput {
+  answers: OnboardingAnswers
+  /** The creator confirmed replacing the active pillars with the niche's selection. */
+  replacePillars: boolean
   now?: Date
   newId?: () => ID
 }
@@ -214,19 +226,11 @@ export function whoAmI(a: OnboardingAnswers): string {
   return [first, second].filter(Boolean).join(" ")
 }
 
-/* ---------------------------------- Plan ---------------------------------- */
+/* ------------------------------ Plan sections ----------------------------- */
 
-export function planOnboarding(db: Database, input: OnboardingInput): OnboardingPlan {
-  const a = input.answers
-  const now = input.now ?? new Date()
-  const newId = input.newId ?? uid
-  const b = createBuilder()
-  const libraryRows = planLibrary(db, b, now, newId)
-
-  /* Goals */
+function planGoals(b: Builder, db: Database, a: OnboardingAnswers, newId: () => ID): Partial<Record<GoalCategory, ID>> {
   const goalIds: Partial<Record<GoalCategory, ID>> = {}
-  const goals = chosenGoals(a)
-  for (const category of goals) {
+  for (const category of chosenGoals(a)) {
     const target = goalTargetFor(a, category)
     const values: UpdateRow<"content_goals"> = {
       target_metric: GOAL_CATEGORIES[category].metric,
@@ -254,11 +258,20 @@ export function planOnboarding(db: Database, input: OnboardingInput): Onboarding
       goalIds[category] = id
     }
   }
+  return goalIds
+}
 
-  /* Pillars */
+interface PillarPlan {
+  idFor: (name: string | null) => ID | null
+  names: string[]
+  count: number
+  archived: number
+}
+
+function planPillars(b: Builder, db: Database, a: OnboardingAnswers, newId: () => ID): PillarPlan {
   const selected = selectedPillars(a)
   const colors = pillarColors(a.pillars, db.content_pillars)
-  const pillarIds = new Map<string, ID>()
+  const ids = new Map<string, ID>()
   selected.forEach((p, index) => {
     const name = p.name.trim()
     const values: UpdateRow<"content_pillars"> = {
@@ -271,58 +284,129 @@ export function planOnboarding(db: Database, input: OnboardingInput): Onboarding
     const match = db.content_pillars.find((row) => norm(row.name) === norm(name))
     if (match) {
       b.patch("content_pillars", match.id, values)
-      pillarIds.set(norm(name), match.id)
+      ids.set(norm(name), match.id)
     } else {
       const id = newId()
       b.insert("content_pillars", { id, name, color: colors.get(p.key) ?? CATEGORICAL_COLORS[index % CATEGORICAL_COLORS.length], icon: p.icon || "Layers", ...values })
-      pillarIds.set(norm(name), id)
+      ids.set(norm(name), id)
     }
   })
   const keep = new Set(selected.map((p) => norm(p.name)))
-  let pillarsArchived = 0
+  let archived = 0
   for (const row of db.content_pillars) {
     if (row.is_active && !keep.has(norm(row.name))) {
       b.patch("content_pillars", row.id, { is_active: false })
-      pillarsArchived++
+      archived++
     }
   }
-  const pillarNames = selected.map((p) => p.name.trim())
-  const pillarIdFor = (name: string | null) => (name ? (pillarIds.get(norm(name)) ?? null) : null)
+  return { idFor: (name) => (name ? (ids.get(norm(name)) ?? null) : null), names: selected.map((p) => p.name.trim()), count: selected.length, archived }
+}
 
-  /* Primary persona + problems */
-  const personaName = a.persona_name.trim()
+/** The workspace's active pillars, untouched (Niche Discovery without replacing pillars). */
+function currentPillars(db: Database): PillarPlan {
+  const active = db.content_pillars.filter((p) => p.is_active)
+  const ids = new Map(active.map((p) => [norm(p.name), p.id]))
+  return { idFor: (name) => (name ? (ids.get(norm(name)) ?? null) : null), names: active.map((p) => p.name), count: 0, archived: 0 }
+}
+
+interface PersonaPlan {
+  id: ID
+  name: string
+  problems: string[]
+  problemIds: ID[]
+}
+
+/** The primary persona from "Kanino", with its problems in the Problem Bank. */
+function planPersona(b: Builder, db: Database, a: OnboardingAnswers, newId: () => ID): PersonaPlan {
+  const name = personaNameOf(a)
   const problems = cleanList(a.persona_problems)
-  const personaValues: UpdateRow<"audience_personas"> = {
+  const values: UpdateRow<"audience_personas"> = {
     profession: a.persona_profession.trim(),
     experience_level: a.persona_experience.trim(),
-    goals: cleanList(a.persona_goals),
+    goals: cleanList([a.audience_goal, ...a.persona_goals]),
     problems,
     platforms: platformsInOrder(a.persona_platforms),
     is_primary: true,
   }
-  const personaMatch = db.audience_personas.find((p) => norm(p.name) === norm(personaName))
-  let personaId: ID
-  if (personaMatch) {
-    personaId = personaMatch.id
-    b.patch("audience_personas", personaId, personaValues)
+  const match = db.audience_personas.find((p) => norm(p.name) === norm(name))
+  let id: ID
+  if (match) {
+    id = match.id
+    b.patch("audience_personas", id, values)
   } else {
-    personaId = newId()
+    id = newId()
     const used = new Set(db.audience_personas.map((p) => p.color))
-    b.insert("audience_personas", { id: personaId, name: personaName, color: CATEGORICAL_COLORS.find((c) => !used.has(c)) ?? "blue", ...personaValues })
+    b.insert("audience_personas", { id, name, color: CATEGORICAL_COLORS.find((c) => !used.has(c)) ?? "blue", ...values })
   }
-  for (const p of db.audience_personas) if (p.is_primary && p.id !== personaId) b.patch("audience_personas", p.id, { is_primary: false })
+  for (const p of db.audience_personas) if (p.is_primary && p.id !== id) b.patch("audience_personas", p.id, { is_primary: false })
 
   const category = problemCategoryFor(a.persona_experience)
   const problemIds: ID[] = problems.map((text, index) => {
-    const match = db.audience_problems.find((r) => norm(r.problem) === norm(text) && (r.persona_id === personaId || r.persona_id === null))
-    if (match) {
-      if (match.persona_id !== personaId) b.patch("audience_problems", match.id, { persona_id: personaId })
-      return match.id
+    const existing = db.audience_problems.find((r) => norm(r.problem) === norm(text) && (r.persona_id === id || r.persona_id === null))
+    if (existing) {
+      if (existing.persona_id !== id) b.patch("audience_problems", existing.id, { persona_id: id })
+      return existing.id
     }
-    const id = newId()
-    b.insert("audience_problems", { id, persona_id: personaId, problem: text, category, severity: index === 0 ? 5 : index < 3 ? 4 : 3 })
-    return id
+    const problemId = newId()
+    b.insert("audience_problems", { id: problemId, persona_id: id, problem: text, category, severity: index === 0 ? 5 : index < 3 ? 4 : 3 })
+    return problemId
   })
+  return { id, name, problems, problemIds }
+}
+
+/** Story Vault — the proof story from "Galing", once. */
+function planStory(b: Builder, db: Database, a: OnboardingAnswers, pillars: PillarPlan, newId: () => ID): boolean {
+  const story = a.story.trim().slice(0, 2000)
+  if (!story) return false
+  const title = storyTitle(story)
+  if (db.stories.some((s) => norm(s.situation) === norm(story) || (title && norm(s.title) === norm(title)))) return false
+  b.insert("stories", {
+    id: newId(),
+    type: "experience",
+    title: title || "My story",
+    situation: story,
+    keywords: cleanList([...a.expertise_areas, ...a.interests]).slice(0, 3).map((x) => x.toLowerCase()),
+    pillar_id: pillars.idFor(pillarForLabel("Story / Journey", pillars.names)),
+    is_favorite: true,
+  })
+  return true
+}
+
+/** The Brand HQ fields Niche Discovery owns (a full setup writes them too). */
+function nicheBrand(a: OnboardingAnswers): UpdateRow<"brand_profiles"> {
+  return {
+    niche: a.niche.trim(),
+    interests: cleanList(a.interests),
+    niche_fit: a.niche_fit.trim(),
+    positioning_audience: a.audience.trim(),
+    positioning_result: a.result.trim(),
+    positioning_method: a.method.trim(),
+    known_for: a.known_for.trim() || a.niche.trim(),
+    problems_solved: a.problems_solved.trim() || cleanList(a.persona_problems).join("; "),
+    why_listen: a.why_listen.trim() || a.proof.trim(),
+    expertise_areas: cleanList(a.expertise_areas),
+    expertise_summary: a.expertise_summary.trim() || a.help_requests.trim(),
+    years_experience: a.years_experience,
+  }
+}
+
+const goalRef = (goalIds: Partial<Record<GoalCategory, ID>>, a: OnboardingAnswers): UpdateRow<"brand_profiles"> => ({
+  primary_goal_id: a.primary_goal ? (goalIds[a.primary_goal] ?? null) : null,
+  secondary_goal_id: a.secondary_goal && a.secondary_goal !== a.primary_goal ? (goalIds[a.secondary_goal] ?? null) : null,
+})
+
+/* ---------------------------------- Plans --------------------------------- */
+
+export function planOnboarding(db: Database, input: OnboardingInput): OnboardingPlan {
+  const a = input.answers
+  const now = input.now ?? new Date()
+  const newId = input.newId ?? uid
+  const b = createBuilder()
+  const libraryRows = planLibrary(db, b, now, newId)
+  const goals = chosenGoals(a)
+  const goalIds = planGoals(b, db, a, newId)
+  const pillars = planPillars(b, db, a, newId)
+  const persona = planPersona(b, db, a, newId)
 
   /* Platform strategies */
   const split = platformSplit(a)
@@ -367,7 +451,7 @@ export function planOnboarding(db: Database, input: OnboardingInput): Onboarding
       platforms: platformsInOrder(plan.platforms),
       time: plan.time,
       format_id: formatId(plan.format),
-      pillar_id: pillarIdFor(pillarForLabel(plan.label, pillarNames)),
+      pillar_id: pillars.idFor(pillarForLabel(plan.label, pillars.names)),
       sort_order: index,
       is_active: true,
     }
@@ -390,7 +474,7 @@ export function planOnboarding(db: Database, input: OnboardingInput): Onboarding
       continue
     }
     seen.add(norm(finalTitle))
-    const problemIndex = matchProblem(idea, problems)
+    const problemIndex = matchProblem(idea, persona.problems)
     const goal = goalForIdea(idea.funnel_stage, goals)
     b.insert("content_ideas", {
       id: newId(),
@@ -399,9 +483,9 @@ export function planOnboarding(db: Database, input: OnboardingInput): Onboarding
       hook: idea.hook.trim(),
       hook_category: idea.hook_category,
       angle_id: angles.find((x) => norm(x.name) === norm(idea.angle))?.id ?? null,
-      pillar_id: pillarIdFor(pillar),
-      persona_id: personaId,
-      problem_id: problemIndex >= 0 ? (problemIds[problemIndex] ?? null) : null,
+      pillar_id: pillars.idFor(pillar),
+      persona_id: persona.id,
+      problem_id: problemIndex >= 0 ? (persona.problemIds[problemIndex] ?? null) : null,
       goal_id: goal ? (goalIds[goal] ?? null) : null,
       platforms: [idea.platform],
       format_id: formatId(idea.format),
@@ -416,25 +500,7 @@ export function planOnboarding(db: Database, input: OnboardingInput): Onboarding
     ideas++
   }
 
-  /* Story Vault — the story shared in step 4, once */
-  const story = a.story.trim().slice(0, 2000)
-  let storySaved = false
-  if (story) {
-    const title = storyTitle(story)
-    const duplicate = db.stories.some((s) => norm(s.situation) === norm(story) || (title && norm(s.title) === norm(title)))
-    if (!duplicate) {
-      b.insert("stories", {
-        id: newId(),
-        type: "experience",
-        title: title || "My story",
-        situation: story,
-        keywords: cleanList(a.expertise_areas).slice(0, 3).map((x) => x.toLowerCase()),
-        pillar_id: pillarIdFor(pillarForLabel("Story / Journey", pillarNames)),
-        is_favorite: true,
-      })
-      storySaved = true
-    }
-  }
+  const story = planStory(b, db, a, pillars, newId)
 
   /* Settings + Brand HQ (the brand patch flips onboarding_completed, so it is applied last) */
   const weeklyTarget = weeklyTotal(a)
@@ -444,17 +510,9 @@ export function planOnboarding(db: Database, input: OnboardingInput): Onboarding
     brand_name: a.brand_name.trim(),
     role: a.role.trim(),
     industry: a.industry.trim(),
-    years_experience: a.years_experience,
     location: a.location.trim(),
-    positioning_audience: a.audience.trim(),
-    positioning_result: a.result.trim(),
-    positioning_method: a.method.trim(),
-    known_for: a.known_for.trim(),
-    problems_solved: a.problems_solved.trim(),
-    why_listen: a.why_listen.trim(),
+    ...nicheBrand(a),
     point_of_view: a.point_of_view.trim(),
-    expertise_areas: cleanList(a.expertise_areas),
-    expertise_summary: a.expertise_summary.trim(),
     personality_traits: [...a.personality],
     language: a.language,
     tones: [...a.tones],
@@ -462,8 +520,7 @@ export function planOnboarding(db: Database, input: OnboardingInput): Onboarding
     always_do: a.always_do.trim(),
     never_do: a.never_do.trim(),
     main_platforms: platformsInOrder(a.platforms),
-    primary_goal_id: a.primary_goal ? (goalIds[a.primary_goal] ?? null) : null,
-    secondary_goal_id: a.secondary_goal && a.secondary_goal !== a.primary_goal ? (goalIds[a.secondary_goal] ?? null) : null,
+    ...goalRef(goalIds, a),
     onboarding_completed: true,
   }
   if (!brandRow?.who_am_i.trim()) brand.who_am_i = whoAmI(a)
@@ -475,17 +532,50 @@ export function planOnboarding(db: Database, input: OnboardingInput): Onboarding
     brand,
     summary: {
       libraryRows,
-      pillars: selected.length,
-      pillarsArchived,
-      personaName,
-      problems: problems.length,
+      pillars: pillars.count,
+      pillarsArchived: pillars.archived,
+      personaName: persona.name,
+      problems: persona.problems.length,
       goals: goals.length,
       platforms: main.size,
       slots,
       weeklyTarget,
       ideas,
       ideasSkipped,
-      story: storySaved,
+      story,
+      niche: a.niche.trim(),
+    },
+  }
+}
+
+/** Re-run Niche Discovery on a finished workspace: niche fields, positioning, goals, persona, story — pillars only when confirmed. */
+export function planNicheUpdate(db: Database, input: NicheUpdateInput): OnboardingPlan {
+  const a = input.answers
+  const newId = input.newId ?? uid
+  const b = createBuilder()
+  const goalIds = planGoals(b, db, a, newId)
+  const pillars = input.replacePillars ? planPillars(b, db, a, newId) : currentPillars(db)
+  const persona = planPersona(b, db, a, newId)
+  const story = planStory(b, db, a, pillars, newId)
+  return {
+    inserts: b.inserts as PlanInserts,
+    updates: b.updates as PlanUpdates,
+    settings: {},
+    brand: { ...nicheBrand(a), ...goalRef(goalIds, a) },
+    summary: {
+      libraryRows: 0,
+      pillars: pillars.count,
+      pillarsArchived: pillars.archived,
+      personaName: persona.name,
+      problems: persona.problems.length,
+      goals: chosenGoals(a).length,
+      platforms: 0,
+      slots: 0,
+      weeklyTarget: 0,
+      ideas: 0,
+      ideasSkipped: 0,
+      story,
+      niche: a.niche.trim(),
     },
   }
 }

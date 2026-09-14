@@ -24,6 +24,7 @@ import { dataActions, useRow, useSettings, useTable } from "@/lib/store"
 import type { ContentItem } from "@/lib/types"
 import { cn, formatCompact, formatNumber, formatPercent } from "@/lib/utils"
 import { togglePinnedWinner } from "./winner-actions"
+import { WinnerReplication } from "./winner-replication"
 import { WinnerRepurpose } from "./winner-repurpose"
 import { WinnerWhy } from "./winner-why"
 import { formatRatio, tierExplanation } from "./winners-model"
@@ -150,7 +151,7 @@ export function WinnerDetailSheet({
       <div className="flex flex-col gap-7">
         <PerformanceSummary row={row} pinned={pinned} />
         <Properties item={item} row={row} />
-        <WinnerWhy key={item.id} item={item} />
+        <WinnerWhy key={`why-${item.id}`} item={item} />
         <PageSection
           id="winner-replication-ideas"
           title="Replication Ideas"
@@ -164,6 +165,7 @@ export function WinnerDetailSheet({
             addLabel="Add replication idea"
           />
         </PageSection>
+        <WinnerReplication key={`replicate-${item.id}`} item={item} ratio={row.ratio} />
         <WinnerRepurpose item={item} now={now} />
         <PageSection
           id="winner-tree"

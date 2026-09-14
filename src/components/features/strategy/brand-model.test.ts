@@ -34,6 +34,12 @@ describe("brand form values", () => {
     expect(brandPatch({ ...empty, years_experience: 120 }).years_experience).toBe(80)
   })
 
+  it("keeps the niche on one line and dedupes interests", () => {
+    const patch = brandPatch({ ...empty, niche: "  Bookkeeping\n for  sellers ", interests: ["Shopee", "shopee ", " Cash flow"] })
+    expect(patch.niche).toBe("Bookkeeping for sellers")
+    expect(patch.interests).toEqual(["Shopee", "Cash flow"])
+  })
+
   it("detects list edits", () => {
     expect(changedFields({ ...demo, tones: ["casual"] }, demo)).toEqual(["tones"])
     expect(cleanList(["a", "A", " b "])).toEqual(["a", "b"])
@@ -52,14 +58,17 @@ describe("brandCompleteness", () => {
     expect(c.pct).toBe(100)
     expect(c.missing).toEqual([])
     expect(c.sections.identity).toEqual({ done: 8, total: 8 })
+    expect(c.sections.niche).toEqual({ done: 3, total: 3 })
   })
 
-  it("lists gaps in page order", () => {
+  it("lists gaps in page order, niche first", () => {
     const c = brandCompleteness(empty)
     // The only default that counts is the default tone.
     expect(c.done).toBe(1)
+    expect(c.total).toBe(28)
     expect(c.pct).toBe(4)
-    expect(c.missing[0]).toMatchObject({ field: "name", section: "identity" })
+    expect(c.missing[0]).toMatchObject({ field: "niche", section: "niche" })
+    expect(c.missing[3]).toMatchObject({ field: "name", section: "identity" })
   })
 
   it("needs three expertise areas and personality traits", () => {

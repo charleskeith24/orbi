@@ -21,7 +21,7 @@ export function DashboardHeader({
   return (
     <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
       <div className="min-w-0">
-        <p className="text-xs font-medium text-muted-foreground">Personal Brand OS</p>
+        <p className="text-xs font-medium text-muted-foreground">Orbi</p>
         <h1 className="text-lg leading-7 font-semibold tracking-tight text-balance">{name ? `${greeting}, ${name}` : greeting}</h1>
         <p className="text-sm text-muted-foreground">This week · {weekRangeLabel(weekStart, weekEnd)}</p>
       </div>

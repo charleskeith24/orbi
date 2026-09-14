@@ -292,6 +292,18 @@ export function audienceFromPersona(name: string): string {
   return [...qualifier, noun].join(" ")
 }
 
+/**
+ * The niche's topic without its audience: "Bookkeeping systems for Filipino online sellers" → "Bookkeeping systems";
+ * "Taxes at bookkeeping para sa mga freelancers" → "Taxes at bookkeeping". Empty when no compact topic remains.
+ */
+export function nicheTopic(niche: string): string {
+  const head = (clean(niche).split(/\s+(?:for|para sa|to help|—|–)\s+/i)[0] ?? "")
+    .split(/,\s+|\s+na\s+|\s+made simple\b|\s+explained\b/i)[0]
+    .replace(/[.!?;:]+$/, "")
+    .trim()
+  return head && head.split(" ").length <= 5 && !isWeakSubject(head) ? head : ""
+}
+
 function shortIndustry(industry: string, areas: string[]): string {
   const first = industry.split(/\s*(?:&|,|\/|\(|\band\b)\s*/i)[0]?.trim()
   if (first) return first.charAt(0).toLowerCase() + first.slice(1)
@@ -324,7 +336,8 @@ export function createKit(ctx: BrandContext, seed: string): Kit {
     ...ctx.winners.map((w) => tokenSet(`${w.title} ${w.hook}`)),
     ...ctx.personas.map((p) => tokenSet([...p.problems, ...p.goals, ...p.questions, ...p.frustrations, ...p.language_used].join(" "))),
     ...b.expertise_areas.map((a) => tokenSet(a)),
-    tokenSet(`${b.known_for} ${b.point_of_view} ${b.problems_solved}`),
+    ...b.interests.map((a) => tokenSet(a)),
+    tokenSet(`${b.niche} ${b.known_for} ${b.point_of_view} ${b.problems_solved}`),
   ].filter((d) => d.size)
   const df = new Map<string, number>()
   for (const d of docs) for (const t of d) df.set(t, (df.get(t) ?? 0) + 1)
@@ -348,6 +361,9 @@ export function createKit(ctx: BrandContext, seed: string): Kit {
     lexicon.push({ display: displayPhrase(p), tokens })
   }
   b.expertise_areas.forEach(addLex)
+  // Niche Discovery: the niche's topic and the creator's interests are the brand's own vocabulary too.
+  addLex(nicheTopic(b.niche))
+  b.interests.forEach(addLex)
   ctx.stories.forEach((s) => s.keywords.forEach(addLex))
   ctx.pillars.forEach((p) => p.examples.filter((ex) => !SERIES_LIKE.test(ex)).forEach((ex) => addLex(exampleTopic(ex))))
   ctx.questions.forEach((q) => addLex(topicPhrase(q.question)))

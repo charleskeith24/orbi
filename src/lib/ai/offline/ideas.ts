@@ -8,8 +8,9 @@
 import { FUNNEL_STAGES } from "@/lib/constants"
 import type { FunnelStage, GoalCategory, HookCategory, PlatformId } from "@/lib/types"
 import type { BrandContext, ContextStory } from "../context"
-import { audienceFromPersona, exampleTopic, type Kit } from "./brand"
+import { audienceFromPersona, exampleTopic, nicheTopic, type Kit } from "./brand"
 import { hookSlots, writeHook } from "./hooks"
+import { nicheInterests } from "./niche"
 import { povLine } from "./scripts"
 import { clip, firstSentence, gerund, gerundPhrase, headline, jaccard, lowerFirst, stripEndPunct, tokenSet, uniqueBy, upperFirst } from "./text"
 import { agreeVerb, analyzeTopic, answerTitle, clauseReads, isVerbish, isWeakSubject, nounChunk, problemClause } from "./topic"
@@ -615,9 +616,30 @@ function buildSeeds(ctx: BrandContext, kit: Kit, req: IdeaRequest): Seed[] {
         winnerRatio: null,
       })
     }
+    // Niche Discovery: the niche's own topic and the interests that belong to it keep every batch inside the niche.
+    const known = new Set(seeds.filter((s) => s.kind === "topic").map((s) => s.text.toLowerCase()))
+    for (const text of [nicheTopic(ctx.brand.niche), ...nicheInterests(ctx.brand.niche, ctx.brand.interests, ctx.brand.expertise_areas)]) {
+      if (!text || known.has(text.toLowerCase()) || isWeakSubject(text) || !related(text)) continue
+      known.add(text.toLowerCase())
+      const subject = kit.display(text)
+      seeds.push({
+        kind: "topic",
+        text,
+        subject,
+        short: kit.shortSubject(subject),
+        pillarId: req.pillarId ?? kit.pillarFor(text, { fallback: false })?.id ?? null,
+        personaId: req.personaId ?? null,
+        problemId: null,
+        severity: 0,
+        frequency: 0,
+        story: kit.storyFor(text, { minHits: 1 }),
+        winnerRatio: null,
+      })
+    }
   }
   if (!seeds.length) {
-    const fallback = req.topic || ctx.brand.expertise_areas[0] || ctx.pillars[0]?.name || ctx.brand.industry || "your work"
+    const fallback =
+      req.topic || nicheTopic(ctx.brand.niche) || ctx.brand.expertise_areas[0] || ctx.brand.interests[0] || ctx.pillars[0]?.name || ctx.brand.industry || "your work"
     const subject = kit.display(analyzeTopic(fallback).subject || fallback)
     seeds.push({ kind: "topic", text: fallback, subject, short: kit.shortSubject(subject), pillarId: req.pillarId ?? null, personaId: req.personaId ?? null, problemId: null, severity: 0, frequency: 0, story: null, winnerRatio: null })
   }
