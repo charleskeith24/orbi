@@ -195,6 +195,9 @@ create table public.brand_profiles (
   phrases_avoid text[] not null default '{}',
   cta_style text not null default '',
   storytelling_style text not null default '',
+  contact_email text not null default '',
+  website text not null default '',
+  media_kit_bio text not null default '',
   primary_goal_id uuid references public.content_goals (id) on delete set null,
   secondary_goal_id uuid references public.content_goals (id) on delete set null,
   onboarding_completed boolean not null default false,
@@ -205,6 +208,8 @@ create table public.brand_profiles (
 
 comment on table public.brand_profiles is 'Brand HQ: identity, positioning, communication style and brand rules. Exactly one row per user.';
 comment on column public.brand_profiles.positioning_audience is '"I help [audience] achieve [result] through [method]."';
+comment on column public.brand_profiles.contact_email is 'Public contact for brands (shown on the media kit).';
+comment on column public.brand_profiles.media_kit_bio is 'Short third-person bio for the media kit; the media kit falls back to who_am_i.';
 
 create index brand_profiles_primary_goal_id_idx on public.brand_profiles (primary_goal_id);
 create index brand_profiles_secondary_goal_id_idx on public.brand_profiles (secondary_goal_id);
@@ -1473,16 +1478,33 @@ create table public.app_settings (
   engagement_tasks jsonb not null default '[{"key":"reply_comments","label":"Reply to comments","target":10},{"key":"reply_dms","label":"Reply to DMs","target":5},{"key":"comment_creators","label":"Comment on relevant creators","target":5},{"key":"answer_questions","label":"Answer audience questions","target":3},{"key":"collect_questions","label":"Collect audience questions as content ideas","target":2}]'::jsonb,
   default_owner text not null default '',
   pillar_tolerance numeric not null default 10,
+  ui_language text not null default 'en' check (ui_language in ('en', 'tl')),
+  simple_mode boolean not null default true,
+  currency text not null default 'PHP',
+  reminders_daily_enabled boolean not null default false,
+  reminders_daily_time text not null default '08:00',
+  reminders_slot_enabled boolean not null default false,
+  reminders_slot_lead_minutes integer not null default 30 check (reminders_slot_lead_minutes between 0 and 1440),
+  reminders_review_enabled boolean not null default false,
+  reminders_review_day integer not null default 0 check (reminders_review_day between 0 and 6),
+  reminders_review_time text not null default '18:00',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint app_settings_user_id_key unique (user_id)
 );
 
-comment on table public.app_settings is 'Workspace settings: targets, week start, buffer thresholds, winner detection and funnel targets. Exactly one row per user.';
+comment on table public.app_settings is 'Workspace settings: targets, week start, buffer thresholds, winner detection, funnel targets, language, Simple mode, currency and reminders. Exactly one row per user.';
 comment on column public.app_settings.week_starts_on is '0 = Sunday, 1 = Monday.';
 comment on column public.app_settings.winner_window is 'Compare against the last N posts on the same platform.';
 comment on column public.app_settings.winner_min_sample is 'Minimum comparison posts before performance tiers are assigned.';
 comment on column public.app_settings.pillar_tolerance is 'Pillar mix deviation (percentage points) that triggers an imbalance warning.';
+comment on column public.app_settings.ui_language is 'Language of the app screens: en = English, tl = Taglish. The content language is brand_profiles.language.';
+comment on column public.app_settings.simple_mode is 'Sidebar shows only the everyday modules; every page stays reachable from the command palette.';
+comment on column public.app_settings.currency is 'ISO 4217 code: default currency for new brand deals, income entries and rate cards.';
+comment on column public.app_settings.reminders_daily_time is 'Local time of the daily digest, HH:mm.';
+comment on column public.app_settings.reminders_slot_lead_minutes is 'Minutes before each posting-schedule slot.';
+comment on column public.app_settings.reminders_review_day is 'Weekly review day: 0 = Sunday ... 6 = Saturday.';
+comment on column public.app_settings.reminders_review_time is 'Local time of the weekly review reminder, HH:mm.';
 
 
 create trigger set_updated_at before update on public.app_settings
@@ -1501,3 +1523,143 @@ create policy "Users can delete their own app_settings" on public.app_settings
 
 revoke all on table public.app_settings from anon;
 grant select, insert, update, delete on table public.app_settings to authenticated;
+
+-- ----------------------------------------------------------------------------
+-- brand_deals
+-- ----------------------------------------------------------------------------
+
+create table public.brand_deals (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  brand_name text not null default '',
+  contact_name text not null default '',
+  contact_email text not null default '',
+  contact_handle text not null default '',
+  source text not null default 'inbound' check (source in ('inbound', 'outbound', 'agency', 'referral')),
+  status text not null default 'lead' check (status in ('lead', 'pitched', 'negotiating', 'contracted', 'in_progress', 'delivered', 'paid', 'lost')),
+  fee numeric,
+  currency text not null default 'PHP',
+  deliverables text[] not null default '{}',
+  platforms text[] not null default '{}' check (platforms <@ array['facebook', 'tiktok', 'instagram', 'youtube', 'linkedin', 'x', 'threads']::text[]),
+  content_item_ids uuid[] not null default '{}',
+  campaign_id uuid references public.content_campaigns (id) on delete set null,
+  start_date date,
+  due_date date,
+  paid_at date,
+  usage_rights text not null default '',
+  show_in_media_kit boolean not null default false,
+  notes text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+comment on table public.brand_deals is 'Brand deals: sponsorships and collaborations from lead to paid, with contact, fee, deliverables, linked content and usage rights.';
+comment on column public.brand_deals.fee is 'Agreed fee in currency; null until quoted.';
+comment on column public.brand_deals.content_item_ids is 'Array reference to content_items.id. No FK (arrays cannot carry one); the app removes deleted ids (relations.ts: array_remove).';
+comment on column public.brand_deals.show_in_media_kit is 'List the brand under past collaborations on the media kit.';
+
+create index brand_deals_user_id_status_idx on public.brand_deals (user_id, status);
+create index brand_deals_campaign_id_idx on public.brand_deals (campaign_id);
+
+create trigger set_updated_at before update on public.brand_deals
+  for each row execute function public.set_updated_at();
+
+alter table public.brand_deals enable row level security;
+
+create policy "Users can view their own brand_deals" on public.brand_deals
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy "Users can insert their own brand_deals" on public.brand_deals
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy "Users can update their own brand_deals" on public.brand_deals
+  for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "Users can delete their own brand_deals" on public.brand_deals
+  for delete to authenticated using ((select auth.uid()) = user_id);
+
+revoke all on table public.brand_deals from anon;
+grant select, insert, update, delete on table public.brand_deals to authenticated;
+
+-- ----------------------------------------------------------------------------
+-- income_entries
+-- ----------------------------------------------------------------------------
+
+create table public.income_entries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  date date not null default current_date,
+  amount numeric not null default 0,
+  currency text not null default 'PHP',
+  source text not null default 'other' check (source in ('brand_deal', 'affiliate', 'platform_payout', 'product', 'service', 'tip', 'other')),
+  affiliate_program text not null default '',
+  platform text check (platform in ('facebook', 'tiktok', 'instagram', 'youtube', 'linkedin', 'x', 'threads')),
+  status text not null default 'received' check (status in ('expected', 'received')),
+  brand_deal_id uuid references public.brand_deals (id) on delete set null,
+  content_item_id uuid references public.content_items (id) on delete set null,
+  description text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+comment on table public.income_entries is 'Income: money received or expected, by source (brand deals, affiliate, platform payouts, products, services, tips).';
+comment on column public.income_entries.affiliate_program is 'Free text for affiliate income, e.g. TikTok Shop, Shopee, Lazada.';
+
+create index income_entries_user_id_date_idx on public.income_entries (user_id, date);
+create index income_entries_brand_deal_id_idx on public.income_entries (brand_deal_id);
+create index income_entries_content_item_id_idx on public.income_entries (content_item_id);
+
+create trigger set_updated_at before update on public.income_entries
+  for each row execute function public.set_updated_at();
+
+alter table public.income_entries enable row level security;
+
+create policy "Users can view their own income_entries" on public.income_entries
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy "Users can insert their own income_entries" on public.income_entries
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy "Users can update their own income_entries" on public.income_entries
+  for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "Users can delete their own income_entries" on public.income_entries
+  for delete to authenticated using ((select auth.uid()) = user_id);
+
+revoke all on table public.income_entries from anon;
+grant select, insert, update, delete on table public.income_entries to authenticated;
+
+-- ----------------------------------------------------------------------------
+-- rate_cards
+-- ----------------------------------------------------------------------------
+
+create table public.rate_cards (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  name text not null default '',
+  description text not null default '',
+  platform text check (platform in ('facebook', 'tiktok', 'instagram', 'youtube', 'linkedin', 'x', 'threads')),
+  deliverables text[] not null default '{}',
+  price numeric,
+  currency text not null default 'PHP',
+  is_active boolean not null default true,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+comment on table public.rate_cards is 'Rate cards: media-kit packages with deliverables and a price (null = ask for a quote).';
+comment on column public.rate_cards.platform is 'Null for a multi-platform package.';
+
+create index rate_cards_user_id_idx on public.rate_cards (user_id);
+
+create trigger set_updated_at before update on public.rate_cards
+  for each row execute function public.set_updated_at();
+
+alter table public.rate_cards enable row level security;
+
+create policy "Users can view their own rate_cards" on public.rate_cards
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy "Users can insert their own rate_cards" on public.rate_cards
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy "Users can update their own rate_cards" on public.rate_cards
+  for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "Users can delete their own rate_cards" on public.rate_cards
+  for delete to authenticated using ((select auth.uid()) = user_id);
+
+revoke all on table public.rate_cards from anon;
+grant select, insert, update, delete on table public.rate_cards to authenticated;

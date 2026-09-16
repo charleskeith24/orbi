@@ -7,6 +7,7 @@ import { ContentTodayCard } from "./content-today-card"
 import { DashboardHeader } from "./dashboard-header"
 import { FirstStepsCard, PerformancePlaceholder } from "./first-steps-card"
 import { HealthCard } from "./health-card"
+import { IncomeCard } from "./income-card"
 import { InsightsCard } from "./insights-card"
 import { KpiRow } from "./kpi-row"
 import { PillarDistributionCard } from "./pillar-distribution-card"
@@ -52,6 +53,7 @@ export function DashboardView() {
           <div className="flex min-w-0 flex-col gap-4">
             <QuickCaptureCard capturedToday={data.today.ideasCapturedToday.length} />
             <WhatToPost variant="card" />
+            <IncomeCard />
           </div>
           {showWork ? <InsightsCard insights={data.insights} prompts={data.prompts} className="@5xl:flex-1" /> : null}
         </div>

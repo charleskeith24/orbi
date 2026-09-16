@@ -17,6 +17,7 @@ import {
   SquareKanban,
   Trophy,
   Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react"
 
@@ -31,6 +32,8 @@ export interface NavItem {
   icon: LucideIcon
   description: string
   children?: NavChild[]
+  /** One of the everyday modules the sidebar keeps in Simple mode (`app_settings.simple_mode`). */
+  simple?: true
 }
 
 export interface NavSection {
@@ -38,13 +41,16 @@ export interface NavSection {
   items: NavItem[]
 }
 
-/** Primary navigation (spec §45). Every href here must resolve to a real page. */
+/**
+ * Primary navigation (spec §45). Every href here must resolve to a real page. Module and page names are
+ * product terms (ARCHITECTURE §9) and stay English in both UI languages.
+ */
 export const NAV_SECTIONS: NavSection[] = [
   {
     label: null,
     items: [
-      { title: "Home", href: "/", icon: House, description: "Executive dashboard" },
-      { title: "Today", href: "/today", icon: CalendarCheck, description: "Daily content command center" },
+      { title: "Home", href: "/", icon: House, description: "Executive dashboard", simple: true },
+      { title: "Today", href: "/today", icon: CalendarCheck, description: "Daily content command center", simple: true },
     ],
   },
   {
@@ -94,6 +100,7 @@ export const NAV_SECTIONS: NavSection[] = [
         href: "/ideas",
         icon: Lightbulb,
         description: "Idea Bank, generator, hooks and angles",
+        simple: true,
         children: [
           { title: "Idea Bank", href: "/ideas" },
           { title: "Idea Generator", href: "/ideas/generator" },
@@ -101,13 +108,20 @@ export const NAV_SECTIONS: NavSection[] = [
           { title: "Angle Library", href: "/ideas/angles" },
         ],
       },
-      { title: "Content Studio", href: "/studio", icon: PenLine, description: "Briefs, scripts, scoring and repurposing" },
+      {
+        title: "Content Studio",
+        href: "/studio",
+        icon: PenLine,
+        description: "Briefs, scripts, scoring and repurposing",
+        simple: true,
+      },
       { title: "Pipeline", href: "/pipeline", icon: SquareKanban, description: "Production board" },
       {
         title: "Calendar",
         href: "/calendar",
         icon: CalendarDays,
         description: "Calendar, weekly planner and posting schedule",
+        simple: true,
         children: [
           { title: "Calendar", href: "/calendar" },
           { title: "Weekly Planner", href: "/calendar/planner" },
@@ -151,6 +165,7 @@ export const NAV_SECTIONS: NavSection[] = [
         href: "/analytics",
         icon: ChartColumn,
         description: "Performance and metrics logging",
+        simple: true,
         children: [
           { title: "Overview", href: "/analytics" },
           { title: "Post Performance", href: "/analytics/posts" },
@@ -171,12 +186,32 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    label: "Monetize",
+    items: [
+      {
+        title: "Money",
+        href: "/money",
+        icon: Wallet,
+        description: "Brand deals, income and your media kit",
+        simple: true,
+        children: [
+          { title: "Overview", href: "/money" },
+          { title: "Brand Deals", href: "/money/deals" },
+          { title: "Income", href: "/money/income" },
+          { title: "Media Kit", href: "/money/media-kit" },
+        ],
+      },
+    ],
+  },
+  {
     label: null,
-    items: [{ title: "Settings", href: "/settings", icon: Settings, description: "Targets, thresholds, data and AI" }],
+    items: [
+      { title: "Settings", href: "/settings", icon: Settings, description: "Targets, thresholds, data and AI", simple: true },
+    ],
   },
 ]
 
-/** Every navigable page (for the command palette). */
+/** Every navigable page (for the command palette) — Simple mode never hides anything here. */
 export const ALL_PAGES: { title: string; href: string; section: string }[] = NAV_SECTIONS.flatMap((section) =>
   section.items.flatMap((item) => [
     { title: item.title, href: item.href, section: section.label ?? "General" },
@@ -190,4 +225,23 @@ export const ALL_PAGES: { title: string; href: string; section: string }[] = NAV
 export function isNavActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/"
   return pathname === href || pathname.startsWith(`${href}/`)
+}
+
+/**
+ * The sidebar's sections. In Simple mode only `simple` modules stay — plus the module of the page you're
+ * on, so a page opened from ⌘K or a link still shows where you are. `hidden` counts the modules left out.
+ */
+export function sidebarSections(
+  sections: NavSection[],
+  { simpleMode, pathname }: { simpleMode: boolean; pathname: string }
+): { sections: NavSection[]; hidden: number } {
+  if (!simpleMode) return { sections, hidden: 0 }
+  let hidden = 0
+  const visible: NavSection[] = []
+  for (const section of sections) {
+    const items = section.items.filter((item) => item.simple || isNavActive(pathname, item.href))
+    hidden += section.items.length - items.length
+    if (items.length) visible.push({ ...section, items })
+  }
+  return { sections: visible, hidden }
 }

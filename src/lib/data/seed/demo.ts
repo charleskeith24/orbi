@@ -33,6 +33,7 @@ import { CAMPAIGNS, ENGAGEMENT_NOTES, EXPERIMENTS, MONTHLY_REVIEW, SERIES, WEEKL
 import { PUBLISHED_A } from "./published-a"
 import { PUBLISHED_B } from "./published-b"
 import { RESEARCH } from "./research-data"
+import { buildMoney } from "./money"
 import { hashString } from "./rng"
 import { angleKey, buildStarterKit, formatKey, hookTemplateKey, tagKey } from "./starter"
 import { FORMATS, GOALS, type FormatName, type TagName } from "./starter-data"
@@ -337,7 +338,15 @@ export function buildDemoWorkspace(ctx: SeedContext): Database {
 
   /* ------------------------------ Settings & brand ------------------------------ */
 
-  db.app_settings = db.app_settings.map((s) => ({ ...s, weekly_post_target: 10, default_owner: OWNER }))
+  // A four-month-old workspace: every module in use, so Simple mode is off.
+  db.app_settings = db.app_settings.map((s) => ({
+    ...s,
+    weekly_post_target: 10,
+    default_owner: OWNER,
+    simple_mode: false,
+    ui_language: "en" as const,
+    currency: "PHP",
+  }))
   db.brand_profiles = [
     build(
       "brand_profiles",
@@ -1029,6 +1038,21 @@ export function buildDemoWorkspace(ctx: SeedContext): Database {
       build("content_tags", { tag_id: ctx.id(tagKey(link.tag)), entity_type: link.type, entity_id: link.id }, past(link.at))
     )
   }
+
+  /* ------------------------------------ Money ------------------------------------ */
+
+  // Last, so the ids above never shift when the Money data changes.
+  const money = buildMoney(ctx, {
+    item: (ref) => {
+      const [key, index] = ref.split(":")
+      return specItems.get(key)?.find((b) => b.index === (index ? Number(index) : 0))?.row.id ?? null
+    },
+    campaign: (key) => campaignId(key),
+    workspaceStart,
+  })
+  db.brand_deals = money.brand_deals
+  db.income_entries = money.income_entries
+  db.rate_cards = money.rate_cards
 
   return db
 }

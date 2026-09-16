@@ -40,6 +40,55 @@ export function formatDelta(value: number | null | undefined, digits = 1, suffix
   return `${sign}${Math.abs(value).toFixed(digits)}${suffix}`
 }
 
+const moneyFormatters = new Map<string, Intl.NumberFormat | null>()
+
+function moneyFormatter(currency: string, digits: number | "default", compact: boolean): Intl.NumberFormat | null {
+  const key = `${currency}|${digits}|${compact}`
+  if (!moneyFormatters.has(key)) {
+    let formatter: Intl.NumberFormat | null = null
+    try {
+      formatter = new Intl.NumberFormat("en-PH", {
+        style: "currency",
+        currency,
+        ...(compact ? { notation: "compact", maximumFractionDigits: 1 } : {}),
+        ...(digits === "default" || compact ? {} : { minimumFractionDigits: digits, maximumFractionDigits: digits }),
+      })
+    } catch {
+      formatter = null // Not an ISO 4217 code — formatMoney falls back to "<code> 1,234".
+    }
+    moneyFormatters.set(key, formatter)
+  }
+  return moneyFormatters.get(key) ?? null
+}
+
+/**
+ * Money in the Philippine style (Intl `en-PH`): 12500 → "₱12,500", 12500.5 → "₱12,500.50",
+ * `formatMoney(800, "USD")` → "$800". Whole amounts drop the decimals. `compact` → "₱12.5K" for chart
+ * ticks. Null/NaN → "—"; an unknown currency code → "XYZ 1,234".
+ */
+export function formatMoney(
+  amount: number | null | undefined,
+  currency = "PHP",
+  options: { compact?: boolean } = {}
+): string {
+  if (amount === null || amount === undefined || Number.isNaN(amount)) return "—"
+  const code = currency.trim().toUpperCase() || "PHP"
+  const compact = Boolean(options.compact) && Math.abs(amount) >= 10_000
+  const whole = Math.round(amount * 100) % 100 === 0
+  const formatter = moneyFormatter(code, whole ? 0 : "default", compact)
+  if (!formatter) return `${code} ${whole ? fullFormatter.format(Math.round(amount)) : amount.toFixed(2)}`
+  return formatter.format(whole && !compact ? Math.round(amount) : amount)
+}
+
+/** "PHP" → "₱", "USD" → "$" (Intl `en-PH`); the code itself when there is no symbol or the code is unknown. */
+export function currencySymbol(currency = "PHP"): string {
+  const code = currency.trim().toUpperCase() || "PHP"
+  const part = moneyFormatter(code, 0, false)
+    ?.formatToParts(0)
+    .find((p) => p.type === "currency")
+  return part?.value ?? code
+}
+
 /** 95 → "1:35". */
 export function formatDuration(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined || Number.isNaN(seconds)) return "—"

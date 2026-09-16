@@ -5,6 +5,7 @@ import { BookOpen, Check, Cpu, GitFork, Lightbulb, Link2, Megaphone, Mic, Repeat
 import Link from "next/link"
 import { useMemo } from "react"
 import { ColorDot, IdeaStatusBadge, SectionCard, StatusPill, Token } from "@/components/common"
+import { ItemDealLink } from "@/components/features/money/item-deal-link"
 import { Button } from "@/components/ui/button"
 import { providerLabel } from "@/lib/ai"
 import { LANGUAGE_MAP, STORY_TYPE_MAP, TONE_MAP } from "@/lib/constants"
@@ -187,6 +188,7 @@ function ConnectionsCard({ item }: { item: ContentItem }) {
           ) : null}
         </ul>
       ) : null}
+      <ItemDealLink item={item} />
     </SectionCard>
   )
 }

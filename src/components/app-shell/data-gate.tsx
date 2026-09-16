@@ -2,21 +2,35 @@
 
 import { CircleAlert, RotateCcw } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useSyncExternalStore } from "react"
+import { dataGateMessages } from "@/components/features/settings/data-messages"
+import { MoveLocalPrompt } from "@/components/features/settings/data-move-local"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useT } from "@/lib/i18n"
 import { useBrand, useDataStatus, useDataStore } from "@/lib/store"
+
+/** Settings → Data stays reachable before onboarding, so a new account can restore a backup instead of setting up again. */
+const RESTORE_TAB = "data"
+const noopSubscribe = () => () => {}
+const readSettingsTab = () => new URLSearchParams(window.location.search).get("tab")
 
 /**
  * Renders children once the workspace is loaded.
- * `app` mode also sends first-time users (no completed onboarding) to /onboarding.
+ * `app` mode also sends first-time users (no completed onboarding) to /onboarding — except to
+ * Settings → Data, where a backup can be restored.
+ * Online version: offers once to move this browser's local workspace into an empty account.
  */
 export function DataGate({ children, mode = "app" }: { children: React.ReactNode; mode?: "app" | "onboarding" }) {
-  const { status, error } = useDataStatus()
+  const t = useT(dataGateMessages)
+  const { status, error, mode: dataMode } = useDataStatus()
   const brand = useBrand()
   const pathname = usePathname()
   const router = useRouter()
-  const needsOnboarding = mode === "app" && status === "ready" && !brand.onboarding_completed
+  // Read during render without useSearchParams (which would need a Suspense boundary around the whole shell).
+  const settingsTab = useSyncExternalStore(noopSubscribe, readSettingsTab, () => null)
+  const restoring = pathname === "/settings" && settingsTab === RESTORE_TAB
+  const needsOnboarding = mode === "app" && status === "ready" && !brand.onboarding_completed && !restoring
 
   useEffect(() => {
     if (needsOnboarding && !pathname.startsWith("/onboarding")) router.replace("/onboarding")
@@ -27,10 +41,10 @@ export function DataGate({ children, mode = "app" }: { children: React.ReactNode
       <div className="flex min-h-[60vh] items-center justify-center p-6">
         <div className="max-w-md rounded-lg border bg-card p-6 text-center">
           <CircleAlert className="mx-auto mb-3 size-6 text-critical-fg" aria-hidden />
-          <h2 className="text-base font-semibold">Couldn&apos;t load your workspace</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{error ?? "Unknown error"}</p>
+          <h2 className="text-base font-semibold">{t("load_failed")}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{error ?? t("unknown_error")}</p>
           <Button className="mt-4" variant="outline" onClick={() => void useDataStore.getState().reload()}>
-            <RotateCcw /> Try again
+            <RotateCcw /> {t("retry")}
           </Button>
         </div>
       </div>
@@ -38,7 +52,12 @@ export function DataGate({ children, mode = "app" }: { children: React.ReactNode
   }
 
   if (status !== "ready" || needsOnboarding) return <WorkspaceSkeleton />
-  return <>{children}</>
+  return (
+    <>
+      {children}
+      {dataMode === "supabase" ? <MoveLocalPrompt /> : null}
+    </>
+  )
 }
 
 export function WorkspaceSkeleton() {

@@ -6,11 +6,15 @@ import { toast } from "sonner"
 import { chipVariants, NumberField, OptionSelect, SectionCard, StatusPill } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import { funnelMix, pillarMix } from "@/lib/analytics"
+import { CURRENCIES } from "@/lib/constants"
+import { translate, UI_LANG_LABELS, UI_LANGS, useT, type UiLang } from "@/lib/i18n"
 import { updateSettings, useDb, useSettings } from "@/lib/store"
 import { pluralize } from "@/lib/utils"
+import { generalMessages } from "./general-messages"
 import { SaveBar } from "./save-bar"
-import { generalPatch, GENERAL_DEFAULTS, LIMITS, validateGeneral, type GeneralValues } from "./sections"
+import { generalPatch, generalResetValues, LIMITS, validateGeneral, type GeneralValues } from "./sections"
 import { SettingRow, SettingRows } from "./setting-row"
 import { TimezoneSelect } from "./timezone-select"
 import { sameValues, type SettingsDraft } from "./use-settings-draft"
@@ -19,6 +23,8 @@ const WEEK_START_OPTIONS = [
   { value: "1" as const, label: "Monday" },
   { value: "0" as const, label: "Sunday" },
 ]
+
+const LANGUAGE_OPTIONS = UI_LANGS.map((lang) => ({ value: lang, label: UI_LANG_LABELS[lang] }))
 
 function deviceTimeZone(): string {
   try {
@@ -30,22 +36,71 @@ function deviceTimeZone(): string {
 
 export function GeneralTab({ draft, now }: { draft: SettingsDraft<GeneralValues>; now: Date }) {
   const { values, set } = draft
+  const g = useT(generalMessages)
   const errors = validateGeneral(values)
   const valid = Object.keys(errors).length === 0
   const [deviceZone] = useState(deviceTimeZone)
-  // Timezone and owner are personal — "Reset to defaults" leaves them alone.
-  const resetValues: GeneralValues = { ...GENERAL_DEFAULTS, timezone: values.timezone, default_owner: values.default_owner }
+  const resetValues = generalResetValues(values)
+  // A stored code outside the list (e.g. from an import) stays selectable.
+  const currencyOptions = useMemo(() => {
+    const options = CURRENCIES.map((c) => ({ value: c.id, label: `${c.id} — ${c.label}` }))
+    return options.some((o) => o.value === values.currency) ? options : [...options, { value: values.currency, label: values.currency }]
+  }, [values.currency])
 
   function save(event: React.FormEvent) {
     event.preventDefault()
     if (!draft.dirty || !valid) return
     updateSettings(generalPatch(values))
     draft.discard()
-    toast.success("General settings saved")
+    // Confirm in the language just chosen.
+    toast.success(translate(generalMessages, values.ui_language, "saved"))
   }
 
   return (
     <form onSubmit={save} noValidate className="flex min-w-0 flex-col gap-4">
+      <SectionCard title={g("display_title")} description={g("display_description")}>
+        <SettingRows>
+          <SettingRow label={g("language_label")} htmlFor="settings-ui-language" description={g("language_description")}>
+            <OptionSelect<UiLang>
+              id="settings-ui-language"
+              options={LANGUAGE_OPTIONS}
+              value={values.ui_language}
+              onChange={(next) => {
+                if (next) set("ui_language", next)
+              }}
+              className="w-44"
+            />
+          </SettingRow>
+          <SettingRow label={g("simple_label")} htmlFor="settings-simple-mode" description={g("simple_description")}>
+            <div className="flex min-h-8 items-center gap-2.5">
+              <Switch
+                id="settings-simple-mode"
+                checked={values.simple_mode}
+                onCheckedChange={(checked) => set("simple_mode", checked)}
+              />
+              <span className="text-sm text-muted-foreground">{values.simple_mode ? g("simple_on") : g("simple_off")}</span>
+            </div>
+          </SettingRow>
+          <SettingRow
+            label={g("currency_label")}
+            htmlFor="settings-currency"
+            description={g("currency_description")}
+            error={errors.currency}
+          >
+            <OptionSelect
+              id="settings-currency"
+              options={currencyOptions}
+              value={values.currency}
+              onChange={(next) => {
+                if (next) set("currency", next)
+              }}
+              className="w-64 max-w-full"
+              aria-invalid={Boolean(errors.currency) || undefined}
+            />
+          </SettingRow>
+        </SettingRows>
+      </SectionCard>
+
       <SectionCard title="Posting rhythm" description="The cadence every weekly number is measured against.">
         <SettingRows>
           <SettingRow

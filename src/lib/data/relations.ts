@@ -68,6 +68,7 @@ export const REFERENCES: Partial<Record<TableName, Reference[]>> = {
   content_campaigns: [
     { table: "content_ideas", column: "campaign_id", onDelete: "set_null" },
     { table: "content_items", column: "campaign_id", onDelete: "set_null" },
+    { table: "brand_deals", column: "campaign_id", onDelete: "set_null" },
   ],
   content_series: [
     { table: "content_ideas", column: "series_id", onDelete: "set_null" },
@@ -85,7 +86,10 @@ export const REFERENCES: Partial<Record<TableName, Reference[]>> = {
     { table: "content_experiments", column: "variant_a_item_ids", onDelete: "array_remove" },
     { table: "content_experiments", column: "variant_b_item_ids", onDelete: "array_remove" },
     { table: "weekly_reviews", column: "planned_item_ids", onDelete: "array_remove" },
+    { table: "brand_deals", column: "content_item_ids", onDelete: "array_remove" },
+    { table: "income_entries", column: "content_item_id", onDelete: "set_null" },
   ],
+  brand_deals: [{ table: "income_entries", column: "brand_deal_id", onDelete: "set_null" }],
 }
 
 export const TAGGABLE_TABLES: TaggableEntity[] = [

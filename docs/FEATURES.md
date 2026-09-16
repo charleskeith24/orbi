@@ -260,7 +260,7 @@ Layout (desktop grid, `max-w-[1400px]`; mobile stacks with Today, posting progre
 **Owns:** `src/app/(app)/settings/page.tsx`, `src/components/features/settings/**`, `src/lib/integrations/**` · **Spec:** §14, §19, §26, §41, §43, §53, §55, §58 (Phase 4), §59
 
 Tabs (`?tab=`):
-- **General** — weekly post target, week starts on, timezone, default owner, pillar tolerance.
+- **General** — app language (English / Taglish), Simple mode, default currency (v2); weekly post target, week starts on, timezone, default owner, pillar tolerance.
 - **Performance** — winner metric, comparison window, minimum sample, Good / Winner / Breakout thresholds with a live preview of how many posts fall in each tier; buffer healthy / warning days.
 - **Funnel** — funnel targets (sum 100).
 - **Formats** (§14) — CRUD content formats (name, category, description, default script structure).
@@ -297,3 +297,40 @@ Every new workspace starts empty and lands here. The onboarding first helps the 
 
 - **StrategistPanel** — right `Sheet` bound to `useUIStore` (`strategistOpen`, `setStrategistOpen`, `consumeStrategistPrompt` → auto-send on open); ~440px, full-screen on mobile. Conversation persisted in `ai_generations` (task `strategist_chat`); user bubbles right, assistant `Markdown` left; suggested prompts (§56): "What should I post this week?", "Why are my educational posts underperforming?", "Give me 20 ideas about leadership.", "Turn my experience today into a Facebook post.", "What topics should I double down on?", "What are my best hooks?", "Build my content plan for next week."; ⌘/Ctrl+Enter sends; typing indicator; error with retry; *Clear conversation* (confirm); `ProviderBadge`. Show what the answer considered (§57: positioning, audience, goal, platform, pillar, funnel stage, recent performance, existing content, audience problems, previous winners) as compact context chips. Suggested ideas render as cards with *Save to Idea Bank*; follow-up questions as chips; link *Open full page*.
 - **`/strategist`** — the same conversation full-width with a left column "What the strategist knows" (brand summary, health score, buffer, top pillar, winners) and quick prompts; `?q=` sends a prompt.
+
+---
+
+# Orbi v2 features
+
+Build brief and ownership: `docs/BUILD_BRIEF_V2.md`. Every new string goes through `defineMessages` (English + Taglish, ARCHITECTURE §11).
+
+## F20 · Money — `/money`, `/money/deals`, `/money/income`, `/money/media-kit`
+
+**Owns:** MONEY (wave 2) — `src/components/features/money/**`, replacing FOUNDATION's stubs (read-only lists, `?open=` details, the minimal global `log-income` dialog), plus one dashboard card and the Studio brand-deal link.
+
+- Data: `brand_deals`, `income_entries`, `rate_cards` and the brand's media-kit contact fields (ARCHITECTURE §3). Option lists `DEAL_STATUSES`, `DEAL_SOURCES`, `INCOME_SOURCES`, `INCOME_STATUSES`, `AFFILIATE_PROGRAM_SUGGESTIONS`, `CURRENCIES` in `@/lib/constants`; translated labels in `@/lib/i18n/messages/money`; `formatMoney` / `currencySymbol` in `@/lib/utils`.
+- Global dialog: `uiActions.openDialog({ type: "log-income", dealId?, itemId? })`. Brand deals are in ⌘K and open `/money/deals?open=<id>`.
+- The demo workspace has a USD deal (total per currency) and a deal paid 50% upfront (so "Mark paid" should record the balance, not the whole fee again).
+
+## F21 · Simple mode & app language
+
+**Owns:** FOUNDATION.
+
+- `app_settings.simple_mode` (Starter Kit: on; demo: off). The sidebar keeps only the `NavItem.simple` modules — Home, Today, Ideas, Content Studio, Calendar, Analytics, Money, Settings — plus the module of the page you're on. Footer toggle: "Show all modules (N hidden)" / "Back to Simple mode"; the same switch is in Settings → General. ⌘K and links reach every page.
+- `app_settings.ui_language` (`en` | `tl`) — Settings → General → App language; finishing onboarding sets it from the onboarding language. Settings → General also sets the default currency.
+
+## F22 · Reminders — Settings → Reminders
+
+**Owns:** PWA & REMINDERS (wave 2) — `features/reminders/**` replaces the stub tab. `app_settings.reminders_*` exist: daily digest, a nudge before each Posting Schedule slot, weekly review. Calendar file (.ics) everywhere; web push in the online version.
+
+## F23 · PWA and share target
+
+**Owns:** PWA (wave 1). Installable app with an offline shell, "Install Orbi" in the user menu, Android share target → Quick Capture (`/share`).
+
+## F24 · Analytics import presets
+
+**Owns:** IMPORT PRESETS (wave 1). Meta Business Suite, TikTok Studio and YouTube Studio CSV presets in Settings → Integrations, detected from the header row.
+
+## F25 · Online version, beta toolkit and trademark check
+
+**Owns:** SUPABASE & DEPLOY (schema proven on PGlite, local → cloud move, backups, `docs/DEPLOY.md`) and BETA & TRADEMARK (feedback button, opt-in usage analytics, `docs/BETA_TEST.md`, `docs/TRADEMARK_CHECK.md`).

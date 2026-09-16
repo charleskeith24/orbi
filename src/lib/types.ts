@@ -11,6 +11,8 @@
  * - Nullable foreign keys are `ID | null`
  * - Text fields default to '' (never undefined); list fields default to []
  */
+// Type-only (the i18n core has no imports, so there is no cycle); schema-parity.test.ts resolves it too.
+import type { UiLang } from "@/lib/i18n/core"
 
 export type ID = string
 export type ISODate = string
@@ -240,6 +242,21 @@ export type GeneratedBy = AiProviderId | "manual"
 export type HookSource = "library" | "user" | "ai" | "content"
 export type MetricSource = "manual" | "import" | "integration"
 
+/** Brand deal pipeline (Money → Brand Deals), in board order. `lost` is the only dead end. */
+export type DealStatus =
+  | "lead"
+  | "pitched"
+  | "negotiating"
+  | "contracted"
+  | "in_progress"
+  | "delivered"
+  | "paid"
+  | "lost"
+/** How the deal started: the brand came to you, you pitched them, through an agency, or a referral. */
+export type DealSource = "inbound" | "outbound" | "agency" | "referral"
+export type IncomeSource = "brand_deal" | "affiliate" | "platform_payout" | "product" | "service" | "tip" | "other"
+export type IncomeStatus = "expected" | "received"
+
 /** Categorical color slots (validated data-viz palette, see globals.css `--cat-*`). */
 export type CategoricalColor =
   | "blue"
@@ -304,6 +321,11 @@ export interface BrandProfile extends BaseRow {
   phrases_avoid: string[]
   cta_style: string
   storytelling_style: string
+  // Contact & media kit
+  contact_email: string
+  website: string
+  /** Short third-person bio for the media kit (the media kit falls back to `who_am_i`). */
+  media_kit_bio: string
   // Goals
   primary_goal_id: ID | null
   secondary_goal_id: ID | null
@@ -825,6 +847,84 @@ export interface AppSettings extends BaseRow {
   default_owner: string
   /** Pillar mix deviation (percentage points) that triggers an imbalance warning. */
   pillar_tolerance: number
+  // Language & display
+  /** Language of the app's screens. The content language is Brand HQ's `brand_profiles.language`. */
+  ui_language: UiLang
+  /** Simple mode: the sidebar shows only the everyday modules (`NavItem.simple`); every page stays reachable. */
+  simple_mode: boolean
+  /** ISO 4217 code used as the default for new brand deals, income entries and rate cards. */
+  currency: string
+  // Reminders (Settings → Reminders)
+  reminders_daily_enabled: boolean
+  /** Local time of the daily digest, "HH:mm". */
+  reminders_daily_time: string
+  reminders_slot_enabled: boolean
+  /** Minutes before each Posting Schedule slot. */
+  reminders_slot_lead_minutes: number
+  reminders_review_enabled: boolean
+  /** Weekly review day: 0 = Sunday … 6 = Saturday. */
+  reminders_review_day: number
+  /** Local time of the weekly review reminder, "HH:mm". */
+  reminders_review_time: string
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                   Money                                    */
+/* -------------------------------------------------------------------------- */
+
+/** Table: `brand_deals` — a sponsorship or collaboration (Money → Brand Deals). */
+export interface BrandDeal extends BaseRow {
+  brand_name: string
+  contact_name: string
+  contact_email: string
+  /** Social handle or chat contact, e.g. "@kapihanroasters" or a Viber number. */
+  contact_handle: string
+  source: DealSource
+  status: DealStatus
+  /** Agreed fee in `currency`; null until quoted. */
+  fee: number | null
+  currency: string
+  deliverables: string[]
+  platforms: PlatformId[]
+  /** Content made for the deal. Array reference to content_items (no FK; relations.ts array_remove). */
+  content_item_ids: ID[]
+  campaign_id: ID | null
+  start_date: ISODate | null
+  due_date: ISODate | null
+  paid_at: ISODate | null
+  usage_rights: string
+  /** List the brand under "Past collaborations" in the media kit. */
+  show_in_media_kit: boolean
+  notes: string
+}
+
+/** Table: `income_entries` — money received or expected. */
+export interface IncomeEntry extends BaseRow {
+  date: ISODate
+  amount: number
+  currency: string
+  source: IncomeSource
+  /** Free text for affiliate income, e.g. "TikTok Shop" (see AFFILIATE_PROGRAM_SUGGESTIONS). */
+  affiliate_program: string
+  platform: PlatformId | null
+  status: IncomeStatus
+  brand_deal_id: ID | null
+  content_item_id: ID | null
+  description: string
+}
+
+/** Table: `rate_cards` — media-kit packages. */
+export interface RateCard extends BaseRow {
+  name: string
+  description: string
+  /** null = a multi-platform package. */
+  platform: PlatformId | null
+  deliverables: string[]
+  /** null = "Ask for a quote". */
+  price: number | null
+  currency: string
+  is_active: boolean
+  sort_order: number
 }
 
 /* -------------------------------------------------------------------------- */
@@ -861,6 +961,9 @@ export interface Database {
   ai_generations: AiGeneration[]
   engagement_logs: EngagementLog[]
   app_settings: AppSettings[]
+  brand_deals: BrandDeal[]
+  income_entries: IncomeEntry[]
+  rate_cards: RateCard[]
 }
 
 export type TableName = keyof Database

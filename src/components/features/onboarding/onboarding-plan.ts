@@ -11,8 +11,10 @@
 import { CATEGORICAL_COLORS, GOAL_CATEGORIES, PLATFORM_IDS } from "@/lib/constants"
 import { createStarterDatabase } from "@/lib/data/starter"
 import { GOALS } from "@/lib/data/seed/starter-data"
-import type { Database, GoalCategory, ID, InsertRow, Row, TableName, UpdateRow } from "@/lib/types"
+import type { UiLang } from "@/lib/i18n/core"
+import type { BrandLanguage, Database, GoalCategory, ID, InsertRow, Row, TableName, UpdateRow } from "@/lib/types"
 import { uid } from "@/lib/utils"
+import type { OnboardingLang } from "./copy"
 import { goalForIdea, matchProblem, type IdeaDraft } from "./onboarding-ideas"
 import {
   chosenGoals,
@@ -72,6 +74,11 @@ export interface OnboardingInput {
   answers: OnboardingAnswers
   /** The ideas the creator kept, in order. */
   ideas: PlannedIdea[]
+  /**
+   * The onboarding UI language; finishing setup makes it the app language (`app_settings.ui_language`).
+   * Without it, the brand's writing language decides (the wizard pre-selects that from the UI language).
+   */
+  lang?: OnboardingLang
   now?: Date
   newId?: () => ID
 }
@@ -203,6 +210,12 @@ export function planStarterLibrary(db: Database, options: { now?: Date; newId?: 
 }
 
 /* --------------------------------- Helpers -------------------------------- */
+
+/** The app language after setup: the onboarding UI language, else the brand's writing language (Tagalog → Taglish). */
+export function appLanguage(lang: OnboardingLang | undefined, brandLanguage: BrandLanguage): UiLang {
+  const chosen = lang ?? (brandLanguage === "english" ? "english" : "taglish")
+  return chosen === "english" ? "en" : "tl"
+}
 
 /** "In 2022 we almost closed our café because sales dropped." → "In 2022 we almost closed our café". */
 export function storyTitle(story: string): string {
@@ -528,7 +541,7 @@ export function planOnboarding(db: Database, input: OnboardingInput): Onboarding
   return {
     inserts: b.inserts as PlanInserts,
     updates: b.updates as PlanUpdates,
-    settings: { weekly_post_target: Math.round(weeklyTarget) },
+    settings: { weekly_post_target: Math.round(weeklyTarget), ui_language: appLanguage(input.lang, a.language) },
     brand,
     summary: {
       libraryRows,

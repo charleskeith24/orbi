@@ -1,6 +1,17 @@
-import { Database, Funnel, Gauge, MessagesSquare, Plug, Shapes, SlidersHorizontal, Sparkles, Tags, type LucideIcon } from "lucide-react"
+import { Bell, Database, Funnel, Gauge, MessagesSquare, Plug, Shapes, SlidersHorizontal, Sparkles, Tags, type LucideIcon } from "lucide-react"
 
-export const SETTINGS_TAB_KEYS = ["general", "performance", "funnel", "formats", "tags", "engagement", "ai", "integrations", "data"] as const
+export const SETTINGS_TAB_KEYS = [
+  "general",
+  "performance",
+  "funnel",
+  "formats",
+  "tags",
+  "engagement",
+  "reminders",
+  "ai",
+  "integrations",
+  "data",
+] as const
 
 export type SettingsTabKey = (typeof SETTINGS_TAB_KEYS)[number]
 
@@ -16,7 +27,7 @@ export const SETTINGS_TABS: SettingsTabMeta[] = [
     key: "general",
     label: "General",
     icon: SlidersHorizontal,
-    description: "Posting target, week start, timezone, default owner and how strictly the content mix is checked.",
+    description: "App language, Simple mode, currency, posting target, week start, timezone, default owner and how strictly the content mix is checked.",
   },
   {
     key: "performance",
@@ -42,6 +53,12 @@ export const SETTINGS_TABS: SettingsTabMeta[] = [
     label: "Engagement",
     icon: MessagesSquare,
     description: "The daily engagement tasks and targets behind the Engagement Tracker on Today.",
+  },
+  {
+    key: "reminders",
+    label: "Reminders",
+    icon: Bell,
+    description: "Nudges to post, to show up for your posting slots and to review your week.",
   },
   {
     key: "ai",

@@ -71,6 +71,10 @@ export const BRAND: InsertRow<"brand_profiles"> = {
     "Soft by default — comment a keyword for the template or send me a DM with your situation. Direct only on BOFU posts: book a free scaling audit, limited slots.",
   storytelling_style:
     "Start in the middle of the moment (the Slack message, the call, the dashboard at 11 p.m.), name the real stakes in pesos or people, admit my part in it, then pull out one lesson founders can use this week.",
+  contact_email: "collabs@northbound.example",
+  website: "https://northbound.example",
+  media_kit_bio:
+    "Raf Mendoza is the founder of Northbound Commerce, a 24-person growth agency in Pasig that has managed more than ₱400M in ad spend for Southeast Asian e-commerce brands. He teaches performance marketing, business systems and team leadership in plain Taglish to 220,000+ followers across TikTok, Facebook, Instagram, LinkedIn and YouTube — real numbers, real mistakes, no hype.",
   onboarding_completed: true,
 }
 

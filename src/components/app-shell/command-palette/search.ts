@@ -5,6 +5,7 @@
  */
 import {
   CAMPAIGN_STATUS_MAP,
+  DEAL_STATUS_MAP,
   EXPERIMENT_METRIC_MAP,
   EXPERIMENT_STATUS_MAP,
   HOOK_CATEGORIES,
@@ -23,6 +24,7 @@ import type {
   AudiencePersona,
   AudienceProblem,
   AudienceQuestion,
+  BrandDeal,
   ContentAngle,
   ContentCampaign,
   ContentExperiment,
@@ -37,7 +39,7 @@ import type {
   ResearchItem,
   Story,
 } from "@/lib/types"
-import { formatCompact, pluralize } from "@/lib/utils"
+import { formatCompact, formatMoney, pluralize } from "@/lib/utils"
 
 /** Entity kinds the palette searches. */
 export type SearchKind =
@@ -54,6 +56,7 @@ export type SearchKind =
   | "question"
   | "research"
   | "experiment"
+  | "deal"
   | "topic"
   | "analytics"
 
@@ -509,6 +512,32 @@ export function buildAnalyticsDocs(items: ContentItem[], metrics: ContentMetric[
   return docs
 }
 
+/** Brand deals → `/money/deals?open=<id>`, found by brand, contact, deliverables and notes. */
+export function buildDealDocs(deals: BrandDeal[]): SearchDoc[] {
+  return deals.map(
+    (deal): SearchDoc => ({
+      key: `deal:${deal.id}`,
+      kind: "deal",
+      id: deal.id,
+      title: deal.brand_name || "Untitled deal",
+      secondary: joinParts(
+        DEAL_STATUS_MAP[deal.status]?.label,
+        deal.fee !== null ? formatMoney(deal.fee, deal.currency) : null,
+        deal.platforms.map((p) => PLATFORMS[p]?.label).filter(Boolean).join(", ")
+      ),
+      hint: deal.due_date ? formatShortDate(deal.due_date) : "",
+      href: `/money/deals?open=${deal.id}`,
+      updatedAt: deal.updated_at,
+      fields: [
+        ...field(deal.brand_name, 3),
+        ...field([deal.contact_name, deal.contact_handle, deal.contact_email].join(" "), 2),
+        ...field(deal.deliverables.join(" "), 1),
+        ...field([deal.notes, deal.usage_rights].join(" "), 1),
+      ],
+    })
+  )
+}
+
 export interface SearchSources {
   items: ContentItem[]
   ideas: ContentIdea[]
@@ -523,6 +552,7 @@ export interface SearchSources {
   questions: AudienceQuestion[]
   research: ResearchItem[]
   experiments: ContentExperiment[]
+  deals: BrandDeal[]
   scripts: ContentScript[]
   metrics: ContentMetric[]
 }
@@ -544,6 +574,7 @@ export function buildSearchIndex(sources: SearchSources): SearchIndex {
     question: buildQuestionDocs(sources.questions),
     research: buildResearchDocs(sources.research),
     experiment: buildExperimentDocs(sources.experiments),
+    deal: buildDealDocs(sources.deals),
     topic: buildTopicDocs(sources.ideas),
     analytics: buildAnalyticsDocs(sources.items, sources.metrics),
   }

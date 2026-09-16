@@ -1,13 +1,16 @@
 # Supabase: accounts, sync and production persistence
 
-Personal Brand OS runs in one of two modes. Nothing in the UI changes except where your data lives and whether there are accounts.
+Orbi runs in one of two modes. Nothing in the UI changes except where your data lives and whether there are accounts.
 
-| | Local mode (default) | Supabase mode |
+> Deploying for real (GitHub, Supabase, Vercel, domain)? Follow **[DEPLOY.md](DEPLOY.md)** — it is the step-by-step version of this page for non-developers. This page is the technical reference.
+
+| | Local mode (default) | Supabase mode ("online version") |
 |---|---|---|
 | Turned on by | no Supabase env vars | `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` |
-| Data | this browser's `localStorage`, seeded with a demo workspace | Postgres, one workspace per account, row-level security |
-| Accounts | none; `/login` and `/signup` explain local mode | email + password, magic link, email confirmation |
+| Data | this browser's `localStorage` (`pbos:workspace:v2`), starting from the Starter Kit | Postgres, one workspace per account, row-level security |
+| Accounts | none; `/login`, `/signup` and `/set-password` explain local mode | email + password, magic link, email confirmation, invites |
 | Devices | one browser | any device you sign in on |
+| Backups | Settings → Data → Export; the banner reminds you after 7 days without one | the database; exports still work |
 | Route guard (`src/proxy.ts`) | pass-through | refreshes the session on every request; signed-out pages → `/login?next=…`, signed-out `/api/*` → `401` |
 | Adapter | `src/lib/data/local-adapter.ts` | `src/lib/data/supabase-adapter.ts` |
 
@@ -17,74 +20,81 @@ The switch is `isSupabaseConfigured` in `src/lib/supabase/config.ts`. The AI pro
 
 ## 1. Create a project
 
-1. Go to [supabase.com/dashboard](https://supabase.com/dashboard) → **New project**.
-2. Pick a region close to you and save the database password somewhere safe (you won't need it for the app).
+1. [supabase.com/dashboard](https://supabase.com/dashboard) → **New project**.
+2. Region: **Southeast Asia (Singapore)** for users in the Philippines. Save the database password somewhere safe (the app doesn't use it).
 
 ## 2. Apply the schema
 
-The whole schema is one migration: [`supabase/migrations/20260910000000_init.sql`](../supabase/migrations/20260910000000_init.sql).
+**Run every file in `supabase/migrations`, in filename order, once each.** Today:
 
-**Option A: SQL editor (no tools needed)**
+| File | Owner | Creates |
+|---|---|---|
+| `20260910000000_init.sql` | workspace | `public.users` + every workspace table (`TABLE_NAMES` in `src/lib/data/defaults.ts`), indexes, triggers, RLS |
+| `20260914000100_beta.sql` | beta toolkit | `feedback`, `usage_events` (server-only, RLS: insert/read own rows) |
+| `20260914000200_push.sql` | push reminders | `push_subscriptions` (server-only, RLS: own rows) + reminder claim functions — setup in [REMINDERS.md](REMINDERS.md) |
+| newer files | their feature | run them too, in filename order |
 
-1. Dashboard → **SQL Editor** → **New query**.
-2. Paste the entire contents of the migration file and click **Run**. It should finish with "Success. No rows returned".
+**Option A: SQL Editor** — Dashboard → **SQL Editor** → **New query** → paste one whole file → **Run** ("Success. No rows returned") → next file.
 
-**Option B: Supabase CLI** (install it separately; it isn't a project dependency)
+**Option B: Supabase CLI**
 
 ```bash
-supabase login
-supabase link --project-ref <your-project-ref>
-supabase db push
+npx supabase login
+npx supabase link --project-ref <your-project-ref>
+npx supabase db push
 ```
 
-Run the migration once per project. It creates 30 tables (29 workspace tables + `public.users`), their indexes, triggers and row-level security policies.
+`db push` applies pending files in order and records what already ran.
 
 ## 3. Configure authentication
 
 Dashboard → **Authentication**:
 
 1. **Sign In / Providers → Email**: keep it enabled.
-   - **Confirm email** on: new accounts must click a link before their first sign-in. The sign-up form then shows "Check your email to confirm".
-   - **Confirm email** off: sign-up signs the user in immediately.
+   - **Confirm email** on: new accounts click a link before their first sign-in; the sign-up form shows "Check your email to confirm".
+   - **Allow new users to sign up** off: invite-only (existing and invited accounts still sign in).
 2. **URL Configuration**:
-   - **Site URL**: `http://localhost:3000` (your production URL once deployed).
-   - **Redirect URLs**: add `http://localhost:3000/**` and, for production, `https://<your-domain>/**`. Email links go to `/auth/callback?next=<page>`, and the `/**` pattern also allows that query string.
-3. **Emails / SMTP** (recommended before inviting anyone): the built-in sender is rate-limited to a few emails per hour and may only deliver to your team's addresses. Configure custom SMTP for real use.
+   - **Site URL**: `http://localhost:3000` locally, your production URL once deployed.
+   - **Redirect URLs**: `http://localhost:3000/**`, `https://<your-domain>/**` (and your `*.vercel.app` address). Email links go to `/auth/callback?next=<page>`; the `/**` pattern allows the query string.
+3. **Emails / SMTP** (before inviting anyone): the built-in sender is rate-limited and may only deliver to your team's addresses. Configure custom SMTP for real use.
 
 ## 4. Add the environment variables
 
-Create `.env.local` in the project root (it is git-ignored):
+Locally, create `.env.local` in the project root (git-ignored); on Vercel, add them under Project → Settings → Environment Variables and redeploy.
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://<your-project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
 
-Find both under **Project Settings → API Keys** (and **Data API** for the URL). Older projects show a legacy `anon` key instead; it works too, and `NEXT_PUBLIC_SUPABASE_ANON_KEY` is accepted as the variable name.
+Both are under **Project Settings → API Keys** (and **Data API** for the URL). Older projects show a legacy `anon` key; it works too, and `NEXT_PUBLIC_SUPABASE_ANON_KEY` is accepted as the variable name. Every other variable (AI, push reminders, the server-only `SUPABASE_SECRET_KEY`) is listed with comments in `.env.example`.
 
-> Only the publishable (or anon) key belongs in a `NEXT_PUBLIC_` variable. It is safe in the browser because row-level security limits every query to the signed-in user. Never put the secret / `service_role` key in the app.
+> Only the publishable (or anon) key belongs in a `NEXT_PUBLIC_` variable. It is safe in the browser because row-level security limits every query to the signed-in user. Never put the secret / `service_role` key in a `NEXT_PUBLIC_` variable or in the repository.
 
 ## 5. Restart and sign up
 
-Environment variables are read when the dev server starts, so restart it (`npm run dev`). Then open <http://localhost:3000>:
+Environment variables are read when the app starts (and are built into the bundle on Vercel), so restart `npm run dev` or redeploy. Then:
 
 1. You're redirected to **/login** → **Create an account**.
 2. Confirm your email if required. The link lands on `/auth/callback`, which signs you in.
-3. A new account starts with an empty workspace, so the onboarding wizard opens. Or import an existing workspace (next section).
+3. A new account starts empty, so onboarding opens — unless this browser holds a local workspace (next section).
 
 The account menu sits at the bottom of the sidebar (avatar + email) and has **Settings** and **Sign out**.
 
 ---
 
-## Move a local workspace into Supabase
+## Move a local workspace into your account
 
-Local data stays in the browser it was created in. To take it with you:
+**Same address (e.g. `localhost:3000` before and after adding the env vars).** The local workspace is still in this browser's `localStorage`. After sign-in, while the account is empty, Orbi asks once: **"Move your local workspace to your account?"** The same action stays in **Settings → Data → Local workspace in this browser**.
 
-1. **Before** adding the Supabase variables (still in local mode), open **Settings → Data** and export the workspace as JSON. The file contains every table of your workspace.
-2. Add the variables, restart the dev server, and sign up or sign in.
-3. Open **Settings → Data** again and import that file. The import replaces the cloud workspace of the signed-in account (a new account's is empty), keeps every row id and relationship, and assigns all rows to your account.
+- The move goes through the Supabase adapter in `TABLE_NAMES` order with a progress bar, then a toast.
+- Rows get **fresh ids** with every reference rewritten (`src/lib/supabase/rekey.ts`). Every browser's Starter Kit uses the same ids on the same day, and ids are primary keys shared by all accounts — without this, the second person to move a workspace would hit `duplicate key value violates unique constraint "…_pkey"`.
+- The local copy is **never modified**. After a successful move a marker (`pbos:workspace:v2:moved`) stops the offer; Settings → Data can then download or remove the local copy.
+- An account that already has its own workspace is never overwritten by the offer; the card offers a download instead.
 
-The local copy is not deleted. Remove the Supabase variables and restart to get back to it.
+**Different address (your deployed site).** `localStorage` belongs to one address, so the site can't see it. Export the workspace on the old address (**Settings → Data → Export workspace**), then on the new site open `/settings?tab=data` (reachable before onboarding) → **Import workspace…**. Imports into an account also get fresh ids, so one file can go into several accounts.
+
+**If something fails midway.** PostgREST can't wrap many requests in one transaction, so `replaceAll` reads the account's current rows first and writes them back if any step fails ("Nothing was changed — your previous workspace is back"). If even the restore fails (e.g. the connection is gone), the error says so and asks you to export the in-memory workspace before reloading.
 
 ---
 
@@ -92,79 +102,95 @@ The local copy is not deleted. Remove the Supabase variables and restart to get 
 
 | Piece | File | What it does |
 |---|---|---|
-| Proxy | `src/proxy.ts` | Supabase mode only: calls `auth.getUser()` on every request to refresh the session cookie; redirects signed-out page requests to `/login?next=<path>`, answers signed-out `/api/*` calls with `401 {"error":"unauthorized"}`, and sends signed-in visitors of `/login` / `/signup` to `next` or `/`. Public: `/login`, `/signup`, `/auth/*`, static files. |
-| Auth pages | `src/app/(auth)/login`, `src/app/(auth)/signup` | Email + password, "Email me a magic link", confirmation state. In local mode they show an explanation card with **Open my local workspace**. |
-| Email links | `src/app/auth/callback/route.ts` | Exchanges `?code=` (PKCE) or verifies `?token_hash=&type=`, sets the session cookies, continues to `next`. Failures go back to `/login?error=<code>` (keeping `next`) with a readable message. |
-| Sign-out | `src/app/auth/signout/route.ts` | `POST` only; ends this browser's session (`scope: "local"`) and redirects to `/login`. |
+| Proxy | `src/proxy.ts` | Supabase mode only: calls `auth.getUser()` to refresh the session cookie; signed-out page requests → `/login?next=<path>`, signed-out `/api/*` → `401 {"error":"unauthorized"}`, signed-in visitors of `/login` / `/signup` → `next` or `/`. Public: `/login`, `/signup`, `/auth/*`, `/api/cron/*` (authenticated by `CRON_SECRET` in the route), and static files the matcher skips — `/sw.js`, `/manifest.webmanifest`, `/icons/*`, images, fonts. |
+| Auth pages | `src/app/(auth)/login`, `signup`, `set-password` | Email + password, "Email me a magic link", confirmation state; **Set a password** for signed-in users (invited testers, magic-link users). In local mode they explain local mode. |
+| Email links | `src/app/auth/callback/route.ts` | Exchanges `?code=` (PKCE) or verifies `?token_hash=&type=` (`email`, `invite`, `recovery`…), sets the session cookies, continues to `next`. Failures → `/login?error=<code>` with a readable message. |
+| Sign-out | `src/app/auth/signout/route.ts` | `POST` only; ends this browser's session (`scope: "local"`). |
 | Clients | `src/lib/supabase/{client,server}.ts` | Browser singleton and per-request server client (cookies). |
-| Data | `src/lib/data/supabase-adapter.ts` | Loads every table (RLS scopes it to the user), writes rows, and sends the effects Postgres can't express (array-reference cleanup, tag links). |
+| Data | `src/lib/data/supabase-adapter.ts` | Loads every table (paged, ordered by `created_at, id`), writes rows (unknown fields dropped), sends the effects Postgres can't express (array-reference cleanup, tag links), fails loudly when an update matches no row, and replaces a workspace with rollback + progress (`trackReplace`). |
+| Local → cloud | `src/lib/supabase/{move-local,rekey}.ts`, `features/settings/data-move-local.tsx` | Reads the local snapshot, decides whether to offer the move, rekeys and imports. |
 
 `next` values are restricted to same-origin relative paths (`src/components/features/auth/auth-paths.ts`), so links like `/login?next=//evil.com` can't redirect elsewhere.
 
-### Optional: email links that work across devices
+### Email links that work across devices
 
-The default email templates use the PKCE flow: the link must be opened in the browser that requested it (otherwise the login page says so). To confirm from any device, edit **Authentication → Emails → Confirm signup** and **Magic Link** to link to:
+The default templates use the PKCE flow: the link must be opened in the browser that requested it. To make links work anywhere, edit the templates under **Authentication → Emails**:
 
-```text
-{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email
-```
+| Template | Link |
+|---|---|
+| Confirm signup, Magic Link | `{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email` |
+| Invite user | `{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=invite&next=/set-password` |
+| Reset Password | `{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/set-password` |
 
-This template doesn't carry the `next` page, so these links always land on the home page.
+Without a `next`, a link lands on the home page. Invited testers land on **Set a password** and use email + password from then on.
 
 ---
 
 ## Schema reference
 
-The migration mirrors `src/lib/types.ts` exactly. Column names are the TypeScript field names, so rows move between the store, the local adapter and Postgres without mapping.
+The init migration mirrors `src/lib/types.ts` exactly. Column names are the TypeScript field names, so rows move between the store, the local adapter and Postgres without mapping.
 
 **Conventions**
 
 - Every workspace table: `id uuid` primary key, `user_id` → `auth.users` (`on delete cascade`, defaults to `auth.uid()`), `created_at`, `updated_at` (kept current by the `set_updated_at` trigger).
-- `string` → `text not null default ''`; `string[]` → `text[] not null default '{}'`; `ID[]` → `uuid[]`; counts, ranks and scores → `integer`; anything that can be fractional → `numeric` (rates, percentages, tier multipliers, durations, years of experience, posts per week); `ISODate` → `date`; `ISODateTime` → `timestamptz`; nested objects (scores, analysis, stats, sections, AI input/output, funnel targets, engagement tasks) → `jsonb`.
+- `string` → `text not null default ''`; `string[]` → `text[] not null default '{}'`; `ID[]` → `uuid[]`; counts, ranks and scores → `integer`; anything that can be fractional → `numeric` (rates, percentages, multipliers, durations, money); `ISODate` → `date`; `ISODateTime` → `timestamptz`; nested objects → `jsonb`.
 - Enum-typed columns are `text` with a `CHECK` listing exactly the values in `types.ts` (arrays of enums use `<@ array[...]`).
 - Defaults match `TABLE_DEFAULTS` in `src/lib/data/defaults.ts`.
-- Tables are created in `TABLE_NAMES` order (parents before children), the same order the adapter uses to import.
+- Tables are created in `TABLE_NAMES` order (parents before children), the same order the adapter imports in.
+- Server-only tables (`feedback`, `usage_events`, `push_subscriptions`) are not part of the workspace model; they live in their feature's own migration with RLS.
 
 **Relationships** (identical to `src/lib/data/relations.ts`, which applies the same rules in memory for local mode)
 
 - Deleting a content item cascades to its brief, scripts, metrics and repurposing records; every other optional reference is `on delete set null`.
 - Tags → tag links cascade.
-- No foreign key, by design (each has a `COMMENT` in the migration):
-  - array references (`content_platforms.preferred_*_ids`, `content_experiments.variant_*_item_ids`, `weekly_reviews.planned_item_ids`): the app removes deleted ids;
-  - polymorphic references (`content_tags.entity_id`, `content_ideas.source_ref_id`, `ai_generations.entity_id`);
-  - `content_ideas.converted_item_id`: a soft reference, because `content_items.idea_id` already points back and a second FK would create an insert cycle. The `clear_converted_item_refs` trigger nulls it when the item is deleted.
+- No foreign key, by design (each has a `COMMENT` in the migration): array references (`*_ids` columns — the app removes deleted ids), polymorphic references (`content_tags.entity_id`, `content_ideas.source_ref_id`, `ai_generations.entity_id`), and `content_ideas.converted_item_id` (soft reference, cleared by the `clear_converted_item_refs` trigger).
 
 **Security**
 
-- Row-level security is enabled on every table. Each table has `select` / `insert` / `update` / `delete` policies for the `authenticated` role using `(select auth.uid()) = user_id`; `public.users` allows a user to read and update only their own row. The `anon` role has no table access.
-- `public.users` is filled by the `on_auth_user_created` trigger (name from sign-up metadata) and kept in sync by `on_auth_user_updated`. Accounts that existed before the migration are backfilled.
-- One `brand_profiles` row and one `app_settings` row per user (unique on `user_id`); tag names are unique per user, case-insensitively; a tag is linked to an entity at most once.
+- Row-level security on every table. Workspace tables have `select` / `insert` / `update` / `delete` policies for `authenticated` using `(select auth.uid()) = user_id`; `public.users` allows reading and updating only your own row. `anon` has no table access (Supabase grants it by default; the migrations revoke it).
+- `public.users` is filled by the `on_auth_user_created` trigger and kept in sync by `on_auth_user_updated`.
+- One `brand_profiles` row and one `app_settings` row per user; tag names unique per user, case-insensitively; a tag is linked to an entity at most once.
+- Row **ids are global primary keys** — two accounts can't hold rows with the same id. The app generates random UUIDs; moves and imports rekey (above).
 
-**Indexes**: `user_id` and every foreign-key column, plus `content_items (user_id, stage)`, `content_items (user_id, scheduled_at)`, `content_metrics (content_item_id, recorded_at)` and `content_tags (entity_type, entity_id)`.
+## How the schema is tested
+
+| Test | What it proves |
+|---|---|
+| `src/lib/data/schema-parity.test.ts` | Reads the migration text: columns, SQL types, nullability, CHECK lists, defaults, FKs vs `relations.ts`, indexes, RLS policies and grants, triggers, comments; the demo workspace fits the column types. |
+| `src/lib/data/schema.pglite.test.ts` | **Runs** every migration, in filename order, on real Postgres (PGlite — Postgres 18 compiled to WASM, in memory) on top of a stub of Supabase's `auth` schema (`auth.users`, `auth.uid()` / `auth.role()` / `auth.jwt()` reading `request.jwt.claims`, the `anon` / `authenticated` / `service_role` roles, Supabase's default grants). Then: the demo workspace inserts table by table in `TABLE_NAMES` order as its owner with RLS on and reads back identically; for **every** `relations.ts` reference, deleting a parent leaves exactly what `planDelete` predicts (minus the array/tag cleanup that is the adapter's job); `updated_at` triggers fire on every table; RLS: another account sees, updates and deletes nothing, can't insert rows for someone else, `anon` is denied; per-account unique keys; account deletion cascades; sign-up creates `public.users`. |
+| `src/lib/data/supabase-adapter.pglite.test.ts` | Runs the **real adapter** against that database through a PostgREST stand-in (`src/lib/supabase/testing/postgrest-fake.ts`: one transaction per request as `authenticated` with the user's JWT claims, rows in/out as JSON, `PGRST204` for unknown columns). Covers load (paging past 1,000 rows), insert, update (including "no row matched"), `remove` for every reference end to end (Postgres + the adapter's cleanup = the in-memory store), `replaceAll` with progress, rollback after a rejected row and after a dropped connection, and local → cloud moves (including the primary-key collision rekeying prevents). |
+
+Run them with `npx vitest run src/lib/data/schema.pglite.test.ts src/lib/data/supabase-adapter.pglite.test.ts` (about a minute; one PGlite instance per file). They are data-driven — new tables, references and migration files are picked up automatically.
+
+**What PGlite does not prove.** The SQL is real Postgres, but the rest of hosted Supabase is not in the test: PostgREST itself (the stand-in mimics the calls the adapter makes — no HTTP, schema cache, request limits or its exact error texts), Supabase Auth (sign-up, emails, sessions, token refresh, the real `auth` schema and its functions), Supabase's own extensions and roles beyond the stub, dashboard settings (URL configuration, email templates, SMTP), and the Vercel deployment. After deploying, do the manual check at the end of DEPLOY.md.
 
 ## Changing the schema
 
 1. Update the interface in `src/lib/types.ts` and its entry in `TABLE_DEFAULTS` (plus `REFERENCES` in `relations.ts` for a new reference).
-2. Add a new migration, e.g. `supabase/migrations/20261001000000_add_story_mood.sql`:
+2. Before the first deployment, edit the init migration. After a project has run it, add a new migration instead, e.g. `supabase/migrations/20261001000000_add_story_mood.sql`:
    ```sql
    alter table public.stories add column mood text not null default '';
    ```
-   Don't edit a migration that has already been applied to a project.
-3. Run the parity test. It compares every migration against `types.ts`, `TABLE_DEFAULTS` and `relations.ts` (columns, types, nullability, enum `CHECK` lists, defaults, foreign keys, indexes, RLS) and checks that the demo workspace would import cleanly:
+   Never edit a migration that has already been applied to a project.
+3. Run the parity and PGlite tests:
    ```bash
-   npx vitest run src/lib/data/schema-parity.test.ts
+   npx vitest run src/lib/data/schema-parity.test.ts src/lib/data/schema.pglite.test.ts src/lib/data/supabase-adapter.pglite.test.ts
    ```
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| "Couldn't load your workspace" with `Loading <table> failed: Could not find the table … in the schema cache` (or `relation … does not exist`) | The migration hasn't been applied to this project (step 2). If you just applied it, reload the API schema cache: run `notify pgrst, 'reload schema';` in the SQL editor. |
-| Saving fails with `invalid input syntax for type integer` | A form sent a fraction to a whole-number column (counts, scores, targets). Round it in the form; local mode accepts it, Postgres doesn't. |
-| `/login` still shows "Accounts are off in local mode" | The env vars are missing or misspelled, or the dev server wasn't restarted. |
+| "Couldn't load your workspace" with `Loading <table> failed: Could not find the table … in the schema cache` (or `relation … does not exist`) | A migration hasn't been applied (step 2). If you just applied it, run `notify pgrst, 'reload schema';` in the SQL editor. |
+| `Could not find the '<field>' column of '<table>' in the schema cache` | The app is newer than the database: run the newer migration files. |
+| Saving fails with `invalid input syntax for type integer` | A form sent a fraction to a whole-number column. Round it in the form; local mode accepts it, Postgres doesn't. |
+| `duplicate key value violates unique constraint "…_pkey"` | A row id already exists in the database (another account). Moves and imports rekey automatically; if you insert rows another way, give them new ids. |
+| Import / move: "Nothing was changed — your previous workspace is back" | One step failed (the message names the table and reason); the account was restored. |
+| "the row no longer exists (deleted on another device?)" | The update matched no row. Reload. |
+| `/login` shows "Accounts are off in local mode" | The env vars are missing or misspelled, or the app wasn't restarted / redeployed. |
 | "Couldn't reach Supabase" | Check `NEXT_PUBLIC_SUPABASE_URL` and your connection. |
 | Email link opens `/login` with "Open the link in the same browser…" | PKCE links only work in the requesting browser. Request a new link there, or switch to the token-hash templates above. |
-| Email link goes to the wrong site or is rejected | Add `<origin>/auth/callback` to **Redirect URLs** and check the **Site URL**. |
+| Email link goes to the wrong site or is rejected | Add `<origin>/**` to **Redirect URLs** and check the **Site URL**. |
 | "Too many emails were sent" | Built-in email rate limit. Wait, or configure custom SMTP. |
-| "An account with this email already exists" | Sign in instead, or use "Email me a magic link". |
+| Set a password: "sign in again with an email link" | The project requires a recent sign-in to change passwords. Request a magic link, open it, then set the password right away. |
 | "new row violates row-level security policy" | The request wasn't made as the signed-in user. Sign out and back in; never write rows with another `user_id`. |

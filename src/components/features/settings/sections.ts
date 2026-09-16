@@ -4,6 +4,7 @@
  * pillar tolerance may be decimals.
  */
 import { TABLE_DEFAULTS } from "@/lib/data/defaults"
+import { uiLangOf, type UiLang } from "@/lib/i18n/core"
 import type { AppSettings, EngagementTaskConfig, FunnelTargets, MetaField, UpdateRow, WinnerMetric } from "@/lib/types"
 
 type SettingsFields = Omit<AppSettings, MetaField>
@@ -38,7 +39,15 @@ export function isValidTimeZone(timeZone: string): boolean {
 
 /* --------------------------------- General -------------------------------- */
 
+/** An ISO 4217-shaped code ("PHP", "USD"). Any such code formats with `formatMoney`. */
+export function isCurrencyCode(value: string): boolean {
+  return /^[A-Z]{3}$/.test(value.trim())
+}
+
 export interface GeneralValues {
+  ui_language: UiLang
+  simple_mode: boolean
+  currency: string
   weekly_post_target: number | null
   week_starts_on: 0 | 1
   timezone: string
@@ -48,6 +57,9 @@ export interface GeneralValues {
 
 export function generalFromSettings(s: SettingsFields): GeneralValues {
   return {
+    ui_language: uiLangOf(s),
+    simple_mode: s.simple_mode ?? DEFAULTS.simple_mode,
+    currency: s.currency || DEFAULTS.currency,
     weekly_post_target: s.weekly_post_target,
     week_starts_on: s.week_starts_on,
     timezone: s.timezone,
@@ -58,8 +70,21 @@ export function generalFromSettings(s: SettingsFields): GeneralValues {
 
 export const GENERAL_DEFAULTS = generalFromSettings(DEFAULTS)
 
+/** "Reset to defaults" on the General tab: the rules go back to defaults; personal preferences stay. */
+export function generalResetValues(current: GeneralValues): GeneralValues {
+  return {
+    ...GENERAL_DEFAULTS,
+    ui_language: current.ui_language,
+    simple_mode: current.simple_mode,
+    currency: current.currency,
+    timezone: current.timezone,
+    default_owner: current.default_owner,
+  }
+}
+
 export function validateGeneral(v: GeneralValues): FieldErrors<keyof GeneralValues> {
   const errors: FieldErrors<keyof GeneralValues> = {}
+  if (!isCurrencyCode(v.currency)) errors.currency = "Choose a currency from the list."
   const { min, max } = LIMITS.weeklyTarget
   if (!isInt(v.weekly_post_target) || v.weekly_post_target < min || v.weekly_post_target > max) {
     errors.weekly_post_target = `Enter a whole number of posts from ${min} to ${max}.`
@@ -74,6 +99,9 @@ export function validateGeneral(v: GeneralValues): FieldErrors<keyof GeneralValu
 
 export function generalPatch(v: GeneralValues): UpdateRow<"app_settings"> {
   return {
+    ui_language: v.ui_language,
+    simple_mode: v.simple_mode,
+    currency: v.currency.trim().toUpperCase(),
     weekly_post_target: Math.round(v.weekly_post_target ?? DEFAULTS.weekly_post_target),
     week_starts_on: v.week_starts_on,
     timezone: v.timezone.trim(),

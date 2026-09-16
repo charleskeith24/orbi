@@ -28,6 +28,7 @@ function sources(overrides: Partial<SearchSources> = {}): SearchSources {
     questions: [],
     research: [],
     experiments: [],
+    deals: [],
     scripts: [],
     metrics: [],
     ...overrides,
@@ -159,6 +160,25 @@ describe("entity documents", () => {
     expect(index.pillar[0].href).toMatch(/^\/pillars\?open=/)
     expect(index.persona[0].href).toMatch(/^\/audience\?open=/)
     expect(index.experiment[0].href).toMatch(/^\/experiments\?open=/)
+  })
+
+  it("finds brand deals by brand, contact and deliverables and opens them on the Brand Deals page", () => {
+    const deal = buildRow(
+      "brand_deals",
+      {
+        brand_name: "Kapihan Roasters",
+        contact_name: "Paolo Lim",
+        status: "negotiating",
+        fee: 18000,
+        platforms: ["instagram"],
+        deliverables: ["2 Instagram stories"],
+      },
+      USER,
+      NOW
+    )
+    const index = buildSearchIndex(sources({ deals: [deal] }))
+    for (const query of ["kapihan", "paolo", "stories"]) expect(searchDocs(index.deal, query).map((d) => d.id), query).toEqual([deal.id])
+    expect(index.deal[0]).toMatchObject({ href: `/money/deals?open=${deal.id}`, secondary: "Negotiating · ₱18,000 · Instagram" })
   })
 
   it("finds secondary kinds by their own fields", () => {

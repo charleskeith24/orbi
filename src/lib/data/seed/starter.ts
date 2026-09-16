@@ -32,7 +32,14 @@ export function buildStarterKit(ctx: SeedContext, createdAt: Date): Database {
   const db = emptyDatabase()
   const build = ctx.build
 
-  db.app_settings = [build("app_settings", { id: ctx.id("settings"), weekly_post_target: 10 }, createdAt)]
+  // New creators start in Simple mode, in English, earning in pesos (all switchable in Settings → General).
+  db.app_settings = [
+    build(
+      "app_settings",
+      { id: ctx.id("settings"), weekly_post_target: 10, simple_mode: true, ui_language: "en", currency: "PHP" },
+      createdAt
+    ),
+  ]
   db.brand_profiles = [build("brand_profiles", { id: ctx.id("brand"), onboarding_completed: false }, createdAt)]
 
   db.content_goals = GOAL_CATEGORY_IDS.map((category) => {

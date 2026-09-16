@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest"
 import { funnelMix, pillarMix } from "@/lib/analytics"
 import {
+  DEAL_SOURCE_IDS,
+  DEAL_STATUS_IDS,
   HOOK_CATEGORIES,
   HOOK_CATEGORY_IDS,
   IDEA_SOURCES,
+  INCOME_SOURCE_IDS,
   IDEA_STATUSES,
   PIPELINE_STAGES,
   PUBLISHED_STAGES,
@@ -233,6 +236,12 @@ describe("createStarterDatabase", () => {
     expect(db.content_pillars).toHaveLength(0)
     expect(db.audience_personas).toHaveLength(0)
     expect(db.stories).toHaveLength(0)
+    expect([db.brand_deals, db.income_entries, db.rate_cards].map((t) => t.length)).toEqual([0, 0, 0])
+  })
+
+  it("starts new creators in Simple mode, in English, earning in pesos", () => {
+    expect(db.app_settings[0]).toMatchObject({ simple_mode: true, ui_language: "en", currency: "PHP" })
+    expect(db.app_settings[0]).toMatchObject({ reminders_daily_enabled: false, reminders_slot_enabled: false, reminders_review_enabled: false })
   })
 
   it("ships a Hook Library of fill-in templates in every category", () => {
@@ -304,6 +313,55 @@ describe("createDemoDatabase", () => {
     expect(db.audience_personas).toHaveLength(3)
     expect(db.audience_personas.filter((p) => p.is_primary)).toHaveLength(1)
     expect(db.app_settings[0].default_owner).toBe("Raf")
+  })
+
+  it("keeps every module visible, in English, earning in pesos", () => {
+    expect(db.app_settings[0]).toMatchObject({ simple_mode: false, ui_language: "en", currency: "PHP" })
+  })
+
+  it("has brand deals in every status and source, linked to real content", () => {
+    expect(new Set(db.brand_deals.map((d) => d.status))).toEqual(new Set(DEAL_STATUS_IDS))
+    expect(new Set(db.brand_deals.map((d) => d.source))).toEqual(new Set(DEAL_SOURCE_IDS))
+    // One foreign-currency deal keeps Money honest about mixed currencies.
+    expect(db.brand_deals.some((d) => d.currency !== "PHP")).toBe(true)
+    for (const deal of db.brand_deals) {
+      expect(deal.paid_at !== null, `${deal.brand_name} paid_at`).toBe(deal.status === "paid")
+      if (deal.show_in_media_kit) expect(["paid", "delivered"], deal.brand_name).toContain(deal.status)
+      if (["paid", "delivered", "in_progress"].includes(deal.status)) expect(deal.content_item_ids.length, deal.brand_name).toBeGreaterThan(0)
+      for (const id of deal.content_item_ids) expect(deal.platforms, deal.brand_name).toContain(items.get(id)!.platform)
+      if (deal.start_date && deal.due_date) expect(deal.start_date <= deal.due_date, deal.brand_name).toBe(true)
+    }
+    expect(db.brand_deals.filter((d) => d.show_in_media_kit).length).toBeGreaterThanOrEqual(3)
+  })
+
+  it("records ~6 months of income across every source, and every paid deal's payment", () => {
+    const entries = db.income_entries
+    expect(new Set(entries.map((e) => e.source))).toEqual(new Set(INCOME_SOURCE_IDS))
+    expect(new Set(entries.map((e) => e.status))).toEqual(new Set(["received", "expected"]))
+    expect(new Set(entries.map((e) => e.date.slice(0, 7))).size).toBeGreaterThanOrEqual(6)
+    const programs = new Set(entries.filter((e) => e.source === "affiliate").map((e) => e.affiliate_program))
+    for (const program of ["TikTok Shop", "Shopee"]) expect(programs).toContain(program)
+    for (const e of entries) {
+      expect(e.affiliate_program !== "", e.description).toBe(e.source === "affiliate")
+      expect(e.amount, e.description).toBeGreaterThan(0)
+      if (e.source === "platform_payout" || e.source === "tip") expect(e.platform, e.description).not.toBeNull()
+      if (e.status === "received") expect(e.date <= toISODate(NOW), e.description).toBe(true)
+    }
+    for (const deal of db.brand_deals.filter((d) => d.status === "paid")) {
+      const paid = entries.filter((e) => e.brand_deal_id === deal.id && e.status === "received")
+      expect(paid.reduce((sum, e) => sum + e.amount, 0), deal.brand_name).toBe(deal.fee)
+      expect(paid.map((e) => e.date), deal.brand_name).toContain(deal.paid_at)
+    }
+    expect(entries.some((e) => e.content_item_id !== null)).toBe(true)
+  })
+
+  it("has rate cards for the media kit, including a quote-only package", () => {
+    const active = db.rate_cards.filter((r) => r.is_active)
+    expect(active.length).toBeGreaterThanOrEqual(4)
+    expect(active.some((r) => r.price === null)).toBe(true)
+    expect(active.some((r) => r.platform === null)).toBe(true)
+    expect(new Set(db.rate_cards.map((r) => r.sort_order)).size).toBe(db.rate_cards.length)
+    expect(db.rate_cards.every((r) => r.deliverables.length > 0 && r.name && r.description)).toBe(true)
   })
 
   it("covers every idea status and source, with scored ideas", () => {

@@ -7,6 +7,8 @@ export type GlobalDialog =
   | { type: "new-content"; ideaId?: ID; defaults?: InsertRow<"content_items"> }
   | { type: "log-post" }
   | { type: "add-metrics"; itemId?: ID }
+  /** Log money received or expected; `dealId` / `itemId` pre-link the entry to a brand deal / content item. */
+  | { type: "log-income"; dealId?: ID; itemId?: ID }
 
 interface UIState {
   dialog: GlobalDialog | null

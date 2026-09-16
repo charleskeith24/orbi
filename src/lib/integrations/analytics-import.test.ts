@@ -8,8 +8,6 @@ import {
   importCandidates,
   matchImportRow,
   normalizeUrl,
-  parseImportDate,
-  parseMetricNumber,
   parsePlatform,
   planImport,
   readImportRows,
@@ -18,6 +16,7 @@ import {
   type ImportRow,
 } from "./analytics-import"
 import { readCsvTable } from "./csv"
+import { parseImportDate, parseMetricNumber } from "./values"
 
 const at = (month: number, day: number) => new Date(2026, month - 1, day, 12).toISOString()
 const item = (values: InsertRow<"content_items">): ContentItem => buildRow("content_items", values, "user")
@@ -33,11 +32,13 @@ const row = (values: Partial<ImportRow>): ImportRow => ({
   line: 2,
   contentId: "",
   title: "",
+  caption: "",
   url: "",
   platform: null,
   published: null,
   metrics: { views: 100 },
   invalid: [],
+  isTotal: false,
   ...values,
 })
 const none = { platform: null }

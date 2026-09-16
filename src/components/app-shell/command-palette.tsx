@@ -10,6 +10,7 @@ import {
   CornerDownLeft,
   FishingHook,
   FlaskConical,
+  Handshake,
   Hash,
   Library,
   Lightbulb,
@@ -36,6 +37,7 @@ import {
   buildAngleDocs,
   buildCampaignDocs,
   buildContentDocs,
+  buildDealDocs,
   buildExperimentDocs,
   buildHookDocs,
   buildIdeaDocs,
@@ -89,6 +91,7 @@ const RESULT_GROUPS: { kind: SearchKind; heading: string; icon: LucideIcon }[] =
   { kind: "question", heading: "Question Bank", icon: MessageCircleQuestionMark },
   { kind: "research", heading: "Research", icon: Library },
   { kind: "experiment", heading: "Experiments", icon: FlaskConical },
+  { kind: "deal", heading: "Brand deals", icon: Handshake },
   { kind: "topic", heading: "Topics", icon: Hash },
   { kind: "analytics", heading: "Analytics", icon: TrendingUp },
 ]
@@ -156,6 +159,7 @@ function useSearchIndex(): SearchIndex {
   const questions = useTable("audience_questions")
   const research = useTable("research_items")
   const experiments = useTable("content_experiments")
+  const deals = useTable("brand_deals")
   const scripts = useTable("content_scripts")
   const metrics = useTable("content_metrics")
 
@@ -174,6 +178,7 @@ function useSearchIndex(): SearchIndex {
   const question = useMemo(() => buildQuestionDocs(questions), [questions])
   const researchDocs = useMemo(() => buildResearchDocs(research), [research])
   const experiment = useMemo(() => buildExperimentDocs(experiments), [experiments])
+  const deal = useMemo(() => buildDealDocs(deals), [deals])
   const topic = useMemo(() => buildTopicDocs(ideas), [ideas])
   const analytics = useMemo(() => buildAnalyticsDocs(items, metrics), [items, metrics])
 
@@ -192,6 +197,7 @@ function useSearchIndex(): SearchIndex {
       question,
       research: researchDocs,
       experiment,
+      deal,
       topic,
       analytics,
     }),
@@ -209,6 +215,7 @@ function useSearchIndex(): SearchIndex {
       question,
       researchDocs,
       experiment,
+      deal,
       topic,
       analytics,
     ]

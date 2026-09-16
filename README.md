@@ -27,7 +27,7 @@ Without a key, every AI feature still works through the built-in **offline templ
 
 ### Optional: Supabase for accounts and sync
 
-Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, run the SQL migration in `supabase/migrations/`, and restart. See [docs/SUPABASE.md](docs/SUPABASE.md).
+Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, run **every file in `supabase/migrations/` in filename order**, and restart. To put Orbi online (GitHub → Supabase → Vercel, step by step for non-developers), follow [docs/DEPLOY.md](docs/DEPLOY.md); database and auth details are in [docs/SUPABASE.md](docs/SUPABASE.md).
 
 ## What's inside
 

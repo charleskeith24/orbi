@@ -1,11 +1,25 @@
 "use client"
 
-import { HardDrive, X } from "lucide-react"
+import { Download, HardDrive, TriangleAlert, X } from "lucide-react"
 import Link from "next/link"
 import { useSyncExternalStore } from "react"
-import { useDataStatus } from "@/lib/store"
+import { toast } from "sonner"
+import {
+  backupReminder,
+  exportWorkspaceBackup,
+  snoozeBackupReminder,
+  useBackupSnooze,
+  useLastBackup,
+  useNow,
+} from "@/components/features/settings/data-backup"
+import { workspaceBannerMessages } from "@/components/features/settings/data-messages"
+import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/i18n"
+import { useDataStatus, useDataStore } from "@/lib/store"
+import { formatNumber } from "@/lib/utils"
 
 const KEY = "pbos:banner:local-mode:dismissed"
+const HOUR_MS = 3_600_000
 const listeners = new Set<() => void>()
 
 function subscribe(listener: () => void) {
@@ -30,28 +44,63 @@ function dismiss() {
   listeners.forEach((l) => l())
 }
 
-/** Honest mode indicator: local mode keeps data in this browser only. */
+/**
+ * Honest mode indicator: local mode keeps data in this browser only. When the workspace hasn't been
+ * backed up for a week, the notice becomes a gentle reminder with a one-click backup (even if the
+ * notice itself was dismissed); "Remind me later" hides it for a few days.
+ */
 export function WorkspaceBanner() {
+  const t = useT(workspaceBannerMessages)
   const { mode, status } = useDataStatus()
   const dismissed = useSyncExternalStore(subscribe, isDismissed, () => true)
-  if (mode !== "local" || status !== "ready" || dismissed) return null
+  const lastBackupAt = useLastBackup()
+  const snoozedUntil = useBackupSnooze()
+  const workspaceSince = useDataStore((s) => s.db.brand_profiles[0]?.created_at ?? null)
+  const now = useNow(HOUR_MS)
+  if (mode !== "local" || status !== "ready") return null
 
+  const reminder = backupReminder({ lastBackupAt, workspaceSince, snoozedUntil, now })
+  if (reminder.due) {
+    const days = reminder.days ?? 0
+    const backUp = () => {
+      const state = useDataStore.getState()
+      const count = exportWorkspaceBackup(state.db, state.mode, new Date())
+      toast.success(t("exported"), { description: t.plural("exported_rows", count, { count: formatNumber(count) }) })
+    }
+    return (
+      <div data-print="hide" role="status" className="flex items-center gap-2 border-b bg-muted/50 px-4 py-1.5 text-xs text-muted-foreground">
+        <TriangleAlert className="size-3.5 shrink-0 text-warning-fg" aria-hidden />
+        <p className="line-clamp-2 min-w-0 flex-1 sm:truncate">{reminder.never ? t("never") : t.plural("due", days, { count: formatNumber(days) })}</p>
+        <Button type="button" size="xs" variant="outline" className="shrink-0" onClick={backUp}>
+          <Download aria-hidden />
+          {t("back_up_now")}
+        </Button>
+        <button
+          type="button"
+          onClick={() => snoozeBackupReminder(new Date())}
+          className="rounded p-0.5 hover:bg-accent hover:text-foreground"
+          aria-label={t("remind_later")}
+          title={t("remind_later")}
+        >
+          <X className="size-3.5" />
+        </button>
+      </div>
+    )
+  }
+
+  if (dismissed) return null
+  const [before, after = ""] = t("local").split("{link}")
   return (
     <div data-print="hide" className="flex items-center gap-2 border-b bg-muted/50 px-4 py-1.5 text-xs text-muted-foreground">
       <HardDrive className="size-3.5 shrink-0" aria-hidden />
       <p className="min-w-0 flex-1 truncate">
-        Local workspace — data is saved in this browser only. Export backups or connect Supabase for accounts and sync in{" "}
+        {before}
         <Link href="/settings?tab=data" className="font-medium text-foreground underline-offset-2 hover:underline">
-          Settings → Data
+          {t("link")}
         </Link>
-        .
+        {after}
       </p>
-      <button
-        type="button"
-        onClick={dismiss}
-        className="rounded p-0.5 hover:bg-accent hover:text-foreground"
-        aria-label="Dismiss local workspace notice"
-      >
+      <button type="button" onClick={dismiss} className="rounded p-0.5 hover:bg-accent hover:text-foreground" aria-label={t("dismiss")}>
         <X className="size-3.5" />
       </button>
     </div>

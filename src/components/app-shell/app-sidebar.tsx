@@ -1,9 +1,9 @@
 "use client"
 
-import { ChevronRight, Cloud, HardDrive } from "lucide-react"
+import { ChevronRight, Cloud, HardDrive, LayoutGrid, ListCollapse } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { OrbiLogo, OrbiMark } from "@/components/app-shell/orbi-logo"
 import { UserMenu } from "@/components/app-shell/user-menu"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -24,17 +24,23 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { isNavActive, NAV_SECTIONS, type NavItem } from "@/lib/navigation"
-import { useBrand, useDataStatus } from "@/lib/store"
+import { useT } from "@/lib/i18n"
+import { isNavActive, NAV_SECTIONS, sidebarSections, type NavItem } from "@/lib/navigation"
+import { updateSettings, useBrand, useDataStatus, useSettings } from "@/lib/store"
+import { sidebarMessages } from "./app-sidebar-messages"
 
 export function AppSidebar() {
   const pathname = usePathname()
   const brand = useBrand()
+  const simpleMode = useSettings().simple_mode
+  const t = useT(sidebarMessages)
   const { mode } = useDataStatus()
   const { isMobile, setOpenMobile, state } = useSidebar()
+  const nav = useMemo(() => sidebarSections(NAV_SECTIONS, { simpleMode, pathname }), [simpleMode, pathname])
   const onNavigate = () => {
     if (isMobile) setOpenMobile(false)
   }
+  const modeLabel = simpleMode ? t.plural("show_all", nav.hidden) : t("back_to_simple")
 
   return (
     <Sidebar collapsible="icon">
@@ -51,7 +57,7 @@ export function AppSidebar() {
                     <OrbiLogo className="h-[22px]! w-auto! text-sidebar-foreground" />
                     <span aria-hidden className="h-4 w-px shrink-0 bg-sidebar-border" />
                     <span className="min-w-0 truncate text-xs text-muted-foreground">
-                      {brand.brand_name || brand.name || "Your brand"}
+                      {brand.brand_name || brand.name || t("brand_fallback")}
                     </span>
                   </>
                 )}
@@ -62,12 +68,18 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="scrollbar-thin">
-        {NAV_SECTIONS.map((section, index) => (
+        {nav.sections.map((section, index) => (
           <SidebarGroup key={section.label ?? `section-${index}`} className="py-1">
             {section.label ? <SidebarGroupLabel>{section.label}</SidebarGroupLabel> : null}
             <SidebarMenu>
               {section.items.map((item) => (
-                <NavEntry key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
+                <NavEntry
+                  key={item.href}
+                  item={item}
+                  pathname={pathname}
+                  onNavigate={onNavigate}
+                  toggleLabel={t("toggle_group", { title: item.title })}
+                />
               ))}
             </SidebarMenu>
           </SidebarGroup>
@@ -77,10 +89,26 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild size="sm" tooltip={mode === "local" ? "Local workspace" : "Synced workspace"}>
+            {/* Simple mode lives in app_settings (also in Settings → General); ⌘K reaches every page either way. */}
+            <SidebarMenuButton
+              size="sm"
+              tooltip={modeLabel}
+              className="text-muted-foreground"
+              onClick={() => updateSettings({ simple_mode: !simpleMode })}
+            >
+              {simpleMode ? <LayoutGrid aria-hidden /> : <ListCollapse aria-hidden />}
+              <span>{modeLabel}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              size="sm"
+              tooltip={mode === "local" ? t("workspace_local_tooltip") : t("workspace_synced_tooltip")}
+            >
               <Link href="/settings?tab=data" onClick={onNavigate} className="text-muted-foreground">
                 {mode === "local" ? <HardDrive /> : <Cloud />}
-                <span>{mode === "local" ? "Local workspace · this browser" : "Synced · Supabase"}</span>
+                <span>{mode === "local" ? t("workspace_local") : t("workspace_synced")}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -92,7 +120,17 @@ export function AppSidebar() {
   )
 }
 
-function NavEntry({ item, pathname, onNavigate }: { item: NavItem; pathname: string; onNavigate: () => void }) {
+function NavEntry({
+  item,
+  pathname,
+  onNavigate,
+  toggleLabel,
+}: {
+  item: NavItem
+  pathname: string
+  onNavigate: () => void
+  toggleLabel: string
+}) {
   const active = isNavActive(pathname, item.href)
   const [manualOpen, setManualOpen] = useState<boolean | null>(null)
   const Icon = item.icon
@@ -123,7 +161,7 @@ function NavEntry({ item, pathname, onNavigate }: { item: NavItem; pathname: str
         <CollapsibleTrigger asChild>
           <SidebarMenuAction className="transition-transform data-[state=open]:rotate-90">
             <ChevronRight />
-            <span className="sr-only">Toggle {item.title}</span>
+            <span className="sr-only">{toggleLabel}</span>
           </SidebarMenuAction>
         </CollapsibleTrigger>
         <CollapsibleContent>

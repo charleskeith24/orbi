@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { useAiTask, type NicheOption } from "@/lib/ai"
 import { useDataStore, useSettings, useTable } from "@/lib/store"
+import { trackOnboardingStep, trackUsage } from "@/lib/telemetry"
 import { cn } from "@/lib/utils"
 import { applyOnboardingPlan, ensureStarterLibrary } from "./apply-onboarding"
 import { COPY, CopyContext, type OnboardingLang } from "./copy"
@@ -178,6 +179,11 @@ export function Wizard({
     else headingRef.current?.focus({ preventScroll: true })
   }, [step, flow])
 
+  // Opt-in usage analytics (online version only, src/lib/telemetry): which setup steps are seen.
+  useEffect(() => {
+    trackOnboardingStep("viewed", { step: key, index: step, mode, lang: latest.current.lang })
+  }, [key, step, mode])
+
   function focusFirstError(errs: StepErrors) {
     const first = Object.keys(errs)[0]
     if (!first) return
@@ -212,6 +218,7 @@ export function Wizard({
       focusFirstError(errors)
       return
     }
+    trackOnboardingStep("completed", { step: key, index: step, mode, lang })
     if (key === "strategy") return finish()
     if (key === "niche" && mode === "niche") return finishNiche()
 
@@ -271,8 +278,9 @@ export function Wizard({
       const targets = selectedPillars(answers).map((p) => ({ name: p.name, description: p.description, examples: p.examples, target: p.target }))
       const names = strategy ? effectivePillars(strategy.ideas, targets) : []
       const ideas = (strategy?.ideas ?? []).map((idea, index) => ({ idea, title: idea.title, pillar: names[index] ?? null })).filter((x) => x.idea.selected)
-      const plan = planOnboarding(useDataStore.getState().db, { answers, ideas, now: new Date() })
+      const plan = planOnboarding(useDataStore.getState().db, { answers, ideas, lang, now: new Date() })
       applyOnboardingPlan(plan)
+      trackUsage("onboarding_completed", { mode, lang, pillars: plan.summary.pillars, ideas: plan.summary.ideas })
       clearDraft(userId)
       toast.success(copy.finish.welcome(firstName(answers.name)), {
         description: copy.finish.summary(plan.summary.pillars, plan.summary.ideas, plan.summary.weeklyTarget),
@@ -306,6 +314,7 @@ export function Wizard({
       const source = replace && option ? { ...answers, pillars: pillarsFromOption(option, answers.pillars) } : answers
       const plan = planNicheUpdate(useDataStore.getState().db, { answers: source, replacePillars: replace, now: new Date() })
       applyOnboardingPlan(plan)
+      trackUsage("onboarding_completed", { mode, lang })
       clearDraft(userId)
       toast.success(copy.finish.nicheSaved, { description: copy.finish.nicheSavedText(replace) })
       router.push("/strategy")

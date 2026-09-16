@@ -36,7 +36,15 @@ const FRACTIONAL_FIELDS = [
   "app_settings.tier_winner",
   "app_settings.tier_breakout",
   "app_settings.pillar_tolerance",
+  "brand_deals.fee",
+  "income_entries.amount",
+  "rate_cards.price",
 ]
+/**
+ * Supabase-only tables outside the workspace model (not in TABLE_NAMES), each created by its owner's own
+ * migration: tolerated when present, and they must enable row-level security.
+ */
+const SERVER_ONLY_TABLES = ["push_subscriptions", "feedback", "usage_events"]
 
 /* ------------------------------ SQL parsing ------------------------------ */
 
@@ -157,13 +165,18 @@ function parseColumn(definition: string): SqlColumn {
   }
 }
 
+/** Server-only tables may use column types the workspace model never needs — they are only checked for RLS. */
+const isServerOnly = (table: string) => SERVER_ONLY_TABLES.includes(table)
+
 function parseTables(sql: string): Map<string, SqlTable> {
   const tables = new Map<string, SqlTable>()
-  const re = /create table public\.(\w+)\s*\(/gi
+  const re = /create table (?:if not exists )?public\.(\w+)\s*\(/gi
   for (const m of sql.matchAll(re)) {
     const open = m.index + m[0].length - 1
     const body = sql.slice(open + 1, matchingParen(sql, open))
     const table: SqlTable = { name: m[1], columns: [], uniqueKeys: [] }
+    tables.set(table.name, table)
+    if (isServerOnly(table.name)) continue
     for (const entry of splitTopLevel(body)) {
       const constraint = /^(?:constraint\s+\w+\s+)?(unique|primary key|check|foreign key)\b\s*(?:\(([^)]*)\))?/i.exec(entry)
       if (constraint) {
@@ -176,11 +189,10 @@ function parseTables(sql: string): Map<string, SqlTable> {
       if (/\bprimary key\b|\bunique\b/i.test(entry.replace(/check\s*\([\s\S]*$/i, ""))) table.uniqueKeys.push([column.name])
       table.columns.push(column)
     }
-    tables.set(table.name, table)
   }
   // Later migrations may add columns.
   for (const m of sql.matchAll(/alter table public\.(\w+)\s+add column\s+(?:if not exists\s+)?([^;]+);/gi)) {
-    tables.get(m[1])?.columns.push(parseColumn(m[2].trim()))
+    if (!isServerOnly(m[1])) tables.get(m[1])?.columns.push(parseColumn(m[2].trim()))
   }
   return tables
 }
@@ -253,7 +265,14 @@ function parseInterfaces(src: string): Map<string, Map<string, string>> {
   return interfaces
 }
 
-const ALIASES = parseAliases(TYPES_SOURCE)
+/** Sources of the `@/lib/...` modules types.ts imports types from (e.g. `UiLang` from "@/lib/i18n/core"). */
+function importedTypeSources(src: string): string[] {
+  return [...src.matchAll(/^import type \{[^}]*\} from "@\/lib\/([\w/.-]+)"/gm)].map((m) =>
+    readFileSync(new URL(`../${m[1]}.ts`, import.meta.url), "utf8")
+  )
+}
+
+const ALIASES = parseAliases([TYPES_SOURCE, ...importedTypeSources(TYPES_SOURCE)].join("\n"))
 const INTERFACES = parseInterfaces(TYPES_SOURCE)
 
 /** Literal values of a union such as `"a" | "b" | OtherAlias`, or null when it isn't a pure literal union. */
@@ -341,13 +360,20 @@ const sorted = <T,>(values: Iterable<T>) => [...values].sort()
 /* --------------------------------- Tests --------------------------------- */
 
 describe("schema parity: supabase/migrations vs src/lib", () => {
-  it("creates exactly one table per TABLE_NAMES entry, plus public.users", () => {
-    expect(sorted(TABLES.keys())).toEqual(sorted([...TABLE_NAMES, "users"]))
+  it("creates exactly one table per TABLE_NAMES entry, plus public.users and known server-only tables", () => {
+    const workspace = [...TABLES.keys()].filter((t) => !isServerOnly(t))
+    expect(sorted(workspace)).toEqual(sorted([...TABLE_NAMES, "users"]))
   })
 
   it("creates tables in TABLE_NAMES order (the adapter's insert order)", () => {
-    const created = [...TABLES.keys()].filter((t) => t !== "users")
+    const created = [...TABLES.keys()].filter((t) => t !== "users" && !isServerOnly(t))
     expect(created).toEqual(TABLE_NAMES)
+  })
+
+  it("enables row-level security on every server-only table that exists", () => {
+    for (const table of SERVER_ONLY_TABLES.filter((t) => TABLES.has(t))) {
+      expect(SQL, table).toMatch(new RegExp(`alter table (?:if exists )?public\\.${table}\\s+enable row level security;`))
+    }
   })
 
   it.each(TABLE_NAMES)("%s: columns match TABLE_DEFAULTS plus meta columns", (table) => {

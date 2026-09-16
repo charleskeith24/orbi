@@ -50,6 +50,7 @@ src/
     store/                     zustand store, hooks, domain operations, UI store
     analytics/                 pure analytics functions (metrics, tiers, health, buffer, reports, recommendations)
     ai/                        AI tasks, prompts, providers, offline engine, client hook
+    i18n/                      UI language: core (pure), useT, getUiLang, shared messages (§11)
     supabase/                  config, browser + server clients
     dates.ts  utils.ts  scoring.ts  navigation.ts
 supabase/migrations/           SQL schema, RLS, triggers
@@ -77,7 +78,9 @@ Client views read `useSearchParams()` — wrap them in `<Suspense>` in the page 
 New workspaces are created from the **Starter Kit** (`src/lib/data/starter.ts`: formats, angles, hook templates, goals, platform strategies, posting schedule, tags, settings, blank brand) and go through onboarding, which starts with Niche Discovery. The demo workspace (`src/lib/data/seed.ts`) is a **test fixture and dev-only QA seed** (`localStorage["pbos:dev-seed"]` = `demo` | `fresh`, set by the scripts' `--seed` flag) — never shown to users.
 
 ### Model
-`src/lib/types.ts` defines 29 tables. Field names are snake_case and identical to Postgres columns. Text defaults to `''`, lists to `[]`, optional FKs are `ID | null`.
+`src/lib/types.ts` defines 32 workspace tables (`TABLE_NAMES` in `src/lib/data/defaults.ts` = insert order = the order `supabase/migrations/20260910000000_init.sql` creates them). Field names are snake_case and identical to Postgres columns. Text defaults to `''`, lists to `[]`, optional FKs are `ID | null`. Server-only tables that aren't part of the workspace (`push_subscriptions`, `feedback`, `usage_events`) live in their owner's own migration; the parity test tolerates them and requires RLS.
+
+Workspace-schema changes: edit `types.ts`, `TABLE_DEFAULTS` (and `LOCAL_DATE_DEFAULTS` for "today" dates), `relations.ts` for references, and the init migration's `create table` — `src/lib/data/schema-parity.test.ts` checks all of them against each other (types, nullability, CHECK lists, defaults, FKs, indexes, RLS, triggers) and that the demo workspace fits. Fractional numbers need `numeric` and an entry in its `FRACTIONAL_FIELDS`. `normalizeDatabase` fills new columns and tables in older local workspaces and imports.
 `ISODate` = `'YYYY-MM-DD'` (local calendar day). `ISODateTime` = full ISO timestamp.
 
 Key relationships:
@@ -88,6 +91,8 @@ Key relationships:
 - Singletons: `brand_profiles[0]`, `app_settings[0]` (always exist once loaded).
 - Tags are polymorphic: `tags` + `content_tags(entity_type, entity_id)`.
 - `content_calendar` = recurring weekly posting slots (not dated entries — a dated entry is an item's `scheduled_at`).
+- Money: `brand_deals` (status `lead → pitched → negotiating → contracted → in_progress → delivered → paid`, or `lost`; `content_item_ids` = content made for the deal; optional `campaign_id`), `income_entries` (`received` or `expected`, optional `brand_deal_id` / `content_item_id`, free-text `affiliate_program`), `rate_cards` (media-kit packages; `price: null` = ask for a quote). Every money row carries its own `currency`; `app_settings.currency` is only the default for new rows — total per currency, never add ₱ and $. Format with `formatMoney(amount, currency)` (`₱12,500`) from `@/lib/utils`.
+- `app_settings` also holds the UI language (`ui_language`), `simple_mode`, the default `currency` and the `reminders_*` preferences; `brand_profiles` holds the media-kit contact fields (`contact_email`, `website`, `media_kit_bio`).
 
 ### Reading
 ```ts
@@ -121,7 +126,8 @@ Use `new Date()` at the call site (`now`) and pass it into pure analytics functi
 - `?open=<id>` — a page opens that entity's detail sheet/dialog on load (used by ⌘K search and cross-links). Every list page **must** honor it.
 - `?tab=<key>` — select a tab on tabbed pages (e.g. `/settings?tab=data`).
 - Content item detail lives at **`/studio/<itemId>`**; campaign detail at **`/campaigns/<id>`**.
-- Entity → page map (for links): idea `/ideas?open=`, item `/studio/<id>`, hook `/ideas/hooks?open=`, angle `/ideas/angles?open=`, persona `/audience?open=`, problem `/audience/problems?open=`, question `/audience/questions?open=`, pillar `/pillars?open=`, story `/stories?open=`, research `/research?open=`, series `/series?open=`, experiment `/experiments?open=`, campaign `/campaigns/<id>`.
+- Entity → page map (for links): idea `/ideas?open=`, item `/studio/<id>`, hook `/ideas/hooks?open=`, angle `/ideas/angles?open=`, persona `/audience?open=`, problem `/audience/problems?open=`, question `/audience/questions?open=`, pillar `/pillars?open=`, story `/stories?open=`, research `/research?open=`, series `/series?open=`, experiment `/experiments?open=`, campaign `/campaigns/<id>`, brand deal `/money/deals?open=`, income entry `/money/income?open=`. Rate cards are edited on `/money/media-kit`.
+- Settings tabs: `general`, `performance`, `funnel`, `formats`, `tags`, `engagement`, `reminders`, `ai`, `integrations`, `data` (`settingsHref(tab)` in `features/settings/tabs.ts`).
 
 Global actions (callable from anywhere):
 ```ts
@@ -130,6 +136,7 @@ uiActions.openDialog({ type: "quick-capture", initialText })
 uiActions.openDialog({ type: "new-content", ideaId, defaults })
 uiActions.openDialog({ type: "log-post" })
 uiActions.openDialog({ type: "add-metrics", itemId })
+uiActions.openDialog({ type: "log-income", dealId, itemId })   // both optional: pre-link the entry
 uiActions.askStrategist("Why are my educational posts underperforming?")
 ```
 
@@ -194,3 +201,49 @@ Brand HQ · Audience HQ · Persona · Problem Bank · Question Bank · Content P
 4. Works in light + dark, desktop + mobile (≥ 360px).
 5. `npx tsc --noEmit -p .` clean for your files; `npx eslint <files>` clean; tests pass.
 6. Smoke test passes: `node scripts/smoke.mjs <route> --out=/tmp/x.png` (then look at the screenshot). The dev server is already running on :3000 — never start another one and never run `next build` while others are working.
+7. Every new user-facing string goes through `defineMessages` with English and Taglish (§11).
+
+## 11. Language (English / Taglish)
+
+- `app_settings.ui_language` (`"en"` | `"tl"`) is the language of the screens — Settings → General → App language, set from the onboarding language when setup finishes. The language content is *written* in is Brand HQ's `brand_profiles.language`; AI output follows that, not the UI.
+- A feature's strings live in `messages.ts` in its folder (or `<name>-messages.ts` next to a shared component). Shared words (Save, Cancel, Delete, Loading…) are `commonMessages` in `src/lib/i18n/messages/common.ts`; Money option labels are in `src/lib/i18n/messages/money.ts`.
+
+```ts
+// messages.ts — message files import the pure core only
+import { defineMessages } from "@/lib/i18n/core"
+export const m = defineMessages({
+  en: { title: "Brand deals", saved: "Deal saved", count_one: "{count} deal", count_other: "{count} deals" },
+  tl: { title: "Brand deals", saved: "Na-save ang deal", count_one: "{count} deal", count_other: "{count} deals" },
+})
+
+// React components
+import { useT } from "@/lib/i18n"
+const t = useT(m)
+t("title"); t.plural("count", deals.length); t("hello", { name })
+
+// Non-React code (domain operations, helpers called from handlers)
+import { translate } from "@/lib/i18n/core"
+import { getUiLang } from "@/lib/i18n/ui-lang"
+toast.success(translate(m, getUiLang(), "saved"))
+```
+
+- **Imports.** Lib and store code never import `@/lib/i18n` (the React barrel pulls in hooks and the store). `@/lib/i18n/ui-lang` reads `@/lib/store/data-store` directly, so `domain.ts` may use it; `data-store.ts` itself calls `uiLangOf(get().db.app_settings[0])` from the core.
+- **Checked.** A missing Taglish key is a compile error. `src/lib/i18n/messages.test.ts` loads every namespace in `**/messages.ts`, `**/*-messages.ts` and `src/lib/i18n/messages/*.ts` — same keys, same `{placeholders}`, an `_other` form for every `_one`, no empty strings. Messages outside those file names are not checked.
+- **Taglish voice** — how Filipino creators write online: English nouns and product terms, Tagalog glue and verbs, short and friendly ("I-save", "Wala pang ideas", "May mali — subukan ulit"; "Cancel" stays "Cancel"). §9 terms and the module/page names in the navigation stay English. No deep or formal Tagalog ("Kanselahin"). Match `features/onboarding/copy-tl.ts`.
+- **English only:** page `metadata` titles, the media-kit document (written for brands), developer-facing errors. Numbers and money use fixed locales in both languages (`formatNumber`, `formatMoney` → `₱12,500`).
+
+## 12. Simple mode
+
+- `app_settings.simple_mode` (new workspaces: on). The sidebar shows only the `NavItem.simple` modules — Home, Today, Ideas, Content Studio, Calendar, Analytics, Money, Settings — plus the module of the current page (`sidebarSections()` in `src/lib/navigation.ts`). The footer toggle ("Show all modules (N hidden)" / "Back to Simple mode") and Settings → General flip it.
+- Simple mode only trims the sidebar: ⌘K (`ALL_PAGES`), links and URLs reach every page. Don't hide features inside pages based on it.
+- Adding a module: add it to `NAV_SECTIONS`; set `simple: true` only if a new creator needs it every day.
+
+## 13. Feedback & usage analytics (privacy rules)
+
+Both are **online-version only** (Supabase) and live in server-only tables (`feedback`, `usage_events` in `supabase/migrations/20260914000100_beta.sql`; RLS: users insert and read only their own rows). `schema-parity.test.ts` lists them in `SERVER_ONLY_TABLES` with `push_subscriptions` (Reminders) — tolerated outside `TABLE_NAMES`, RLS required.
+
+- **Feedback** — top-bar dialog → `POST /api/feedback` (`src/lib/telemetry/feedback.ts`: kind `bug | idea | confusing | praise`, message ≤ 4,000 chars, the page path without query string or hash, a viewport bucket). Local mode never sends anything: it says so honestly and offers "Copy feedback".
+- **Usage analytics** — opt-in, **off by default, per device** (consent in this browser's localStorage `pbos:usage-analytics`, never in the workspace). `trackUsage(name, props)` from `@/lib/telemetry` is a no-op on the server, in local mode, before the workspace loads and without consent. Batches go to `POST /api/events`, which re-validates with the same rules.
+- **What an event may contain:** a name from `USAGE_EVENT_NAMES` and only the whitelisted properties for that event (`EVENT_PROPS` in `src/lib/telemetry/events.ts`) — enum-like tokens, small counts, booleans. `sanitizeProps` drops everything else; `normalizePath` strips query strings and ids from paths. **Never** put titles, notes, scripts, captions, hooks, names, handles, emails, amounts, URLs or any other text a creator typed into an event — and don't widen the whitelist to allow it.
+- **Key actions** (`idea_captured`, `content_created`, `post_published`, `metrics_logged`) are derived from workspace changes in `src/lib/telemetry/store-watch.ts` (ids, enums and booleans only; bulk changes such as imports or a reset are ignored), so domain operations and components need no tracking calls. Onboarding step events are the only explicit calls (`features/onboarding/wizard.tsx`).
+- **Adding an event:** extend `USAGE_EVENT_NAMES` and `EVENT_PROPS` and the CHECK list on `usage_events.name` in the beta migration together, with a test.

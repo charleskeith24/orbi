@@ -5,6 +5,8 @@ import {
   engagementValid,
   FUNNEL_DEFAULTS,
   GENERAL_DEFAULTS,
+  generalPatch,
+  generalResetValues,
   normalizeFunnel,
   PERFORMANCE_DEFAULTS,
   performancePatch,
@@ -21,6 +23,21 @@ describe("general", () => {
     const errors = validateGeneral({ ...GENERAL_DEFAULTS, weekly_post_target: 0, pillar_tolerance: null, timezone: "Mars/Base" })
     expect(Object.keys(errors).sort()).toEqual(["pillar_tolerance", "timezone", "weekly_post_target"])
     expect(validateGeneral({ ...GENERAL_DEFAULTS, weekly_post_target: 7.5 }).weekly_post_target).toBeDefined()
+  })
+
+  it("carries language, Simple mode and currency, and saves a clean currency code", () => {
+    expect(GENERAL_DEFAULTS).toMatchObject({ ui_language: "en", simple_mode: true, currency: "PHP" })
+    expect(validateGeneral({ ...GENERAL_DEFAULTS, currency: "peso" }).currency).toBeDefined()
+    expect(generalPatch({ ...GENERAL_DEFAULTS, ui_language: "tl", simple_mode: false, currency: " usd " })).toMatchObject({
+      ui_language: "tl",
+      simple_mode: false,
+      currency: "USD",
+    })
+  })
+
+  it("resets the rules but keeps personal preferences", () => {
+    const mine = { ...GENERAL_DEFAULTS, ui_language: "tl" as const, simple_mode: false, currency: "USD", timezone: "Asia/Tokyo", weekly_post_target: 3 }
+    expect(generalResetValues(mine)).toEqual({ ...GENERAL_DEFAULTS, ui_language: "tl", simple_mode: false, currency: "USD", timezone: "Asia/Tokyo" })
   })
 })
 

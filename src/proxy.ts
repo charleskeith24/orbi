@@ -4,14 +4,22 @@ import { decideProxyAction } from "@/components/features/auth/auth-paths"
 import { isSupabaseConfigured, SUPABASE_ANON_KEY, SUPABASE_URL } from "@/lib/supabase/config"
 
 /**
+ * Scheduled jobs (`/api/cron/*`) are called by the scheduler with `Authorization: Bearer $CRON_SECRET`
+ * and no session cookie; each route checks that secret itself.
+ */
+export function isCronRoute(pathname: string): boolean {
+  return pathname === "/api/cron" || pathname.startsWith("/api/cron/")
+}
+
+/**
  * Supabase mode: refreshes the auth session on every request and guards routes.
  * - anonymous page request   → /login?next=<path>
- * - anonymous /api/* request → 401 JSON
+ * - anonymous /api/* request → 401 JSON (except /api/cron/*, which authenticates with CRON_SECRET)
  * - signed-in /login|/signup → the `next` page or '/'
  * Local mode (no Supabase env vars): a pass-through.
  */
 export async function proxy(request: NextRequest) {
-  if (!isSupabaseConfigured) return NextResponse.next()
+  if (!isSupabaseConfigured || isCronRoute(request.nextUrl.pathname)) return NextResponse.next()
 
   let response = NextResponse.next({ request })
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -57,7 +65,9 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Everything except Next internals and static files (images, fonts, icons, robots/sitemap, manifests).
-    "/((?!_next/|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|txt|xml|webmanifest|woff2?|ttf|otf)$).*)",
+    // Everything except Next internals and public files: the service worker (a browser refuses a
+    // redirected worker script, so a signed-out visitor could never install or update it), PWA icons,
+    // images, fonts, robots/sitemap and manifests.
+    "/((?!_next/|favicon\\.ico$|sw\\.js$|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|txt|xml|webmanifest|woff2?|ttf|otf)$).*)",
   ],
 }

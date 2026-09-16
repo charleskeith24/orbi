@@ -7,6 +7,8 @@ import type {
   BrandTone,
   CampaignStatus,
   CategoricalColor,
+  DealSource,
+  DealStatus,
   EngagementTaskConfig,
   ExperimentMetric,
   ExperimentStatus,
@@ -19,6 +21,8 @@ import type {
   IdeaScores,
   IdeaSource,
   IdeaStatus,
+  IncomeSource,
+  IncomeStatus,
   MetricKey,
   PerformanceTier,
   PersonalityTrait,
@@ -39,6 +43,13 @@ import type {
   StoryType,
   WinnerMetric,
 } from "./types"
+import {
+  dealSourceMessages,
+  dealStatusDescriptionMessages,
+  dealStatusMessages,
+  incomeSourceMessages,
+  incomeStatusMessages,
+} from "./i18n/messages/money"
 
 type Option<T extends string> = { id: T; label: string; description?: string }
 
@@ -904,3 +915,50 @@ export const HEALTH_BANDS: { min: number; label: string; tone: "good" | "warning
   { min: 40, label: "At Risk", tone: "serious" },
   { min: 0, label: "Critical", tone: "critical" },
 ]
+
+/* ---------------------------------- Money --------------------------------- */
+// English labels come from `@/lib/i18n/messages/money`; translated UI uses those messages directly
+// (`useT(dealStatusMessages)(deal.status)`).
+
+/** Brand deal statuses in board order (Money → Brand Deals). */
+export const DEAL_STATUS_IDS: DealStatus[] = ["lead", "pitched", "negotiating", "contracted", "in_progress", "delivered", "paid", "lost"]
+export const DEAL_STATUSES: Option<DealStatus>[] = DEAL_STATUS_IDS.map((id) => ({
+  id,
+  label: dealStatusMessages.en[id],
+  description: dealStatusDescriptionMessages.en[id],
+}))
+export const DEAL_STATUS_MAP = optionMap(DEAL_STATUSES)
+
+export const DEAL_SOURCE_IDS: DealSource[] = ["inbound", "outbound", "agency", "referral"]
+export const DEAL_SOURCES: Option<DealSource>[] = DEAL_SOURCE_IDS.map((id) => ({ id, label: dealSourceMessages.en[id] }))
+export const DEAL_SOURCE_MAP = optionMap(DEAL_SOURCES)
+
+export const INCOME_SOURCE_IDS: IncomeSource[] = ["brand_deal", "affiliate", "platform_payout", "product", "service", "tip", "other"]
+export const INCOME_SOURCES: Option<IncomeSource>[] = INCOME_SOURCE_IDS.map((id) => ({ id, label: incomeSourceMessages.en[id] }))
+export const INCOME_SOURCE_MAP = optionMap(INCOME_SOURCES)
+
+export const INCOME_STATUS_IDS: IncomeStatus[] = ["received", "expected"]
+export const INCOME_STATUSES: Option<IncomeStatus>[] = INCOME_STATUS_IDS.map((id) => ({ id, label: incomeStatusMessages.en[id] }))
+export const INCOME_STATUS_MAP = optionMap(INCOME_STATUSES)
+
+/** Suggestions for `income_entries.affiliate_program` (free text — any program is allowed). */
+export const AFFILIATE_PROGRAM_SUGGESTIONS = ["TikTok Shop", "Shopee", "Lazada", "Involve Asia", "Amazon"]
+
+/**
+ * Currencies offered in Settings and the Money forms (ISO 4217), PHP first. Stored values outside this
+ * list stay valid — `formatMoney` formats any ISO code.
+ */
+export const CURRENCIES: Option<string>[] = [
+  { id: "PHP", label: "Philippine peso" },
+  { id: "USD", label: "US dollar" },
+  { id: "SGD", label: "Singapore dollar" },
+  { id: "AUD", label: "Australian dollar" },
+  { id: "CAD", label: "Canadian dollar" },
+  { id: "EUR", label: "Euro" },
+  { id: "GBP", label: "British pound" },
+  { id: "JPY", label: "Japanese yen" },
+  { id: "HKD", label: "Hong Kong dollar" },
+  { id: "AED", label: "UAE dirham" },
+  { id: "SAR", label: "Saudi riyal" },
+]
+export const CURRENCY_CODES = CURRENCIES.map((c) => c.id)

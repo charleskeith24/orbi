@@ -4,6 +4,7 @@ import { Settings } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useState } from "react"
 import { PageContainer, PageHeader } from "@/components/common"
+import { RemindersTab } from "@/components/features/reminders/reminders-tab"
 import { AiTab } from "./ai-tab"
 import { DataTab } from "./data-tab"
 import { EngagementTab } from "./engagement-tab"
@@ -54,6 +55,7 @@ export function SettingsView() {
           {tab === "formats" ? <FormatsTab openId={openId} now={now} /> : null}
           {tab === "tags" ? <TagsTab openId={openId} /> : null}
           {tab === "engagement" ? <EngagementTab draft={engagement} now={now} /> : null}
+          {tab === "reminders" ? <RemindersTab /> : null}
           {tab === "ai" ? <AiTab now={now} /> : null}
           {tab === "integrations" ? <IntegrationsTab now={now} /> : null}
           {tab === "data" ? <DataTab now={now} /> : null}
