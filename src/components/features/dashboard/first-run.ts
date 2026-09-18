@@ -39,7 +39,7 @@ export type FirstStepAction =
   | { kind: "dialog"; dialog: "quick-capture" | "new-content" | "log-post" | "add-metrics" }
 
 export interface FirstStep {
-  key: "niche" | "pillars" | "idea" | "content" | "publish" | "analytics"
+  key: "niche" | "pillars" | "voice" | "problems" | "idea" | "content" | "publish" | "analytics"
   label: string
   detail: string
   /** Short verb for the step's button. */
@@ -48,7 +48,11 @@ export interface FirstStep {
   action: FirstStepAction
 }
 
-/** Strategy → Ideas → Create → Publish → Measure, each ticked off from the workspace itself. Text in `lang` (default English). */
+/**
+ * Strategy → Ideas → Create → Publish → Measure, each ticked off from the workspace itself. Text in `lang`
+ * (default English). Quick setup fills in everything it can; the strategy steps it can't decide for the
+ * creator — their voice and their audience's problems — wait here.
+ */
 export function firstSteps(db: Database, lang: UiLang = "en"): FirstStep[] {
   const brand = db.brand_profiles[0]
   const t = translator(firstStepMessages, lang)
@@ -68,6 +72,22 @@ export function firstSteps(db: Database, lang: UiLang = "en"): FirstStep[] {
       cta: t("pillars_cta"),
       done: db.content_pillars.some((p) => p.is_active),
       action: { kind: "link", href: "/pillars" },
+    },
+    {
+      key: "voice",
+      label: t("voice_label"),
+      detail: t("voice_detail"),
+      cta: t("voice_cta"),
+      done: Boolean(brand && (brand.tones.length > 0 || brand.personality_traits.length > 0)),
+      action: { kind: "link", href: "/strategy#personality" },
+    },
+    {
+      key: "problems",
+      label: t("problems_label"),
+      detail: t("problems_detail"),
+      cta: t("problems_cta"),
+      done: db.audience_problems.length > 0,
+      action: { kind: "link", href: "/audience/problems" },
     },
     {
       key: "idea",

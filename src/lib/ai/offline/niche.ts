@@ -6,6 +6,7 @@
  * domain table adds what a strategist knows about the space, and thin input gets honest notes.
  */
 import type { NicheAim, NicheDiscoveryInput, NicheDiscoveryOutput, NicheKind, NicheOption } from "../tasks/niche-discovery"
+import { nicheTopic } from "./brand"
 import { NICHE_DOMAINS, type Bi, type NicheDomain } from "./niche-domains"
 import { clean, firstSentence, looksLikeVerb, stripEndPunct, tokenSet, upperFirst } from "./text"
 
@@ -195,7 +196,11 @@ export function nicheInterests(niche: string, interests: readonly string[], anch
   })
 }
 
-/** A domain made from the creator's own word when the table has nothing for it ("birdwatching"). */
+/**
+ * A domain made from the creator's own word when the table has nothing for it ("birdwatching"). Only the
+ * first pillar carries the word: the niche already names the topic, so pillars and the result don't
+ * repeat it ("get good at birdwatching", "Birdwatching mistakes", "Birdwatching tools" read as filler).
+ */
 function customDomain(term: string): NicheDomain {
   const t = term || "your topic"
   const short = cut(t, 22)
@@ -207,14 +212,14 @@ function customDomain(term: string): NicheDomain {
     theme: [short, short],
     industry: upperFirst(t),
     audience: ["beginners", "beginners"],
-    result: [`get good at ${t} without the guesswork`, `gumaling sa ${t} nang walang hula-hula`],
-    method: [`practical, experience-based ${t} lessons`, `practical na ${t} lessons mula sa totoong experience`],
+    result: ["make real progress without the guesswork", "umusad nang totoo nang walang hula-hula"],
+    method: ["practical lessons from real experience", "practical na lessons mula sa totoong experience"],
     pillars: [
       [[`${T} basics`, `${T} basics`], [`The fundamentals of ${t}, explained simply`, `Ang basics ng ${t}, explained nang simple`]],
-      [[`${T} mistakes`, `${T} mistakes`], [`What people get wrong about ${t} — and the fix`, `Mga mali sa ${t} — at paano ayusin`]],
-      [[`${T} deep dives`, `${T} deep dives`], [`Longer breakdowns for people who want to go further`, `Mas malalim na breakdowns para sa gustong lumalim pa`]],
-      [[`${T} tools`, `${T} tools`], [`The tools and resources worth using`, `Mga tools at resources na sulit gamitin`]],
-      [[`My ${short} journey`, `My ${short} journey`], [`What I'm learning, testing and building`, `Ano ang natututunan, tine-test at binubuo ko`]],
+      [["Mistakes & fixes", "Mistakes & fixes"], [`What people get wrong about ${t} — and the fix`, `Mga mali sa ${t} — at paano ayusin`]],
+      [["Deep dives", "Deep dives"], [`Longer breakdowns of ${t} for people who want to go further`, `Mas malalim na breakdowns ng ${t} para sa gustong lumalim pa`]],
+      [["Tools & resources", "Tools & resources"], [`The ${t} tools and resources worth using`, `Mga ${t} tools at resources na sulit gamitin`]],
+      [["Learning in public", "Learning in public"], [`What I'm learning, testing and building in ${t}`, `Ano ang natututunan, tine-test at binubuo ko sa ${t}`]],
     ],
     monetization: [
       [`${T} coaching or services`, `${T} coaching o services`],
@@ -232,8 +237,15 @@ function customDomain(term: string): NicheDomain {
 
 /* --------------------------------- Analysis --------------------------------- */
 
+/** A niche the creator wrote themselves: its topic and the domain behind it anchor all three directions. */
+interface OwnNiche {
+  topic: string
+  domain: NicheDomain
+}
+
 interface Analysis {
   l: L
+  own: OwnNiche | null
   interests: string[]
   skills: string[]
   audiences: string[]
@@ -255,13 +267,60 @@ function levelOf(text: string): Analysis["level"] {
   return ""
 }
 
+/** "mga nurse" → "nurses": a Taglish plural becomes an English plural once "mga" is dropped. */
+const plural = (aud: string, hadMga: boolean) => (hadMga && /^[a-z]+$/i.test(aud) && !/s$/i.test(aud) ? `${aud}s` : aud)
+
+/**
+ * A written niche split into its audience and its topic: "Budget meal prep for busy nurses who work nights"
+ * → busy nurses · "Budget meal prep"; "Helping moms get fit at home" → moms · "get fit at home";
+ * "… para sa mga nurse na …" → nurses.
+ */
+export function splitWrittenNiche(niche: string): { audience: string; topic: string } {
+  const text = stripEndPunct(clean(niche))
+  const forMatch = /^(.*?)\s+(?:for|para sa)\s+(mga\s+)?(.+?)(?:\s+(?:who|that|na|so|to|at|in|sa)\s.*)?$/i.exec(text)
+  if (forMatch) {
+    const aud = forMatch[3].replace(/[,;:—–].*$/, "").trim()
+    return { audience: aud.split(/\s+/).length <= 6 ? displayTerm(plural(aud, Boolean(forMatch[2]))) : "", topic: forMatch[1].trim() }
+  }
+  const helping = /^(?:helping|i help|we help|tinutulungan(?:\s+ko)?(?:\s+ang)?)\s+(mga\s+)?(.+)$/i.exec(text)
+  if (helping) {
+    const words = helping[2].split(/\s+/)
+    const verb = words.findIndex((w, i) => i > 0 && (EN_VERBS.has(w.toLowerCase()) || looksLikeVerb(w) || /^(to|na|mag\S*|ma\S*)$/i.test(w)))
+    if (verb > 0 && verb <= 4) {
+      const aud = words.slice(0, verb).join(" ")
+      return { audience: displayTerm(plural(aud, Boolean(helping[1]))), topic: words.slice(verb).join(" ").replace(/^(to|na)\s+/i, "") }
+    }
+  }
+  return { audience: "", topic: text }
+}
+
+/** The topic of a written niche: its head (before the audience), else the domain it names, else its first words. */
+function ownNiche(niche: string, l: L): OwnNiche | null {
+  const text = clean(niche)
+  if (!text) return null
+  const { topic: rest } = splitWrittenNiche(text)
+  // "get fit at home" is an outcome, not a topic: name the domain ("fitness and healthy living") instead.
+  const first = (rest.split(/\s+/)[0] ?? "").toLowerCase()
+  const verbFirst = EN_VERBS.has(first) || looksLikeVerb(first)
+  const head = verbFirst ? "" : nicheTopic(rest) || nicheTopic(text)
+  const domain = (head ? domainOf(head) : null) ?? domainOf(rest) ?? domainOf(text)
+  const topic = head ? displayTerm(head) : domain ? domain.topic[l] : displayTerm(cut((verbFirst ? rest.replace(/^\S+\s+/, "") : rest) || text, 40))
+  return { topic, domain: domain ?? customDomain(topic) }
+}
+
 function analyze(input: NicheDiscoveryInput): Analysis {
+  const l: L = input.language === "english" ? 0 : 1
   const skills = terms(input.skills)
+  const own = ownNiche(input.niche, l)
+  // The written niche names its audience: it leads, ahead of the audiences picked on screen 3.
+  const writtenAud = own ? splitWrittenNiche(input.niche).audience : ""
+  const audiences = terms(input.audiences, 6)
   return {
-    l: input.language === "english" ? 0 : 1,
+    l,
+    own,
     interests: terms(input.interests),
     skills: skills.length ? skills : terms([input.industry]),
-    audiences: terms(input.audiences, 6),
+    audiences: writtenAud ? [writtenAud, ...audiences.filter((x) => !sameGround(x, writtenAud))].slice(0, 6) : audiences,
     problems: input.audience_problems.map((p) => stripEndPunct(clean(p))).filter((p) => p.length > 3).slice(0, 10),
     aims: [...new Set(input.aims)],
     years: input.years_experience && input.years_experience > 0 ? input.years_experience : null,
@@ -325,6 +384,22 @@ const defaultDomain = (kind: NicheKind) => NICHE_DOMAINS.find((d) => d.id === DE
 
 function expertiseCore(a: Analysis): Core {
   const l = a.l
+  if (a.own) {
+    // Their niche leads; a skill from the same world joins it.
+    const d = a.own.domain
+    const extra = a.skills.find((s) => domainOf(s)?.id === d.id && !sameGround(s, a.own!.topic))
+    return {
+      kind: "expertise",
+      terms: [a.own.topic, ...(extra ? [extra] : [])],
+      domain: d,
+      second: null,
+      audience: a.audiences[0] ?? d.audience[l],
+      result: d.result[l],
+      method: d.method[l],
+      borrowed: !a.skills.length,
+      flavor: a.interests.find((i) => domainOf(i)?.id !== d.id && !sameGround(i, a.own!.topic)) ?? null,
+    }
+  }
   const ranked = rankDomains([
     { list: a.skills, weight: 3 },
     { list: a.help ? [a.help] : [], weight: 2 },
@@ -355,6 +430,22 @@ function expertiseCore(a: Analysis): Core {
 
 function passionCore(a: Analysis, avoid: Core): Core {
   const l = a.l
+  if (a.own) {
+    // The same niche, told through what they love: an interest from its world (or any other) joins the topic.
+    const d = a.own.domain
+    const next = a.interests.find((i) => !sameGround(i, a.own!.topic) && domainOf(i)?.id === d.id)
+    return {
+      kind: "passion",
+      terms: [a.own.topic, ...(next ? [next] : [])],
+      domain: d,
+      second: null,
+      audience: a.audiences[0] ?? d.audience[l],
+      result: d.result[l],
+      method: d.method[l],
+      borrowed: !a.interests.length,
+      flavor: null,
+    }
+  }
   const fresh = a.interests.filter((i) => !avoid.terms.some((t) => sameGround(t, i)))
   const pool = fresh.length ? fresh : a.interests
   const lead = [...pool].sort((x, y) => Number(domainOf(x)?.id === avoid.domain.id) - Number(domainOf(y)?.id === avoid.domain.id))[0]
@@ -399,11 +490,12 @@ function audienceCore(a: Analysis, expertise: Core, passion: Core): Core {
     // Only the audience this direction targets — a second audience belongs to the passion-led direction.
     { list: a.audiences.slice(0, 1), weight: 1 },
   ])
-  const domain = ranked[0] ?? expertise.domain
+  const domain = a.own?.domain ?? ranked[0] ?? expertise.domain
   // Only a hilig that belongs to this audience's world joins the mix — "pastry and travel" helps nobody.
   const belongs = (d: NicheDomain | null) => Boolean(d && (d.id === domain.id || d.id === expertise.domain.id || ranked.some((r) => r.id === d.id)))
   const interest = a.interests.find((i) => !expertise.terms.some((t) => sameGround(t, i)) && belongs(domainOf(i))) ?? null
-  const mix = [expertise.borrowed ? null : (expertise.terms[0] ?? null), interest].filter((t, i, all): t is string => Boolean(t) && all.findIndex((x) => x && t && sameGround(x, t)) === i)
+  const lead = a.own ? a.own.topic : expertise.borrowed ? null : (expertise.terms[0] ?? null)
+  const mix = [lead, interest].filter((t, i, all): t is string => Boolean(t) && all.findIndex((x) => x && t && sameGround(x, t)) === i)
   const candidates = [ranked.find((d) => d.id !== domain.id), expertise.domain, interest ? domainOf(interest) : null, passion.terms.length ? null : passion.domain]
   const second = candidates.find((d): d is NicheDomain => Boolean(d) && d?.id !== domain.id) ?? null
   const audience = qualify(a.audiences[0] ?? expertise.audience ?? domain.audience[l], a)
@@ -421,6 +513,9 @@ function audienceCore(a: Analysis, expertise: Core, passion: Core): Core {
 }
 
 /* ------------------------------- Statements -------------------------------- */
+
+/** The result already names one of the topic words, so putting both in one sentence repeats it. */
+const restates = (result: string, topics: readonly string[]) => topics.some((t) => sameGround(t, result))
 
 function nameOf(core: Core, l: L): string {
   const aud = core.audience
@@ -452,10 +547,15 @@ function statementOf(core: Core, a: Analysis): string {
         `Dino-document ang ${topic} in real life para sa ${mga(aud, l)} — ang wins, fails at kung ano talaga ang gumagana.`
       )
     }
-    return say(l, `${upperFirst(topic)} for ${aud} who want to ${core.result}.`, `${upperFirst(topic)} para sa ${mga(aud, l)} na gustong ${core.result}.`)
+    // "Travel … for moms who want to travel more often" says the topic twice: then the love for it carries the line.
+    return restates(core.result, core.terms)
+      ? say(l, `${upperFirst(topic)} for ${aud}, from someone who genuinely loves it.`, `${upperFirst(topic)} para sa ${mga(aud, l)}, mula sa taong totoong mahilig dito.`)
+      : say(l, `${upperFirst(topic)} for ${aud} who want to ${core.result}.`, `${upperFirst(topic)} para sa ${mga(aud, l)} na gustong ${core.result}.`)
   }
   const long = say(l, `Helping ${aud} ${core.result} — with ${topic}.`, `Tinutulungan ang ${mga(aud, l)} na ${core.result} — gamit ang ${topic}.`)
-  return core.terms.length >= 2 && long.length <= 150 ? long : say(l, `Helping ${aud} ${core.result}.`, `Tinutulungan ang ${mga(aud, l)} na ${core.result}.`)
+  return core.terms.length >= 2 && long.length <= 150 && !restates(core.result, core.terms)
+    ? long
+    : say(l, `Helping ${aud} ${core.result}.`, `Tinutulungan ang ${mga(aud, l)} na ${core.result}.`)
 }
 
 /* --------------------------------- Pillars --------------------------------- */
@@ -737,11 +837,19 @@ function whyOf(core: Core, a: Analysis): string {
   const topic = joinTopics(core.terms, l)
   const aud = core.audience
   if (core.kind === "expertise") {
-    return say(
-      l,
-      `It turns what you're already good at (${topic}) into content ${aud} need${core.flavor ? `, with ${core.flavor} as your personal flavour` : ""}.`,
-      `Ginagawang content ang galing mo (${topic}) para sa ${mga(aud, l)}${core.flavor ? `, at ang ${core.flavor} ang personal flavor mo` : ""}.`
-    )
+    const flavor = core.flavor
+    // Without listed skills it's what they know, not (yet) what they're known to be good at.
+    return core.borrowed
+      ? say(
+          l,
+          `It turns what you already know about ${topic} into practical content ${aud} need${flavor ? `, with ${flavor} as your personal flavour` : ""}.`,
+          `Ginagawang practical na content ang alam mo sa ${topic} para sa ${mga(aud, l)}${flavor ? `, at ang ${flavor} ang personal flavor mo` : ""}.`
+        )
+      : say(
+          l,
+          `It turns what you're already good at (${topic}) into content ${aud} need${flavor ? `, with ${flavor} as your personal flavour` : ""}.`,
+          `Ginagawang content ang galing mo (${topic}) para sa ${mga(aud, l)}${flavor ? `, at ang ${flavor} ang personal flavor mo` : ""}.`
+        )
   }
   if (core.kind === "passion") {
     return core.borrowed

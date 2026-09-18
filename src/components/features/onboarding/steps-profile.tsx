@@ -52,6 +52,7 @@ export function TextField({
         <Textarea
           id={id}
           name={field}
+          data-ob-required={required || undefined}
           value={value}
           rows={rows ?? 3}
           maxLength={maxLength}
@@ -64,6 +65,7 @@ export function TextField({
         <Input
           id={id}
           name={field}
+          data-ob-required={required || undefined}
           value={value}
           maxLength={maxLength}
           placeholder={placeholder}
@@ -111,6 +113,7 @@ export function SentenceRow({
         <Input
           id={id}
           name={field}
+          data-ob-required={required || undefined}
           value={value}
           maxLength={LIMITS.positioning}
           placeholder={placeholder}

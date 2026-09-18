@@ -9,8 +9,8 @@ import { answersFromWorkspace } from "./onboarding-model"
 import { Wizard } from "./wizard"
 
 /**
- * /onboarding: Niche Discovery and setup for a new workspace; on a finished workspace a notice (re-run or
- * back), or — with `?step=niche` — Niche Discovery alone, pre-filled from Brand HQ.
+ * /onboarding: Quick setup for a new workspace; on a finished workspace a notice (Detailed setup, Niche
+ * Discovery or back), or — with `?step=niche` — Niche Discovery alone, pre-filled from Brand HQ.
  */
 export function OnboardingView({ entry = null }: { entry?: "niche" | null }) {
   const brand = useBrand()

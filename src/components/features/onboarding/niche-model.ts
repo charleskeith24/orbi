@@ -59,6 +59,76 @@ export const KANINO_CHIPS = [
   "Startup founders",
 ]
 
+/** Suggested #1 problems for the suggested audiences, in the audience's own words — [English, Taglish]. */
+export const PROBLEM_SUGGESTIONS: Record<string, readonly [readonly string[], readonly string[]]> = {
+  Freelancers: [
+    ["Doesn't know how to price their services", "Income goes up and down every month", "Doesn't know how to file taxes as a freelancer"],
+    ["Hindi alam paano mag-price ng services", "Pabago-bago ang kita kada buwan", "Hindi alam paano mag-file ng taxes as freelancer"],
+  ],
+  "Virtual assistants": [
+    ["Can't find clients outside job boards", "Stuck at a low hourly rate", "Burned out juggling too many clients"],
+    ["Hirap maghanap ng clients labas sa job boards", "Stuck sa mababang hourly rate", "Burnout sa dami ng hawak na clients"],
+  ],
+  "Online sellers": [
+    ["Sales are slow even with daily posting", "Doesn't know their real profit per order", "Lots of inquiries that never buy"],
+    ["Matumal ang benta kahit araw-araw nagpo-post", "Hindi alam ang totoong kita kada order", "Daming inquiry pero walang bumibili"],
+  ],
+  "Small business owners": [
+    ["No time to post consistently", "Business and personal money are mixed", "Can't find and keep good staff"],
+    ["Walang oras mag-post nang consistent", "Halo ang pera ng negosyo at personal", "Hirap maghanap at magpanatili ng magagaling na staff"],
+  ],
+  "Young professionals": [
+    ["Salary runs out before the next payday", "Feels stuck in their career", "Doesn't know where to start investing"],
+    ["Ubos ang sweldo bago pa ang susunod na sahod", "Feeling stuck sa career", "Hindi alam saan magsisimulang mag-invest"],
+  ],
+  "Fresh grads": [
+    ["Can't land a first job without experience", "Doesn't know what to put on their resume", "Unsure which career path to choose"],
+    ["Hirap makakuha ng unang trabaho kasi walang experience", "Hindi alam ano ang ilalagay sa resume", "Hindi sigurado kung anong career path ang pipiliin"],
+  ],
+  Students: [
+    ["Always studies at the last minute", "Struggles to review for big exams", "Worried about money while studying"],
+    ["Laging last minute kung mag-aral", "Hirap mag-review para sa malalaking exam", "Nag-aalala sa pera habang nag-aaral"],
+  ],
+  "OFWs & their families": [
+    ["Remittances run out every month", "No savings plan for coming home", "The whole family depends on one income"],
+    ["Ubos agad ang padala kada buwan", "Walang ipon para sa pag-uwi", "Iisang income lang ang inaasahan ng buong pamilya"],
+  ],
+  "Moms & parents": [
+    ["No time for themselves", "Hard to stretch the family budget", "Unsure how to handle screen time"],
+    ["Walang oras para sa sarili", "Hirap pagkasyahin ang budget ng pamilya", "Hindi alam paano i-manage ang screen time ng anak"],
+  ],
+  "BPO agents": [
+    ["Night shift is wearing down their health", "Wants a promotion but doesn't know how", "Wants a way out of the call center"],
+    ["Nasisira ang health dahil sa night shift", "Gustong ma-promote pero hindi alam paano", "Gustong makaalis sa call center"],
+  ],
+  Creators: [
+    ["Keeps running out of content ideas", "Posts consistently but doesn't grow", "Doesn't know how to earn from content"],
+    ["Laging nauubusan ng content ideas", "Consistent mag-post pero hindi lumalaki", "Hindi alam paano kumita sa content"],
+  ],
+  "Corporate managers": [
+    ["The team keeps missing deadlines", "Avoids difficult conversations", "Too many meetings, no time for real work"],
+    ["Laging late ang team sa deadlines", "Iniiwasan ang mahihirap na usapan sa team", "Puro meetings, walang oras sa totoong trabaho"],
+  ],
+  "Nurses & healthcare workers": [
+    ["Exhausted from long shifts", "Unsure about working abroad", "Salary doesn't match the workload"],
+    ["Pagod na sa mahahabang shift", "Hindi sigurado kung magta-trabaho abroad", "Hindi tugma ang sweldo sa dami ng trabaho"],
+  ],
+  Teachers: [
+    ["Buried in paperwork", "Hard to keep students engaged", "Needs extra income"],
+    ["Lunod sa paperwork", "Hirap panatilihing engaged ang students", "Kailangan ng extra income"],
+  ],
+  "Startup founders": [
+    ["Can't find their first customers", "Cash runs out too fast", "Doing everything alone"],
+    ["Hirap hanapin ang unang customers", "Mabilis maubos ang pera", "Mag-isang ginagawa ang lahat"],
+  ],
+}
+
+/** Problem suggestions for an audience (matched to the suggested audiences by name), in the UI language. */
+export function problemSuggestions(audience: string, lang: OnboardingLang): string[] {
+  const key = Object.keys(PROBLEM_SUGGESTIONS).find((k) => norm(k) === norm(audience))
+  return key ? [...PROBLEM_SUGGESTIONS[key][lang === "english" ? 0 : 1]] : []
+}
+
 /* ---------------------------------- Request -------------------------------- */
 
 const clip = (value: string, max: number) => value.trim().slice(0, max)
@@ -81,6 +151,11 @@ export function nicheInput(a: OnboardingAnswers, lang: OnboardingLang): AiTaskIn
     audience_problems: clipList(a.persona_problems, LIMITS.problem, LIMITS.problemsMax),
     aims: [...a.aims],
   }
+}
+
+/** Directions for a niche the creator wrote: the same request, anchored on their own sentence. */
+export function writtenNicheInput(a: OnboardingAnswers, lang: OnboardingLang, niche: string): AiTaskInput<"niche_discovery"> {
+  return { ...nicheInput(a, lang), niche: clip(niche, LIMITS.niche) }
 }
 
 /** Identifies the answers (and language) niche suggestions were generated from. */

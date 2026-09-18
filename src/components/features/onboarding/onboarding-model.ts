@@ -1,8 +1,10 @@
 /**
- * Onboarding wizard model (spec §48): the flows (first run, re-run, Niche Discovery only), the answers
- * each step collects, their defaults and validation, and the pure helpers behind the steps — pillar
- * rebalancing, the posts-per-platform split, the recommended weekly posting strategy (§49), aims → goals
- * and the `onboarding_strategy` AI input. No React and no store access, so it is unit-tested directly.
+ * Onboarding wizard model (spec §48, docs/QUICK_SETUP.md): the flows (4-screen Quick setup for a new
+ * workspace, the detailed setup for a re-run, Niche Discovery only), the answers each step collects,
+ * their defaults and validation, and the pure helpers behind the steps — pillar rebalancing, the
+ * posts-per-platform split, the recommended weekly posting strategy (§49), aims → goals and the
+ * `onboarding_strategy` AI input. No React and no store access, so it is unit-tested directly.
+ * `quick-setup.ts` turns the Quick setup answers into the full answers the plan understands.
  */
 import type { NicheAim, NicheOption } from "@/lib/ai"
 import { positioningStatement } from "@/lib/ai/context"
@@ -26,6 +28,12 @@ import { EN, type Copy } from "./copy-en"
 /* ---------------------------------- Steps --------------------------------- */
 
 export type StepKey =
+  // Quick setup (first run) — also screens 2–4 of a Niche Discovery re-run
+  | "start"
+  | "about"
+  | "who"
+  | "pick"
+  // Detailed setup (re-run from Brand HQ)
   | "welcome"
   | "hilig"
   | "galing"
@@ -38,15 +46,21 @@ export type StepKey =
   | "pillars"
   | "strategy"
 
-/** first = a new workspace · rerun = setup again from Brand HQ · niche = only Niche Discovery (`/onboarding?step=niche`). */
+/** first = a new workspace (Quick setup) · rerun = Detailed setup from Brand HQ · niche = only Niche Discovery (`/onboarding?step=niche`). */
 export type WizardMode = "first" | "rerun" | "niche"
 
-/** Niche Discovery first, then the setup it pre-fills. The welcome screen picks the language and isn't counted. */
+/** Quick setup: start (language, name, platforms) → about you → who you help → pick your niche. A Building screen follows (not a step). */
+export const QUICK_FLOW: readonly StepKey[] = ["start", "about", "who", "pick"]
+/** Detailed setup: Niche Discovery first, then the setup it pre-fills. The welcome screen picks the language and isn't counted. */
 export const FULL_FLOW: readonly StepKey[] = ["welcome", "hilig", "galing", "kanino", "para_saan", "niche", "identity", "platforms", "voice", "pillars", "strategy"]
-export const NICHE_FLOW: readonly StepKey[] = ["hilig", "galing", "kanino", "para_saan", "niche"]
-export const DISCOVERY_STEPS: ReadonlySet<StepKey> = new Set<StepKey>(NICHE_FLOW)
+/** Niche Discovery re-run: the Quick setup screens 2–4, pre-filled from Brand HQ. */
+export const NICHE_FLOW: readonly StepKey[] = ["about", "who", "pick"]
+/** Detailed-setup steps shown under the "Niche Discovery" phase in its progress bar. */
+export const DISCOVERY_STEPS: ReadonlySet<StepKey> = new Set<StepKey>(["hilig", "galing", "kanino", "para_saan", "niche"])
 
-export const flowFor = (mode: WizardMode): readonly StepKey[] => (mode === "niche" ? NICHE_FLOW : FULL_FLOW)
+export const flowFor = (mode: WizardMode): readonly StepKey[] => (mode === "first" ? QUICK_FLOW : mode === "niche" ? NICHE_FLOW : FULL_FLOW)
+/** Quick setup and Niche Discovery use the light screens (one progress bar); a re-run uses the detailed steps. */
+export const isQuickMode = (mode: WizardMode) => mode !== "rerun"
 export const countedSteps = (flow: readonly StepKey[]) => flow.filter((k) => k !== "welcome")
 export const stepIndex = (flow: readonly StepKey[], key: StepKey) => flow.indexOf(key)
 
@@ -203,6 +217,8 @@ export interface OnboardingAnswers {
   niche_fit: string
   /** The suggested direction the niche came from (null = written by the creator). */
   niche_option: NicheOption | null
+  /** "Write my own" is the chosen niche card (Quick setup and Niche Discovery). Screens 2–3 become optional. */
+  own_niche: boolean
   audience: string
   result: string
   method: string
@@ -271,6 +287,7 @@ export function emptyAnswers(): OnboardingAnswers {
     niche: "",
     niche_fit: "",
     niche_option: null,
+    own_niche: false,
     audience: "",
     result: "",
     method: "",
@@ -617,6 +634,22 @@ export function validateStep(key: StepKey, a: OnboardingAnswers, e: ErrorCopy = 
     case "welcome":
     case "strategy":
       break
+    // Quick setup: only these block. Writing your own niche makes "about" and "who" optional.
+    case "start":
+      need("name", e.name)
+      if (!a.platforms.length) errors.platforms = e.platforms
+      break
+    case "about":
+      if (!a.own_niche && filled(a.interests) < LIMITS.interestsMin) errors.interests = e.interests
+      break
+    case "who":
+      if (!a.own_niche && !filled(a.audiences)) errors.audiences = e.audiences
+      break
+    case "pick":
+      if (a.own_niche) {
+        if (!a.niche.trim()) errors.niche = e.ownNiche
+      } else if (!a.niche_option || !a.niche.trim()) errors.niche = e.pickNiche
+      break
     case "hilig":
       if (filled(a.interests) < LIMITS.interestsMin) errors.interests = e.interests
       break
@@ -756,6 +789,8 @@ export function answersFromWorkspace(db: Database, options: { rerun?: boolean } 
       expertise_areas: [...brand.expertise_areas].slice(0, LIMITS.expertiseMax),
       expertise_summary: brand.expertise_summary,
       niche: (brand.niche ?? "").slice(0, LIMITS.niche),
+      // Niche Discovery opens with the current niche as "your own", so saving without a new pick keeps it.
+      own_niche: Boolean((brand.niche ?? "").trim()),
       niche_fit: brand.niche_fit ?? "",
       interests: [...(brand.interests ?? [])].slice(0, LIMITS.interestsMax),
       platforms: platformsInOrder(brand.main_platforms),
@@ -936,6 +971,7 @@ export function sanitizeAnswers(raw: unknown): OnboardingAnswers {
   out.audiences = strings(r.audiences, LIMITS.audiencesMax)
   out.aims = listOf(r.aims, AIM_IDS).slice(0, LIMITS.aimsMax)
   out.niche_option = sanitizeNicheOption(r.niche_option)
+  out.own_niche = r.own_niche === true
   out.persona_goals = strings(r.persona_goals, LIMITS.personaGoalsMax)
   out.persona_problems = strings(r.persona_problems, LIMITS.problemsMax)
   out.persona_platforms = listOf(r.persona_platforms, PLATFORM_IDS)

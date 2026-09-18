@@ -7,23 +7,27 @@ import { toast } from "sonner"
 import { useConfirm } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import { useAiTask, type NicheOption } from "@/lib/ai"
-import { useDataStore, useSettings, useTable } from "@/lib/store"
+import { isAiError, runAiTask, useAiTask, type NicheOption } from "@/lib/ai"
+import { updateSettings, useDataStore, useSettings, useTable } from "@/lib/store"
 import { trackOnboardingStep, trackUsage } from "@/lib/telemetry"
 import { cn } from "@/lib/utils"
 import { applyOnboardingPlan, ensureStarterLibrary } from "./apply-onboarding"
 import { COPY, CopyContext, type OnboardingLang } from "./copy"
-import { applyNicheOption, nicheInput, nicheKey, pillarsFromOption, startOwnNiche } from "./niche-model"
+import { BuildingScreen, type BuildState } from "./building"
+import { applyNicheOption, nicheInput, nicheKey, pillarsFromOption, startOwnNiche, writtenNicheInput } from "./niche-model"
 import { clearDraft, saveDraft, type OnboardingDraft, type StrategyResult } from "./onboarding-draft"
 import { effectivePillars, toIdeaDrafts } from "./onboarding-ideas"
 import {
+  chosenGoals,
   countedSteps,
   DISCOVERY_STEPS,
   firstInvalidStep,
   firstName,
   flowFor,
   GENERATE_KEY,
+  goalsFromAims,
   hasErrors,
+  isQuickMode,
   normalizeSplit,
   platformsInOrder,
   selectedPillars,
@@ -32,25 +36,33 @@ import {
   strategyInput,
   strategyKey,
   validateStep,
+  weeklyTotal,
   type OnboardingAnswers,
   type StepErrors,
   type StepKey,
 } from "./onboarding-model"
 import { planNicheUpdate, planOnboarding } from "./onboarding-plan"
+import { canSuggestNiches, optionForWrittenNiche, quickAims, quickSetupAnswers } from "./quick-setup"
 import { StrategyStep } from "./step-generate"
 import { NicheStep } from "./step-niche"
 import { ParaSaanStep } from "./step-para-saan"
+import { PickStep } from "./step-pick"
 import { WelcomeStep } from "./step-welcome"
 import { GalingStep, HiligStep, KaninoStep } from "./steps-discovery"
 import { IdentityStep } from "./steps-profile"
+import { AboutStep, StartStep, WhoStep } from "./steps-quick"
 import { PillarsStep, PlatformsStep, VoiceStep } from "./steps-strategy"
-import { StepHeading, WIDTH_CLASS, WizardFooter, WizardHeader } from "./wizard-chrome"
+import { StepHeading, TAP, WIDTH_CLASS, WizardFooter, WizardHeader } from "./wizard-chrome"
 
 /** Steps that open with the cursor in their first text field (on devices with a keyboard). */
-const TEXT_FIRST = new Set<StepKey>(["hilig", "galing", "kanino", "identity"])
+const TEXT_FIRST = new Set<StepKey>(["start", "about", "who", "hilig", "galing", "kanino", "identity"])
 const WIDE = new Set<StepKey>(["niche", "strategy"])
 
-/** The setup wizard: Niche Discovery first, then the setup it pre-fills (or Niche Discovery alone on a re-run). */
+/**
+ * The setup wizard. A new workspace gets Quick setup (4 screens, then the Building screen); a re-run from
+ * Brand HQ the detailed setup; `?step=niche` Niche Discovery alone on Quick setup screens 2–4.
+ * Every path writes through `planOnboarding` / `planNicheUpdate` → `applyOnboardingPlan`.
+ */
 export function Wizard({
   draft,
   setDraft,
@@ -68,7 +80,11 @@ export function Wizard({
   const [confirm, confirmDialog] = useConfirm()
   const [attempted, setAttempted] = useState<Record<number, boolean>>({})
   const [finishing, setFinishing] = useState(false)
+  const [building, setBuilding] = useState<BuildState | null>(null)
   const [replacePillars, setReplacePillars] = useState(false)
+  /** Work the Building screen already finished, so "Try again" only redoes what failed. */
+  const prepared = useRef<{ niche?: { key: string; option: NicheOption }; ideas?: { key: string; output: { ideas: Parameters<typeof toIdeaDrafts>[0] } } }>({})
+  const buildAbort = useRef<AbortController | null>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -83,6 +99,8 @@ export function Wizard({
   const stale = Boolean(strategy && strategy.key !== currentKey)
   const currentNicheKey = useMemo(() => nicheKey(answers, lang), [answers, lang])
   const nicheStale = Boolean(niche && niche.key !== currentNicheKey)
+  const quick = isQuickMode(mode)
+  const canSuggest = useMemo(() => canSuggestNiches(answers), [answers])
   const latest = useRef({ answers, lang })
   useEffect(() => {
     latest.current = { answers, lang }
@@ -103,16 +121,20 @@ export function Wizard({
     (edit: (s: StrategyResult) => StrategyResult) => patchDraft((d) => (d.strategy ? { strategy: { ...edit(d.strategy), edited: true } } : {})),
     [patchDraft]
   )
-  /** The UI language; before the voice step it also pre-selects how the brand writes. */
+  /** The UI language; on a first run it is also the language the brand writes in. */
   const setLang = useCallback(
-    (next: OnboardingLang) =>
-      patchDraft((d) => {
-        const voice = stepIndex(flowFor(d.mode), "voice")
-        const sync = d.mode === "first" && voice !== -1 && d.maxStep < voice
-        return { lang: next, answers: sync ? { ...d.answers, language: next } : d.answers }
-      }),
+    (next: OnboardingLang) => patchDraft((d) => ({ lang: next, answers: d.mode === "first" ? { ...d.answers, language: next } : d.answers })),
     [patchDraft]
   )
+
+  // A first run shows shared controls (chip inputs, AI badges) in the chosen language too: the app language follows.
+  useEffect(() => {
+    if (mode !== "first") return
+    const want = lang === "english" ? "en" : "tl"
+    if (useDataStore.getState().db.app_settings[0]?.ui_language !== want) updateSettings({ ui_language: want })
+  }, [lang, mode])
+
+  useEffect(() => () => buildAbort.current?.abort(), [])
 
   const generate = useCallback(
     async (source: OnboardingAnswers) => {
@@ -164,18 +186,23 @@ export function Wizard({
   }, [key, strategy, strategyError, generate])
 
   // Arriving on the niche step without suggestions — or with suggestions for older answers or another language — finds them.
+  // Quick setup only suggests once screens 2–3 have something to build on (the shortcut may skip them).
+  const onNicheStep = key === "niche" || (key === "pick" && canSuggest)
   useEffect(() => {
-    if (key !== "niche" || nichePending || nicheError || (niche && !nicheStale)) return
+    if (!onNicheStep || nichePending || nicheError || (niche && !nicheStale)) return
     const timer = window.setTimeout(() => void generateNiche(latest.current.answers, latest.current.lang), 0)
     return () => window.clearTimeout(timer)
-  }, [key, niche, nicheStale, nichePending, nicheError, generateNiche])
+  }, [onNicheStep, niche, nicheStale, nichePending, nicheError, generateNiche])
 
   // Each step starts at the top with focus on its first field (keyboard devices) or its question.
   useEffect(() => {
     window.scrollTo({ top: 0 })
     const coarse = window.matchMedia("(pointer: coarse)").matches
     const field = contentRef.current?.querySelector<HTMLElement>("input:not([type=hidden]):not([disabled]), textarea:not([disabled])")
-    if (!coarse && field && TEXT_FIRST.has(flow[step])) field.focus({ preventScroll: true })
+    // "I already know my niche" lands in the sentence field.
+    const own = flow[step] === "pick" && latest.current.answers.own_niche ? document.getElementById("ob-niche") : null
+    if (!coarse && own) own.focus({ preventScroll: true })
+    else if (!coarse && field && TEXT_FIRST.has(flow[step])) field.focus({ preventScroll: true })
     else headingRef.current?.focus({ preventScroll: true })
   }, [step, flow])
 
@@ -220,7 +247,7 @@ export function Wizard({
     }
     trackOnboardingStep("completed", { step: key, index: step, mode, lang })
     if (key === "strategy") return finish()
-    if (key === "niche" && mode === "niche") return finishNiche()
+    if (key === "pick") return mode === "niche" ? finishNiche() : build()
 
     const patch: Partial<OnboardingAnswers> = {}
     if (key === "identity" && !answers.platforms.length && answers.persona_platforms.length) {
@@ -294,7 +321,7 @@ export function Wizard({
 
   async function finishNiche() {
     if (!checkAll()) return
-    const option = answers.niche_option
+    const option = answers.own_niche ? null : answers.niche_option
     const replace = Boolean(option && replacePillars && option.pillars.length)
     if (
       replace &&
@@ -311,7 +338,10 @@ export function Wizard({
     }
     setFinishing(true)
     try {
-      const source = replace && option ? { ...answers, pillars: pillarsFromOption(option, answers.pillars) } : answers
+      // No aim picked: the brand keeps growing an audience (the Quick setup default) instead of losing its goal.
+      const aims = answers.aims.length ? {} : { aims: quickAims([]), ...goalsFromAims(quickAims([]), answers) }
+      const base = { ...answers, ...aims }
+      const source = replace && option ? { ...base, pillars: pillarsFromOption(option, base.pillars) } : base
       const plan = planNicheUpdate(useDataStore.getState().db, { answers: source, replacePillars: replace, now: new Date() })
       applyOnboardingPlan(plan)
       trackUsage("onboarding_completed", { mode, lang })
@@ -324,14 +354,123 @@ export function Wizard({
     }
   }
 
-  const choose = (option: NicheOption) => update(applyNicheOption(answers, option, { replacePillars: mode === "first", copy }))
-  const writeOwn = () => {
-    update(startOwnNiche(answers, copy))
+  const choose = (option: NicheOption) => update({ ...applyNicheOption(answers, option, { replacePillars: mode === "first", copy }), own_niche: false })
+  const focusOwn = () =>
     requestAnimationFrame(() => {
       const el = document.getElementById("ob-niche")
       el?.scrollIntoView({ block: "center" })
       el?.focus({ preventScroll: true })
     })
+  const writeOwn = () => {
+    if (!answers.own_niche) update({ ...startOwnNiche(answers, copy), own_niche: true })
+    focusOwn()
+  }
+
+  /** "I already know my niche": straight to screen 4 with "Write my own" open (screen 1 is still required). */
+  function knowNiche() {
+    const next: OnboardingAnswers = { ...answers, ...startOwnNiche(answers, copy), own_niche: true }
+    const target = stepIndex(flow, "pick")
+    const invalid = firstInvalidStep(next, flow, target, copy.errors)
+    trackOnboardingStep("completed", { step: key, index: step, mode, lang })
+    if (invalid !== -1) {
+      setAttempted((a) => ({ ...a, [invalid]: true }))
+      patchDraft({ answers: next, step: invalid })
+      return
+    }
+    patchDraft((d) => ({ answers: next, step: target, maxStep: Math.max(d.maxStep, target) }))
+  }
+
+  /** Back from "Write my own" to screen 2, so Orbi can suggest directions. */
+  function findForMe() {
+    patchDraft((d) => ({ answers: { ...d.answers, own_niche: false }, step: Math.max(0, stepIndex(flow, "about")) }))
+  }
+
+  /**
+   * Finish Quick setup: the niche (a chosen direction, or directions built for the written niche) → the
+   * full answers → first ideas → the same plan and apply as every setup. Each Building item ticks when
+   * its work is done; a failure keeps the answers and offers Try again.
+   */
+  async function build() {
+    if (!checkAll()) return
+    const source = answers
+    const t = copy.quick
+    const written = source.own_niche ? source.niche.trim() : ""
+    buildAbort.current?.abort()
+    const abort = new AbortController()
+    buildAbort.current = abort
+    setBuilding({ done: {}, running: ["brand", "pillars", "schedule", "goals"], error: null })
+    try {
+      // Formats and angles must exist for the ideas to map onto them (new Supabase users start empty).
+      try {
+        ensureStarterLibrary()
+      } catch {
+        // Ideas still generate without the library; the plan inserts what's missing.
+      }
+      let option = source.own_niche ? null : source.niche_option
+      if (!option) {
+        const input = writtenNicheInput(source, lang, written)
+        const nicheCacheKey = JSON.stringify(input)
+        option = prepared.current.niche?.key === nicheCacheKey ? prepared.current.niche.option : null
+        if (!option) {
+          const res = await runAiTask("niche_discovery", input, { signal: abort.signal })
+          option = optionForWrittenNiche(res.output.options, written)
+          if (!option) throw new Error(copy.niche.errorTitle)
+          prepared.current.niche = { key: nicheCacheKey, option }
+        }
+      }
+      const full = quickSetupAnswers(source, { option, written: written || undefined }, lang)
+      const pillars = selectedPillars(full)
+      setBuilding({
+        done: {
+          brand: "",
+          pillars: t.pillarsDone(pillars.length),
+          schedule: t.scheduleDone(weeklyTotal(full)),
+          goals: chosenGoals(full)
+            .map((g) => copy.goals[g])
+            .join(" · "),
+        },
+        running: ["ideas"],
+        error: null,
+      })
+
+      const ideasKey = strategyKey(full)
+      let output = prepared.current.ideas?.key === ideasKey ? prepared.current.ideas.output : null
+      if (!output) {
+        output = (await runAiTask("onboarding_strategy", strategyInput(full), { signal: abort.signal })).output
+        prepared.current.ideas = { key: ideasKey, output }
+      }
+      const drafts = toIdeaDrafts(output.ideas)
+      const names = effectivePillars(
+        drafts,
+        pillars.map((p) => ({ name: p.name, description: p.description, examples: p.examples, target: p.target }))
+      )
+      const ideas = drafts.map((idea, index) => ({ idea, title: idea.title, pillar: names[index] ?? null }))
+      setBuilding((s) => (s ? { ...s, done: { ...s.done, ideas: t.ideasDone(ideas.length) }, running: [] } : s))
+
+      const plan = planOnboarding(useDataStore.getState().db, { answers: full, ideas, lang, now: new Date() })
+      applyOnboardingPlan(plan)
+      trackUsage("onboarding_completed", { mode, lang, pillars: plan.summary.pillars, ideas: plan.summary.ideas })
+      setFinishing(true)
+      clearDraft(userId)
+      toast.success(copy.finish.welcome(firstName(full.name)), {
+        description: copy.finish.summary(plan.summary.pillars, plan.summary.ideas, plan.summary.weeklyTarget),
+      })
+      router.push("/")
+    } catch (err) {
+      if (abort.signal.aborted) return
+      const message = isAiError(err) || err instanceof Error ? err.message : String(err)
+      setBuilding((s) => ({ done: s?.done ?? {}, running: [], error: message }))
+    }
+  }
+
+  if (building) {
+    return (
+      <CopyContext.Provider value={copy}>
+        <div lang={lang === "english" ? "en" : "fil"}>
+          <BuildingScreen state={building} onRetry={() => void build()} onBack={() => setBuilding(null)} />
+        </div>
+      </CopyContext.Provider>
+    )
   }
 
   if (finishing) {
@@ -351,13 +490,14 @@ export function Wizard({
   const forward = <ArrowRight data-icon="inline-end" aria-hidden />
   const sparkle = <Sparkles data-icon="inline-end" aria-hidden />
   const check = <Check data-icon="inline-end" aria-hidden />
+  const showNiches = (key === "para_saan" || (key === "who" && canSuggest)) && (!niche || nicheStale)
   const primary =
     key === "welcome"
       ? { label: copy.welcome.start, icon: forward }
-      : key === "para_saan" && (!niche || nicheStale)
+      : showNiches
         ? { label: copy.finish.showNiches, icon: sparkle }
-        : key === "niche" && mode === "niche"
-          ? { label: copy.finish.saveNiche, icon: check }
+        : key === "pick"
+          ? { label: mode === "niche" ? copy.finish.saveNiche : copy.finish.finish, icon: check }
           : key === GENERATE_KEY
             ? { label: !strategy ? copy.finish.generate : stale ? copy.finish.regenerate : copy.finish.review, icon: !strategy || stale ? sparkle : forward }
             : key === "strategy"
@@ -366,6 +506,33 @@ export function Wizard({
 
   let body: React.ReactNode
   switch (key) {
+    case "start":
+      body = <StartStep {...stepProps} lang={lang} onLang={setLang} />
+      break
+    case "about":
+      body = <AboutStep {...stepProps} onKnowNiche={knowNiche} />
+      break
+    case "who":
+      body = <WhoStep {...stepProps} lang={lang} />
+      break
+    case "pick":
+      body = (
+        <PickStep
+          {...stepProps}
+          result={niche}
+          pending={nichePending}
+          error={nicheError}
+          mode={mode}
+          canSuggest={canSuggest}
+          replacePillars={replacePillars}
+          onReplacePillarsChange={setReplacePillars}
+          onGenerate={() => void generateNiche(answers, lang)}
+          onChoose={choose}
+          onWriteOwn={writeOwn}
+          onFindForMe={findForMe}
+        />
+      )
+      break
     case "welcome":
       body = <WelcomeStep lang={lang} onLang={setLang} />
       break
@@ -430,7 +597,8 @@ export function Wizard({
 
   const number = stepNumber(flow, step)
   const total = countedSteps(flow).length
-  const eyebrow = number ? `${DISCOVERY_STEPS.has(key) ? copy.phases.discovery : copy.phases.setup} · ${copy.common.stepOf(number, total)}` : undefined
+  // Quick setup shows its place in the progress bar; the detailed setup keeps the phase eyebrow.
+  const eyebrow = number && !quick ? `${DISCOVERY_STEPS.has(key) ? copy.phases.discovery : copy.phases.setup} · ${copy.common.stepOf(number, total)}` : undefined
 
   return (
     <CopyContext.Provider value={copy}>
@@ -440,10 +608,12 @@ export function Wizard({
           step={step}
           maxStep={draft.maxStep}
           onStepSelect={goTo}
-          subtitle={mode === "niche" ? copy.common.nicheSetup : copy.common.setup}
+          subtitle={mode === "niche" ? copy.common.nicheSetup : mode === "rerun" ? copy.common.detailedSetup : copy.common.quickSetup}
           exitHref={mode === "rerun" ? "/" : mode === "niche" ? "/strategy" : null}
           lang={lang}
           onLangChange={setLang}
+          progress={quick ? "bar" : "steps"}
+          showLanguage={key !== "start"}
         />
         <form
           id="ob-step-form"
@@ -464,14 +634,19 @@ export function Wizard({
           <main className="flex-1">
             <div ref={contentRef} className={cn("mx-auto w-full px-4 py-8 md:px-6 md:py-10", WIDTH_CLASS[width])}>
               <div id="ob-step-title">
-                <StepHeading eyebrow={eyebrow} title={meta.title} description={meta.description} headingRef={headingRef} />
+                <StepHeading
+                  eyebrow={eyebrow}
+                  title={meta.title}
+                  description={key === "pick" && !canSuggest ? copy.quick.ownDescription : meta.description}
+                  headingRef={headingRef}
+                />
               </div>
               <div className="mt-6">{body}</div>
             </div>
           </main>
           <WizardFooter width={width} onBack={step > 0 ? () => goTo(step - 1) : null}>
             {key === "strategy" && strategy ? <span className="hidden text-xs text-muted-foreground sm:inline num">{copy.strategy.willAdd(ideaCount)}</span> : null}
-            <Button type="submit" size="lg" disabled={key === "strategy" && strategyPending}>
+            <Button type="submit" size="lg" disabled={key === "strategy" && strategyPending} className={TAP}>
               {primary.label}
               {primary.icon}
             </Button>

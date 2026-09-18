@@ -75,7 +75,7 @@ Client views read `useSearchParams()` — wrap them in `<Suspense>` in the page 
 
 ## 3. Data layer
 
-New workspaces are created from the **Starter Kit** (`src/lib/data/starter.ts`: formats, angles, hook templates, goals, platform strategies, posting schedule, tags, settings, blank brand) and go through onboarding, which starts with Niche Discovery. The demo workspace (`src/lib/data/seed.ts`) is a **test fixture and dev-only QA seed** (`localStorage["pbos:dev-seed"]` = `demo` | `fresh`, set by the scripts' `--seed` flag) — never shown to users.
+New workspaces are created from the **Starter Kit** (`src/lib/data/starter.ts`: formats, angles, hook templates, goals, platform strategies, posting schedule, tags, settings, blank brand) and go through **Quick setup** (`/onboarding`, `docs/QUICK_SETUP.md`): four screens — language, name and platforms · interests and skills · who you help · pick a niche direction or write your own — then a Building screen, and `quickSetupAnswers` (`features/onboarding/quick-setup.ts`) fills in the rest (role, industry, positioning, pillars, persona, goals, posting schedule, first ideas) before the one apply path (`planOnboarding` → `applyOnboardingPlan`). Voice and audience problems are left to the Home checklist (`features/dashboard/first-run.ts`). Brand HQ re-runs use the **Detailed setup** (the full niche-first flow) and `/onboarding?step=niche` re-runs Niche Discovery on Quick setup screens 2–4. The demo workspace (`src/lib/data/seed.ts`) is a **test fixture and dev-only QA seed** (`localStorage["pbos:dev-seed"]` = `demo` | `fresh`, set by the scripts' `--seed` flag) — never shown to users.
 
 ### Model
 `src/lib/types.ts` defines 32 workspace tables (`TABLE_NAMES` in `src/lib/data/defaults.ts` = insert order = the order `supabase/migrations/20260910000000_init.sql` creates them). Field names are snake_case and identical to Postgres columns. Text defaults to `''`, lists to `[]`, optional FKs are `ID | null`. Server-only tables that aren't part of the workspace (`push_subscriptions`, `feedback`, `usage_events`) live in their owner's own migration; the parity test tolerates them and requires RLS.
@@ -205,7 +205,7 @@ Brand HQ · Audience HQ · Persona · Problem Bank · Question Bank · Content P
 
 ## 11. Language (English / Taglish)
 
-- `app_settings.ui_language` (`"en"` | `"tl"`) is the language of the screens — Settings → General → App language, set from the onboarding language when setup finishes. The language content is *written* in is Brand HQ's `brand_profiles.language`; AI output follows that, not the UI.
+- `app_settings.ui_language` (`"en"` | `"tl"`) is the language of the screens — Settings → General → App language. During a first run it follows the language toggle on the Quick setup screens, so shared controls switch too. The language content is *written* in is Brand HQ's `brand_profiles.language`; AI output follows that, not the UI.
 - A feature's strings live in `messages.ts` in its folder (or `<name>-messages.ts` next to a shared component). Shared words (Save, Cancel, Delete, Loading…) are `commonMessages` in `src/lib/i18n/messages/common.ts`; Money option labels are in `src/lib/i18n/messages/money.ts`.
 
 ```ts

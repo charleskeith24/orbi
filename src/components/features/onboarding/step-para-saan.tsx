@@ -12,7 +12,7 @@ import { AIM_IDS, aimGoals, chosenGoals, goalsFromAims, goalTargetFor, LIMITS } 
 import { fid, type StepProps } from "./steps-profile"
 import { StepSection } from "./wizard-chrome"
 
-const AIM_ICONS: Record<NicheAim, LucideIcon> = {
+export const AIM_ICONS: Record<NicheAim, LucideIcon> = {
   clients: Handshake,
   career: TrendingUp,
   audience: Megaphone,
@@ -41,7 +41,7 @@ export function ParaSaanStep({ answers: a, update, errors }: StepProps) {
   return (
     <div className="flex flex-col gap-6">
       <StepSection title={t.aims} description={t.aimsDescription} action={<span className="text-xs text-muted-foreground num">{a.aims.length}/{LIMITS.aimsMax}</span>}>
-        <div id={fid("aims")} tabIndex={-1} role="group" aria-label={t.aims} className="grid gap-2 outline-none sm:grid-cols-2">
+        <div id={fid("aims")} data-ob-required tabIndex={-1} role="group" aria-label={t.aims} className="grid gap-2 outline-none sm:grid-cols-2">
           {AIM_IDS.map((aim) => {
             const on = a.aims.includes(aim)
             const Icon = AIM_ICONS[aim]

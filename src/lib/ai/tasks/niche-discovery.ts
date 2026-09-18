@@ -37,6 +37,8 @@ const input = z.object({
   aims: z.array(z.enum(NICHE_AIMS)).max(6).default([]),
   role: text(160),
   industry: text(160),
+  /** A niche the creator already wrote ("I already know my niche") — every direction is then a take on exactly it. */
+  niche: text(200),
 })
 
 const fit = z.object({ score: z.number().describe("1–10"), reason: z.string().describe("One line that cites the creator's own input") })
@@ -158,8 +160,13 @@ export const nicheDiscoveryTask = defineTask({
         "notes: short, honest guidance when the input is thin (e.g. “Add one more audience problem to sharpen this”); leave it empty when the input is strong.",
         `Rules: use only what they typed — never invent clients, numbers, credentials or results. Keep it relevant to Filipino creators and professionals. Write every text field in ${LANGUAGE_MAP[a.language].label}${a.language === "english" ? "" : " (natural, the way Filipinos actually post; technical terms stay in English)"}.`,
         `What the brand should do for them (aims): ${a.aims.map((x) => AIM_MEANING[x]).join("; ") || "not chosen yet"}.`,
+        a.niche
+          ? `They already know their niche: “${a.niche}”. Keep it — all three directions must build exactly this niche (same topic and audience), as its expertise-led, passion-led and audience-led takes. niche_statement may tighten the wording but never change the niche, and the pillars must cover this topic.`
+          : "",
         jsonBlock("creator_input", { ...a, language: LANGUAGE_MAP[a.language].label }),
-      ].join("\n\n"),
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
     }
   },
 

@@ -1,16 +1,20 @@
 #!/usr/bin/env node
 /**
- * First-run onboarding flow: a brand-new browser (no workspace) is sent from "/" to /onboarding,
- * completes Niche Discovery and setup — once in English, once in Taglish — and lands back on "/".
- * Every pass checks the stored workspace, not just the screen. The English pass then re-runs only
- * Niche Discovery (/onboarding?step=niche) and replaces the pillars.
+ * First-run onboarding flow (docs/QUICK_SETUP.md): a brand-new browser (no workspace) is sent from "/" to
+ * /onboarding and goes through the four Quick setup screens — once in English, once in Taglish — then the
+ * Building screen, and lands on Home with the setup checklist. A third new browser takes the
+ * "I already know my niche" shortcut. The English workspace then re-runs Niche Discovery
+ * (/onboarding?step=niche, replacing the pillars) and the Detailed setup (every step, as before Quick setup).
+ * Every pass checks the stored workspace, not just the screen, and prints how many screens and required
+ * fields it needed (required fields are the `[data-ob-required]` markers on each screen that was submitted).
  *
  *   node scripts/onboarding-flow.mjs [--shots=/tmp/onboarding-flow] [--lang=english|taglish] [--headed]
  *   node scripts/onboarding-flow.mjs --lang=taglish --dark --width=390 --height=844   (same flow, dark, phone-sized)
  *
  * --seed follows the other QA scripts: none (the default here — a true first run), or demo / fresh, which
- * skip the first-run passes and only re-run Niche Discovery on the seeded workspace.
- * Exits 1 on the first failure (with a screenshot) or if any page error was logged.
+ * skip the first-run passes and only re-run Niche Discovery and the Detailed setup on the seeded workspace.
+ * The Building screen is screenshotted by holding the ideas request until the shot is taken (the app itself
+ * never waits). Exits 1 on the first failure (with a screenshot) or if any page error was logged.
  */
 import fs from "node:fs"
 import { chromium } from "playwright-core"
@@ -27,39 +31,38 @@ fs.mkdirSync(shots, { recursive: true })
 const SEED = String(args.seed ?? "none")
 const LANGS = args.lang ? [String(args.lang)] : ["english", "taglish"]
 
-/** What the creator types and clicks, per UI language. */
+/** What the creator types and taps, and what the screens say, per UI language. */
 const RUN = {
   english: {
-    hilig: "What could you talk about for hours?",
-    help: "How to register with BIR as a freelancer and how to budget an irregular income",
-    proof: "Helped 40+ freelancers register and file with BIR",
-    story: "In 2022 I almost paid a ₱20,000 penalty because I missed one deadline. Now I track every filing in one sheet.",
-    stage: "First year freelancing, no idea about taxes yet",
-    goal: "File taxes with confidence and save every month",
-    level: "Beginner",
-    problems: ["Doesn't know how to file taxes with BIR", "No savings even with good income", "Afraid of tax penalties"],
-    aims: ["Get clients", "Sell products"],
-    choose: "Choose this",
+    titles: { start: "Let's start", about: "About you", who: "Who you help", pick: "Pick your niche", building: "Setting up your Orbi" },
+    aim: "Get clients",
+    problemsGroup: /^Common for /,
+    seeDetails: "See details",
+    written: "Budget meal prep for busy nurses who work nights",
+    knowNiche: "I already know my niche",
+    detailed: "Detailed setup",
+    checklistVoice: "Set your voice",
     /** Every suggestion reads in the chosen language. */
     reads: (s) => !/\b(para sa|ang|mga|na gustong|tinutulungan)\b/i.test(s),
   },
   taglish: {
-    hilig: "Anong topic ang kaya mong pag-usapan nang ilang oras?",
-    help: "Paano mag-register sa BIR as freelancer, paano mag-budget ng sahod",
-    proof: "Natulungan ko ang 40+ freelancers mag-register at mag-file sa BIR",
-    story: "Noong 2022, muntik na akong magbayad ng ₱20,000 na penalty dahil nakalimutan ko ang isang deadline. Ngayon, nasa isang sheet na lahat ng filings ko.",
-    stage: "Bagong freelancer, first year pa lang, walang idea sa taxes",
-    goal: "Maging tax-compliant at makaipon kahit irregular ang income",
-    level: "Nagsisimula pa lang",
-    problems: ["Hindi alam paano mag-file ng BIR", "Walang ipon kahit malaki ang kita", "Takot sa tax penalties"],
-    aims: ["Magka-clients", "Magbenta ng products"],
-    choose: "Piliin 'to",
-    reads: (s) => /\b(para sa|ang|mga)\b/i.test(s),
+    titles: { start: "Simulan natin", about: "Tungkol sa'yo", who: "Sino ang tinutulungan mo", pick: "Piliin ang niche mo", building: "Sine-setup ang Orbi mo" },
+    aim: "Magka-clients",
+    problemsGroup: /^Madalas sa /,
+    seeDetails: "Tingnan ang detalye",
+    written: "Budget meal prep para sa mga nurse na pagod sa night shift",
+    knowNiche: "Alam ko na ang niche ko",
+    detailed: "Detalyadong setup",
+    checklistVoice: "I-set ang voice mo",
+    reads: (s) => /\b(para sa|ang|mga|sa|mo|na)\b/i.test(s),
   },
 }
 
 const browser = await chromium.launch({ channel: "chrome", headless: !args.headed })
 const errors = []
+const summary = []
+/** 500s the flow causes on purpose (the Building screen's failure path): the browser logs each one. */
+let expected500 = 0
 
 async function newPage() {
   const context = await browser.newContext({
@@ -74,9 +77,46 @@ async function newPage() {
   const page = await context.newPage()
   page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`))
   page.on("console", (m) => {
-    if (m.type() === "error" && !/DevTools|favicon/.test(m.text())) errors.push(`console: ${m.text().slice(0, 240)}`)
+    if (m.type() !== "error" || /DevTools|favicon/.test(m.text())) return
+    if (expected500 > 0 && /status of 500/.test(m.text())) {
+      expected500--
+      return
+    }
+    errors.push(`console: ${m.text().slice(0, 240)}`)
   })
   return { context, page }
+}
+
+/**
+ * Holds the next `onboarding_strategy` request until released, so the Building screen can be screenshotted;
+ * with `failOnce`, that task's first request answers 500 instead (the Building screen's error and Try again).
+ */
+async function holdIdeas(page, { failOnce = "" } = {}) {
+  let release = () => {}
+  let held = false
+  let failed = false
+  const gate = new Promise((resolve) => (release = resolve))
+  await page.route("**/api/ai", async (route) => {
+    let task = ""
+    try {
+      task = JSON.parse(route.request().postData() ?? "{}").task ?? ""
+    } catch {
+      // Not JSON: let it through.
+    }
+    if (task === failOnce && !failed) {
+      failed = true
+      expected500++
+      await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "The AI service is unavailable (test).", code: "unknown" }) }).catch(() => {})
+      return
+    }
+    if (task === "onboarding_strategy" && !held) {
+      held = true
+      await gate
+    }
+    await route.continue().catch(() => {})
+  })
+  // The route stays installed (later requests pass straight through); releasing lets the held request go.
+  return async () => release()
 }
 
 const workspace = (page) => page.evaluate(() => JSON.parse(localStorage.getItem("pbos:workspace:v2")).db)
@@ -92,6 +132,7 @@ const heading = (page) => page.locator("main h1").first().innerText()
 const submit = (page) => page.locator("#ob-step-form button[type=submit]")
 const exact = (text) => new RegExp(`^\\s*${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`)
 const chip = (page, text) => page.locator("main button", { hasText: exact(text) }).first()
+const radios = (page) => page.locator('main [role="radiogroup"] [role="radio"]')
 
 /** Click after centring the element — the sticky header and footer cover the edges on phone-sized viewports. */
 async function tap(locator) {
@@ -100,20 +141,37 @@ async function tap(locator) {
   await locator.click({ timeout: 30000 })
 }
 
+/** Screens and required fields a pass needed. */
+function counter(name) {
+  const seen = new Set()
+  let required = 0
+  return {
+    async screen(page) {
+      seen.add((await heading(page)).trim())
+    },
+    async submitted(page) {
+      seen.add((await heading(page)).trim())
+      required += await page.locator("main [data-ob-required]").count()
+    },
+    report(extra = "") {
+      const line = `${name}: ${seen.size} screens · ${required} required fields${extra ? ` · ${extra}` : ""}`
+      summary.push(line)
+      return line
+    },
+  }
+}
+
 /** Submit the step and wait for the next one's heading. */
-async function advance(page) {
+async function advance(page, count) {
   const before = await heading(page)
+  if (count) await count.submitted(page)
   await submit(page).click()
   await page.waitForFunction((prev) => {
     const h = document.querySelector("main h1")
     return Boolean(h && h.textContent.trim() !== prev.trim())
   }, before, { timeout: 45000 })
   await settle(page, 300)
-}
-
-async function addChip(page, id, text) {
-  await page.fill(`#${id}`, text)
-  await page.press(`#${id}`, "Enter")
+  if (count) await count.screen(page)
 }
 
 let n = 0
@@ -135,209 +193,305 @@ const shot = (page, name, fullPage = false) => page.screenshot({ path: `${shots}
 const expect = (ok, message) => {
   if (!ok) throw new Error(message)
 }
+const GENERIC = /^(Education|Authority|Journey|Leadership|Personal|Business)$/
 
-/* ------------------------------- First run -------------------------------- */
+/** What every pass checks in the stored workspace. */
+function checkWorkspace(db, want) {
+  const brand = db.brand_profiles[0]
+  expect(brand.onboarding_completed === true, "onboarding_completed is not true")
+  if (want.niche) expect(brand.niche === want.niche, `brand.niche is “${brand.niche}”, expected “${want.niche}”`)
+  else expect(brand.niche.trim().length > 10, `brand.niche is “${brand.niche}”`)
+  expect(brand.language === want.lang, `brand.language is ${brand.language}, expected ${want.lang}`)
+  const pillars = db.content_pillars.filter((p) => p.is_active)
+  const total = pillars.reduce((a, p) => a + p.target_percentage, 0)
+  expect(pillars.length >= 2 && total === 100, `${pillars.length} active pillars totalling ${total}%`)
+  if (want.nichePillars) expect(!pillars.some((p) => GENERIC.test(p.name)), `generic preset pillars were saved: ${pillars.map((p) => p.name).join(", ")}`)
+  const ideas = db.content_ideas.filter((i) => i.source === "onboarding")
+  expect(ideas.length >= 20, `${ideas.length} onboarding ideas`)
+  const persona = db.audience_personas.find((p) => p.is_primary)
+  expect(persona, "no primary persona")
+  if (want.persona) expect(want.persona.test(persona.name), `primary persona is “${persona.name}”`)
+  const platforms = db.content_platforms.filter((p) => p.is_active).map((p) => p.platform).sort()
+  if (want.platforms) {
+    expect(JSON.stringify(platforms) === JSON.stringify([...want.platforms].sort()), `active platforms ${JSON.stringify(platforms)}`)
+    expect(JSON.stringify([...brand.main_platforms].sort()) === JSON.stringify([...want.platforms].sort()), `main platforms ${JSON.stringify(brand.main_platforms)}`)
+  }
+  const slots = db.content_calendar.filter((s) => s.is_active)
+  expect(slots.length >= 1, "no posting slots")
+  expect(slots.every((s) => s.platforms.every((p) => platforms.includes(p))), "a posting slot uses a platform that isn't active")
+  if (want.uiLang) expect(db.app_settings[0].ui_language === want.uiLang, `app language is ${db.app_settings[0].ui_language}`)
+  if (want.quick) {
+    expect(brand.tones.length === 0 && brand.personality_traits.length === 0, `Quick setup invented a voice: ${JSON.stringify([brand.tones, brand.personality_traits])}`)
+    expect(brand.role.trim() && brand.industry.trim(), `role/industry not derived: “${brand.role}” / “${brand.industry}”`)
+    expect(brand.primary_goal_id, "no primary goal")
+  }
+  if (want.taglishIdeas) {
+    const taglish = ideas.filter((i) => /\b(ang|mga|sa|ng|mo|ko)\b|'to\b/i.test(`${i.hook} ${i.cta}`)).length
+    expect(taglish >= 10, `only ${taglish} ideas read as Taglish`)
+  }
+  return `${pillars.length} pillars · ${ideas.length} ideas · persona “${persona.name}” · ${platforms.length} platforms · ${slots.length} slots`
+}
+
+/* ------------------------------- Quick setup -------------------------------- */
+
+/** Screen 1 → the chosen language, the name and the platforms (and, with `errorShot`, the validation error first). */
+async function startScreen(page, lang, count, prefix, errorShot = false) {
+  const r = RUN[lang]
+  await go(page, "/")
+  await page.waitForURL(/\/onboarding/, { timeout: 60000 })
+  await page.locator("#ob-lang-english").waitFor({ timeout: 60000 })
+  const db = await workspace(page)
+  expect(!db.brand_profiles[0].onboarding_completed, "the new workspace is already onboarded")
+  expect(db.content_ideas.length === 0 && db.content_items.length === 0, "a new workspace should hold no content")
+  await tap(page.locator(`label[for="ob-lang-${lang}"]`))
+  await settle(page, 300)
+  expect((await heading(page)).includes(r.titles.start), `screen 1 isn't in ${lang}: “${await heading(page)}”`)
+  await count.screen(page)
+  await shot(page, `${prefix}-01-start`)
+  if (errorShot) {
+    await submit(page).click()
+    await page.locator('main [role="alert"]').first().waitFor({ timeout: 10000 })
+    expect((await page.locator('main [role="alert"]').count()) === 2, "screen 1 should flag the name and the platforms")
+    await shot(page, `${prefix}-01b-start-error`)
+  }
+  await page.fill("#ob-name", "Mika Reyes")
+  const group = page.locator('[role="group"][aria-labelledby="ob-platforms-title"]')
+  for (const p of ["Facebook", "TikTok"]) await tap(group.locator("button", { hasText: p }).first())
+  await advance(page, count)
+  expect((await heading(page)).includes(r.titles.about), `screen 2 isn't in ${lang}: “${await heading(page)}”`)
+  return `${db.content_formats.length} formats in the starter library`
+}
+
+/** Finish setup → the Building screen (screenshotted while the ideas are held) → Home with the checklist. */
+async function finishAndLand(page, lang, count, prefix, { failOnce = "" } = {}) {
+  const r = RUN[lang]
+  const release = await holdIdeas(page, { failOnce })
+  await count.submitted(page)
+  await submit(page).click()
+  await page.locator("#ob-building-title").waitFor({ timeout: 30000 })
+  if (failOnce) {
+    // The failed request shows its error with Try again; the answers are kept.
+    const alert = page.locator('main [role="alert"]')
+    await alert.waitFor({ timeout: 30000 })
+    expect((await alert.innerText()).includes("unavailable (test)"), "the Building screen doesn't show the error")
+    await shot(page, `${prefix}-05a-building-error`)
+    await alert.getByRole("button").first().click()
+  }
+  expect((await page.locator("#ob-building-title").innerText()).includes(r.titles.building), "the Building screen isn't in the chosen language")
+  await page.waitForFunction(() => document.querySelectorAll("main li svg.text-good-fg").length >= 4, null, { timeout: 30000 })
+  await shot(page, `${prefix}-05-building`)
+  await release()
+  await page.waitForURL((url) => new URL(url).pathname === "/", { timeout: 60000 })
+  await settle(page, 1500)
+  await page.getByText(r.checklistVoice).first().waitFor({ timeout: 30000 })
+  await shot(page, `${prefix}-06-home`, true)
+}
 
 async function firstRun(lang) {
   const r = RUN[lang]
+  const count = counter(`[${lang}] Quick setup`)
   const { context, page } = await newPage()
   let niche = ""
+  let persona = ""
 
-  await step(page, `[${lang}] a new browser is sent to /onboarding`, async () => {
-    await go(page, "/")
-    await page.waitForURL(/\/onboarding/, { timeout: 60000 })
-    await page.locator("#ob-lang-english").waitFor({ timeout: 60000 })
-    const db = await workspace(page)
-    expect(!db.brand_profiles[0].onboarding_completed, "the new workspace is already onboarded")
-    expect(db.content_ideas.length === 0 && db.content_items.length === 0, "a new workspace should hold no content")
-    return `${db.content_formats.length} formats in the starter library`
-  })
+  await step(page, `[${lang}] a new browser lands on screen 1; name and platforms are required`, () => startScreen(page, lang, count, lang, true))
 
-  await step(page, `[${lang}] welcome: pick the language`, async () => {
-    await tap(page.locator(`label[for="ob-lang-${lang}"]`))
-    await shot(page, `${lang}-01-welcome`)
-    await advance(page)
-    expect((await heading(page)).includes(r.hilig), `the hilig step isn't in ${lang}: “${await heading(page)}”`)
-  })
-
-  await step(page, `[${lang}] hilig: two suggestions and one of my own`, async () => {
+  await step(page, `[${lang}] about you: two interests, one skill, "Show more"`, async () => {
     await tap(chip(page, "Personal finance"))
     await tap(chip(page, "Ipon & budgeting"))
-    await addChip(page, "ob-interests", "K-drama")
-    await shot(page, `${lang}-02-hilig`)
-    await advance(page)
+    await tap(chip(page, "Bookkeeping"))
+    await shot(page, `${lang}-02-about`)
+    await tap(page.locator("main button[aria-expanded]").first())
+    await shot(page, `${lang}-02b-about-more`, true)
+    await advance(page, count)
+    expect((await heading(page)).includes(r.titles.who), `screen 3 isn't in ${lang}`)
   })
 
-  await step(page, `[${lang}] galing: skills, help, years, proof and a story`, async () => {
-    await addChip(page, "ob-expertise_areas", "Bookkeeping")
-    await tap(chip(page, "BIR & taxes"))
-    await page.fill("#ob-help_requests", r.help)
-    await page.fill("#ob-years_experience", "6")
-    await page.fill("#ob-proof", r.proof)
-    await page.fill("#ob-story", r.story)
-    await shot(page, `${lang}-03-galing`, true)
-    await advance(page)
-  })
-
-  await step(page, `[${lang}] kanino: audience, stage, goal and three problems`, async () => {
+  await step(page, `[${lang}] who you help: an audience, a suggested #1 problem, one aim`, async () => {
     await tap(chip(page, "Freelancers"))
-    await page.fill("#ob-persona_profession", r.stage)
-    await page.fill("#ob-audience_goal", r.goal)
-    await tap(page.locator("main button", { hasText: exact(r.level) }).first())
-    for (const problem of r.problems) await addChip(page, "ob-persona_problems", problem)
-    await shot(page, `${lang}-04-kanino`, true)
-    await advance(page)
+    const problems = page.locator("main [role=group]").filter({ has: page.locator("p", { hasText: r.problemsGroup }) })
+    await tap(problems.locator("button").first())
+    persona = "Freelancers"
+    await tap(page.locator("main button", { hasText: r.aim }).first())
+    const problem = await page.inputValue("#ob-persona_problems")
+    expect(problem.length > 5, "the suggested problem didn't fill the field")
+    await shot(page, `${lang}-03-who`, true)
+    await advance(page, count)
+    return `“${problem}”`
   })
 
-  await step(page, `[${lang}] para saan: clients and products`, async () => {
-    for (const aim of r.aims) await tap(page.locator("main button", { hasText: aim }).first())
-    await shot(page, `${lang}-05-para-saan`)
-    await advance(page)
-  })
-
-  await step(page, `[${lang}] niche: three directions, choose the audience-led one`, async () => {
-    const cards = page.locator("main article")
-    await cards.nth(2).waitFor({ timeout: 60000 })
-    expect((await cards.count()) === 3, `expected 3 niche cards, got ${await cards.count()}`)
-    const statements = await cards.evaluateAll((els) => els.map((el) => el.querySelector("h3 + p")?.textContent ?? ""))
-    expect(new Set(statements).size === 3, "the three directions aren't distinct")
-    expect(statements.every((s) => r.reads(s)), `suggestions aren't in ${lang}: ${JSON.stringify(statements)}`)
-    await shot(page, `${lang}-06-niche`, true)
-    await tap(cards.nth(2).getByRole("button", { name: r.choose }))
+  await step(page, `[${lang}] pick your niche: three directions + "Write my own", best match first`, async () => {
+    await radios(page).nth(3).waitFor({ timeout: 60000 })
+    expect((await radios(page).count()) === 4, `expected 3 directions + "Write my own", got ${await radios(page).count()}`)
+    const titles = await radios(page).evaluateAll((els) => els.slice(0, 3).map((el) => el.textContent ?? ""))
+    expect(new Set(titles).size === 3, "the three directions aren't distinct")
+    expect(titles.every((s) => r.reads(s)), `directions aren't in ${lang}: ${JSON.stringify(titles)}`)
+    expect(await radios(page).first().locator("[data-slot=badge]").count(), "the first direction isn't marked Best match")
+    await shot(page, `${lang}-04-pick`)
+    // A validation error when nothing is picked.
+    await submit(page).click()
+    await page.locator('main [role="alert"]').first().waitFor({ timeout: 10000 })
+    await shot(page, `${lang}-04b-pick-error`)
+    // Details on demand.
+    await tap(page.getByRole("button", { name: r.seeDetails }).first())
+    await shot(page, `${lang}-04c-details`, true)
+    // "Write my own" opens one field.
+    await tap(radios(page).nth(3))
+    await page.locator("textarea#ob-niche").waitFor()
+    await shot(page, `${lang}-04d-write-own`, true)
+    // Keyboard: arrows move the radio selection back to the first direction.
+    await radios(page).nth(3).focus()
+    await page.keyboard.press("Home")
     await settle(page, 300)
-    niche = await page.inputValue("#ob-niche")
-    expect(niche.length > 20, "choosing a direction didn't fill the niche")
-    await page.locator("#ob-clarity-title").waitFor()
-    await shot(page, `${lang}-07-niche-chosen`, true)
-    await advance(page)
+    expect((await radios(page).first().getAttribute("aria-checked")) === "true", "Home didn't select the best match")
+    const draft = await page.evaluate(() => Object.entries(localStorage).find(([k]) => k.startsWith("pbos:onboarding:"))?.[1])
+    niche = JSON.parse(draft).answers.niche
+    expect(niche.length > 20, "choosing a direction didn't set the niche")
     return `“${niche}”`
   })
 
-  await step(page, `[${lang}] identity: pre-filled industry, name and role`, async () => {
-    const industry = await page.inputValue("#ob-industry")
-    expect(industry.trim().length > 0, "industry wasn't pre-filled from the niche")
-    await page.fill("#ob-name", "Mika Reyes")
-    await page.fill("#ob-role", "Freelance bookkeeper")
-    await page.fill("#ob-location", "Quezon City")
-    await shot(page, `${lang}-08-identity`)
-    await advance(page)
-    return `industry “${industry}”`
-  })
-
-  await step(page, `[${lang}] platforms & schedule`, async () => {
-    const group = page.locator('[role="group"][aria-label="Main platforms"]')
-    for (const p of ["Facebook", "TikTok", "LinkedIn"]) await tap(group.locator("button", { hasText: p }).first())
-    await shot(page, `${lang}-09-platforms`, true)
-    await advance(page)
-  })
-
-  await step(page, `[${lang}] voice: personality traits`, async () => {
-    const traits = page.locator('[aria-label="Personality"]')
-    for (const trait of ["Direct", "Practical"]) await tap(traits.locator("button", { hasText: exact(trait) }).first())
-    await shot(page, `${lang}-10-voice`, true)
-    await advance(page)
-  })
-
-  await step(page, `[${lang}] pillars come from the niche and total 100%`, async () => {
-    const list = page.locator("#ob-pillars")
-    await list.waitFor()
-    const selected = await list.locator('button[role="checkbox"][data-state="checked"]').count()
-    expect(selected >= 4 && selected <= 6, `${selected} pillars selected`)
-    expect((await page.locator("main").innerText()).includes("100%"), "the pillar mix doesn't total 100%")
-    await shot(page, `${lang}-11-pillars`, true)
-    await advance(page) // "Generate my strategy"
-    await page.locator("#ob-ideas-title").waitFor({ timeout: 90000 })
-    return `${selected} niche pillars`
-  })
-
-  await step(page, `[${lang}] strategy: starter ideas inside the niche`, async () => {
-    const rows = await page.locator('section[aria-labelledby="ob-ideas-title"] li').count()
-    expect(rows >= 25, `only ${rows} starter ideas`)
-    await shot(page, `${lang}-12-strategy`, true)
-    return `${rows} starter ideas`
-  })
-
-  await step(page, `[${lang}] finish setup lands on "/" with everything stored`, async () => {
-    await submit(page).click()
-    await page.waitForURL((url) => new URL(url).pathname === "/", { timeout: 60000 })
-    await settle(page, 1200)
-    const db = await workspace(page)
-    const brand = db.brand_profiles[0]
-    expect(brand.onboarding_completed === true, "onboarding_completed is not true")
-    expect(brand.niche === niche, `brand.niche is “${brand.niche}”, expected “${niche}”`)
-    expect(brand.interests.includes("Personal finance") && brand.interests.includes("K-drama"), `interests: ${JSON.stringify(brand.interests)}`)
-    expect(/\/10/.test(brand.niche_fit), `niche_fit: “${brand.niche_fit}”`)
-    expect(brand.language === lang, `brand.language is ${brand.language}`)
-    expect(brand.expertise_areas.includes("Bookkeeping"), "expertise areas missing")
-    const pillars = db.content_pillars.filter((p) => p.is_active)
-    const total = pillars.reduce((a, p) => a + p.target_percentage, 0)
-    expect(total === 100, `active pillars total ${total}%`)
-    expect(!pillars.some((p) => /^(Education|Authority|Journey|Leadership|Personal|Business)$/.test(p.name)), "generic preset pillars were saved instead of niche pillars")
-    const persona = db.audience_personas.find((p) => p.is_primary)
-    expect(persona?.name === "Freelancers", `primary persona: ${persona?.name}`)
-    const problems = db.audience_problems.filter((p) => p.persona_id === persona.id)
-    expect(problems.length >= 3, `${problems.length} problems for the persona`)
-    const ideas = db.content_ideas.filter((i) => i.source === "onboarding")
-    expect(ideas.length >= 25, `${ideas.length} onboarding ideas`)
-    expect(db.stories.length === 1, `${db.stories.length} stories`)
-    if (lang === "taglish") {
-      const taglish = ideas.filter((i) => /\b(ang|mga|sa|ng|mo|ko)\b|'to\b/i.test(`${i.hook} ${i.cta}`)).length
-      expect(taglish >= 10, `only ${taglish} ideas read as Taglish`)
-    }
-    return `${pillars.length} pillars · ${ideas.length} ideas · persona “${persona.name}” with ${problems.length} problems`
+  await step(page, `[${lang}] finish setup: Building screen, then Home with everything stored`, async () => {
+    await finishAndLand(page, lang, count, lang)
+    const detail = checkWorkspace(await workspace(page), {
+      niche,
+      lang,
+      uiLang: lang === "english" ? "en" : "tl",
+      nichePillars: true,
+      persona: new RegExp(persona),
+      platforms: ["facebook", "tiktok"],
+      quick: true,
+      taglishIdeas: lang === "taglish",
+    })
+    return `${detail} — ${count.report()}`
   })
 
   return { context, page }
 }
 
+/** "I already know my niche": screen 1, the shortcut on screen 2, one sentence on screen 4. */
+async function shortcutRun(lang) {
+  const r = RUN[lang]
+  const count = counter(`[${lang}] shortcut`)
+  const { context, page } = await newPage()
+  await step(page, `[${lang}] shortcut: screen 1`, () => startScreen(page, lang, count, `shortcut-${lang}`))
+  await step(page, `[${lang}] shortcut: "${r.knowNiche}" opens "Write my own" on screen 4`, async () => {
+    await tap(page.getByRole("button", { name: r.knowNiche }))
+    await page.locator("textarea#ob-niche").waitFor({ timeout: 30000 })
+    expect((await heading(page)).includes(r.titles.pick), "the shortcut didn't land on screen 4")
+    await count.screen(page)
+    expect((await radios(page).last().getAttribute("aria-checked")) === "true", "“Write my own” isn't selected")
+    await page.fill("#ob-niche", r.written)
+    await shot(page, `shortcut-${lang}-04-own`, true)
+  })
+  await step(page, `[${lang}] shortcut: the written niche alone builds pillars, persona and ideas`, async () => {
+    await finishAndLand(page, lang, count, `shortcut-${lang}`, { failOnce: "niche_discovery" })
+    const detail = checkWorkspace(await workspace(page), { niche: r.written, lang, nichePillars: true, persona: /nurse/i, platforms: ["facebook", "tiktok"], quick: true })
+    return `${detail} — ${count.report()}`
+  })
+  await context.close()
+}
+
 /* ------------------------- Niche Discovery re-run ------------------------- */
 
-async function nicheRerun(page, { replace = true } = {}) {
+async function nicheRerun(page) {
+  const count = counter("[niche] Niche Discovery re-run")
   let niche = ""
   let before = []
-  await step(page, "[niche] /onboarding?step=niche opens Niche Discovery pre-filled", async () => {
+  let chosenPillars = []
+  await step(page, "[niche] /onboarding?step=niche opens screens 2–4 pre-filled", async () => {
     before = (await workspace(page)).content_pillars.filter((p) => p.is_active).map((p) => p.id)
     await go(page, "/onboarding?step=niche")
     await page.locator("#ob-interests").waitFor({ timeout: 60000 })
+    await count.screen(page)
     const chips = await page.locator('[data-slot="token"]').count()
     expect(chips >= 2, "interests weren't pre-filled from Brand HQ")
-    await shot(page, "niche-01-hilig")
-    for (let i = 0; i < 4; i++) await advance(page)
+    await shot(page, "niche-01-about")
+    await advance(page, count)
+    await advance(page, count)
     return `${chips} pre-filled chips`
   })
 
-  await step(page, "[niche] choose a new direction and replace pillars (confirmed)", async () => {
-    const cards = page.locator("main article")
-    await cards.nth(2).waitFor({ timeout: 60000 })
-    const chosenPillars = await cards.nth(0).locator("ul").first().locator("li > span.truncate").allInnerTexts()
-    await tap(cards.nth(0).getByRole("button", { name: /Choose this|Piliin 'to/ }))
+  await step(page, "[niche] choose the best match and replace pillars (confirmed)", async () => {
+    await radios(page).nth(3).waitFor({ timeout: 60000 })
+    await tap(page.locator("main button[aria-controls^=ob-niche-details]").first())
+    chosenPillars = await page.locator("#ob-niche-details-0 ul").first().locator("li > span.truncate").allInnerTexts()
+    await tap(radios(page).first())
     await settle(page, 300)
-    niche = await page.inputValue("#ob-niche")
-    if (replace) await tap(page.locator('label[for="ob-replace-pillars"]'))
-    await shot(page, "niche-02-chosen", true)
+    const draft = await page.evaluate(() => Object.entries(localStorage).find(([k]) => k.startsWith("pbos:onboarding:"))?.[1])
+    niche = JSON.parse(draft).answers.niche
+    await tap(page.locator('label[for="ob-replace-pillars"]'))
+    await shot(page, "niche-02-pick", true)
+    await count.submitted(page)
     await submit(page).click()
-    if (replace) {
-      const dialog = page.locator('[role="alertdialog"]')
-      await dialog.waitFor({ timeout: 10000 })
-      await shot(page, "niche-03-confirm")
-      await dialog.getByRole("button", { name: /Replace pillars|Palitan ang pillars/ }).click()
-    }
+    const dialog = page.locator('[role="alertdialog"]')
+    await dialog.waitFor({ timeout: 10000 })
+    await shot(page, "niche-03-confirm")
+    await dialog.getByRole("button", { name: /Replace pillars|Palitan ang pillars/ }).click()
     await page.waitForURL((url) => new URL(url).pathname === "/strategy", { timeout: 60000 })
     await settle(page, 1200)
     const db = await workspace(page)
-    expect(db.brand_profiles[0].niche === niche, `brand.niche is “${db.brand_profiles[0].niche}”`)
+    const lang = db.brand_profiles[0].language
+    const detail = checkWorkspace(db, { niche, lang, nichePillars: true })
     const active = db.content_pillars.filter((p) => p.is_active)
-    const total = active.reduce((a, p) => a + p.target_percentage, 0)
-    expect(total === 100, `active pillars total ${total}%`)
-    if (replace) {
-      // Pillars are matched by name: shared names are updated in place, the rest are switched off.
-      const names = active.map((p) => p.name).sort()
-      expect(JSON.stringify(names) === JSON.stringify([...chosenPillars].sort()), `active pillars ${JSON.stringify(names)} ≠ chosen ${JSON.stringify(chosenPillars)}`)
-      const stale = db.content_pillars.filter((p) => before.includes(p.id) && !chosenPillars.includes(p.name) && p.is_active)
-      expect(!stale.length, `old pillars still active: ${stale.map((p) => p.name).join(", ")}`)
-    }
+    // Pillars are matched by name: shared names are updated in place, the rest are switched off.
+    const names = active.map((p) => p.name).sort()
+    expect(JSON.stringify(names) === JSON.stringify([...chosenPillars].sort()), `active pillars ${JSON.stringify(names)} ≠ chosen ${JSON.stringify(chosenPillars)}`)
+    const stale = db.content_pillars.filter((p) => before.includes(p.id) && !chosenPillars.includes(p.name) && p.is_active)
+    expect(!stale.length, `old pillars still active: ${stale.map((p) => p.name).join(", ")}`)
     expect(db.content_pillars.filter((p) => before.includes(p.id)).length === before.length, "pillars were deleted instead of switched off")
-    return `“${niche}” · ${active.length} active pillars`
+    return `“${niche}” · ${detail} — ${count.report()}`
+  })
+}
+
+/* ---------------------------- Detailed setup -------------------------------- */
+
+async function detailedRerun(page) {
+  const count = counter("[detailed] Detailed setup (re-run)")
+  await step(page, "[detailed] /onboarding offers the Detailed setup on a finished workspace", async () => {
+    await go(page, "/onboarding")
+    const db = await workspace(page)
+    const lang = db.brand_profiles[0].language === "english" ? "english" : "taglish"
+    const button = page.getByRole("button", { name: RUN[lang].detailed })
+    await button.waitFor({ timeout: 30000 })
+    await shot(page, "detailed-00-already-set-up")
+    await tap(button)
+    await page.locator("#ob-lang-english").waitFor({ timeout: 30000 })
+    await count.screen(page)
+    return lang
+  })
+
+  await step(page, "[detailed] every step, pre-filled from Brand HQ; voice needs a personality", async () => {
+    let i = 1
+    for (;;) {
+      const h = await heading(page)
+      await shot(page, `detailed-${String(i).padStart(2, "0")}`)
+      if (await page.locator("#ob-personality").count()) {
+        const traits = page.locator('[aria-label="Personality"]')
+        for (const trait of ["Direct", "Practical"]) await tap(traits.locator("button", { hasText: exact(trait) }).first())
+      }
+      if (await page.locator("#ob-ideas-title").count()) break
+      await advance(page, count)
+      if ((await heading(page)) === h) throw new Error(`stuck on “${h}”`)
+      if (await page.locator("#ob-pillars").count()) {
+        // The next Continue is "Generate my strategy": wait for the ideas.
+        await advance(page, count)
+        await page.locator("#ob-ideas-title").waitFor({ timeout: 90000 })
+      }
+      i++
+      if (i > 14) throw new Error("the detailed setup never reached the strategy step")
+    }
+    return `${i} screens walked`
+  })
+
+  await step(page, "[detailed] finish setup lands on \"/\" with everything stored", async () => {
+    await count.submitted(page)
+    await submit(page).click()
+    await page.waitForURL((url) => new URL(url).pathname === "/", { timeout: 60000 })
+    await settle(page, 1200)
+    const db = await workspace(page)
+    const detail = checkWorkspace(db, { lang: db.brand_profiles[0].language })
+    expect(db.brand_profiles[0].personality_traits.length >= 1, "the Detailed setup didn't save the personality")
+    return `${detail} — ${count.report()}`
   })
 }
 
@@ -346,13 +500,18 @@ async function nicheRerun(page, { replace = true } = {}) {
 if (SEED === "none") {
   for (const lang of LANGS) {
     const { context, page } = await firstRun(lang)
-    if (lang === "english") await nicheRerun(page)
+    if (lang === "english") {
+      await nicheRerun(page)
+      await detailedRerun(page)
+    }
     await context.close()
   }
+  await shortcutRun(LANGS[LANGS.length - 1])
 } else {
   const { context, page } = await newPage()
   await go(page, "/")
   await nicheRerun(page)
+  await detailedRerun(page)
   await context.close()
 }
 
@@ -361,4 +520,6 @@ if (errors.length) {
   console.log(`✗ page errors during the flow: ${JSON.stringify(errors.slice(0, 8))}`)
   process.exit(1)
 }
+console.log("\nScreens and required fields per pass:")
+for (const line of summary) console.log(`  ${line}`)
 console.log("✓ onboarding flow complete — no page errors")

@@ -13,6 +13,9 @@ import { countedSteps, DISCOVERY_STEPS, stepNumber, type StepKey } from "./onboa
 export type WizardWidth = "narrow" | "wide"
 export const WIDTH_CLASS: Record<WizardWidth, string> = { narrow: "max-w-2xl", wide: "max-w-6xl" }
 
+/** Phones get 44px tap targets (chips, tiles, inputs and the footer buttons); desktop stays dense. */
+export const TAP = "max-sm:h-11"
+
 /** English / Taglish switch, available on every step. */
 export function LanguageToggle({ lang, onChange, className }: { lang: OnboardingLang; onChange: (lang: OnboardingLang) => void; className?: string }) {
   const copy = useCopy()
@@ -36,7 +39,35 @@ export function LanguageToggle({ lang, onChange, className }: { lang: Onboarding
   )
 }
 
-/** Sticky top bar: mark, step counter, language, theme, optional exit and the progress, grouped by phase. */
+/** Quick setup progress: one thin bar and "2 of 4 · About you". */
+function ProgressBar({ flow, step }: { flow: readonly StepKey[]; step: number }) {
+  const copy = useCopy()
+  const counted = countedSteps(flow)
+  const number = stepNumber(flow, step)
+  const label = copy.steps[flow[step]]?.short ?? ""
+  return (
+    <div className="mx-auto flex w-full max-w-2xl items-center gap-3 px-4 pb-2.5 md:px-6">
+      <div
+        role="progressbar"
+        aria-label={copy.common.progress}
+        aria-valuemin={0}
+        aria-valuemax={counted.length}
+        aria-valuenow={number}
+        aria-valuetext={`${copy.common.progressOf(number, counted.length)} · ${label}`}
+        className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
+      >
+        <span className="block h-full rounded-full bg-brand" style={{ width: `${(number / counted.length) * 100}%` }} />
+      </div>
+      <p aria-hidden className="shrink-0 text-xs text-muted-foreground num">
+        {copy.common.progressOf(number, counted.length)}
+        <span className="text-muted-foreground/70"> · </span>
+        <span className="font-medium text-foreground">{label}</span>
+      </p>
+    </div>
+  )
+}
+
+/** Sticky top bar: mark, language, theme, optional exit and the progress — one thin bar (Quick setup) or the steps grouped by phase (detailed setup). */
 export function WizardHeader({
   flow,
   step,
@@ -46,6 +77,8 @@ export function WizardHeader({
   exitHref,
   lang,
   onLangChange,
+  progress = "steps",
+  showLanguage = true,
 }: {
   flow: readonly StepKey[]
   step: number
@@ -56,6 +89,9 @@ export function WizardHeader({
   exitHref?: string | null
   lang: OnboardingLang
   onLangChange: (lang: OnboardingLang) => void
+  progress?: "bar" | "steps"
+  /** Off on the screen that has its own, larger language choice. */
+  showLanguage?: boolean
 }) {
   const copy = useCopy()
   const counted = countedSteps(flow)
@@ -72,8 +108,8 @@ export function WizardHeader({
         <span aria-hidden className="h-4 w-px shrink-0 bg-border" />
         <p className="min-w-0 truncate text-xs text-muted-foreground">{subtitle}</p>
         <div className="ml-auto flex items-center gap-1">
-          {number ? <span className="mr-1 hidden text-xs text-muted-foreground sm:inline num">{copy.common.stepOf(number, counted.length)}</span> : null}
-          <LanguageToggle lang={lang} onChange={onLangChange} />
+          {number && progress === "steps" ? <span className="mr-1 hidden text-xs text-muted-foreground sm:inline num">{copy.common.stepOf(number, counted.length)}</span> : null}
+          {showLanguage ? <LanguageToggle lang={lang} onChange={onLangChange} /> : null}
           <ThemeToggle />
           {exitHref ? (
             <>
@@ -90,7 +126,8 @@ export function WizardHeader({
           ) : null}
         </div>
       </div>
-      {number ? (
+      {number && progress === "bar" ? <ProgressBar flow={flow} step={step} /> : null}
+      {number && progress === "steps" ? (
         <nav aria-label={copy.common.progress} className="mx-auto flex w-full max-w-6xl gap-3 px-4 pb-2 md:px-6">
           {groups.map((group) => (
             <div key={group.label} className="min-w-0" style={{ flex: group.keys.length }}>
@@ -142,7 +179,7 @@ export function WizardHeader({
 
 const IS_MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/i.test(navigator.userAgent)
 
-/** Sticky bottom bar: Back on the left; keyboard hint, extras and the primary action on the right. */
+/** Sticky bottom bar: Back on the left; keyboard hint (keyboards only), extras and the primary action on the right. */
 export function WizardFooter({
   width,
   onBack,
@@ -160,13 +197,13 @@ export function WizardFooter({
     <footer className="sticky bottom-0 z-20 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className={cn("mx-auto flex min-h-16 w-full items-center gap-2 px-4 py-3 md:px-6", WIDTH_CLASS[width])}>
         {onBack ? (
-          <Button type="button" variant="ghost" onClick={onBack} disabled={backDisabled}>
+          <Button type="button" variant="ghost" onClick={onBack} disabled={backDisabled} className={TAP}>
             <ArrowLeft aria-hidden />
             {copy.common.back}
           </Button>
         ) : null}
         <div className="ml-auto flex min-w-0 items-center gap-2">
-          <span className="hidden items-center gap-1.5 text-xs text-muted-foreground lg:flex">
+          <span className="hidden items-center gap-1.5 text-xs text-muted-foreground lg:flex pointer-coarse:hidden">
             <KbdGroup>
               <Kbd>{IS_MAC ? "⌘" : "Ctrl"}</Kbd>
               <Kbd>Enter</Kbd>

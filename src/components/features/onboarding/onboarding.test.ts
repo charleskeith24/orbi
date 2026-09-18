@@ -13,14 +13,17 @@ import { applyOnboardingPlan } from "./apply-onboarding"
 import { COPY } from "./copy"
 import { EN } from "./copy-en"
 import { TL } from "./copy-tl"
-import { applyNicheOption, clarityChecks, nicheInput, nicheKey, pillarsFromOption, pillarsMatchOption, startOwnNiche } from "./niche-model"
+import { applyNicheOption, clarityChecks, nicheInput, nicheKey, pillarsFromOption, pillarsMatchOption, problemSuggestions, startOwnNiche, writtenNicheInput } from "./niche-model"
+import { createDraft, parseDraft, serializeDraft } from "./onboarding-draft"
 import { assignPillars, effectivePillars, goalForIdea, matchProblem, toIdeaDrafts, type IdeaDraft } from "./onboarding-ideas"
 import {
   answersFromWorkspace,
+  countedSteps,
   distributeTotal,
   emptyAnswers,
   evenPillars,
   firstInvalidStep,
+  flowFor,
   FULL_FLOW,
   goalsFromAims,
   largestRemainder,
@@ -29,6 +32,7 @@ import {
   pillarColors,
   pillarTotal,
   presetPillars,
+  QUICK_FLOW,
   rebalancePillars,
   recommendedSchedule,
   sanitizeAnswers,
@@ -41,6 +45,7 @@ import {
   type OnboardingAnswers,
 } from "./onboarding-model"
 import { planNicheUpdate, planOnboarding, planStarterLibrary, storyTitle } from "./onboarding-plan"
+import { bestMatchIndex, canSuggestNiches, optionForWrittenNiche, quickSetupAnswers, rankedOptions, roleFor, type QuickAnswers } from "./quick-setup"
 
 const NOW = new Date(2026, 8, 13, 10, 0, 0)
 const USER = "00000000-0000-4000-8000-000000000001"
@@ -146,12 +151,19 @@ describe("onboarding model", () => {
     }
   })
 
-  it("starts with Niche Discovery; the welcome screen isn't counted", () => {
+  it("runs Quick setup on a first run, the detailed setup on a re-run and screens 2–4 for Niche Discovery", () => {
+    expect(flowFor("first")).toBe(QUICK_FLOW)
+    expect(QUICK_FLOW).toEqual(["start", "about", "who", "pick"])
+    expect(countedSteps(QUICK_FLOW)).toHaveLength(4)
+    expect(QUICK_FLOW.map((_, i) => stepNumber(QUICK_FLOW, i))).toEqual([1, 2, 3, 4])
+    expect(flowFor("niche")).toBe(NICHE_FLOW)
+    expect(NICHE_FLOW).toEqual(QUICK_FLOW.slice(1))
+    // The detailed setup keeps Niche Discovery first; its welcome screen isn't counted.
+    expect(flowFor("rerun")).toBe(FULL_FLOW)
     expect(FULL_FLOW.slice(0, 6)).toEqual(["welcome", "hilig", "galing", "kanino", "para_saan", "niche"])
     expect(stepNumber(FULL_FLOW, 0)).toBe(0)
     expect(stepNumber(FULL_FLOW, 1)).toBe(1)
     expect(stepNumber(FULL_FLOW, FULL_FLOW.length - 1)).toBe(10)
-    expect(NICHE_FLOW).toEqual(["hilig", "galing", "kanino", "para_saan", "niche"])
   })
 
   it("validates each step in English and Taglish", () => {
@@ -164,7 +176,7 @@ describe("onboarding model", () => {
     expect(validateStep("niche", blank).niche).toBeTruthy()
     expect(Object.keys(validateStep("identity", blank)).sort()).toEqual(["industry", "name", "role"])
     expect(firstInvalidStep(filledAnswers())).toBe(-1)
-    expect(firstInvalidStep(filledAnswers(), NICHE_FLOW, NICHE_FLOW.length)).toBe(-1)
+    expect(firstInvalidStep({ ...filledAnswers(), own_niche: true }, NICHE_FLOW, NICHE_FLOW.length)).toBe(-1)
     const pillars = filledAnswers()
     pillars.pillars[0] = { ...pillars.pillars[0], target: 40 }
     expect(validateStep("pillars", pillars).pillars).toMatch(/110%/)
@@ -488,5 +500,206 @@ describe("first run end to end (offline engine)", () => {
     expect(plan.summary.ideas).toBeGreaterThanOrEqual(25)
     expect(plan.brand).toMatchObject({ niche: option.niche_statement, onboarding_completed: true, language: lang })
     expect(plan.inserts.content_pillars?.map((p) => p.name)).toEqual(option.pillars.map((p) => p.name))
+  })
+})
+
+describe("quick setup", () => {
+  const quick = (over: Partial<QuickAnswers> = {}): QuickAnswers => ({
+    name: "Mika Reyes",
+    platforms: ["tiktok", "facebook"],
+    interests: ["Personal finance", "Ipon & budgeting"],
+    expertise_areas: [],
+    audiences: ["Freelancers"],
+    persona_problems: [],
+    aims: [],
+    ...over,
+  })
+  const answersOf = (q: QuickAnswers): OnboardingAnswers => ({ ...emptyAnswers(), ...q })
+  const discover = (a: OnboardingAnswers, lang: "english" | "taglish" = "english") =>
+    discoverNiches(nicheDiscoveryTask.input.parse(nicheInput(a, lang))).options
+
+  it("blocks each screen only on its required fields", () => {
+    const blank = emptyAnswers()
+    expect(Object.keys(validateStep("start", blank)).sort()).toEqual(["name", "platforms"])
+    expect(Object.keys(validateStep("about", blank))).toEqual(["interests"])
+    expect(Object.keys(validateStep("who", blank))).toEqual(["audiences"])
+    expect(validateStep("pick", blank).niche).toBe(EN.errors.pickNiche)
+    expect(validateStep("pick", blank, TL.errors).niche).toBe(TL.errors.pickNiche)
+
+    // Skills, the #1 problem and aims are optional.
+    const a = answersOf(quick())
+    for (const key of ["start", "about", "who"] as const) expect(validateStep(key, a)).toEqual({})
+    expect(validateStep("about", { ...a, interests: ["Coffee"] }).interests).toBe(EN.errors.interests)
+    const option = discover(a)[0]
+    expect(validateStep("pick", { ...a, ...applyNicheOption(a, option, { replacePillars: true, copy: EN }) })).toEqual({})
+
+    // Writing your own niche: only the sentence is needed, and screens 2–3 become optional.
+    const own = { ...emptyAnswers(), name: "Mika", platforms: ["facebook" as const], own_niche: true }
+    expect(validateStep("pick", own).niche).toBe(EN.errors.ownNiche)
+    expect(firstInvalidStep({ ...own, niche: "Budget meal prep for busy nurses" }, QUICK_FLOW, QUICK_FLOW.length)).toBe(-1)
+    expect(firstInvalidStep(own, QUICK_FLOW, QUICK_FLOW.length)).toBe(3)
+    expect(canSuggestNiches(own)).toBe(false)
+    expect(canSuggestNiches(a)).toBe(true)
+  })
+
+  it("fills in everything from four screens: identity, schedule, pillars, persona, goals — no invented voice", () => {
+    const a = answersOf(quick({ persona_problems: ["Doesn't know how to file taxes"] }))
+    const options = discover(a)
+    const option = options[bestMatchIndex(options)]
+    const full = quickSetupAnswers(a, { option }, "english")
+
+    expect(full).toMatchObject({ name: "Mika Reyes", role: roleFor(option.industry), industry: option.industry, location: "", language: "english" })
+    expect(full.role).toMatch(/ creator$/)
+    expect(full.niche).toBe(option.niche_statement)
+    expect(full.niche_option).toEqual(option)
+    expect(full.niche_fit).toMatch(/Passion \d+\/10/)
+    expect({ audience: full.audience, result: full.result, method: full.method }).toEqual({
+      audience: option.positioning_audience,
+      result: option.positioning_result,
+      method: option.positioning_method,
+    })
+    // Recommended weekly strategy for the chosen platforms.
+    expect(full.platforms).toEqual(["facebook", "tiktok"])
+    expect(full.schedule_mode).toBe("recommended")
+    expect(weeklyTotal(full)).toBe(5)
+    // Pillars from the chosen direction, totalling 100.
+    expect(selectedPillars(full).map((p) => p.name)).toEqual(option.pillars.map((p) => p.name))
+    expect(pillarTotal(full.pillars)).toBe(100)
+    // No aims picked → build an audience (awareness), with no target.
+    expect(full.aims).toEqual(["audience"])
+    expect(full).toMatchObject({ primary_goal: "awareness", secondary_goal: null, goal_targets: { awareness: { value: null, period: "monthly" } } })
+    // Voice is the creator's call.
+    expect(full.tones).toEqual([])
+    expect(full.personality).toEqual([])
+
+    const plan = planOnboarding(createStarterDatabase(USER, NOW), { answers: full, ideas: [], lang: "english", now: NOW })
+    expect(plan.brand).toMatchObject({ onboarding_completed: true, name: "Mika Reyes", tones: [], personality_traits: [], language: "english", niche: option.niche_statement })
+    expect(plan.inserts.audience_personas?.[0]).toMatchObject({ name: "Freelancers", is_primary: true, platforms: ["facebook", "tiktok"] })
+    expect(plan.inserts.audience_problems?.map((p) => p.problem)).toEqual(["Doesn't know how to file taxes"])
+    const awareness = plan.updates.content_goals?.find((u) => u.patch.target_value === null)
+    expect(awareness).toBeTruthy()
+    expect(plan.summary).toMatchObject({ goals: 1, slots: 7, weeklyTarget: 5, pillars: option.pillars.length })
+
+    // Aims map to goals when picked; Taglish sets the brand language and fit labels.
+    const picked = quickSetupAnswers({ ...a, aims: ["clients", "products"] }, { option }, "taglish")
+    expect(picked).toMatchObject({ primary_goal: "leads", secondary_goal: "business", language: "taglish" })
+    expect(picked.niche_fit).toMatch(/^Hilig \d+\/10/)
+  })
+
+  it("ranks the best match first", () => {
+    const options = discover(answersOf(quick({ expertise_areas: ["Bookkeeping"] })))
+    const best = bestMatchIndex(options)
+    const total = (i: number) => options[i].fit.passion.score + options[i].fit.expertise.score + options[i].fit.demand.score
+    expect(options.every((_, i) => total(i) <= total(best))).toBe(true)
+    expect(rankedOptions(options)[0]).toBe(options[best])
+    expect(new Set(rankedOptions(options))).toEqual(new Set(options))
+  })
+
+  it.each(["english", "taglish"] as const)("%s: a written niche alone builds pillars, a persona and 30 ideas", async (lang) => {
+    const written = lang === "english" ? "Budget meal prep for busy nurses who work nights" : "Budget meal prep para sa mga nurse na pagod sa night shift"
+    const q = quick({ interests: [], audiences: [] })
+    const a = { ...answersOf(q), own_niche: true, niche: written }
+    expect(firstInvalidStep(a, QUICK_FLOW, QUICK_FLOW.length)).toBe(-1)
+
+    const res = await executeAiTask({ task: "niche_discovery", input: writtenNicheInput(a, lang, written), context: {} }, { provider: offlineProvider })
+    const options = (res.output as NicheDiscoveryOutput).options
+    const option = optionForWrittenNiche(options, written)!
+    expect(option).toBeTruthy()
+    const full = quickSetupAnswers(q, { option, written }, lang)
+    expect(full).toMatchObject({ niche: written, own_niche: true, niche_option: null, language: lang, known_for: written })
+    expect(pillarTotal(full.pillars)).toBe(100)
+    const pillars = selectedPillars(full).map((p) => p.name)
+    expect(pillars.length).toBeGreaterThanOrEqual(4)
+    expect(pillars.some((p) => /^(Education|Authority|Journey|Leadership|Personal|Business)$/.test(p))).toBe(false)
+    // The niche names its audience: that's the persona.
+    expect(full.audience.toLowerCase()).toContain("nurse")
+
+    const strategy = await executeAiTask({ task: "onboarding_strategy", input: strategyInput(full), context: {} }, { provider: offlineProvider })
+    const ideas = toIdeaDrafts((strategy.output as AiTaskOutput<"onboarding_strategy">).ideas)
+    expect(ideas.length).toBeGreaterThanOrEqual(20)
+    const plan = planOnboarding(createStarterDatabase(USER, NOW), { answers: full, ideas: ideas.map((idea) => ({ idea, title: idea.title, pillar: null })), lang, now: NOW })
+    expect(plan.summary.ideas).toBeGreaterThanOrEqual(20)
+    expect(plan.brand).toMatchObject({ niche: written, language: lang, onboarding_completed: true })
+    expect((plan.inserts.audience_personas?.[0]?.name ?? "").toLowerCase()).toContain("nurse")
+    expect(plan.inserts.content_calendar?.length ?? plan.updates.content_calendar?.length).toBeGreaterThan(0)
+  })
+
+  it("suggests #1 problems for the suggested audiences in the UI language", () => {
+    expect(problemSuggestions("Freelancers", "english")).toHaveLength(3)
+    expect(problemSuggestions("freelancers", "taglish")[0]).toMatch(/Hindi alam/)
+    expect(problemSuggestions("Birdwatchers", "english")).toEqual([])
+  })
+})
+
+describe("onboarding drafts", () => {
+  const WS = "brand-1|2026-09-13T00:00:00.000Z"
+  const stored = (draft: object) => JSON.parse(JSON.stringify(draft))
+
+  it("resumes by step key and round-trips", () => {
+    const draft = { ...createDraft(WS, "first", { ...emptyAnswers(), name: "Mika" }, "taglish"), step: 2, maxStep: 3 }
+    const restored = parseDraft(JSON.parse(serializeDraft(draft)), WS)
+    expect(restored).toMatchObject({ version: 3, mode: "first", lang: "taglish", step: 2, maxStep: 3 })
+    expect(restored?.answers.name).toBe("Mika")
+    expect(JSON.parse(serializeDraft(draft))).toMatchObject({ stepKey: "who", maxStepKey: "pick" })
+    expect(parseDraft(JSON.parse(serializeDraft(draft)), "another|workspace")).toBeNull()
+    expect(parseDraft("nonsense", WS)).toBeNull()
+    expect(parseDraft(null, WS)).toBeNull()
+  })
+
+  it("moves old drafts (step indexes into the 10-step flow) and unknown keys to screen 1, keeping the answers", () => {
+    const old = stored({
+      version: 2,
+      workspace: WS,
+      mode: "first",
+      lang: "english",
+      step: 7, // "platforms" in the old first run
+      maxStep: 9,
+      answers: { name: "Mika", platforms: ["facebook"], interests: ["Coffee", "Travel"], audiences: ["Freelancers"], persona_problems: ["No savings"], aims: ["clients"], tones: ["casual"] },
+      niche: null,
+      strategy: { key: "x", positioning_statement: "I help …", ideas: [] },
+    })
+    const migrated = parseDraft(old, WS)
+    expect(migrated).toMatchObject({ version: 3, step: 0, maxStep: 0 })
+    expect(migrated?.answers).toMatchObject({ name: "Mika", platforms: ["facebook"], interests: ["Coffee", "Travel"], audiences: ["Freelancers"], persona_problems: ["No savings"], aims: ["clients"], own_niche: false })
+    expect(validateStep("start", migrated!.answers)).toEqual({})
+
+    expect(parseDraft({ ...old, version: 3, stepKey: "hilig" }, WS)?.step).toBe(0)
+    expect(parseDraft({ ...old, version: 3, stepKey: 42 }, WS)?.step).toBe(0)
+    expect(parseDraft({ ...old, version: 3, stepKey: "pick" }, WS)?.step).toBe(3)
+    // The detailed flow didn't change: a re-run draft keeps its place.
+    expect(parseDraft({ ...old, mode: "rerun", step: 3 }, WS)?.step).toBe(3)
+    // An old Niche Discovery draft starts again on its first screen.
+    expect(parseDraft({ ...old, mode: "niche", step: 4 }, WS)?.step).toBe(0)
+  })
+})
+
+describe("quick setup end to end (offline engine)", () => {
+  it.each(["english", "taglish"] as const)("%s: four screens → best match → 30 ideas → workspace plan", async (lang) => {
+    const q: QuickAnswers = {
+      name: "Mika Reyes",
+      platforms: ["facebook", "tiktok"],
+      interests: ["Personal finance", "Ipon & budgeting"],
+      expertise_areas: ["Bookkeeping"],
+      audiences: ["Freelancers"],
+      persona_problems: [problemSuggestions("Freelancers", lang)[0]],
+      aims: ["clients"],
+    }
+    const a = { ...emptyAnswers(), ...q }
+    const niche = await executeAiTask({ task: "niche_discovery", input: nicheInput(a, lang), context: {} }, { provider: offlineProvider })
+    const options = (niche.output as NicheDiscoveryOutput).options
+    const option = rankedOptions(options)[0]
+    const chosen = { ...a, ...applyNicheOption(a, option, { replacePillars: true, copy: COPY[lang] }) }
+    expect(firstInvalidStep(chosen, QUICK_FLOW, QUICK_FLOW.length)).toBe(-1)
+
+    const full = quickSetupAnswers(chosen, { option }, lang)
+    const res = await executeAiTask({ task: "onboarding_strategy", input: strategyInput(full), context: {} }, { provider: offlineProvider })
+    const drafts = toIdeaDrafts((res.output as AiTaskOutput<"onboarding_strategy">).ideas)
+    expect(drafts).toHaveLength(30)
+    const names = effectivePillars(drafts, selectedPillars(full).map((p) => ({ name: p.name, description: p.description, examples: p.examples, target: p.target })))
+    const plan = planOnboarding(createStarterDatabase(USER, NOW), { answers: full, ideas: drafts.map((d, i) => ({ idea: d, title: d.title, pillar: names[i] })), lang, now: NOW })
+    expect(plan.summary.ideas).toBeGreaterThanOrEqual(25)
+    expect(plan.summary.pillars).toBe(option.pillars.length)
+    expect(plan.brand).toMatchObject({ niche: option.niche_statement, language: lang, primary_goal_id: expect.any(String) })
+    expect(plan.settings.ui_language).toBe(lang === "english" ? "en" : "tl")
   })
 })

@@ -3,6 +3,7 @@
 import { Check, CircleAlert, CircleCheck, Lightbulb, Plus } from "lucide-react"
 import { chipVariants, ChipToggleGroup, FormField, FormRow, ListEditor, NumberField, PlatformToggleGroup } from "@/components/common"
 import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
 import { useCopy } from "./copy"
 import { GALING_GROUPS, HILIG_GROUPS, KANINO_CHIPS } from "./niche-model"
 import { EXPERIENCE_LEVELS, LIMITS, norm } from "./onboarding-model"
@@ -10,16 +11,18 @@ import { fid, TextField, type StepProps } from "./steps-profile"
 import { StepSection } from "./wizard-chrome"
 
 /** Suggestion chips that add to (or remove from) a list the creator can also type into. */
-function SuggestionChips({
+export function SuggestionChips({
   groups,
   value,
   onChange,
   max,
+  chipClassName,
 }: {
   groups: { id: string; label: string | null; items: string[] }[]
   value: string[]
   onChange: (value: string[]) => void
   max: number
+  chipClassName?: string
 }) {
   const full = value.length >= max
   const has = (item: string) => value.some((x) => norm(x) === norm(item))
@@ -42,7 +45,7 @@ function SuggestionChips({
                   aria-pressed={on}
                   disabled={!on && full}
                   onClick={() => toggle(item)}
-                  className={chipVariants({ size: "default", selected: on })}
+                  className={cn(chipVariants({ size: "default", selected: on }), chipClassName)}
                 >
                   {on ? <Check aria-hidden /> : <Plus aria-hidden />}
                   {item}
@@ -67,24 +70,26 @@ export function HiligStep({ answers: a, update, errors }: StepProps) {
   const set = (interests: string[]) => update({ interests: cap(interests, LIMITS.interest) })
   return (
     <div className="flex flex-col gap-6">
-      <FormField
-        label={t.label}
-        required
-        htmlFor={fid("interests")}
-        error={errors.interests}
-        description={t.description}
-        labelAction={<span className="text-xs text-muted-foreground num">{t.count(count)}</span>}
-      >
-        <ListEditor
-          variant="chips"
-          id={fid("interests")}
-          value={a.interests}
-          onChange={set}
-          maxItems={LIMITS.interestsMax}
-          placeholder={t.placeholder}
-          aria-label={t.label}
-        />
-      </FormField>
+      <div data-ob-required>
+        <FormField
+          label={t.label}
+          required
+          htmlFor={fid("interests")}
+          error={errors.interests}
+          description={t.description}
+          labelAction={<span className="text-xs text-muted-foreground num">{t.count(count)}</span>}
+        >
+          <ListEditor
+            variant="chips"
+            id={fid("interests")}
+            value={a.interests}
+            onChange={set}
+            maxItems={LIMITS.interestsMax}
+            placeholder={t.placeholder}
+            aria-label={t.label}
+          />
+        </FormField>
+      </div>
       <StepSection title={t.suggestions}>
         <SuggestionChips groups={HILIG_GROUPS.map((g) => ({ id: g.id, label: t.groups[g.id], items: g.items }))} value={a.interests} onChange={set} max={LIMITS.interestsMax} />
       </StepSection>
@@ -104,17 +109,19 @@ export function GalingStep({ answers: a, update, errors }: StepProps) {
   const set = (expertise_areas: string[]) => update({ expertise_areas: cap(expertise_areas, LIMITS.expertise) })
   return (
     <div className="flex flex-col gap-6">
-      <FormField label={t.skills} required htmlFor={fid("expertise_areas")} error={errors.expertise_areas} description={t.skillsDescription}>
-        <ListEditor
-          variant="chips"
-          id={fid("expertise_areas")}
-          value={a.expertise_areas}
-          onChange={set}
-          maxItems={LIMITS.expertiseMax}
-          placeholder={t.skillsPlaceholder}
-          aria-label={t.skills}
-        />
-      </FormField>
+      <div data-ob-required>
+        <FormField label={t.skills} required htmlFor={fid("expertise_areas")} error={errors.expertise_areas} description={t.skillsDescription}>
+          <ListEditor
+            variant="chips"
+            id={fid("expertise_areas")}
+            value={a.expertise_areas}
+            onChange={set}
+            maxItems={LIMITS.expertiseMax}
+            placeholder={t.skillsPlaceholder}
+            aria-label={t.skills}
+          />
+        </FormField>
+      </div>
       <StepSection title={copy.hilig.suggestions}>
         <SuggestionChips groups={GALING_GROUPS.map((g) => ({ id: g.id, label: t.groups[g.id], items: g.items }))} value={a.expertise_areas} onChange={set} max={LIMITS.expertiseMax} />
       </StepSection>
@@ -169,17 +176,19 @@ export function KaninoStep({ answers: a, update, errors }: StepProps) {
   const set = (audiences: string[]) => update({ audiences: cap(audiences, LIMITS.audience) })
   return (
     <div className="flex flex-col gap-6">
-      <FormField label={t.who} required htmlFor={fid("audiences")} error={errors.audiences} description={t.whoDescription}>
-        <ListEditor
-          variant="chips"
-          id={fid("audiences")}
-          value={a.audiences}
-          onChange={set}
-          maxItems={LIMITS.audiencesMax}
-          placeholder={t.whoPlaceholder}
-          aria-label={t.who}
-        />
-      </FormField>
+      <div data-ob-required>
+        <FormField label={t.who} required htmlFor={fid("audiences")} error={errors.audiences} description={t.whoDescription}>
+          <ListEditor
+            variant="chips"
+            id={fid("audiences")}
+            value={a.audiences}
+            onChange={set}
+            maxItems={LIMITS.audiencesMax}
+            placeholder={t.whoPlaceholder}
+            aria-label={t.who}
+          />
+        </FormField>
+      </div>
       <SuggestionChips groups={[{ id: "kanino", label: null, items: KANINO_CHIPS }]} value={a.audiences} onChange={set} max={LIMITS.audiencesMax} />
       <FormRow>
         <TextField
@@ -215,6 +224,7 @@ export function KaninoStep({ answers: a, update, errors }: StepProps) {
         error={errors.persona_problems}
         description={t.problemsDescription}
       >
+        <span data-ob-required hidden />
         <ListEditor
           variant="lines"
           id={fid("persona_problems")}

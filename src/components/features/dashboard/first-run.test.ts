@@ -12,9 +12,30 @@ describe("first run", () => {
     const db = createStarterDatabase(USER, NOW)
     expect(hasPublishedContent(db.content_items)).toBe(false)
     expect(workspaceStartKey(db)).toBe("2026-09-13")
-    const steps = firstSteps(db)
-    expect(steps.map((s) => s.key)).toEqual(["niche", "pillars", "idea", "content", "publish", "analytics"])
+    // As Quick setup leaves it before the creator picks a voice: no tones, no traits.
+    const fresh: Database = { ...db, brand_profiles: [{ ...db.brand_profiles[0], tones: [], personality_traits: [] }] }
+    const steps = firstSteps(fresh)
+    // The loop: Strategy (niche, pillars, voice, problems) → Ideas → Create → Publish → Measure.
+    expect(steps.map((s) => s.key)).toEqual(["niche", "pillars", "voice", "problems", "idea", "content", "publish", "analytics"])
     expect(steps.every((s) => !s.done)).toBe(true)
+  })
+
+  it("asks for the voice and the audience's problems until the workspace has them", () => {
+    const base = createStarterDatabase(USER, NOW)
+    const brand = { ...base.brand_profiles[0], tones: [], personality_traits: [] }
+    const open = (db: Database) => Object.fromEntries(firstSteps(db).map((s) => [s.key, s]))
+    const blank = open({ ...base, brand_profiles: [brand] })
+    expect(blank.voice).toMatchObject({ done: false, action: { kind: "link", href: "/strategy#personality" } })
+    expect(blank.problems).toMatchObject({ done: false, action: { kind: "link", href: "/audience/problems" } })
+
+    expect(open({ ...base, brand_profiles: [{ ...brand, tones: ["casual"] }] }).voice.done).toBe(true)
+    expect(open({ ...base, brand_profiles: [{ ...brand, personality_traits: ["direct"] }] }).voice.done).toBe(true)
+    const problem = buildRow("audience_problems", { problem: "Doesn't know how to file taxes" }, USER, NOW)
+    expect(open({ ...base, brand_profiles: [brand], audience_problems: [problem] }).problems.done).toBe(true)
+
+    const tl = firstSteps({ ...base, brand_profiles: [brand] }, "tl")
+    expect(tl.find((s) => s.key === "voice")?.label).toBe("I-set ang voice mo")
+    expect(tl.find((s) => s.key === "problems")?.label).toBe("Idagdag ang problema ng audience mo")
   })
 
   it("moves the start back to the earliest logged post and ticks steps off from real rows", () => {
@@ -32,6 +53,7 @@ describe("first run", () => {
     }
     expect(hasPublishedContent(db.content_items)).toBe(true)
     expect(workspaceStartKey(db)).toBe("2026-06-02")
-    expect(firstSteps(db).filter((s) => s.done).map((s) => s.key)).toEqual(["niche", "content", "publish"])
+    // The starter brand still carries the default "conversational" tone, so its voice counts as set.
+    expect(firstSteps(db).filter((s) => s.done).map((s) => s.key)).toEqual(["niche", "voice", "content", "publish"])
   })
 })

@@ -203,6 +203,7 @@ export function NicheStep({
             </label>
             <Textarea
               id={fid("niche")}
+              data-ob-required
               value={a.niche}
               rows={2}
               maxLength={LIMITS.niche}

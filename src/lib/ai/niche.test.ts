@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { buildBrandContext, EMPTY_BRAND_CONTEXT, type BrandContext } from "./context"
 import { createKit } from "./offline/brand"
 import { generateOfflineIdeas } from "./offline/ideas"
-import { nicheInterests } from "./offline/niche"
+import { nicheInterests, splitWrittenNiche } from "./offline/niche"
 import { looksTagalog } from "./offline/text"
 import { brandVoiceSystemPrompt } from "./prompts/system"
 import { offlineProvider } from "./providers/offline"
@@ -124,6 +124,56 @@ describe("niche_discovery — offline engine", () => {
     }
     const thin = await niches({ ...ENGLISH, audience_problems: ENGLISH.audience_problems.slice(0, 2) })
     expect(thin.notes).toContain("Add one more audience problem to sharpen this — real problems are what make a niche specific.")
+  })
+})
+
+describe("niche_discovery — wording", () => {
+  type Sample = { language: string; interests?: string[]; skills?: string[]; audiences?: string[]; niche?: string }
+  const SAMPLES: Sample[] = [
+    ENGLISH,
+    TAGLISH as Sample,
+    { language: "english", interests: ["Personal improvement", "Productivity"], audiences: ["Young professionals"] },
+    { language: "taglish", interests: ["Personal improvement", "Journaling"], audiences: ["Fresh grads"] },
+    { language: "english", interests: ["Birdwatching", "Photography"], audiences: ["Retirees"] },
+    { language: "taglish", interests: ["Sourdough", "Coffee"], skills: ["Baking"], audiences: ["Moms & parents"] },
+    { language: "english", interests: ["Personal finance", "Ipon & budgeting"], audiences: ["Freelancers"] },
+    // Written niches ("I already know my niche").
+    { language: "english", niche: "Budget meal prep for busy nurses who work nights" },
+    { language: "taglish", niche: "Budget meal prep para sa mga nurse na pagod sa night shift" },
+    { language: "english", niche: "Birdwatching for retirees", interests: ["Photography"] },
+    { language: "english", niche: "Helping moms get fit at home" },
+  ]
+  const count = (text: string, phrase: string) => text.toLowerCase().split(phrase.toLowerCase()).length - 1
+
+  it.each(SAMPLES.map((input): [string, Sample] => [JSON.stringify(input.niche ?? input.interests), input]))(
+    "%s: no direction repeats the niche phrase, in its sentences or across its pillars",
+    async (_label, input) => {
+      const out = await niches(input)
+      expectWellFormed(out)
+      const phrases = [...(input.interests ?? []), ...(input.skills ?? [])].map((x) => x.toLowerCase()).filter((x) => x.length >= 5)
+      for (const o of out.options) {
+        for (const phrase of phrases) {
+          expect(count(o.niche_statement, phrase), `${o.name}: “${o.niche_statement}”`).toBeLessThanOrEqual(1)
+          expect(count(o.positioning_statement, phrase), `${o.name}: “${o.positioning_statement}”`).toBeLessThanOrEqual(1)
+          expect(o.pillars.filter((p) => count(p.name, phrase) > 0).length, `${o.name}: ${o.pillars.map((p) => p.name).join(" | ")}`).toBeLessThanOrEqual(1)
+        }
+        // "Personal improvement basics · Personal improvement deep dives · My personal improvement journey" reads as filler.
+        const lead = o.pillars.map((p) => p.name.toLowerCase().split(/\s+/)[0]).filter((w) => !["my", "the", "your", "real"].includes(w))
+        const most = Math.max(0, ...lead.map((w) => lead.filter((x) => x === w).length))
+        expect(most, `${o.name}: ${o.pillars.map((p) => p.name).join(" | ")}`).toBeLessThanOrEqual(2)
+      }
+    }
+  )
+
+  it("anchors every direction on a written niche and reads its audience", async () => {
+    const out = await niches({ language: "english", niche: "Budget meal prep for busy nurses who work nights", interests: ["Coffee"] })
+    for (const o of out.options) {
+      expect(`${o.name} ${o.niche_statement}`.toLowerCase()).toMatch(/meal prep|food|cook/)
+      expect(o.positioning_audience.toLowerCase()).toContain("nurses")
+    }
+    expect(splitWrittenNiche("Helping moms get fit at home")).toEqual({ audience: "moms", topic: "get fit at home" })
+    expect(splitWrittenNiche("Taxes at bookkeeping para sa mga freelancer na bago pa lang").audience).toBe("freelancers")
+    expect(splitWrittenNiche("Coffee reviews").audience).toBe("")
   })
 })
 

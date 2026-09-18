@@ -279,7 +279,7 @@ export const NICHE_DOMAINS: readonly NicheDomain[] = [
   },
   {
     id: "fitness",
-    match: /\b(fitness|gym|workouts?|exercis\w*|runners?|marathons?|yoga|weight loss|diet\w*|nutrition|(?<!mental )health(?:y|ier|iest)?|wellness|pilates|calisthenics|hiking|lifting)\b/,
+    match: /\b(fitness|get fit|gym|workouts?|exercis\w*|runners?|marathons?|yoga|weight loss|diet\w*|nutrition|(?<!mental )health(?:y|ier|iest)?|wellness|pilates|calisthenics|hiking|lifting)\b/,
     topic: ["fitness and healthy living", "fitness at healthy living"],
     theme: ["fitness", "fitness"],
     industry: "Health & fitness",
@@ -551,7 +551,7 @@ export const NICHE_DOMAINS: readonly NicheDomain[] = [
   },
   {
     id: "growth",
-    match: /\b(mental health|self-?growth|self-?improvement|personal develop\w*|mindset|habits?|journaling|faith|christian|spiritual\w*|motivation|productivity|burnout|anxiety|self-?care|books?|reading)\b/,
+    match: /\b(mental health|self-?growth|self-?improvement|personal (?:growth|improvement)|personal develop\w*|mindset|habits?|journaling|faith|christian|spiritual\w*|motivation|productivity|burnout|anxiety|self-?care|books?|reading)\b/,
     topic: ["self-growth", "self-growth"],
     theme: ["self-growth", "self-growth"],
     industry: "Personal development",

@@ -182,7 +182,7 @@ export function PillarsStep({
         </div>
       </div>
 
-      <ul id={fid("pillars")} tabIndex={-1} className="divide-y rounded-lg border bg-card outline-none dark:bg-input/20" aria-label={t.listAria}>
+      <ul id={fid("pillars")} data-ob-required tabIndex={-1} className="divide-y rounded-lg border bg-card outline-none dark:bg-input/20" aria-label={t.listAria}>
         {listed.map((p) => {
           const checkboxId = `ob-pillar-${p.key.replace(/[^a-z0-9]+/gi, "-")}`
           const badge = badgeFor(p, copy)
@@ -516,7 +516,7 @@ export function PlatformsStep(props: StepProps & { weekStartsOn: 0 | 1 }) {
             </Button>
           </div>
         ) : null}
-        <div role="group" aria-label={t.group} className="grid gap-2 sm:grid-cols-2">
+        <div role="group" aria-label={t.group} data-ob-required className="grid gap-2 sm:grid-cols-2">
           {PLATFORM_IDS.map((p, index) => {
             const on = a.platforms.includes(p)
             return (
@@ -580,7 +580,7 @@ export function VoiceStep({ answers: a, update, errors }: StepProps) {
       </StepSection>
 
       <StepSection title={t.tone} description={t.toneDescription(LIMITS.tonesMax)} action={<span className="text-xs text-muted-foreground num">{a.tones.length}/{LIMITS.tonesMax}</span>}>
-        <div id={fid("tones")} tabIndex={-1} className="outline-none">
+        <div id={fid("tones")} data-ob-required tabIndex={-1} className="outline-none">
           <ChipToggleGroup
             multiple
             aria-label={t.tone}
@@ -602,7 +602,7 @@ export function VoiceStep({ answers: a, update, errors }: StepProps) {
         description={t.personalityDescription(LIMITS.traitsMax)}
         action={<span className="text-xs text-muted-foreground num">{a.personality.length}/{LIMITS.traitsMax}</span>}
       >
-        <div id={fid("personality")} tabIndex={-1} className="outline-none">
+        <div id={fid("personality")} data-ob-required tabIndex={-1} className="outline-none">
           <ChipToggleGroup
             multiple
             aria-label={t.personality}
