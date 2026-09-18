@@ -8,18 +8,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { PLATFORMS } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import type { ID, ResearchItem } from "@/lib/types"
+import { adaptMessages } from "./adapt-messages"
 import type { PastedReference } from "./adapt-model"
 import { RESEARCH_TYPE_ICONS, RESEARCH_TYPE_OPTIONS, ResearchStatusBadge, ResearchTypeBadge } from "./research-badges"
 import { isHttpUrl, MIN_REFERENCE_CHARS } from "./research-model"
 import { StepCard, type StepState } from "./step-card"
 
 export type SourceMode = "paste" | "library"
-
-const MODE_OPTIONS: ViewOption<SourceMode>[] = [
-  { value: "paste", label: "Paste", icon: ClipboardPaste },
-  { value: "library", label: "From library", icon: Library },
-]
 
 /** Step 1: paste a reference (text used for analysis only) or pick one from the Research Library. */
 export function AdaptReferenceStep({
@@ -41,9 +38,17 @@ export function AdaptReferenceStep({
   libraryItem: ResearchItem | undefined
   onSelect: (id: ID | null) => void
 }) {
+  const t = useT(adaptMessages)
   const id = useId()
   const field = (name: string) => `${id}-${name}`
   const currentId = libraryItem?.id ?? null
+  const modeOptions = useMemo<ViewOption<SourceMode>[]>(
+    () => [
+      { value: "paste", label: t("mode_paste"), icon: ClipboardPaste },
+      { value: "library", label: t("mode_library"), icon: Library },
+    ],
+    [t]
+  )
   const options = useMemo<SelectOption<ID>[]>(
     () =>
       items
@@ -51,29 +56,29 @@ export function AdaptReferenceStep({
         .sort((a, b) => Number(Boolean(b.analysis)) - Number(Boolean(a.analysis)) || b.created_at.localeCompare(a.created_at))
         .map((r) => {
           const Icon = RESEARCH_TYPE_ICONS[r.type]
-          return { value: r.id, label: r.title || "Untitled reference", icon: <Icon className="text-muted-foreground" aria-hidden /> }
+          return { value: r.id, label: r.title || t("untitled_reference"), icon: <Icon className="text-muted-foreground" aria-hidden /> }
         }),
-    [items, currentId]
+    [items, currentId, t]
   )
   const chars = pasted.content.trim().length
-  const urlError = pasted.url.trim() && !isHttpUrl(pasted.url) ? "Use a full web address, starting with https://" : undefined
+  const urlError = pasted.url.trim() && !isHttpUrl(pasted.url) ? t("error_url") : undefined
 
   return (
     <StepCard
       step={1}
       state={state}
-      title="Reference"
-      description="Paste the post, script or transcript — or pick one from your Research Library."
-      action={<ViewToggle value={mode} onChange={onModeChange} options={MODE_OPTIONS} aria-label="Reference source" />}
+      title={t("reference")}
+      description={t("reference_description")}
+      action={<ViewToggle value={mode} onChange={onModeChange} options={modeOptions} aria-label={t("source_aria")} />}
     >
       {mode === "paste" ? (
         <div className="flex min-w-0 flex-col gap-4">
           <FormField
-            label="Reference text"
+            label={t("reference_text")}
             htmlFor={field("content")}
             required
-            description="Used for analysis only — it's never shown as your draft and never republished."
-            error={chars > 0 && chars < MIN_REFERENCE_CHARS ? `Paste at least ${MIN_REFERENCE_CHARS} characters.` : undefined}
+            description={t("reference_text_description")}
+            error={chars > 0 && chars < MIN_REFERENCE_CHARS ? t("error_min", { min: MIN_REFERENCE_CHARS }) : undefined}
           >
             <Textarea
               id={field("content")}
@@ -81,23 +86,23 @@ export function AdaptReferenceStep({
               className="min-h-32"
               value={pasted.content}
               maxLength={15000}
-              placeholder="Paste the post, caption, script or transcript you want to learn from…"
+              placeholder={t("reference_text_placeholder")}
               onChange={(event) => onPastedChange({ content: event.target.value })}
             />
           </FormField>
           <FormRow>
-            <FormField label="Title" htmlFor={field("title")} description="Optional — how you'll recognise it in your library.">
+            <FormField label={t("title")} htmlFor={field("title")} description={t("title_description")}>
               <Input id={field("title")} value={pasted.title} maxLength={300} onChange={(event) => onPastedChange({ title: event.target.value })} />
             </FormField>
-            <FormField label="Creator" htmlFor={field("creator")} description="Describe them — e.g. SaaS founder, ~90k followers.">
+            <FormField label={t("creator")} htmlFor={field("creator")} description={t("creator_description")}>
               <Input id={field("creator")} value={pasted.creator} maxLength={120} onChange={(event) => onPastedChange({ creator: event.target.value })} />
             </FormField>
           </FormRow>
           <FormRow>
-            <FormField label="Platform" htmlFor={field("platform")}>
+            <FormField label={t("platform")} htmlFor={field("platform")}>
               <PlatformSelect id={field("platform")} allowNone value={pasted.platform} onChange={(platform) => onPastedChange({ platform })} />
             </FormField>
-            <FormField label="Type" htmlFor={field("type")}>
+            <FormField label={t("type")} htmlFor={field("type")}>
               <OptionSelect
                 id={field("type")}
                 options={RESEARCH_TYPE_OPTIONS}
@@ -108,7 +113,7 @@ export function AdaptReferenceStep({
               />
             </FormField>
           </FormRow>
-          <FormField label="URL" htmlFor={field("url")} error={urlError}>
+          <FormField label={t("url")} htmlFor={field("url")} error={urlError}>
             <Input
               id={field("url")}
               type="url"
@@ -123,14 +128,14 @@ export function AdaptReferenceStep({
         </div>
       ) : (
         <div className="flex min-w-0 flex-col gap-3">
-          <FormField label="Reference" htmlFor={field("library")}>
+          <FormField label={t("reference")} htmlFor={field("library")}>
             <OptionSelect
               id={field("library")}
               options={options}
               value={currentId}
               onChange={onSelect}
-              placeholder="Choose a reference from your library"
-              emptyText="Your Research Library is empty — paste a reference instead."
+              placeholder={t("choose_reference")}
+              emptyText={t("library_empty")}
             />
           </FormField>
           {libraryItem ? <LibrarySummary item={libraryItem} /> : null}
@@ -141,6 +146,7 @@ export function AdaptReferenceStep({
 }
 
 function LibrarySummary({ item }: { item: ResearchItem }) {
+  const t = useT(adaptMessages)
   const byline = [item.creator, item.platform ? PLATFORMS[item.platform].label : item.source].filter(Boolean).join(" · ")
   const noText = !item.analysis && item.content.trim().length < MIN_REFERENCE_CHARS
   return (
@@ -151,14 +157,14 @@ function LibrarySummary({ item }: { item: ResearchItem }) {
         <Button type="button" variant="ghost" size="xs" className="ml-auto text-muted-foreground" asChild>
           <Link href={`/research?open=${item.id}`}>
             <ExternalLink aria-hidden />
-            Open in library
+            {t("open_in_library")}
           </Link>
         </Button>
       </div>
       {byline ? <p className="text-xs text-muted-foreground">{byline}</p> : null}
       {item.topic ? (
         <p className="text-sm">
-          <span className="text-muted-foreground">Topic: </span>
+          <span className="text-muted-foreground">{t("topic_prefix")}</span>
           {item.topic}
         </p>
       ) : null}
@@ -166,7 +172,7 @@ function LibrarySummary({ item }: { item: ResearchItem }) {
       {noText ? (
         <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
           <Info className="mt-px size-3.5 shrink-0" aria-hidden />
-          This reference has no pasted text yet — add it in the library to analyze it.
+          {t("no_text")}
         </p>
       ) : null}
     </div>

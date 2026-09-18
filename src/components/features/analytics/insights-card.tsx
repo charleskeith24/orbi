@@ -6,33 +6,34 @@ import { useState } from "react"
 import { EmptyState, SectionCard, TONE_TEXT, type IconComponent } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import type { InsightType, StrategicInsight } from "@/lib/analytics"
+import { useT } from "@/lib/i18n"
 import { uiActions } from "@/lib/store"
 import { cn } from "@/lib/utils"
+import { analyticsMessages } from "./messages"
 
-const TYPE_META: Record<InsightType, { label: string; icon: IconComponent; className: string }> = {
-  double_down: { label: "Double down", icon: TrendingUp, className: TONE_TEXT.good },
-  fix: { label: "Fix", icon: Wrench, className: TONE_TEXT.warning },
-  warning: { label: "Warning", icon: CircleAlert, className: TONE_TEXT.serious },
-  opportunity: { label: "Opportunity", icon: Lightbulb, className: "text-muted-foreground" },
+const TYPE_META: Record<InsightType, { label: `type_${InsightType}`; icon: IconComponent; className: string }> = {
+  double_down: { label: "type_double_down", icon: TrendingUp, className: TONE_TEXT.good },
+  fix: { label: "type_fix", icon: Wrench, className: TONE_TEXT.warning },
+  warning: { label: "type_warning", icon: CircleAlert, className: TONE_TEXT.serious },
+  opportunity: { label: "type_opportunity", icon: Lightbulb, className: "text-muted-foreground" },
 }
-
-const STRATEGIST_PROMPT = "Look at my analytics: what should I double down on, fix and stop next week?"
 
 const VISIBLE = 5
 
 /** Data-backed insights from the whole workspace (strategicInsights), most urgent first. */
 export function InsightsCard({ insights, className }: { insights: StrategicInsight[]; className?: string }) {
+  const t = useT(analyticsMessages)
   const [expanded, setExpanded] = useState(false)
   const visible = expanded ? insights : insights.slice(0, VISIBLE)
   return (
     <SectionCard
       className={className}
-      title="Strategic insights"
-      description="From your whole workspace — not affected by the filters"
+      title={t("insights_title")}
+      description={t("insights_description")}
       action={
-        <Button variant="ghost" size="sm" onClick={() => uiActions.askStrategist(STRATEGIST_PROMPT)}>
+        <Button variant="ghost" size="sm" onClick={() => uiActions.askStrategist(t("strategist_prompt"))}>
           <MessageSquareText aria-hidden />
-          Ask strategist
+          {t("ask_strategist")}
         </Button>
       }
       contentClassName="px-0 pb-1"
@@ -55,7 +56,7 @@ export function InsightsCard({ insights, className }: { insights: StrategicInsig
                   ) : (
                     <p className="text-sm text-pretty">{insight.text}</p>
                   )}
-                  <p className="mt-0.5 text-xs text-muted-foreground">{meta.label}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{t(meta.label)}</p>
                 </div>
               </li>
             )
@@ -64,7 +65,7 @@ export function InsightsCard({ insights, className }: { insights: StrategicInsig
         {insights.length > VISIBLE ? (
           <div className="border-t px-2 pt-1">
             <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => setExpanded((v) => !v)}>
-              {expanded ? "Show less" : `Show all ${insights.length}`}
+              {expanded ? t("show_less") : t("show_all", { count: insights.length })}
             </Button>
           </div>
         ) : null}
@@ -73,11 +74,11 @@ export function InsightsCard({ insights, className }: { insights: StrategicInsig
         <EmptyState
           compact
           icon={Lightbulb}
-          title="No insights yet"
-          description="Log analytics on a few posts and this list will point out what to double down on and what to fix."
+          title={t("no_insights")}
+          description={t("no_insights_description")}
           action={
             <Button size="sm" variant="outline" onClick={() => uiActions.openDialog({ type: "add-metrics" })}>
-              Add analytics
+              {t("add_analytics")}
             </Button>
           }
         />

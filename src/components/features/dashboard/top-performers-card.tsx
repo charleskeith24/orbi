@@ -18,13 +18,16 @@ import { Button } from "@/components/ui/button"
 import type { TieredRow } from "@/lib/analytics"
 import { PLATFORMS, WINNER_METRIC_MAP } from "@/lib/constants"
 import { formatShortDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import { uiActions } from "@/lib/store"
 import type { WinnerMetric } from "@/lib/types"
 import { formatCompact, formatNumber, formatPercent } from "@/lib/utils"
 import { CardLink } from "./card-link"
+import { dashboardMessages } from "./messages"
 
 function ContentCell({ row }: { row: TieredRow }) {
-  const title = row.item.title.trim() || "Untitled content"
+  const t = useT(dashboardMessages)
+  const title = row.item.title.trim() || t("untitled_content")
   return (
     <div className="flex min-w-0 items-center gap-2.5">
       <span className="hidden shrink-0 sm:block">
@@ -62,13 +65,14 @@ export function TopPerformersCard({
   winnerMetric: WinnerMetric
   className?: string
 }) {
+  const t = useT(dashboardMessages)
   const router = useRouter()
   const columns = useMemo<DataTableColumn<TieredRow>[]>(() => {
     const rank = new Map(rows.map((row, i) => [row.id, i + 1]))
     return [
       {
         id: "rank",
-        header: <span className="sr-only">Rank</span>,
+        header: <span className="sr-only">{t("rank")}</span>,
         cell: (row) => <span className="text-xs text-muted-foreground num">{rank.get(row.id)}</span>,
         width: 28,
         className: "pr-0",
@@ -92,17 +96,17 @@ export function TopPerformersCard({
       { id: "leads", header: "Leads", align: "right", cell: (row) => formatNumber(row.leads), sortValue: (row) => row.leads, hideBelow: "md" },
       {
         id: "tier",
-        header: <span className="sr-only">Tier</span>,
+        header: <span className="sr-only">{t("tier")}</span>,
         cell: (row) => <TierBadge tier={row.tier} />,
         hideBelow: "sm",
       },
     ]
-  }, [rows])
+  }, [rows, t])
 
   return (
     <SectionCard
-      title="Top Performing Content"
-      description={`Last 30 days · ranked by ${(WINNER_METRIC_MAP[winnerMetric]?.label ?? "views").toLowerCase()}`}
+      title={t("top_title")}
+      description={t("top_description", { metric: (WINNER_METRIC_MAP[winnerMetric]?.label ?? "views").toLowerCase() })}
       action={
         <CardLink href="/winners">
           <span className="hidden sm:inline">Winning Content Library</span>
@@ -118,20 +122,20 @@ export function TopPerformersCard({
           columns={columns}
           getRowId={(row) => row.id}
           onRowClick={(row) => router.push(`/studio/${row.id}`)}
-          rowLabel={(row) => `Open ${row.item.title}`}
+          rowLabel={(row) => t("open_row", { name: row.item.title })}
           bordered={false}
           dense
-          aria-label="Top performing content, last 30 days"
+          aria-label={t("top_aria")}
         />
       ) : (
         <EmptyState
           compact
           icon={Trophy}
-          title="No measured posts in the last 30 days"
-          description="Log analytics on your published posts to see what performs best."
+          title={t("no_measured")}
+          description={t("no_measured_description")}
           action={
             <Button size="sm" variant="outline" onClick={() => uiActions.openDialog({ type: "add-metrics" })}>
-              Add analytics
+              {t("add_analytics")}
             </Button>
           }
         />

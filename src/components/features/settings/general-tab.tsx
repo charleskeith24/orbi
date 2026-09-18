@@ -9,9 +9,9 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { funnelMix, pillarMix } from "@/lib/analytics"
 import { CURRENCIES } from "@/lib/constants"
-import { translate, UI_LANG_LABELS, UI_LANGS, useT, type UiLang } from "@/lib/i18n"
+import { translate, UI_LANG_LABELS, UI_LANGS, useT, useUiLang, type UiLang } from "@/lib/i18n"
 import { updateSettings, useDb, useSettings } from "@/lib/store"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
 import { generalMessages } from "./general-messages"
 import { SaveBar } from "./save-bar"
 import { generalPatch, generalResetValues, LIMITS, validateGeneral, type GeneralValues } from "./sections"
@@ -37,7 +37,8 @@ function deviceTimeZone(): string {
 export function GeneralTab({ draft, now }: { draft: SettingsDraft<GeneralValues>; now: Date }) {
   const { values, set } = draft
   const g = useT(generalMessages)
-  const errors = validateGeneral(values)
+  const lang = useUiLang()
+  const errors = validateGeneral(values, lang)
   const valid = Object.keys(errors).length === 0
   const [deviceZone] = useState(deviceTimeZone)
   const resetValues = generalResetValues(values)
@@ -101,12 +102,12 @@ export function GeneralTab({ draft, now }: { draft: SettingsDraft<GeneralValues>
         </SettingRows>
       </SectionCard>
 
-      <SectionCard title="Posting rhythm" description="The cadence every weekly number is measured against.">
+      <SectionCard title={g("rhythm_title")} description={g("rhythm_description")}>
         <SettingRows>
           <SettingRow
-            label="Weekly post target"
+            label={g("weekly_label")}
             htmlFor="settings-weekly-target"
-            description="Posts you aim to publish each week across all platforms. Drives posting progress, the Content Buffer and the Weekly Planner."
+            description={g("weekly_description")}
             error={errors.weekly_post_target}
           >
             <NumberField
@@ -116,17 +117,13 @@ export function GeneralTab({ draft, now }: { draft: SettingsDraft<GeneralValues>
               max={LIMITS.weeklyTarget.max}
               value={values.weekly_post_target}
               onChange={(next) => set("weekly_post_target", next)}
-              suffix="posts / week"
+              suffix={g("weekly_suffix")}
               className="w-44"
               aria-invalid={Boolean(errors.weekly_post_target) || undefined}
             />
             <PlanCrossCheck target={values.weekly_post_target} />
           </SettingRow>
-          <SettingRow
-            label="Week starts on"
-            htmlFor="settings-week-start"
-            description="Weekly posting progress, reports, the calendar and the planner all use this boundary."
-          >
+          <SettingRow label={g("week_start_label")} htmlFor="settings-week-start" description={g("week_start_description")}>
             <OptionSelect
               id="settings-week-start"
               options={WEEK_START_OPTIONS}
@@ -140,12 +137,12 @@ export function GeneralTab({ draft, now }: { draft: SettingsDraft<GeneralValues>
         </SettingRows>
       </SectionCard>
 
-      <SectionCard title="Workspace" description="Defaults for new work.">
+      <SectionCard title={g("workspace_title")} description={g("workspace_description")}>
         <SettingRows>
           <SettingRow
-            label="Timezone"
+            label={g("timezone_label")}
             htmlFor="settings-timezone"
-            description="Given to the AI as your local context. Calendar dates follow this device's clock."
+            description={g("timezone_description")}
             error={errors.timezone}
           >
             <TimezoneSelect
@@ -157,7 +154,7 @@ export function GeneralTab({ draft, now }: { draft: SettingsDraft<GeneralValues>
             />
             {deviceZone && deviceZone !== values.timezone ? (
               <p className="text-xs text-muted-foreground">
-                This device is set to <span className="font-medium text-foreground">{deviceZone.replace(/_/g, " ")}</span>.{" "}
+                <WithStrong text={g("device_zone")} name="zone" strong={deviceZone.replace(/_/g, " ")} />{" "}
                 <Button
                   type="button"
                   variant="link"
@@ -165,22 +162,22 @@ export function GeneralTab({ draft, now }: { draft: SettingsDraft<GeneralValues>
                   className="h-auto px-0 text-xs"
                   onClick={() => set("timezone", deviceZone)}
                 >
-                  Use it
+                  {g("use_it")}
                 </Button>
               </p>
             ) : null}
           </SettingRow>
           <SettingRow
-            label="Default owner"
+            label={g("owner_label")}
             htmlFor="settings-default-owner"
-            description="Assigned to new content items. Change it per item in Content Studio or on the Pipeline."
+            description={g("owner_description")}
             error={errors.default_owner}
           >
             <Input
               id="settings-default-owner"
               value={values.default_owner}
               maxLength={LIMITS.ownerLength + 20}
-              placeholder="e.g. Maria"
+              placeholder={g("owner_placeholder")}
               className="max-w-xs"
               aria-invalid={Boolean(errors.default_owner) || undefined}
               onChange={(event) => set("default_owner", event.target.value)}
@@ -190,12 +187,12 @@ export function GeneralTab({ draft, now }: { draft: SettingsDraft<GeneralValues>
         </SettingRows>
       </SectionCard>
 
-      <SectionCard title="Content mix" description="How strictly the pillar and funnel mix are checked.">
+      <SectionCard title={g("mix_title")} description={g("mix_description")}>
         <SettingRows>
           <SettingRow
-            label="Mix tolerance"
+            label={g("tolerance_label")}
             htmlFor="settings-pillar-tolerance"
-            description="How far a pillar's share of the last 30 days may drift from its target before the dashboard flags an unbalanced mix. The funnel mix uses the same tolerance."
+            description={g("tolerance_description")}
             error={errors.pillar_tolerance}
           >
             <NumberField
@@ -205,7 +202,7 @@ export function GeneralTab({ draft, now }: { draft: SettingsDraft<GeneralValues>
               value={values.pillar_tolerance}
               onChange={(next) => set("pillar_tolerance", next)}
               prefix="±"
-              suffix="pts"
+              suffix={g("tolerance_suffix")}
               className="w-36"
               aria-invalid={Boolean(errors.pillar_tolerance) || undefined}
             />
@@ -225,8 +222,22 @@ export function GeneralTab({ draft, now }: { draft: SettingsDraft<GeneralValues>
   )
 }
 
+/** Renders a translated sentence with its `{name}` placeholder emphasised (e.g. the device timezone). */
+function WithStrong({ text, name, strong, numeric = false }: { text: string; name: string; strong: React.ReactNode; numeric?: boolean }) {
+  const [before, ...rest] = text.split(`{${name}}`)
+  if (!rest.length) return <>{text}</>
+  return (
+    <>
+      {before}
+      <span className={numeric ? "font-medium text-foreground num" : "font-medium text-foreground"}>{strong}</span>
+      {rest.join(`{${name}}`)}
+    </>
+  )
+}
+
 /** Compares the target with what the platform strategies and the Posting Schedule plan. */
 function PlanCrossCheck({ target }: { target: number | null }) {
+  const g = useT(generalMessages)
   const db = useDb()
   const planned = useMemo(() => {
     const platforms = db.content_platforms.filter((p) => p.is_active)
@@ -243,12 +254,22 @@ function PlanCrossCheck({ target }: { target: number | null }) {
     <p className="text-xs text-pretty text-muted-foreground">
       {planned.platforms ? (
         <>
-          Your {pluralize(planned.platforms, "active platform strategy", "active platform strategies")} plan{" "}
-          <span className="font-medium text-foreground num">{planned.frequency}</span> posts a week
-          {target !== null && gap !== 0 ? ` — ${Math.abs(gap)} ${gap > 0 ? "more" : "fewer"} than this target` : ""}.{" "}
+          <WithStrong
+            text={g("plan_posts", {
+              platforms: g.plural("plan_platforms", planned.platforms, { count: formatNumber(planned.platforms) }),
+              gap: target !== null && gap !== 0 ? g(gap > 0 ? "plan_gap_more" : "plan_gap_fewer", { count: Math.abs(gap) }) : "",
+            })}
+            name="frequency"
+            strong={planned.frequency}
+            numeric
+          />{" "}
         </>
       ) : null}
-      {planned.slots ? <>The Posting Schedule has {pluralize(planned.slots, "slot")} a week. </> : null}
+      {planned.slots ? (
+        <>
+          {g("plan_slots", { slots: g.plural("slots", planned.slots, { count: formatNumber(planned.slots) }) })}{" "}
+        </>
+      ) : null}
       <Link href="/strategy/platforms" className="font-medium text-foreground underline-offset-2 hover:underline">
         Platforms
       </Link>
@@ -262,6 +283,7 @@ function PlanCrossCheck({ target }: { target: number | null }) {
 
 /** Owners already used on content, most frequent first. */
 function OwnerSuggestions({ current, onPick }: { current: string; onPick: (owner: string) => void }) {
+  const g = useT(generalMessages)
   const db = useDb()
   const owners = useMemo(() => {
     const counts = new Map<string, number>()
@@ -275,7 +297,7 @@ function OwnerSuggestions({ current, onPick }: { current: string; onPick: (owner
   if (!options.length) return null
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-xs text-muted-foreground">Used on content:</span>
+      <span className="text-xs text-muted-foreground">{g("used_on_content")}</span>
       {options.map((owner) => (
         <button key={owner} type="button" className={chipVariants({ size: "xs", selected: false })} onClick={() => onPick(owner)}>
           {owner}
@@ -287,18 +309,21 @@ function OwnerSuggestions({ current, onPick }: { current: string; onPick: (owner
 
 /** Live check of the current pillar and funnel mix with the edited tolerance. */
 function MixCheck({ tolerance, now }: { tolerance: number | null; now: Date }) {
+  const g = useT(generalMessages)
+  const lang = useUiLang()
   const db = useDb()
   const settings = useSettings()
   const result = useMemo(() => {
     if (tolerance === null) return null
     const draft = { ...settings, pillar_tolerance: tolerance }
-    return { pillars: pillarMix(db, now, draft), funnel: funnelMix(db, now, draft) }
-  }, [db, settings, tolerance, now])
+    // `lang` for the warning sentences shown below.
+    return { pillars: pillarMix(db, now, draft, { lang }), funnel: funnelMix(db, now, draft, { lang }) }
+  }, [db, settings, tolerance, now, lang])
 
   if (!result) return null
   const { pillars, funnel } = result
   if (!pillars.enoughData) {
-    return <p className="text-xs text-muted-foreground">Not enough content in the last 30 days to check the mix yet.</p>
+    return <p className="text-xs text-muted-foreground">{g("mix_not_enough")}</p>
   }
   const flagged = pillars.warnings
   return (
@@ -306,12 +331,14 @@ function MixCheck({ tolerance, now }: { tolerance: number | null; now: Date }) {
       <div className="flex flex-wrap items-center gap-1.5">
         <StatusPill tone={flagged.length ? "warning" : "good"}>
           {flagged.length
-            ? `${pluralize(flagged.length, "pillar")} flagged right now`
-            : `Pillar mix balanced within ±${tolerance} pts`}
+            ? g.plural("pillars_flagged", flagged.length, { count: formatNumber(flagged.length) })
+            : g("pillars_balanced", { tolerance: String(tolerance) })}
         </StatusPill>
         {funnel.enoughData ? (
           <StatusPill tone={funnel.warnings.length ? "warning" : "good"}>
-            {funnel.warnings.length ? `${pluralize(funnel.warnings.length, "funnel stage")} flagged` : "Funnel mix balanced"}
+            {funnel.warnings.length
+              ? g.plural("funnel_flagged", funnel.warnings.length, { count: formatNumber(funnel.warnings.length) })
+              : g("funnel_balanced")}
           </StatusPill>
         ) : null}
       </div>

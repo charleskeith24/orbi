@@ -4,17 +4,16 @@
  */
 import { FUNNEL_STAGE_IDS, IDEA_SOURCES, IDEA_STATUSES, PLATFORM_IDS, PRIORITIES } from "@/lib/constants"
 import type { ContentIdea, ContentTag, ID, IdeaStatus, InsertRow, Priority, Tag } from "@/lib/types"
+import { translate, type UiLang } from "@/lib/i18n/core"
 import { matchesQuery } from "@/lib/utils"
+import { ideaDetailMessages } from "./idea-detail-messages"
 
 export type IdeaView = "table" | "cards" | "kanban"
 export type IdeaSort = "score" | "created" | "priority"
 
 export const IDEA_VIEWS: IdeaView[] = ["table", "cards", "kanban"]
-export const IDEA_SORTS: { id: IdeaSort; label: string; description: string }[] = [
-  { id: "score", label: "Idea Score", description: "Highest score first" },
-  { id: "created", label: "Newest", description: "Most recently captured first" },
-  { id: "priority", label: "Priority", description: "High → low, then by score" },
-]
+/** Sort options in menu order (labels: `sort_<id>` in `ideaBankMessages`). */
+export const IDEA_SORTS: IdeaSort[] = ["score", "created", "priority"]
 export const DEFAULT_SORT: IdeaSort = "score"
 
 export const ALL_STATUSES: IdeaStatus[] = IDEA_STATUSES.map((s) => s.id)
@@ -91,7 +90,7 @@ export function parseIdeaBankState(params: ReadableParams): IdeaBankState {
   return {
     q: params.get("q") ?? "",
     view: IDEA_VIEWS.includes(view as IdeaView) ? (view as IdeaView) : null,
-    sort: IDEA_SORTS.some((s) => s.id === sort) ? (sort as IdeaSort) : DEFAULT_SORT,
+    sort: IDEA_SORTS.includes(sort as IdeaSort) ? (sort as IdeaSort) : DEFAULT_SORT,
     status: parseStatus(params.getAll("status")),
     facets,
     open: params.get("open") || null,
@@ -286,9 +285,11 @@ export function restoreStatus(idea: Pick<ContentIdea, "converted_item_id">): Ide
 }
 
 /** Field-by-field copy for "Duplicate" (never copies the conversion link). */
-export function duplicateIdeaValues(idea: ContentIdea): InsertRow<"content_ideas"> {
+export function duplicateIdeaValues(idea: ContentIdea, lang: UiLang = "en"): InsertRow<"content_ideas"> {
   return {
-    title: idea.title ? `${idea.title} (copy)` : "Untitled idea (copy)",
+    title: idea.title
+      ? translate(ideaDetailMessages, lang, "copy_title", { title: idea.title })
+      : translate(ideaDetailMessages, lang, "copy_untitled"),
     core_topic: idea.core_topic,
     description: idea.description,
     hook: idea.hook,

@@ -3,10 +3,13 @@
 import { createContext, useContext, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { useConfirm } from "@/components/common"
+import { useT, useUiLang } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions } from "@/lib/store"
 import type { ID, Story } from "@/lib/types"
 import { generateAngles, storySessionKey } from "./angle-store"
 import { copyText } from "./clipboard"
+import { storyVaultMessages } from "./messages"
 import { storyCopyValues, storyExperienceText, storyReadyForAi, type StorySheetTab } from "./story-model"
 import { StoryIdeaDialog } from "./story-idea-dialog"
 
@@ -52,6 +55,9 @@ export function StoryActionsProvider({
   const [confirm, confirmDialog] = useConfirm()
   const [ideaStory, setIdeaStory] = useState<Story | null>(null)
   const [ideaOpen, setIdeaOpen] = useState(false)
+  const t = useT(storyVaultMessages)
+  const c = useT(commonMessages)
+  const lang = useUiLang()
 
   const actions = useMemo<StoryActions>(
     () => ({
@@ -61,9 +67,7 @@ export function StoryActionsProvider({
           onOpen(story.id, "angles")
           return
         }
-        toast.info("Add a little more to this story first", {
-          description: "The AI needs the situation, what you did or the lesson to work with.",
-        })
+        toast.info(t("too_thin"), { description: t("too_thin_description") })
         onOpen(story.id, "story")
       },
       createIdea(story) {
@@ -74,23 +78,23 @@ export function StoryActionsProvider({
         dataActions.update("stories", story.id, { is_favorite: !story.is_favorite })
       },
       duplicate(story) {
-        const copy = dataActions.insert("stories", storyCopyValues(story))
-        toast.success("Story duplicated", { description: copy.title, action: { label: "Open", onClick: () => onOpen(copy.id) } })
+        const copy = dataActions.insert("stories", storyCopyValues(story, lang))
+        toast.success(t("duplicated"), { description: copy.title, action: { label: c("open"), onClick: () => onOpen(copy.id) } })
       },
       copyLink(story) {
-        void copyText(`${window.location.origin}/stories?open=${story.id}`, "Link copied")
+        void copyText(`${window.location.origin}/stories?open=${story.id}`, t("link_copied"))
       },
       async remove(story) {
-        const title = story.title.trim() || "Untitled story"
+        const title = story.title.trim() || t("untitled")
         const cited = dataActions.getDb().content_ideas.filter((i) => i.source_ref_id === story.id).length
         const ok = await confirm({
-          title: "Delete this story?",
+          title: t("delete_title"),
           description:
             cited === 0
-              ? `“${title}” will be removed from your Story Vault. This can't be undone.`
+              ? t("delete_none", { title })
               : cited === 1
-                ? `“${title}” will be removed from your Story Vault. The idea created from it stays in your Idea Bank.`
-                : `“${title}” will be removed from your Story Vault. The ${cited} ideas created from it stay in your Idea Bank.`,
+                ? t("delete_single", { title })
+                : t("delete_many", { title, count: cited }),
         })
         if (!ok) return
         // Ideas keep their content but stop pointing at a story that no longer exists.
@@ -98,10 +102,10 @@ export function StoryActionsProvider({
         if (linked.length) dataActions.updateMany("content_ideas", linked.map((i) => ({ id: i.id, patch: { source_ref_id: null } })))
         dataActions.remove("stories", story.id)
         onRemoved(story.id)
-        toast.success("Story deleted", { description: title })
+        toast.success(t("deleted"), { description: title })
       },
     }),
-    [confirm, onOpen, onRemoved]
+    [confirm, onOpen, onRemoved, t, c, lang]
   )
 
   return (

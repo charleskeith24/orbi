@@ -4,13 +4,15 @@ import { AlarmClock, CalendarClock, CalendarDays, CircleCheck, type LucideIcon }
 import Link from "next/link"
 import { ContentThumbnail } from "@/components/common/content-thumbnail"
 import { FormatLabel, PillarBadge } from "@/components/common/entity-badges"
+import { contentCardMessages } from "@/components/common/messages"
 import { PlatformIcon } from "@/components/common/platform-icon"
 import { PriorityBadge, StageBadge, TierBadge } from "@/components/common/status-badges"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { PUBLISHED_STAGES } from "@/lib/constants"
 import { daysBetween, formatDateTime, formatRelativeDay, parseDate } from "@/lib/dates"
+import { translator, useT, useUiLang, type UiLang } from "@/lib/i18n"
 import type { ContentItem, PerformanceTier } from "@/lib/types"
-import { cn, initials, pluralize } from "@/lib/utils"
+import { cn, formatNumber, initials } from "@/lib/utils"
 
 interface DateInfo {
   icon: LucideIcon
@@ -19,18 +21,26 @@ interface DateInfo {
   overdue: boolean
 }
 
+/** "Today" → "today", "Bukas" → "bukas" for "Due …"; multi-word labels ("in 3 days", "Oct 6") keep their casing. */
 function lowerRelative(label: string): string {
-  return /^(Today|Tomorrow|Yesterday)$/.test(label) ? label.toLowerCase() : label
+  return /^[A-Z][a-z]+$/.test(label) ? label.toLowerCase() : label
 }
 
 /** Published → scheduled → due date, with overdue detection for unpublished work. */
 export function contentDateInfo(
   item: Pick<ContentItem, "published_at" | "scheduled_at" | "due_date" | "stage">,
-  now: Date = new Date()
+  now: Date = new Date(),
+  lang: UiLang = "en"
 ): DateInfo | null {
+  const t = translator(contentCardMessages, lang)
   const published = parseDate(item.published_at)
   if (published) {
-    return { icon: CircleCheck, label: formatRelativeDay(published, now), title: `Published ${formatDateTime(published)}`, overdue: false }
+    return {
+      icon: CircleCheck,
+      label: formatRelativeDay(published, now, lang),
+      title: t("published_at", { date: formatDateTime(published) }),
+      overdue: false,
+    }
   }
   const isLive = PUBLISHED_STAGES.includes(item.stage)
   const scheduled = parseDate(item.scheduled_at)
@@ -44,18 +54,23 @@ export function contentDateInfo(
     const late = -days
     return {
       icon: AlarmClock,
-      label: `Overdue by ${pluralize(late, "day")}`,
-      title: `${scheduled ? "Was scheduled" : "Was due"} ${formatDateTime(date)}`,
+      label: t.plural("overdue_by", late, { count: formatNumber(late) }),
+      title: t(scheduled ? "was_scheduled" : "was_due", { date: formatDateTime(date) }),
       overdue: true,
     }
   }
   if (scheduled) {
-    return { icon: CalendarClock, label: formatRelativeDay(scheduled, now), title: `Scheduled ${formatDateTime(scheduled)}`, overdue: false }
+    return {
+      icon: CalendarClock,
+      label: formatRelativeDay(scheduled, now, lang),
+      title: t("scheduled_at", { date: formatDateTime(scheduled) }),
+      overdue: false,
+    }
   }
   return {
     icon: CalendarDays,
-    label: `Due ${lowerRelative(formatRelativeDay(date, now))}`,
-    title: `Due ${formatDateTime(date).replace(/, 12:00 AM$/, "")}`,
+    label: t("due", { when: lowerRelative(formatRelativeDay(date, now, lang)) }),
+    title: t("due_at", { date: formatDateTime(date).replace(/, 12:00 AM$/, "") }),
     overdue: false,
   }
 }
@@ -87,11 +102,12 @@ function ownerInitials(owner: string): string {
 }
 
 function OwnerAvatar({ owner }: { owner: string }) {
+  const t = useT(contentCardMessages)
   if (!owner.trim()) return null
   return (
     <Avatar size="sm" className="size-5" title={owner}>
       <AvatarFallback className="text-[10px] font-medium">{ownerInitials(owner)}</AvatarFallback>
-      <span className="sr-only">Owner: {owner}</span>
+      <span className="sr-only">{t("owner", { owner })}</span>
     </Avatar>
   )
 }
@@ -132,8 +148,9 @@ export function ContentCard({
   now,
   className,
 }: ContentCardProps) {
-  const dateInfo = showDate ? contentDateInfo(item, now) : null
-  const title = item.title.trim() || "Untitled content"
+  const lang = useUiLang()
+  const dateInfo = showDate ? contentDateInfo(item, now, lang) : null
+  const title = item.title.trim() || translator(contentCardMessages, lang)("untitled_content")
   // The ::after covers the card (containing block = the article), so the whole card is the target.
   const stretched =
     "outline-none after:absolute after:inset-0 after:rounded-lg after:content-[''] focus-visible:outline-none"

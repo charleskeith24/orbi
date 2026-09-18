@@ -10,10 +10,11 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { workspaceStartKey } from "@/components/features/dashboard/first-run"
 import { uiActions, useBrand, useLookup, useSettings, useTable } from "@/lib/store"
 import type { ContentItem } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { useT, type Translator } from "@/lib/i18n"
+import { formatNumber } from "@/lib/utils"
 import { CalendarActionsProvider, useCalendarActions } from "./calendar-actions"
 import { CompactMonthGrid, DayAgenda, MonthGrid, WeekColumns, WeekList, WeekStrip, type DayContext } from "./calendar-days"
-import { collisionDetection, screenReaderInstructions } from "./calendar-dnd"
+import { collisionDetection } from "./calendar-dnd"
 import { useCalendarFacets } from "./calendar-facets"
 import { ItemBody } from "./calendar-item"
 import {
@@ -36,16 +37,17 @@ import {
 import { CalendarFilterBar, CalendarToolbar } from "./calendar-toolbar"
 import { UnscheduledTray, type TrayGroup } from "./unscheduled-tray"
 import { PREF_KEYS, useCalendarNav, usePref, writePref } from "./use-calendar-nav"
+import { calendarMessages } from "./messages"
 import { useCalendarDnd } from "./use-calendar-dnd"
 import { useNow } from "./use-now"
 import { useRevealItem } from "./use-reveal-item"
 
-function statsText(stats: PeriodStats): string {
-  const parts = [`${stats.published} published`, `${stats.scheduled} scheduled`]
-  if (stats.due) parts.push(`${stats.due} due`)
-  if (stats.openSlots) parts.push(pluralize(stats.openSlots, "open slot"))
-  if (stats.missedSlots) parts.push(`${stats.missedSlots} missed`)
-  if (stats.slotsTotal && !stats.openSlots && !stats.missedSlots) parts.push("all slots filled")
+function statsText(stats: PeriodStats, t: Translator<typeof calendarMessages.en>): string {
+  const parts = [t("stat_published", { count: stats.published }), t("stat_scheduled", { count: stats.scheduled })]
+  if (stats.due) parts.push(t("stat_due", { count: stats.due }))
+  if (stats.openSlots) parts.push(t.plural("stat_open_slots", stats.openSlots, { count: formatNumber(stats.openSlots) }))
+  if (stats.missedSlots) parts.push(t("stat_missed", { count: stats.missedSlots }))
+  if (stats.slotsTotal && !stats.openSlots && !stats.missedSlots) parts.push(t("stat_all_filled"))
   return parts.join(" · ")
 }
 
@@ -62,6 +64,7 @@ export function CalendarView() {
 }
 
 function CalendarScreen() {
+  const t = useT(calendarMessages)
   const now = useNow()
   const isMobile = useIsMobile()
   const settings = useSettings()
@@ -111,8 +114,13 @@ function CalendarScreen() {
       if (list) list.push(item)
       else buckets.set(group, [item])
     }
-    return TRAY_GROUPS.map((g) => ({ ...g, items: (buckets.get(g.id) ?? []).sort((a, b) => b.updated_at.localeCompare(a.updated_at)) }))
-  }, [items, visible])
+    return TRAY_GROUPS.map((g) => ({
+      ...g,
+      label: t(`group_${g.id}`),
+      hint: t(`group_${g.id}_hint`),
+      items: (buckets.get(g.id) ?? []).sort((a, b) => b.updated_at.localeCompare(a.updated_at)),
+    }))
+  }, [items, visible, t])
   const readyCount = trayGroups.find((g) => g.id === "ready")?.items.length ?? 0
   const openInTray = nav.openId ? trayGroups.some((g) => g.items.some((i) => i.id === nav.openId)) : false
   const trayOpen = openInTray || (trayPref ? trayPref === "open" : readyCount > 0)
@@ -170,7 +178,7 @@ function CalendarScreen() {
       <PageHeader
         title="Calendar"
         icon={CalendarDays}
-        description="What goes out when — scheduled, published and due content with your posting targets as lanes. Drag to reschedule."
+        description={t("description")}
         actions={
           <>
             <Button asChild size="sm" variant="outline">
@@ -187,7 +195,7 @@ function CalendarScreen() {
             </Button>
             <Button type="button" size="sm" onClick={() => uiActions.openDialog({ type: "new-content" })}>
               <Plus aria-hidden />
-              New content
+              {t("new_content")}
             </Button>
           </>
         }
@@ -211,7 +219,7 @@ function CalendarScreen() {
           filters={filters}
           options={facetOptions}
           onChange={setFilters}
-          summary={<span className="text-xs text-muted-foreground num">{statsText(stats)}</span>}
+          summary={<span className="text-xs text-muted-foreground num">{statsText(stats, t)}</span>}
         />
       </div>
 
@@ -219,21 +227,20 @@ function CalendarScreen() {
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-dashed bg-card/50 px-3 py-2.5 text-sm">
           <Target className="size-4 shrink-0 text-muted-foreground" aria-hidden />
           <p className="min-w-0 flex-1 text-pretty text-muted-foreground">
-            No posting targets yet — set up your weekly Posting Schedule so every day shows what to post.
+            {t("no_targets")}
           </p>
           <Button asChild size="sm" variant="outline">
-            <Link href="/calendar/schedule">Set up Posting Schedule</Link>
+            <Link href="/calendar/schedule">{t("setup_schedule")}</Link>
           </Button>
         </div>
       ) : !items.length && showSlots ? (
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-dashed bg-card/50 px-3 py-2.5 text-sm">
           <CalendarDays className="size-4 shrink-0 text-muted-foreground" aria-hidden />
           <p className="min-w-0 flex-1 text-pretty text-muted-foreground">
-            Nothing on the calendar yet — your Posting Schedule shows as open slots. Click + on an upcoming slot to fill your first
-            one, or plan the whole week at once.
+            {t("nothing_yet")}
           </p>
           <Button asChild size="sm" variant="outline">
-            <Link href="/calendar/planner">Plan the week</Link>
+            <Link href="/calendar/planner">{t("plan_week")}</Link>
           </Button>
         </div>
       ) : null}
@@ -241,7 +248,7 @@ function CalendarScreen() {
       <DndContext
         sensors={drag.sensors}
         collisionDetection={collisionDetection}
-        accessibility={{ announcements: drag.announcements, screenReaderInstructions }}
+        accessibility={{ announcements: drag.announcements, screenReaderInstructions: { draggable: t("dnd_instructions") } }}
         onDragStart={drag.onDragStart}
         onDragCancel={drag.onDragCancel}
         onDragEnd={drag.onDragEnd}

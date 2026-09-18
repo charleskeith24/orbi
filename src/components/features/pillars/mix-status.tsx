@@ -1,6 +1,8 @@
 import { ArrowDown, ArrowUp } from "lucide-react"
 import { StatusPill } from "@/components/common"
 import { MIN_MIX_SAMPLE, type MixStatus } from "@/lib/analytics"
+import { useT } from "@/lib/i18n"
+import { pillarMessages } from "./pillar-messages"
 
 /** Mix status as icon + label: "6 pts under", "On target", or "Not enough data" below the sample size. */
 export function MixStatusPill({
@@ -14,17 +16,18 @@ export function MixStatusPill({
   enoughData: boolean
   className?: string
 }) {
+  const t = useT(pillarMessages)
   if (!enoughData || !status) {
     return (
-      <StatusPill tone="neutral" className={className} title={`Mix warnings start once ${MIN_MIX_SAMPLE} or more items are in the window`}>
-        Not enough data
+      <StatusPill tone="neutral" className={className} title={t("mix_warnings_start", { count: MIN_MIX_SAMPLE })}>
+        {t("not_enough_data")}
       </StatusPill>
     )
   }
   if (status === "on_target") {
     return (
       <StatusPill tone="good" className={className}>
-        On target
+        {t("on_target")}
       </StatusPill>
     )
   }
@@ -34,9 +37,9 @@ export function MixStatusPill({
       tone="warning"
       icon={status === "under" ? ArrowDown : ArrowUp}
       className={className}
-      title={status === "under" ? "Under-represented vs its target" : "Over-represented vs its target"}
+      title={status === "under" ? t("under_title") : t("over_title")}
     >
-      {pts} pts {status}
+      {t(status === "under" ? "pts_under" : "pts_over", { pts })}
     </StatusPill>
   )
 }

@@ -9,10 +9,12 @@ import type { SourceUsage } from "@/components/features/stories/story-model"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import { dataActions } from "@/lib/store"
 import type { ResearchItem, UpdateRow } from "@/lib/types"
 import { formatNumber } from "@/lib/utils"
 import { useAnalysisSession } from "./analysis-store"
+import { researchMessages } from "./messages"
 import { useResearchActions } from "./research-actions"
 import { ResearchActionsMenu } from "./research-actions-menu"
 import { ResearchAnalysisPanel } from "./research-analysis-panel"
@@ -36,6 +38,7 @@ export function ResearchDetailSheet({
   onTabChange: (tab: ResearchSheetTab) => void
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useT(researchMessages)
   if (!item) return null
   return (
     <DetailSheet
@@ -47,13 +50,17 @@ export function ResearchDetailSheet({
           value={item.title}
           required
           maxLength={300}
-          placeholder="Untitled reference"
-          aria-label="Reference title"
+          placeholder={t("untitled")}
+          aria-label={t("title_aria")}
           className="text-base leading-6 font-semibold"
           onSave={(title) => dataActions.update("research_items", item.id, { title })}
         />
       }
-      description={`${researchTypeLabel(item.type)} · ${researchStatusLabel(item.status)} · saved ${formatDate(item.created_at)}`}
+      description={t("sheet_description", {
+        type: researchTypeLabel(item.type),
+        status: researchStatusLabel(item.status),
+        date: formatDate(item.created_at),
+      })}
       actions={<ResearchActionsMenu item={item} inSheet className="size-7" />}
       footer={<SheetFooter item={item} />}
     >
@@ -73,6 +80,7 @@ function SheetBody({
   usage: SourceUsage | undefined
   onTabChange: (tab: ResearchSheetTab) => void
 }) {
+  const t = useT(researchMessages)
   const id = useId()
   const drafting = Boolean(useAnalysisSession(item.id).draft)
   const ideas = usage?.ideas.length ?? 0
@@ -81,7 +89,7 @@ function SheetBody({
   return (
     <div className="flex min-w-0 flex-col gap-5">
       <div className="grid min-w-0 grid-cols-2 gap-3">
-        <FormField label="Type" htmlFor={`${id}-type`}>
+        <FormField label={t("type")} htmlFor={`${id}-type`}>
           <OptionSelect
             id={`${id}-type`}
             size="sm"
@@ -92,7 +100,7 @@ function SheetBody({
             }}
           />
         </FormField>
-        <FormField label="Status" htmlFor={`${id}-status`}>
+        <FormField label={t("status")} htmlFor={`${id}-status`}>
           <OptionSelect
             id={`${id}-status`}
             size="sm"
@@ -103,28 +111,28 @@ function SheetBody({
             }}
           />
         </FormField>
-        <FormField label="Platform" htmlFor={`${id}-platform`}>
+        <FormField label={t("platform")} htmlFor={`${id}-platform`}>
           <PlatformSelect id={`${id}-platform`} size="sm" allowNone value={item.platform} onChange={(platform) => set({ platform })} />
         </FormField>
-        <FormField label="Content Pillar" htmlFor={`${id}-pillar`}>
+        <FormField label={t("content_pillar")} htmlFor={`${id}-pillar`}>
           <PillarSelect id={`${id}-pillar`} size="sm" allowNone value={item.pillar_id} onChange={(pillar_id) => set({ pillar_id })} />
         </FormField>
       </div>
 
       <Tabs value={tab} onValueChange={(next) => onTabChange(next as ResearchSheetTab)} className="min-w-0 gap-4">
         <TabsList>
-          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="details">{t("tab_details")}</TabsTrigger>
           <TabsTrigger value="analysis">
-            Analysis
+            {t("tab_analysis")}
             {drafting ? (
               <>
                 <span aria-hidden className="size-1.5 rounded-full bg-brand" />
-                <span className="sr-only">(unsaved)</span>
+                <span className="sr-only">{t("unsaved_sr")}</span>
               </>
             ) : null}
           </TabsTrigger>
           <TabsTrigger value="usage">
-            Usage
+            {t("tab_usage")}
             {ideas ? <span className="text-xs text-muted-foreground num">{formatNumber(ideas)}</span> : null}
           </TabsTrigger>
         </TabsList>
@@ -142,7 +150,7 @@ function SheetBody({
               <Button type="button" size="sm" variant="outline" asChild>
                 <Link href={`/research/adapt?from=${item.id}`}>
                   <WandSparkles aria-hidden />
-                  Adapt into original
+                  {t("adapt")}
                 </Link>
               </Button>
             }
@@ -154,21 +162,22 @@ function SheetBody({
 }
 
 function SheetFooter({ item }: { item: ResearchItem }) {
+  const t = useT(researchMessages)
   const actions = useResearchActions()
   const pending = useAnalysisSession(item.id).status === "pending"
   return (
     <>
       <Button type="button" variant="ghost" size="sm" className="mr-auto text-muted-foreground" onClick={() => void actions.remove(item)}>
         <Trash2 aria-hidden />
-        Delete
+        {t("delete")}
       </Button>
-      <AiButton type="button" size="sm" variant="outline" pending={pending} pendingLabel="Analyzing…" onClick={() => actions.analyze(item)}>
-        {item.analysis ? "Re-analyze" : "Analyze"}
+      <AiButton type="button" size="sm" variant="outline" pending={pending} pendingLabel={t("analyzing")} onClick={() => actions.analyze(item)}>
+        {item.analysis ? t("reanalyze") : t("analyze")}
       </AiButton>
       <Button type="button" size="sm" asChild>
         <Link href={`/research/adapt?from=${item.id}`}>
           <WandSparkles aria-hidden />
-          Adapt into original
+          {t("adapt")}
         </Link>
       </Button>
     </>

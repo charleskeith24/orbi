@@ -7,6 +7,8 @@ import { useMemo, useState } from "react"
 import { ColorDot, EmptyState, PageContainer, PageHeader, SectionCard } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { useT, useUiLang } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { uiActions, useDb, useRow, useSettings } from "@/lib/store"
 import type { ContentCampaign, ID, InsertRow, PerformanceTier } from "@/lib/types"
 import { AddItemsDialog } from "./add-items-dialog"
@@ -19,6 +21,7 @@ import { CampaignStatusSelect, setCampaignStatus } from "./campaign-status"
 import { CampaignTimeline } from "./campaign-timeline"
 import { dateRangeLabel, summarizeCampaign, timeLabel } from "./campaign-utils"
 import { LinkedIdeas } from "./linked-ideas"
+import { campaignDetailMessages } from "./messages"
 
 /** `/campaigns/<id>` — resolves the campaign and shows a proper empty state for unknown ids. */
 export function CampaignDetailView({ campaignId }: { campaignId: string }) {
@@ -29,17 +32,18 @@ export function CampaignDetailView({ campaignId }: { campaignId: string }) {
 }
 
 function CampaignNotFound() {
+  const t = useT(campaignDetailMessages)
   return (
     <PageContainer>
       <EmptyState
         icon={Megaphone}
-        title="Campaign not found"
-        description="It may have been deleted, or the link is out of date. Your other campaigns are on the Campaigns page."
+        title={t("not_found_title")}
+        description={t("not_found_description")}
         action={
           <Button size="sm" asChild>
             <Link href="/campaigns">
               <ArrowLeft aria-hidden />
-              Back to campaigns
+              {t("back_to_campaigns")}
             </Link>
           </Button>
         }
@@ -50,13 +54,16 @@ function CampaignNotFound() {
 
 function CampaignDetail({ campaign, onDeleting }: { campaign: ContentCampaign; onDeleting: () => void }) {
   const router = useRouter()
+  const t = useT(campaignDetailMessages)
+  const c = useT(commonMessages)
+  const lang = useUiLang()
   const db = useDb()
   const settings = useSettings()
   const [now] = useState(() => new Date())
   const [editOpen, setEditOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
 
-  const summary = useMemo(() => summarizeCampaign(db, campaign, now, settings), [db, campaign, now, settings])
+  const summary = useMemo(() => summarizeCampaign(db, campaign, now, settings, lang), [db, campaign, now, settings, lang])
   const tiers = useMemo(() => new Map<ID, PerformanceTier>(summary?.perf.rows.map((r) => [r.id, r.tier]) ?? []), [summary])
   const views = useMemo(
     () => new Map<ID, number>(summary?.perf.rows.filter((r) => r.metric).map((r) => [r.id, r.views]) ?? []),
@@ -81,10 +88,10 @@ function CampaignDetail({ campaign, onDeleting }: { campaign: ContentCampaign; o
         title={
           <span className="flex min-w-0 items-center gap-2.5">
             <ColorDot color={campaign.color} shape="square" className="size-2.5" />
-            <span className="min-w-0">{campaign.name || "Untitled campaign"}</span>
+            <span className="min-w-0">{campaign.name || t("untitled_campaign")}</span>
           </span>
         }
-        description={`${dateRangeLabel(campaign)} · ${timeLabel(summary.window)}`}
+        description={`${dateRangeLabel(campaign, lang)} · ${timeLabel(summary.window, lang)}`}
         actions={
           <>
             <CampaignStatusSelect
@@ -94,7 +101,7 @@ function CampaignDetail({ campaign, onDeleting }: { campaign: ContentCampaign; o
             />
             <Button type="button" variant="outline" size="sm" onClick={() => setEditOpen(true)}>
               <Pencil aria-hidden />
-              Edit
+              {c("edit")}
             </Button>
             <CampaignActionsMenu
               campaign={campaign}
@@ -107,12 +114,12 @@ function CampaignDetail({ campaign, onDeleting }: { campaign: ContentCampaign; o
             >
               <DropdownMenuItem onSelect={() => setAddOpen(true)}>
                 <ListPlus aria-hidden />
-                Add existing content…
+                {t("add_existing_menu")}
               </DropdownMenuItem>
             </CampaignActionsMenu>
             <Button type="button" size="sm" onClick={newContent}>
               <Plus aria-hidden />
-              New content
+              {t("new_content")}
             </Button>
           </>
         }
@@ -126,8 +133,8 @@ function CampaignDetail({ campaign, onDeleting }: { campaign: ContentCampaign; o
       <CampaignPerformanceSection perf={summary.perf} />
 
       <SectionCard
-        title="Timeline"
-        description="Every piece on its publish, scheduled or due date across the campaign window."
+        title={t("timeline_title")}
+        description={t("timeline_description")}
         contentClassName="px-0 pb-4"
       >
         <CampaignTimeline campaign={campaign} items={summary.perf.items} now={now} />

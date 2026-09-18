@@ -5,11 +5,16 @@ import { toast } from "sonner"
 import { SeriesKey } from "@/components/charts"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { funnelGoalMessages } from "@/components/common/messages"
 import { FUNNEL_STAGE_IDS, FUNNEL_STAGES } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { updateSettings } from "@/lib/store"
 import type { FunnelStage, FunnelTargets } from "@/lib/types"
+import { funnelMessages } from "./funnel-messages"
 import { FUNNEL_COLORS } from "./funnel-utils"
 import { sumValues, TARGET_TOTAL } from "./pillar-math"
+import { pillarMessages } from "./pillar-messages"
 import { TargetsEditor, type TargetValues } from "./targets-editor"
 
 /** Edit settings.funnel_targets — whole numbers that must add up to exactly 100. */
@@ -47,6 +52,10 @@ function TargetsForm({
   windowLabel: string
   onDone: () => void
 }) {
+  const t = useT(funnelMessages)
+  const p = useT(pillarMessages)
+  const c = useT(commonMessages)
+  const goal = useT(funnelGoalMessages)
   const [values, setValues] = useState<TargetValues>(() => ({ tofu: targets.tofu, mofu: targets.mofu, bofu: targets.bofu }))
   const valid = sumValues(FUNNEL_STAGE_IDS.map((s) => values[s])) === TARGET_TOTAL
 
@@ -59,17 +68,15 @@ function TargetsForm({
       bofu: Math.round(values.bofu ?? 0),
     }
     updateSettings({ funnel_targets: next })
-    toast.success("Funnel targets saved", { description: `TOFU ${next.tofu}% · MOFU ${next.mofu}% · BOFU ${next.bofu}%` })
+    toast.success(t("targets_saved"), { description: `TOFU ${next.tofu}% · MOFU ${next.mofu}% · BOFU ${next.bofu}%` })
     onDone()
   }
 
   return (
     <form onSubmit={submit} noValidate className="flex min-h-0 flex-1 flex-col">
       <DialogHeader className="gap-1 border-b py-3.5 pr-12 pl-4">
-        <DialogTitle>Edit funnel targets</DialogTitle>
-        <DialogDescription className="text-xs">
-          How your content should split across the funnel. Whole numbers that add up to 100%.
-        </DialogDescription>
+        <DialogTitle>{t("targets_title")}</DialogTitle>
+        <DialogDescription className="text-xs">{t("targets_description")}</DialogDescription>
       </DialogHeader>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 scrollbar-thin">
@@ -81,17 +88,17 @@ function TargetsForm({
             id: stage,
             label: `${FUNNEL_STAGES[stage].label} · ${FUNNEL_STAGES[stage].name}`,
             mark: <SeriesKey color={FUNNEL_COLORS[stage]} />,
-            hint: `${FUNNEL_STAGES[stage].goal} · actual ${Math.round(actual[stage])}% (${windowLabel})`,
+            hint: t("target_hint", { goal: goal(stage), pct: Math.round(actual[stage]), window: windowLabel }),
           }))}
         />
       </div>
 
       <DialogFooter className="m-0 rounded-b-xl px-4 py-3">
         <Button type="button" variant="outline" onClick={onDone}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={!valid}>
-          Save targets
+          {p("save_targets")}
         </Button>
       </DialogFooter>
     </form>

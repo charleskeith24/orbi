@@ -6,11 +6,13 @@ import { AiButton, AiNotice, EmptyState, ProviderBadge } from "@/components/comm
 import { AiErrorNotice } from "@/components/features/stories/ai-error"
 import { Button } from "@/components/ui/button"
 import { formatDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import { dataActions } from "@/lib/store"
 import type { ResearchItem } from "@/lib/types"
 import { AnalysisEditor } from "./analysis-editor"
 import { canAnalyze, clearAnalysisDraft, editSavedAnalysis, updateAnalysisDraft, useAnalysisSession } from "./analysis-store"
 import { AnalysisView } from "./analysis-view"
+import { researchMessages } from "./messages"
 import { useResearchActions } from "./research-actions"
 import { analysisIsEmpty, MIN_REFERENCE_CHARS, statusAfterAnalysis, toReferenceAnalysis } from "./research-model"
 
@@ -19,6 +21,7 @@ import { analysisIsEmpty, MIN_REFERENCE_CHARS, statusAfterAnalysis, toReferenceA
  * A saved analysis stays visible while a new one is generated.
  */
 export function ResearchAnalysisPanel({ item }: { item: ResearchItem }) {
+  const t = useT(researchMessages)
   const session = useAnalysisSession(item.id)
   const actions = useResearchActions()
   const pending = session.status === "pending"
@@ -35,40 +38,40 @@ export function ResearchAnalysisPanel({ item }: { item: ResearchItem }) {
       ...(fresh ? { status } : {}),
     })
     clearAnalysisDraft(item.id)
-    toast.success(fresh ? "Analysis saved" : "Analysis updated", {
-      description: fresh && status !== item.status ? `${item.title} · marked as analyzed` : item.title,
+    toast.success(fresh ? t("analysis_saved") : t("analysis_updated"), {
+      description: fresh && status !== item.status ? t("marked_analyzed", { title: item.title }) : item.title,
     })
   }
 
   const analyzeButton = (label: string, variant: "ghost" | "default") => (
-    <AiButton type="button" size="sm" variant={variant} pending={pending} pendingLabel="Analyzing…" disabled={!ready} onClick={() => actions.analyze(item)}>
+    <AiButton type="button" size="sm" variant={variant} pending={pending} pendingLabel={t("analyzing")} disabled={!ready} onClick={() => actions.analyze(item)}>
       {label}
     </AiButton>
   )
-  const error = session.error ? <AiErrorNotice message={session.error} onRetry={() => actions.analyze(item)} /> : null
+  const error = session.error ? <AiErrorNotice message={session.error} retryLabel={t("retry")} onRetry={() => actions.analyze(item)} /> : null
 
   if (draft) {
     return (
       <div className="flex min-w-0 flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-muted-foreground">
-            {session.analyzedAt ? "New analysis — review and edit it before saving." : "Editing the saved analysis."}
+            {session.analyzedAt ? t("new_analysis") : t("editing_saved")}
           </span>
           {session.provider ? <ProviderBadge provider={session.provider} model={session.model ?? undefined} /> : null}
-          <div className="ml-auto">{analyzeButton("Re-analyze", "ghost")}</div>
+          <div className="ml-auto">{analyzeButton(t("reanalyze"), "ghost")}</div>
         </div>
         {error}
         <AnalysisEditor value={draft} onChange={(next) => updateAnalysisDraft(item.id, next)} disabled={pending} />
         <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-3">
           <Button type="button" variant="ghost" size="sm" onClick={() => clearAnalysisDraft(item.id)}>
-            Discard
+            {t("discard")}
           </Button>
           <Button type="button" size="sm" disabled={pending || analysisIsEmpty(draft)} onClick={save}>
             <Check aria-hidden />
-            Save analysis
+            {t("save_analysis")}
           </Button>
         </div>
-        <AiNotice>The analysis explains why the reference works — it never rewrites it. Borrow the structure, bring your own substance.</AiNotice>
+        <AiNotice>{t("analysis_notice")}</AiNotice>
       </div>
     )
   }
@@ -78,13 +81,13 @@ export function ResearchAnalysisPanel({ item }: { item: ResearchItem }) {
       <div className="flex min-w-0 flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2">
           <ProviderBadge provider={saved.provider} />
-          <span className="text-xs text-muted-foreground">Analyzed {formatDate(saved.analyzed_at)}</span>
+          <span className="text-xs text-muted-foreground">{t("analyzed_on", { date: formatDate(saved.analyzed_at) })}</span>
           <div className="ml-auto flex items-center gap-1">
             <Button type="button" size="sm" variant="ghost" onClick={() => editSavedAnalysis(item)}>
               <Pencil aria-hidden />
-              Edit
+              {t("edit")}
             </Button>
-            {analyzeButton("Re-analyze", "ghost")}
+            {analyzeButton(t("reanalyze"), "ghost")}
           </div>
         </div>
         {error}
@@ -99,14 +102,14 @@ export function ResearchAnalysisPanel({ item }: { item: ResearchItem }) {
       <EmptyState
         compact
         icon={ScanSearch}
-        title="Not analyzed yet"
-        description="Find out why it works — the hook, structure, angle, psychology and the patterns you can borrow."
-        action={analyzeButton("Analyze", "default")}
+        title={t("not_analyzed")}
+        description={t("not_analyzed_description")}
+        action={analyzeButton(t("analyze"), "default")}
         className="rounded-lg border border-dashed"
       />
       {ready ? null : (
         <p className="text-center text-xs text-pretty text-muted-foreground">
-          Paste the reference text, a transcript or your notes in Details first — at least {MIN_REFERENCE_CHARS} characters.
+          {t("paste_in_details", { min: MIN_REFERENCE_CHARS })}
         </p>
       )}
     </div>

@@ -10,6 +10,7 @@ import {
 } from "@/lib/analytics"
 import { hasPublishedContent } from "@/components/features/dashboard/first-run"
 import { positioningStatement } from "@/lib/ai"
+import type { UiLang } from "@/lib/i18n/core"
 import type { AppSettings, Database, ID, PlatformId, Row } from "@/lib/types"
 
 export interface StrategistKnowledge {
@@ -36,13 +37,16 @@ export interface StrategistKnowledge {
   bestWinner: { id: ID; title: string; ratio: number | null } | null
 }
 
-/** The strategist's context, summarised for the "What the strategist knows" column. Pure over (db, now, settings). */
-export function strategistKnowledge(db: Database, now: Date, settings: AppSettings): StrategistKnowledge {
+/**
+ * The strategist's context, summarised for the "What the strategist knows" column. Pure over (db, now, settings).
+ * Display-only (the AI gets its own Brand Context), so health and buffer text follow the UI language.
+ */
+export function strategistKnowledge(db: Database, now: Date, settings: AppSettings, lang: UiLang = "en"): StrategistKnowledge {
   const brand = db.brand_profiles[0]
   const persona = db.audience_personas.find((p) => p.is_primary) ?? db.audience_personas[0] ?? null
   const goal = (brand?.primary_goal_id ? db.content_goals.find((g) => g.id === brand.primary_goal_id) : undefined) ?? null
   const strategies = db.content_platforms.filter((p) => p.is_active).map((p) => p.platform)
-  const top = pillarPerformance(db, now, { days: 90, settings })
+  const top = pillarPerformance(db, now, { days: 90, settings, lang })
     .filter((g) => g.pillar && g.measured >= 3)
     .sort((a, b) => (b.avgRatio ?? 0) - (a.avgRatio ?? 0) || (b.avgViews ?? 0) - (a.avgViews ?? 0))[0]
   const winners = getWinners(db, settings, now, { days: 90 })
@@ -61,10 +65,10 @@ export function strategistKnowledge(db: Database, now: Date, settings: AppSettin
     platforms: strategies.length ? strategies : (brand?.main_platforms ?? []),
     problemCount: db.audience_problems.length,
     questionCount: db.audience_questions.filter((q) => q.status !== "dismissed").length,
-    health: contentHealthScore(db, now, settings),
+    health: contentHealthScore(db, now, settings, lang),
     hasPublished: hasPublishedContent(db.content_items),
     hasContent: db.content_items.length > 0,
-    buffer: contentBuffer(db, now, settings),
+    buffer: contentBuffer(db, now, settings, lang),
     week: weeklyPostingProgress(db, now, settings),
     topPillar: top?.pillar ? { pillar: top.pillar, posts: top.measured, avgViews: top.avgViews, ratio: top.avgRatio } : null,
     winnerCount: winners.length,

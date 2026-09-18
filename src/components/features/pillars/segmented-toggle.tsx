@@ -1,7 +1,9 @@
 "use client"
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
+import { pillarMessages } from "./pillar-messages"
 
 export interface SegmentOption<T extends string> {
   value: T
@@ -47,11 +49,6 @@ export function SegmentedToggle<T extends string>({
 
 export type MixWindow = "30" | "90"
 
-export const MIX_WINDOW_OPTIONS: SegmentOption<MixWindow>[] = [
-  { value: "30", label: "30 days" },
-  { value: "90", label: "90 days" },
-]
-
 export const windowDays = (window: MixWindow): number => (window === "90" ? 90 : 30)
 
 /** 30 / 90 day window for mix and performance numbers. */
@@ -64,7 +61,10 @@ export function WindowToggle({
   onChange: (value: MixWindow) => void
   className?: string
 }) {
-  return (
-    <SegmentedToggle value={value} options={MIX_WINDOW_OPTIONS} onChange={onChange} aria-label="Time window" className={className} />
-  )
+  const t = useT(pillarMessages)
+  const options: SegmentOption<MixWindow>[] = [
+    { value: "30", label: t("days_30") },
+    { value: "90", label: t("days_90") },
+  ]
+  return <SegmentedToggle value={value} options={options} onChange={onChange} aria-label={t("time_window")} className={className} />
 }

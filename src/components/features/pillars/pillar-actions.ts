@@ -1,9 +1,14 @@
 /** Pillar mutations shared by the card menu, the detail sheet and the page (toasts included). */
 import { toast } from "sonner"
 import type { PILLAR_PRESETS } from "@/lib/constants"
+import { translator } from "@/lib/i18n/core"
+import { getUiLang } from "@/lib/i18n/ui-lang"
 import { dataActions } from "@/lib/store"
 import type { CategoricalColor, ContentPillar } from "@/lib/types"
 import { activeTargetTotal, nextPillarColor, nextSortOrder, reorderPatches, TARGET_TOTAL } from "./pillar-math"
+import { pillarMessages } from "./pillar-messages"
+
+const tr = () => translator(pillarMessages, getUiLang())
 
 export type PillarPreset = (typeof PILLAR_PRESETS)[number]
 
@@ -16,9 +21,10 @@ export interface RebalanceHint {
 export function rebalanceHint(onSetTargets?: () => void): RebalanceHint {
   const total = activeTargetTotal(dataActions.getDb().content_pillars)
   if (total === TARGET_TOTAL) return {}
+  const t = tr()
   return {
-    description: `Active targets now add up to ${total}% — rebalance them to 100%.`,
-    action: onSetTargets ? { label: "Set targets", onClick: onSetTargets } : undefined,
+    description: t("rebalance_hint", { total }),
+    action: onSetTargets ? { label: t("set_targets"), onClick: onSetTargets } : undefined,
   }
 }
 
@@ -31,10 +37,9 @@ export function movePillar(id: string, direction: -1 | 1): void {
 export function setPillarActive(pillar: ContentPillar, active: boolean, onSetTargets?: () => void): void {
   dataActions.update("content_pillars", pillar.id, { is_active: active })
   const hint = rebalanceHint(onSetTargets)
-  toast.success(active ? `${pillar.name} is active again` : `${pillar.name} paused`, {
-    description:
-      hint.description ??
-      (active ? "It counts toward your mix and targets again." : "Paused pillars leave the mix and targets but keep their history."),
+  const t = tr()
+  toast.success(active ? t("active_again", { name: pillar.name }) : t("paused_toast", { name: pillar.name }), {
+    description: hint.description ?? (active ? t("active_again_description") : t("paused_description")),
     action: hint.action,
   })
 }
@@ -61,7 +66,8 @@ export function addPresetPillars(presets: PillarPreset[], onSetTargets?: () => v
   })
   const rows = dataActions.insertMany("content_pillars", values)
   const hint = rebalanceHint(onSetTargets)
-  toast.success(rows.length === 1 ? `${rows[0].name} pillar added` : `${rows.length} recommended pillars added`, {
+  const t = tr()
+  toast.success(rows.length === 1 ? t("preset_added", { name: rows[0].name }) : t("presets_added", { count: rows.length }), {
     description: hint.description,
     action: hint.action,
   })

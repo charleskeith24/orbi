@@ -6,12 +6,15 @@ import { AiButton, AiNotice, ProviderBadge } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { useLookup } from "@/lib/store"
-import { cn, pluralize } from "@/lib/utils"
+import { cn, formatNumber } from "@/lib/utils"
 import { AiErrorNotice } from "./ai-error"
 import { AngleCard } from "./angle-card"
 import type { AngleOrigin } from "./angle-model"
 import { updateAngleDraft, useAngleSession } from "./angle-store"
+import { angleMessages } from "./experience-messages"
 import { useAngleActions } from "./use-angle-actions"
 
 /**
@@ -37,6 +40,8 @@ export function AngleResults({
   const pillars = useLookup("content_pillars")
   const actions = useAngleActions(sessionKey, origin)
   const [selected, setSelected] = useState<string[]>([])
+  const t = useT(angleMessages)
+  const c = useT(commonMessages)
   const pending = session.status === "pending"
   const drafts = session.drafts
   const unsaved = drafts.filter((d) => !d.ideaId && d.title.trim())
@@ -56,12 +61,12 @@ export function AngleResults({
             <Checkbox
               checked={allChosen ? true : chosen.length ? "indeterminate" : false}
               onCheckedChange={(value) => setSelected(value === true ? unsaved.map((d) => d.key) : [])}
-              aria-label="Select all unsaved angles"
+              aria-label={t("select_all_label")}
             />
-            Select all
+            {c("select_all")}
           </label>
         ) : null}
-        <span className="text-xs text-muted-foreground num">{drafts.length ? pluralize(drafts.length, "content angle") : "Writing your angles…"}</span>
+        <span className="text-xs text-muted-foreground num">{drafts.length ? t.plural("angles", drafts.length, { count: formatNumber(drafts.length) }) : t("writing")}</span>
         {session.provider && drafts.length ? <ProviderBadge provider={session.provider} model={session.model ?? undefined} /> : null}
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
           <Button
@@ -75,10 +80,10 @@ export function AngleResults({
             }}
           >
             <BookmarkPlus aria-hidden />
-            {chosen.length ? `Save ${chosen.length} as idea${chosen.length === 1 ? "" : "s"}` : "Save selected"}
+            {chosen.length ? t.plural("save_many", chosen.length) : t("save_selected")}
           </Button>
           <AiButton type="button" size="sm" variant="ghost" pending={pending} disabled={!canRegenerate} onClick={regenerate}>
-            Regenerate
+            {t("regenerate")}
           </AiButton>
         </div>
       </div>

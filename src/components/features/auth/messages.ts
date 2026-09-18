@@ -1,0 +1,153 @@
+import { defineMessages } from "@/lib/i18n/core"
+
+/**
+ * Sign-in, sign-up and the local-mode card. These screens can render without a loaded workspace, so
+ * components read them with `useScreenT` (this device's last app language). Env var names, file paths
+ * and the product tagline stay as they are.
+ */
+export const authMessages = defineMessages({
+  en: {
+    // Local mode card
+    local_title: "Accounts are off in local mode",
+    local_body: "You're running in local mode: your workspace lives in this browser.",
+    local_env: "To turn on accounts and sync, set these environment variables and restart the app:",
+    local_env_label: "Supabase environment variables",
+    local_guide: "Setup guide:",
+    local_open: "Open my local workspace",
+    local_backup: "Back up or move your data any time from Settings → Data.",
+    // Shared
+    or: "or",
+    email: "Email",
+    password: "Password",
+    email_placeholder: "you@example.com",
+    // Sign in
+    sign_in: "Sign in",
+    sign_in_description: "Welcome back. Your content system is right where you left it.",
+    new_here: "New here?",
+    create_account_link: "Create an account",
+    signing_in: "Signing in…",
+    sending_link: "Sending link…",
+    magic_link: "Email me a magic link",
+    check_inbox: "Check your inbox",
+    link_sent: "We sent a sign-in link to {email}. Open it in this browser to continue.",
+    different_email: "Use a different email",
+    // Sign up
+    signup_title: "Create your account",
+    signup_description: "Your brand strategy, ideas, content and analytics, synced across devices.",
+    have_account: "Already have an account?",
+    name: "Name",
+    optional: "(optional)",
+    name_placeholder: "Your name",
+    password_hint: "At least 8 characters.",
+    creating_account: "Creating account…",
+    create_account: "Create account",
+    confirm_title: "Check your email to confirm",
+    confirm_sent: "We sent a confirmation link to {email}. Open it to activate your account and you'll land right in your workspace.",
+    sending: "Sending…",
+    confirmation_resent: "Confirmation email sent again",
+    resend_confirmation: "Resend confirmation email",
+    back_to_sign_in: "Back to sign in",
+  },
+  tl: {
+    local_title: "Naka-off ang accounts sa local mode",
+    local_body: "Naka-local mode ka: nasa browser na 'to ang workspace mo.",
+    local_env: "Para i-on ang accounts at sync, i-set ang mga environment variable na 'to at i-restart ang app:",
+    local_env_label: "Mga Supabase environment variable",
+    local_guide: "Setup guide:",
+    local_open: "Buksan ang local workspace ko",
+    local_backup: "I-back up o ilipat ang data mo anytime sa Settings → Data.",
+    or: "o",
+    email: "Email",
+    password: "Password",
+    email_placeholder: "you@example.com",
+    sign_in: "Mag-sign in",
+    sign_in_description: "Welcome back. Nandito pa ang content system mo, gaya ng iniwan mo.",
+    new_here: "Bago dito?",
+    create_account_link: "Gumawa ng account",
+    signing_in: "Sini-sign in…",
+    sending_link: "Pinapadala ang link…",
+    magic_link: "I-email sa'kin ang magic link",
+    check_inbox: "Tingnan ang inbox mo",
+    link_sent: "Nagpadala kami ng sign-in link sa {email}. Buksan ito sa browser na 'to para tumuloy.",
+    different_email: "Gumamit ng ibang email",
+    signup_title: "Gumawa ng account",
+    signup_description: "Ang brand strategy, ideas, content at analytics mo, naka-sync sa lahat ng device.",
+    have_account: "May account na?",
+    name: "Pangalan",
+    optional: "(optional)",
+    name_placeholder: "Pangalan mo",
+    password_hint: "Kahit 8 characters.",
+    creating_account: "Ginagawa ang account…",
+    create_account: "Gumawa ng account",
+    confirm_title: "Tingnan ang email mo para i-confirm",
+    confirm_sent: "Nagpadala kami ng confirmation link sa {email}. Buksan ito para i-activate ang account mo — dumiretso sa workspace mo pagkatapos.",
+    sending: "Pinapadala…",
+    confirmation_resent: "Pinadala ulit ang confirmation email",
+    resend_confirmation: "Ipadala ulit ang confirmation email",
+    back_to_sign_in: "Balik sa sign in",
+  },
+})
+
+/** Field validation (see `auth-schemas.ts`). */
+export const authValidationMessages = defineMessages({
+  en: {
+    email_required: "Enter your email address",
+    email_invalid: "Enter a valid email address",
+    password_required: "Enter your password",
+    name_too_long: "Keep your name under 120 characters",
+    password_too_short: "Use at least 8 characters",
+    password_too_long: "Use 72 characters or fewer",
+  },
+  tl: {
+    email_required: "Ilagay ang email address mo",
+    email_invalid: "Maglagay ng valid na email address",
+    password_required: "Ilagay ang password mo",
+    name_too_long: "Hanggang 120 characters lang ang pangalan",
+    password_too_short: "Gumamit ng kahit 8 characters",
+    password_too_long: "Hanggang 72 characters lang",
+  },
+})
+
+/** Readable Supabase Auth errors (see `describeAuthError`). */
+export const authErrorMessages = defineMessages({
+  en: {
+    link_invalid: "That sign-in link is invalid or has expired. Request a new one.",
+    other_browser: "Open the link in the same browser you requested it from, or request a new one.",
+    already_registered: "An account with this email already exists. Sign in instead.",
+    rate_limited: "Too many attempts. Wait a minute, then try again.",
+    invalid_credentials: "That email and password don't match. Check both and try again.",
+    email_not_confirmed: "Confirm your email first: open the link we sent when you signed up, or email yourself a magic link.",
+    weak_password: "Choose a stronger password: at least 8 characters, mixing letters, numbers and symbols.",
+    email_rate_limit: "Too many emails were sent. Wait a minute, then try again.",
+    signup_disabled: "New accounts are disabled for this project. Enable sign-ups in Supabase → Authentication.",
+    email_provider_disabled: "Email sign-in is disabled. Enable the Email provider in Supabase → Authentication.",
+    otp_disabled: "Magic links are disabled for this project. Sign in with your password instead.",
+    email_address_invalid: "Enter a valid email address.",
+    email_not_authorized:
+      "Supabase's built-in email service only sends to your team's addresses. Configure custom SMTP to email anyone.",
+    session_expired: "Your session expired. Sign in again.",
+    user_banned: "This account has been suspended.",
+    generic: "Something went wrong. Try again.",
+    unreachable: "Couldn't reach Supabase. Check your connection and NEXT_PUBLIC_SUPABASE_URL.",
+  },
+  tl: {
+    link_invalid: "Invalid o expired na ang sign-in link. Humingi ng bago.",
+    other_browser: "Buksan ang link sa parehong browser kung saan hiningi, o humingi ng bago.",
+    already_registered: "May account na gamit ang email na 'to. Mag-sign in na lang.",
+    rate_limited: "Sobra sa dami ng attempts. Maghintay ng isang minuto, tapos subukan ulit.",
+    invalid_credentials: "Hindi tugma ang email at password. Tingnan ang dalawa at subukan ulit.",
+    email_not_confirmed: "I-confirm muna ang email mo: buksan ang link na pinadala noong nag-sign up, o i-email sa sarili ang magic link.",
+    weak_password: "Pumili ng mas matibay na password: kahit 8 characters, pinaghalong letters, numbers at symbols.",
+    email_rate_limit: "Sobra sa dami ng emails na pinadala. Maghintay ng isang minuto, tapos subukan ulit.",
+    signup_disabled: "Naka-disable ang bagong accounts sa project na 'to. I-enable ang sign-ups sa Supabase → Authentication.",
+    email_provider_disabled: "Naka-disable ang email sign-in. I-enable ang Email provider sa Supabase → Authentication.",
+    otp_disabled: "Naka-disable ang magic links sa project na 'to. Mag-sign in gamit ang password.",
+    email_address_invalid: "Maglagay ng valid na email address.",
+    email_not_authorized:
+      "Ang built-in email service ng Supabase ay nagpapadala lang sa addresses ng team mo. I-configure ang custom SMTP para mag-email sa kahit sino.",
+    session_expired: "Expired na ang session mo. Mag-sign in ulit.",
+    user_banned: "Naka-suspend ang account na 'to.",
+    generic: "May mali. Subukan ulit.",
+    unreachable: "Hindi maabot ang Supabase. Tingnan ang connection mo at ang NEXT_PUBLIC_SUPABASE_URL.",
+  },
+})

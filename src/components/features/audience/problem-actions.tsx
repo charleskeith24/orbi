@@ -12,10 +12,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { createIdea, dataActions } from "@/lib/store"
 import type { AudienceProblem, ContentIdea, ID } from "@/lib/types"
-import { cn, pluralize, truncate } from "@/lib/utils"
+import { cn, formatNumber, truncate } from "@/lib/utils"
 import { generatorHref, problemIdeaValues } from "./audience-model"
+import { audienceMessages } from "./messages"
+import { problemMessages } from "./problem-messages"
 
 /**
  * Create idea, generate ideas, copy link and delete (with confirmation) for Problem Bank rows.
@@ -24,15 +28,17 @@ import { generatorHref, problemIdeaValues } from "./audience-model"
 export function useProblemActions({ onOpen, onDeleted }: { onOpen: (id: ID) => void; onDeleted?: (id: ID) => void }) {
   const router = useRouter()
   const [confirm, confirmDialog] = useConfirm()
+  const t = useT(problemMessages)
+  const a = useT(audienceMessages)
 
   function createIdeaFrom(problem: AudienceProblem): ContentIdea {
     const persona = problem.persona_id
       ? dataActions.getDb().audience_personas.find((p) => p.id === problem.persona_id)
       : undefined
     const idea = createIdea(problemIdeaValues(problem, persona))
-    toast.success("Idea added to the Idea Bank", {
+    toast.success(a("idea_added"), {
       description: idea.title,
-      action: { label: "Open idea", onClick: () => router.push(`/ideas?open=${idea.id}`) },
+      action: { label: a("open_idea"), onClick: () => router.push(`/ideas?open=${idea.id}`) },
     })
     return idea
   }
@@ -45,9 +51,9 @@ export function useProblemActions({ onOpen, onDeleted }: { onOpen: (id: ID) => v
     const url = `${window.location.origin}/audience/problems?open=${problem.id}`
     try {
       await navigator.clipboard.writeText(url)
-      toast.success("Link copied", { description: url })
+      toast.success(a("link_copied"), { description: url })
     } catch {
-      toast.error("Couldn't copy the link", { description: url })
+      toast.error(a("copy_failed"), { description: url })
     }
   }
 
@@ -55,18 +61,21 @@ export function useProblemActions({ onOpen, onDeleted }: { onOpen: (id: ID) => v
     const db = dataActions.getDb()
     const ideas = db.content_ideas.filter((i) => i.problem_id === problem.id).length
     const items = db.content_items.filter((i) => i.problem_id === problem.id).length
-    const linked = [ideas > 0 && pluralize(ideas, "idea"), items > 0 && pluralize(items, "content piece")].filter(Boolean).join(" and ")
+    const parts = [
+      ideas > 0 && t.plural("ideas_count", ideas, { count: formatNumber(ideas) }),
+      items > 0 && t.plural("content_pieces", items, { count: formatNumber(items) }),
+    ].filter((part): part is string => Boolean(part))
+    const linked = parts.length > 1 ? t("join_and", { first: parts[0], second: parts[1] }) : (parts[0] ?? "")
+    const text = truncate(problem.problem || t("untitled"), 140)
     const ok = await confirm({
-      title: "Delete this problem?",
-      description: `“${truncate(problem.problem || "Untitled problem", 140)}” leaves the Problem Bank.${
-        linked ? ` The ${linked} made from it stay — only the link to this problem is removed.` : ""
-      } This can't be undone.`,
-      confirmLabel: "Delete problem",
+      title: t("delete_title"),
+      description: linked ? t("delete_description_linked", { text, linked }) : t("delete_description", { text }),
+      confirmLabel: t("delete_confirm"),
     })
     if (!ok) return false
     dataActions.remove("audience_problems", problem.id)
     onDeleted?.(problem.id)
-    toast.success("Problem deleted", { description: truncate(problem.problem, 80) })
+    toast.success(t("deleted"), { description: truncate(problem.problem, 80) })
     return true
   }
 
@@ -87,6 +96,9 @@ export function ProblemActionsMenu({
   showOpen?: boolean
   className?: string
 }) {
+  const t = useT(problemMessages)
+  const a = useT(audienceMessages)
+  const c = useT(commonMessages)
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -94,7 +106,7 @@ export function ProblemActionsMenu({
           type="button"
           variant="ghost"
           size="icon-xs"
-          aria-label={`Actions for problem: ${truncate(problem.problem || "Untitled problem", 60)}`}
+          aria-label={t("actions_for", { text: truncate(problem.problem || t("untitled"), 60) })}
           className={cn("text-muted-foreground", className)}
         >
           <Ellipsis aria-hidden />
@@ -104,25 +116,25 @@ export function ProblemActionsMenu({
         {showOpen ? (
           <DropdownMenuItem onSelect={() => actions.open(problem.id)}>
             <PanelRightOpen aria-hidden />
-            Open details
+            {a("open_details")}
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem onSelect={() => actions.createIdea(problem)}>
           <Lightbulb aria-hidden />
-          Create idea
+          {a("create_idea")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => actions.generateIdeas(problem)}>
           <Sparkles aria-hidden />
-          Generate ideas
+          {a("generate_ideas")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => void actions.copyLink(problem)}>
           <Link2 aria-hidden />
-          Copy link
+          {a("copy_link")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={() => void actions.remove(problem)}>
           <Trash2 aria-hidden />
-          Delete
+          {c("delete")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

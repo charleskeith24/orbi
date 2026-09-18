@@ -4,35 +4,39 @@ import Link from "next/link"
 import { ColorDot, PlatformIcon, SectionCard, StageBadge, StatusPill } from "@/components/common"
 import type { TodayContent } from "@/lib/analytics"
 import { formatTime } from "@/lib/dates"
+import { useT, useUiLang, type Translator } from "@/lib/i18n"
 import type { ContentItem } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { CardLink } from "./card-link"
 import { formatSlotTime, overdueLabel, type WeekSlot } from "./dashboard-utils"
+import { dashboardMessages } from "./messages"
+
+type T = Translator<typeof dashboardMessages.en>
 
 type GroupKey = "dueToday" | "overdue" | "scheduledToday" | "awaitingProduction" | "awaitingApproval"
 
 interface Group {
   key: GroupKey
-  label: string
+  label: keyof typeof dashboardMessages.en
   icon: LucideIcon
-  empty: string
+  empty: keyof typeof dashboardMessages.en
   href: string
   /** Urgent groups render only when they have items (and then in the critical tone). */
   urgent?: boolean
 }
 
 const GROUPS: Group[] = [
-  { key: "dueToday", label: "Due today", icon: CalendarClock, empty: "Nothing due today", href: "/today" },
-  { key: "overdue", label: "Overdue", icon: AlarmClock, empty: "Nothing overdue", href: "/today", urgent: true },
-  { key: "scheduledToday", label: "Scheduled today", icon: Send, empty: "Nothing scheduled for today", href: "/today" },
+  { key: "dueToday", label: "group_due_today", icon: CalendarClock, empty: "group_due_today_empty", href: "/today" },
+  { key: "overdue", label: "group_overdue", icon: AlarmClock, empty: "group_overdue_empty", href: "/today", urgent: true },
+  { key: "scheduledToday", label: "group_scheduled_today", icon: Send, empty: "group_scheduled_today_empty", href: "/today" },
   {
     key: "awaitingProduction",
-    label: "Awaiting production",
+    label: "group_awaiting_production",
     icon: Clapperboard,
-    empty: "Nothing waiting to be recorded or edited",
+    empty: "group_awaiting_production_empty",
     href: "/pipeline",
   },
-  { key: "awaitingApproval", label: "Awaiting approval", icon: ClipboardCheck, empty: "Nothing waiting for approval", href: "/pipeline" },
+  { key: "awaitingApproval", label: "group_awaiting_approval", icon: ClipboardCheck, empty: "group_awaiting_approval_empty", href: "/pipeline" },
 ]
 
 /** Items shown per group; the rest sit behind "+N more". */
@@ -41,11 +45,11 @@ const VISIBLE = 2
 const ROW_LINK =
   "-mx-2 flex min-w-0 items-center gap-2 rounded-md px-2 outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50"
 
-function TodaySlots({ slots }: { slots: WeekSlot[] }) {
+function TodaySlots({ slots, t }: { slots: WeekSlot[]; t: T }) {
   if (!slots.length) {
     return (
       <Link href="/calendar/schedule" className={cn(ROW_LINK, "mx-0 rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground")}>
-        No posting slot today — adjust your Posting Schedule
+        {t("no_slot_today")}
       </Link>
     )
   }
@@ -63,16 +67,16 @@ function TodaySlots({ slots }: { slots: WeekSlot[] }) {
                 !filled && "border-dashed"
               )}
             >
-              <span className="shrink-0 text-xs text-muted-foreground">Today&apos;s slot</span>
+              <span className="shrink-0 text-xs text-muted-foreground">{t("todays_slot")}</span>
               {pillar ? <ColorDot color={pillar.color} /> : null}
-              <span className="min-w-0 flex-1 truncate text-sm font-medium">{slot.label || "Posting slot"}</span>
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">{slot.label || t("posting_slot")}</span>
               <span className="flex shrink-0 items-center gap-1 text-muted-foreground">
                 {slot.platforms.map((platform) => (
                   <PlatformIcon key={platform} platform={platform} label className="size-3.5" />
                 ))}
               </span>
               {time ? <span className="hidden shrink-0 text-xs text-muted-foreground num @xl:inline">{time}</span> : null}
-              <StatusPill tone={filled ? "good" : "warning"}>{filled ? "Filled" : "Open slot"}</StatusPill>
+              <StatusPill tone={filled ? "good" : "warning"}>{filled ? t("slot_filled") : t("slot_open")}</StatusPill>
             </Link>
           </li>
         )
@@ -82,30 +86,31 @@ function TodaySlots({ slots }: { slots: WeekSlot[] }) {
 }
 
 function ItemMeta({ item, group, now }: { item: ContentItem; group: GroupKey; now: Date }) {
-  if (group === "overdue") return <span className="shrink-0 text-xs font-medium text-critical-fg">{overdueLabel(item, now)}</span>
+  const lang = useUiLang()
+  if (group === "overdue") return <span className="shrink-0 text-xs font-medium text-critical-fg">{overdueLabel(item, now, lang)}</span>
   if (group === "scheduledToday" && item.scheduled_at) {
     return <span className="shrink-0 text-xs text-muted-foreground num">{formatTime(item.scheduled_at)}</span>
   }
   return <StageBadge stage={item.stage} />
 }
 
-function TodayGroup({ group, items, now }: { group: Group; items: ContentItem[]; now: Date }) {
+function TodayGroup({ group, items, now, t }: { group: Group; items: ContentItem[]; now: Date; t: T }) {
   if (group.urgent && !items.length) return null
   const Icon = group.icon
   const shown = items.slice(0, VISIBLE)
   const more = items.length - shown.length
   return (
-    <section aria-label={group.label} className="flex min-w-0 flex-col gap-0.5">
+    <section aria-label={t(group.label)} className="flex min-w-0 flex-col gap-0.5">
       <div className="flex min-w-0 items-center gap-1.5 text-xs">
         <Icon className={cn("size-3.5 shrink-0", group.urgent ? "text-critical-fg" : "text-muted-foreground")} aria-hidden />
-        <span className={cn("font-medium", group.urgent && "text-critical-fg")}>{group.label}</span>
+        <span className={cn("font-medium", group.urgent && "text-critical-fg")}>{t(group.label)}</span>
         <span className="text-muted-foreground num">{items.length}</span>
         {more > 0 ? (
           <Link
             href={group.href}
             className="ml-auto rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
           >
-            +{more} more
+            {t("more", { count: more })}
           </Link>
         ) : null}
       </div>
@@ -116,7 +121,7 @@ function TodayGroup({ group, items, now }: { group: Group; items: ContentItem[];
               <Link href={`/studio/${item.id}`} className={cn(ROW_LINK, "py-1")}>
                 <PlatformIcon platform={item.platform} label className="size-3.5 shrink-0 text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate text-sm" title={item.title}>
-                  {item.title.trim() || "Untitled content"}
+                  {item.title.trim() || t("untitled_content")}
                 </span>
                 <ItemMeta item={item} group={group.key} now={now} />
               </Link>
@@ -124,7 +129,7 @@ function TodayGroup({ group, items, now }: { group: Group; items: ContentItem[];
           ))}
         </ul>
       ) : (
-        <p className="py-1 pl-5 text-xs text-muted-foreground">{group.empty}</p>
+        <p className="py-1 pl-5 text-xs text-muted-foreground">{t(group.empty)}</p>
       )}
     </section>
   )
@@ -142,17 +147,18 @@ export function ContentTodayCard({
   now: Date
   className?: string
 }) {
+  const t = useT(dashboardMessages)
   return (
     <SectionCard
-      title="Content Today"
+      title={t("today_title")}
       description={format(now, "EEEE, MMM d")}
-      action={<CardLink href="/today">Open Today</CardLink>}
+      action={<CardLink href="/today">{t("open_today")}</CardLink>}
       className={className}
       contentClassName="flex flex-col gap-3"
     >
-      <TodaySlots slots={slots} />
+      <TodaySlots slots={slots} t={t} />
       {GROUPS.map((group) => (
-        <TodayGroup key={group.key} group={group} items={today[group.key]} now={now} />
+        <TodayGroup key={group.key} group={group} items={today[group.key]} now={now} t={t} />
       ))}
     </SectionCard>
   )

@@ -2,11 +2,14 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import type { ContentIdea, ID } from "@/lib/types"
 import { formatNumber } from "@/lib/utils"
 import { IdeaActionsMenu } from "./idea-actions-menu"
 import { IdeaCard } from "./idea-card"
 import type { IdeaLookups } from "./idea-table"
+import { ideaBankMessages } from "./messages"
 
 const PAGE_SIZE = 48
 
@@ -24,13 +27,15 @@ export function IdeaCardsView({
   onOpen: (id: ID) => void
   empty: React.ReactNode
 }) {
+  const t = useT(ideaBankMessages)
+  const c = useT(commonMessages)
   const [limit, setLimit] = useState(PAGE_SIZE)
   if (!ideas.length) return <div className="rounded-lg border bg-card">{empty}</div>
   const shown = ideas.slice(0, limit)
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      <ul aria-label="Ideas" className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+      <ul aria-label={t("ideas")} className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
         {shown.map((idea) => (
           <li key={idea.id} className="flex min-w-0">
             <IdeaCard
@@ -48,11 +53,9 @@ export function IdeaCardsView({
       </ul>
       {shown.length < ideas.length ? (
         <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
-          <span className="num">
-            Showing {formatNumber(shown.length)} of {formatNumber(ideas.length)}
-          </span>
+          <span className="num">{t("showing", { shown: formatNumber(shown.length), total: formatNumber(ideas.length) })}</span>
           <Button type="button" variant="outline" size="sm" onClick={() => setLimit((l) => l + PAGE_SIZE)}>
-            Show more
+            {c("show_more")}
           </Button>
         </div>
       ) : null}

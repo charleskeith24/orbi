@@ -3,8 +3,10 @@
 import { useMemo } from "react"
 import { DataTable, PillarBadge, Token, type DataTableColumn } from "@/components/common"
 import { formatDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import type { ContentPillar, ID, Story } from "@/lib/types"
 import { formatNumber } from "@/lib/utils"
+import { storyVaultMessages } from "./messages"
 import { useStoryActions } from "./story-actions"
 import { StoryActionsMenu } from "./story-actions-menu"
 import { FavoriteToggle, StoryTypeBadge } from "./story-badges"
@@ -21,36 +23,37 @@ export function StoryTable({
   pillars: ReadonlyMap<ID, ContentPillar>
 }) {
   const actions = useStoryActions()
+  const t = useT(storyVaultMessages)
   const columns = useMemo<DataTableColumn<Story>[]>(
     () => [
       {
         id: "title",
-        header: "Story",
+        header: t("col_story"),
         sortValue: (s) => s.title.toLowerCase(),
         cell: (s) => (
           <div className="flex max-w-[26rem] min-w-48 flex-col">
-            <span className="truncate font-medium">{s.title || "Untitled story"}</span>
-            <span className="truncate text-xs text-muted-foreground">{s.lesson || "No lesson written yet"}</span>
+            <span className="truncate font-medium">{s.title || t("untitled")}</span>
+            <span className="truncate text-xs text-muted-foreground">{s.lesson || t("no_lesson")}</span>
           </div>
         ),
       },
       {
         id: "type",
-        header: "Type",
+        header: t("col_type"),
         sortValue: (s) => storyTypeLabel(s.type),
         cell: (s) => <StoryTypeBadge type={s.type} />,
         hideBelow: "sm",
       },
       {
         id: "pillar",
-        header: "Pillar",
+        header: t("col_pillar"),
         sortValue: (s) => (s.pillar_id ? (pillars.get(s.pillar_id)?.name ?? null) : null),
         cell: (s) => <PillarBadge pillar={s.pillar_id ? (pillars.get(s.pillar_id) ?? null) : null} variant="plain" />,
         hideBelow: "md",
       },
       {
         id: "keywords",
-        header: "Keywords",
+        header: t("col_keywords"),
         cell: (s) =>
           s.keywords.length ? (
             <span className="flex max-w-56 flex-wrap gap-1">
@@ -66,14 +69,14 @@ export function StoryTable({
       },
       {
         id: "date",
-        header: "Date",
+        header: t("col_date"),
         sortValue: (s) => storyDay(s),
         cell: (s) => <span className="whitespace-nowrap text-muted-foreground num">{formatDate(storyDay(s), "MMM d, yyyy")}</span>,
         hideBelow: "sm",
       },
       {
         id: "ideas",
-        header: "Ideas",
+        header: t("col_ideas"),
         align: "right",
         sortValue: (s) => usageCount(usage, s.id),
         cell: (s) => {
@@ -83,7 +86,7 @@ export function StoryTable({
       },
       {
         id: "actions",
-        header: <span className="sr-only">Actions</span>,
+        header: <span className="sr-only">{t("col_actions")}</span>,
         className: "w-16",
         cell: (s) => (
           <div className="flex items-center justify-end">
@@ -93,7 +96,7 @@ export function StoryTable({
         ),
       },
     ],
-    [pillars, usage]
+    [pillars, usage, t]
   )
 
   return (
@@ -102,8 +105,8 @@ export function StoryTable({
       columns={columns}
       getRowId={(s) => s.id}
       onRowClick={(s) => actions.open(s.id)}
-      rowLabel={(s) => `Open ${s.title || "story"}`}
-      aria-label="Stories"
+      rowLabel={(s) => t("open_row", { title: s.title || t("story_fallback") })}
+      aria-label={t("stories_label")}
     />
   )
 }

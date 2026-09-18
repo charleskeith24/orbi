@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest"
-import { getIntegration, INTEGRATIONS, integrationsIn } from "./registry"
-import { INTEGRATION_CATEGORIES } from "./types"
+import { getIntegration, integrationLabels, integrationText, INTEGRATIONS, integrationsIn, localizeConnectResult } from "./registry"
+import {
+  INTEGRATION_AUTH_LABELS,
+  INTEGRATION_CAPABILITY_LABELS,
+  INTEGRATION_CATEGORIES,
+  INTEGRATION_STATUS_LABELS,
+  type IntegrationAuth,
+  type IntegrationCapability,
+  type IntegrationStatus,
+} from "./types"
 
 describe("integration registry", () => {
   it("covers the Phase 4 services with unique ids", () => {
@@ -27,5 +35,34 @@ describe("integration registry", () => {
     const listed = INTEGRATION_CATEGORIES.flatMap((c) => integrationsIn(c.id))
     expect(listed).toHaveLength(INTEGRATIONS.length)
     for (const adapter of integrationsIn("social")) expect(adapter.capabilities).toContain("import_analytics")
+  })
+
+  it("labels English exactly like the type constants and translates them for Taglish", () => {
+    const en = integrationLabels("en")
+    const tl = integrationLabels("tl")
+    for (const [capability, label] of Object.entries(INTEGRATION_CAPABILITY_LABELS)) expect(en.capability(capability as IntegrationCapability)).toBe(label)
+    for (const [status, label] of Object.entries(INTEGRATION_STATUS_LABELS)) expect(en.status(status as IntegrationStatus)).toBe(label)
+    for (const [auth, label] of Object.entries(INTEGRATION_AUTH_LABELS)) expect(en.auth(auth as IntegrationAuth)).toBe(label)
+    for (const category of INTEGRATION_CATEGORIES) {
+      expect(en.category(category.id)).toEqual({ label: category.label, description: category.description })
+      expect(tl.category(category.id).description).not.toBe(category.description)
+    }
+    expect(tl.status("not_configured")).toBe("Hindi naka-connect")
+  })
+
+  it("gives every adapter Taglish text with the same number of requirements", async () => {
+    for (const adapter of INTEGRATIONS) {
+      expect(integrationText(adapter, "en")).toEqual({ description: adapter.description, requirements: adapter.requirements, manualPath: adapter.manualPath })
+      const tl = integrationText(adapter, "tl")
+      expect(tl.requirements).toHaveLength(adapter.requirements.length)
+      expect(tl.description).not.toBe(adapter.description)
+      expect(tl.manualPath).not.toBe(adapter.manualPath)
+      const result = await adapter.connect()
+      expect(localizeConnectResult(adapter, result, "en")).toBe(result)
+      const localized = localizeConnectResult(adapter, result, "tl")
+      expect(localized.message).toContain(adapter.name)
+      expect(localized.message).not.toBe(result.message)
+      expect(localized.requirements).toEqual(tl.requirements)
+    }
   })
 })

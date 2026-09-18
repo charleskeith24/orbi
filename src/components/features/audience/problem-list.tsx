@@ -5,10 +5,13 @@ import Link from "next/link"
 import { PersonaBadge, PillarBadge, StatusPill } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { PROBLEM_CATEGORY_MAP } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import type { AudiencePersona, AudienceProblem, ContentPillar, ID, ProblemCategory } from "@/lib/types"
-import { cn, formatNumber, pluralize } from "@/lib/utils"
+import { cn, formatNumber } from "@/lib/utils"
 import { generatorHref, isUntapped, NO_LINKS, type ProblemLinks } from "./audience-model"
+import { audienceMessages } from "./messages"
 import { ProblemActionsMenu, type ProblemActions } from "./problem-actions"
+import { problemMessages } from "./problem-messages"
 import { SeverityMeter } from "./severity"
 
 export interface ProblemGroup {
@@ -29,6 +32,7 @@ export function ProblemGroups({
   actions,
   ...lookups
 }: Lookups & { groups: ProblemGroup[]; showHeaders: boolean; actions: ProblemActions }) {
+  const a = useT(audienceMessages)
   return (
     <div className="flex min-w-0 flex-col gap-4">
       {groups.map((group) => {
@@ -41,7 +45,7 @@ export function ProblemGroups({
               <h2 id={headingId} className="text-sm font-medium">
                 {label} <span className="font-normal text-muted-foreground num">{formatNumber(group.problems.length)}</span>
               </h2>
-              {untapped ? <span className="text-xs text-muted-foreground num">{formatNumber(untapped)} untapped</span> : null}
+              {untapped ? <span className="text-xs text-muted-foreground num">{a("untapped", { count: formatNumber(untapped) })}</span> : null}
             </header>
             <ul className="divide-y">
               {group.problems.map((problem) => (
@@ -63,18 +67,19 @@ export function ProblemGroups({
 }
 
 function LinkCounts({ links }: { links: ProblemLinks }) {
+  const t = useT(problemMessages)
   return (
     <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
       {links.ideas.length ? (
         <span className="inline-flex items-center gap-1">
           <Lightbulb className="size-3.5" aria-hidden />
-          {pluralize(links.ideas.length, "idea")}
+          {t.plural("ideas_count", links.ideas.length, { count: formatNumber(links.ideas.length) })}
         </span>
       ) : null}
       {links.items.length ? (
         <span className="inline-flex items-center gap-1">
           <FileText className="size-3.5" aria-hidden />
-          {pluralize(links.items.length, "piece")}
+          {t.plural("pieces_count", links.items.length, { count: formatNumber(links.items.length) })}
         </span>
       ) : null}
     </span>
@@ -94,6 +99,8 @@ function ProblemRow({
   pillar: ContentPillar | null
   actions: ProblemActions
 }) {
+  const t = useT(problemMessages)
+  const a = useT(audienceMessages)
   const untapped = isUntapped(links)
   return (
     <li className="group/row relative flex min-w-0 items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/40 has-[[data-row-link]:focus-visible]:bg-muted/50">
@@ -105,14 +112,14 @@ function ProblemRow({
           onClick={() => actions.open(problem.id)}
           className="block w-full text-left text-sm leading-snug outline-none after:absolute after:inset-0 after:content-[''] focus-visible:underline"
         >
-          {problem.problem || "Untitled problem"}
+          {problem.problem || t("untitled")}
         </button>
         <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
           <PersonaBadge persona={persona} variant="plain" />
           <PillarBadge pillar={pillar} variant="plain" />
           {untapped ? (
-            <StatusPill tone="warning" icon={Lightbulb} title="No idea or content addresses this problem yet">
-              Untapped
+            <StatusPill tone="warning" icon={Lightbulb} title={t("untapped_title")}>
+              {t("untapped")}
             </StatusPill>
           ) : (
             <LinkCounts links={links} />
@@ -135,12 +142,12 @@ function ProblemRow({
             onClick={() => actions.createIdea(problem)}
           >
             <Lightbulb aria-hidden />
-            <span className="max-md:sr-only">Create idea</span>
+            <span className="max-md:sr-only">{a("create_idea")}</span>
           </Button>
           <Button type="button" variant="ghost" size="sm" className="max-md:size-7 max-md:px-0" asChild>
             <Link href={generatorHref(problem)}>
               <Sparkles className="text-brand" aria-hidden />
-              <span className="max-md:sr-only">Generate ideas</span>
+              <span className="max-md:sr-only">{a("generate_ideas")}</span>
             </Link>
           </Button>
         </div>

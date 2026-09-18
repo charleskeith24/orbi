@@ -13,37 +13,42 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useT } from "@/lib/i18n"
 import { PIPELINE_STAGE_MAP, PLATFORMS } from "@/lib/constants"
 import { dataActions, duplicateContentItem, uiActions, useDataStore } from "@/lib/store"
 import type { ContentItem } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { workspaceMessages } from "./messages"
 import { copyText } from "./studio-utils"
 
-function joinList(parts: string[]): string {
+function joinList(parts: string[], and: string): string {
   if (parts.length <= 1) return parts[0] ?? ""
-  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`
+  return `${parts.slice(0, -1).join(", ")} ${and} ${parts[parts.length - 1]}`
 }
 
 /** Workspace overflow menu: related records, copy link, strategist, duplicate and delete (confirmed). */
 export function WorkspaceMenu({ item, onDeleting }: { item: ContentItem; onDeleting: () => void }) {
+  const t = useT(workspaceMessages)
   const router = useRouter()
   const [confirm, confirmDialog] = useConfirm()
-  const title = item.title.trim() || "Untitled content"
+  const title = item.title.trim() || t("untitled_content")
 
   function duplicate() {
     const copy = duplicateContentItem(item.id)
-    toast.success("Duplicated", { description: `“${copy.title}” is ready in ${PIPELINE_STAGE_MAP[copy.stage]?.label ?? copy.stage}.` })
+    toast.success(t("duplicated"), {
+      description: t("duplicated_description", { title: copy.title, stage: PIPELINE_STAGE_MAP[copy.stage]?.label ?? copy.stage }),
+    })
     router.push(`/studio/${copy.id}`)
   }
 
   async function copyLink() {
-    if (await copyText(`${window.location.origin}/studio/${item.id}`)) toast.success("Link copied")
-    else toast.error("Couldn't copy the link", { description: "Copy it from the address bar instead." })
+    if (await copyText(`${window.location.origin}/studio/${item.id}`)) toast.success(t("link_copied"))
+    else toast.error(t("link_copy_failed"), { description: t("link_copy_failed_description") })
   }
 
   function askStrategist() {
     const platform = PLATFORMS[item.platform].label
-    uiActions.askStrategist(`How can I make my ${platform} piece “${title}” stronger for my audience before it goes out?`)
+    uiActions.askStrategist(t("strategist_question", { platform, title }))
   }
 
   async function remove() {
@@ -52,25 +57,33 @@ export function WorkspaceMenu({ item, onDeleting }: { item: ContentItem; onDelet
     const snapshots = db.content_metrics.filter((m) => m.content_item_id === item.id).length
     const children = db.content_items.filter((i) => i.parent_id === item.id).length
     const cascades = joinList(
-      ["its brief", scripts ? pluralize(scripts, "script version") : "", snapshots ? pluralize(snapshots, "analytics snapshot") : ""].filter(Boolean)
+      [
+        t("its_brief"),
+        scripts ? t.plural("script_versions", scripts, { count: formatNumber(scripts) }) : "",
+        snapshots ? t.plural("snapshots", snapshots, { count: formatNumber(snapshots) }) : "",
+      ].filter(Boolean),
+      t("and")
     )
     const ok = await confirm({
-      title: `Delete “${title}”?`,
-      description: `This also deletes ${cascades}.${children ? ` ${pluralize(children, "repurposed piece")} stay, without the link back to it.` : ""} This can’t be undone.`,
-      confirmLabel: "Delete content",
+      title: t("delete_title", { title }),
+      description: t("delete_description", {
+        cascades,
+        children: children ? t.plural("children_stay", children, { count: formatNumber(children) }) : "",
+      }),
+      confirmLabel: t("delete_confirm"),
     })
     if (!ok) return
     onDeleting()
     router.replace("/studio")
     dataActions.remove("content_items", item.id)
-    toast.success("Content deleted", { description: title })
+    toast.success(t("deleted"), { description: title })
   }
 
   return (
     <>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button type="button" variant="outline" size="icon-sm" aria-label="More actions">
+          <Button type="button" variant="outline" size="icon-sm" aria-label={t("more_actions")}>
             <Ellipsis aria-hidden />
           </Button>
         </DropdownMenuTrigger>
@@ -79,7 +92,7 @@ export function WorkspaceMenu({ item, onDeleting }: { item: ContentItem; onDelet
             <DropdownMenuItem asChild>
               <Link href={`/ideas?open=${item.idea_id}`}>
                 <Lightbulb aria-hidden />
-                Open idea
+                {t("open_idea")}
               </Link>
             </DropdownMenuItem>
           ) : null}
@@ -87,7 +100,7 @@ export function WorkspaceMenu({ item, onDeleting }: { item: ContentItem; onDelet
             <DropdownMenuItem asChild>
               <Link href={`/studio/${item.parent_id}`}>
                 <GitFork aria-hidden />
-                Open source content
+                {t("open_source")}
               </Link>
             </DropdownMenuItem>
           ) : null}
@@ -95,33 +108,33 @@ export function WorkspaceMenu({ item, onDeleting }: { item: ContentItem; onDelet
             <DropdownMenuItem asChild>
               <Link href={`/campaigns/${item.campaign_id}`}>
                 <Megaphone aria-hidden />
-                Open campaign
+                {t("open_campaign")}
               </Link>
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuItem asChild>
             <Link href={`/pipeline?open=${item.id}`}>
               <SquareKanban aria-hidden />
-              Show in Pipeline
+              {t("show_in_pipeline")}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => void copyLink()}>
             <Link2 aria-hidden />
-            Copy link
+            {t("copy_link")}
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={askStrategist}>
             <Sparkles aria-hidden />
-            Ask the Content Strategist
+            {t("ask_strategist")}
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={duplicate}>
             <CopyPlus aria-hidden />
-            Duplicate
+            {t("duplicate")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onSelect={() => void remove()}>
             <Trash2 aria-hidden />
-            Delete content…
+            {t("delete_menu")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

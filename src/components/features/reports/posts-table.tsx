@@ -19,12 +19,15 @@ import { Button } from "@/components/ui/button"
 import type { TieredRow } from "@/lib/analytics"
 import { PLATFORMS } from "@/lib/constants"
 import { formatShortDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import { uiActions } from "@/lib/store"
 import { cn, formatCompact, formatNumber, formatPercent } from "@/lib/utils"
+import { reportMessages } from "./messages"
 import { formatRatio } from "./report-format"
 
 function ContentCell({ row }: { row: TieredRow }) {
-  const title = row.item.title.trim() || "Untitled content"
+  const t = useT(reportMessages)
+  const title = row.item.title.trim() || t("untitled_content")
   return (
     <div className="flex min-w-0 items-center gap-2.5">
       <span className="hidden shrink-0 sm:block">
@@ -75,34 +78,35 @@ export function ReportPostsTable({
   emptyAction?: React.ReactNode
   className?: string
 }) {
+  const t = useT(reportMessages)
   const router = useRouter()
   const columns = useMemo<DataTableColumn<TieredRow>[]>(() => {
     const rank = new Map(rows.filter((r) => r.metric).map((row, i) => [row.id, i + 1]))
     return [
       {
         id: "rank",
-        header: <span className="sr-only">Rank</span>,
+        header: <span className="sr-only">{t("rank")}</span>,
         cell: (row) => <span className="text-xs text-muted-foreground num">{rank.get(row.id) ?? ""}</span>,
         width: 28,
         className: "pr-0",
       },
       {
         id: "content",
-        header: "Content",
+        header: t("content"),
         cell: (row) => <ContentCell row={row} />,
         className: "w-full max-w-0",
         headerClassName: "w-full",
       },
       {
         id: "views",
-        header: "Views",
+        header: t("views"),
         align: "right",
         cell: (row) => (row.metric ? formatCompact(row.views) : "—"),
         sortValue: (row) => (row.metric ? row.views : null),
       },
       {
         id: "engagement",
-        header: "Eng. rate",
+        header: t("eng_rate"),
         align: "right",
         cell: (row) => formatPercent(row.rates.engagement_rate),
         sortValue: (row) => row.rates.engagement_rate,
@@ -110,7 +114,7 @@ export function ReportPostsTable({
       },
       {
         id: "leads",
-        header: "Leads",
+        header: t("leads"),
         align: "right",
         cell: (row) => (row.metric ? formatNumber(row.leads) : "—"),
         sortValue: (row) => (row.metric ? row.leads : null),
@@ -118,7 +122,7 @@ export function ReportPostsTable({
       },
       {
         id: "ratio",
-        header: "vs baseline",
+        header: t("vs_baseline"),
         align: "right",
         cell: (row) => formatRatio(row.ratio),
         sortValue: (row) => row.ratio,
@@ -126,7 +130,7 @@ export function ReportPostsTable({
       },
       {
         id: "tier",
-        header: <span className="sr-only">Tier or action</span>,
+        header: <span className="sr-only">{t("tier_or_action")}</span>,
         align: "right",
         cell: (row) =>
           row.metric ? (
@@ -139,12 +143,12 @@ export function ReportPostsTable({
               className="print:hidden"
               onClick={() => uiActions.openDialog({ type: "add-metrics", itemId: row.id })}
             >
-              Add analytics
+              {t("add_analytics")}
             </Button>
           ),
       },
     ]
-  }, [rows])
+  }, [rows, t])
 
   return (
     <SectionCard
@@ -160,7 +164,7 @@ export function ReportPostsTable({
           columns={columns}
           getRowId={(row) => row.id}
           onRowClick={(row) => router.push(`/studio/${row.id}`)}
-          rowLabel={(row) => `Open ${row.item.title || "content"} in Content Studio`}
+          rowLabel={(row) => t("open_in_studio", { title: row.item.title || t("content_lower") })}
           bordered={false}
           dense
           aria-label={title}
@@ -174,7 +178,7 @@ export function ReportPostsTable({
           action={
             emptyAction ?? (
               <Button size="sm" variant="outline" onClick={() => uiActions.openDialog({ type: "log-post" })}>
-                Log a published post
+                {t("log_post")}
               </Button>
             )
           }

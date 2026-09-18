@@ -14,10 +14,13 @@ import {
   type MultiSelectOption,
 } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { translate, useT } from "@/lib/i18n"
+import { getUiLang } from "@/lib/i18n/ui-lang"
 import { dataActions, useDb, useSettings } from "@/lib/store"
 import type { PlatformId, PlatformStrategy } from "@/lib/types"
 import { PausedPlatformCard, PlatformCard, type PlatformOptions } from "./platform-card"
 import { PlatformPlanSummary } from "./platform-plan"
+import { platformsMessages } from "./platforms-messages"
 import { platformLabel, platformPlan, type PlatformPlanRow } from "./platforms-model"
 import { StrategyTabs } from "./strategy-tabs"
 import { useNow } from "./use-now"
@@ -27,7 +30,10 @@ const hasStrategy = (row: PlatformPlanRow): row is RowWithStrategy => row.strate
 
 function setUpPlatform(platform: PlatformId) {
   dataActions.insert("content_platforms", { platform, is_active: true })
-  toast.success(`${platformLabel(platform)} added to your plan`, { description: "Set its frequency, goal and audience below." })
+  const lang = getUiLang()
+  toast.success(translate(platformsMessages, lang, "added", { platform: platformLabel(platform) }), {
+    description: translate(platformsMessages, lang, "added_description"),
+  })
 }
 
 /** Strategy → Platforms (spec §15): per-platform strategy cards, the weekly plan vs target and 30-day performance. */
@@ -38,6 +44,7 @@ export function PlatformsView() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const t = useT(platformsMessages)
 
   const plan = useMemo(() => platformPlan(db, now, settings), [db, now, settings])
   const formats = db.content_formats
@@ -48,14 +55,14 @@ export function PlatformsView() {
         .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
         .map((f): MultiSelectOption => {
           const Icon = formatCategoryIcon(f.category)
-          return { value: f.id, label: f.name || "Untitled format", icon: <Icon className="text-muted-foreground" aria-hidden /> }
+          return { value: f.id, label: f.name || t("untitled_format"), icon: <Icon className="text-muted-foreground" aria-hidden /> }
         }),
       pillars: [...pillars]
         .filter((p) => p.is_active)
         .sort((a, b) => a.sort_order - b.sort_order)
-        .map((p): MultiSelectOption => ({ value: p.id, label: p.name || "Untitled pillar", color: p.color })),
+        .map((p): MultiSelectOption => ({ value: p.id, label: p.name || t("untitled_pillar"), color: p.color })),
     }),
-    [formats, pillars]
+    [formats, pillars, t]
   )
 
   const active = plan.rows.filter(hasStrategy).filter((r) => r.strategy.is_active)
@@ -82,7 +89,7 @@ export function PlatformsView() {
       <PageHeader
         title="Platform Strategy"
         icon={Radio}
-        description="The job each platform does for your brand — its goal, audience, formats, pillars and how often you post."
+        description={t("description")}
       >
         <StrategyTabs />
       </PageHeader>
@@ -90,8 +97,8 @@ export function PlatformsView() {
       <PlatformPlanSummary plan={plan} />
 
       <PageSection
-        title="Active platforms"
-        description="Edit a card and save it — the plan feeds your Posting Schedule, recommendations and every AI generation."
+        title={t("active_title")}
+        description={t("active_description")}
       >
         {active.length ? (
           <div className="grid min-w-0 gap-4 xl:grid-cols-2">
@@ -102,16 +109,16 @@ export function PlatformsView() {
         ) : (
           <EmptyState
             icon={Radio}
-            title="No active platforms"
-            description="Switch on the platforms you publish to so your weekly plan, schedule and recommendations know where content goes."
+            title={t("empty_title")}
+            description={t("empty_description")}
           />
         )}
       </PageSection>
 
       {paused.length || missing.length ? (
         <PageSection
-          title="Paused platforms"
-          description="Not part of your weekly plan. Switch one on once your core platforms post consistently."
+          title={t("paused_title")}
+          description={t("paused_description")}
         >
           <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {paused.map((row) => (
@@ -127,7 +134,7 @@ export function PlatformsView() {
                 </span>
                 <Button type="button" variant="outline" size="sm" onClick={() => setUpPlatform(row.platform)}>
                   <Plus aria-hidden />
-                  Set up
+                  {t("set_up")}
                 </Button>
               </div>
             ))}

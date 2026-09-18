@@ -6,9 +6,11 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { EmptyState, PlatformIcon } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { computeTiers, isPublishedItem, latestMetricsByItem } from "@/lib/analytics"
+import { useT, useUiLang } from "@/lib/i18n"
 import { useDb, useLookup, useSettings } from "@/lib/store"
 import type { ID } from "@/lib/types"
-import { cn, formatCompact, formatNumber, pluralize } from "@/lib/utils"
+import { cn, formatCompact, formatNumber } from "@/lib/utils"
+import { treeMessages } from "./messages"
 import { buildContentTree, treeHeadline, type ContentTreeModel, type TreeNode } from "./tree-model"
 import { NODE_H, TreeNodeCard, TreeRow, type TreeContext } from "./tree-node"
 
@@ -80,20 +82,22 @@ function ListBranch({ node, ctx }: { node: TreeNode; ctx: TreeContext }) {
 }
 
 function TreeSummaryLine({ model }: { model: ContentTreeModel }) {
+  const t = useT(treeMessages)
+  const lang = useUiLang()
   const { summary } = model
   const stats = [
-    `${formatNumber(summary.published)} published`,
-    summary.measured ? `${formatCompact(summary.views)} views` : null,
-    summary.pending ? pluralize(summary.pending, "pending suggestion") : null,
+    t("published_count", { count: formatNumber(summary.published) }),
+    summary.measured ? t("views", { count: formatCompact(summary.views) }) : null,
+    summary.pending ? t.plural("pending", summary.pending, { count: formatNumber(summary.pending) }) : null,
   ].filter(Boolean)
   return (
     <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
       <div className="min-w-0">
-        <p className="text-sm leading-6 font-medium text-balance">{treeHeadline(model)}</p>
+        <p className="text-sm leading-6 font-medium text-balance">{treeHeadline(model, lang)}</p>
         <p className="text-xs text-muted-foreground num">{stats.join(" · ")}</p>
       </div>
       {summary.platforms.length ? (
-        <ul className="flex items-center gap-1.5 text-muted-foreground" aria-label="Platforms in this tree">
+        <ul className="flex items-center gap-1.5 text-muted-foreground" aria-label={t("platforms_label")}>
           {summary.platforms.map((p) => (
             <li key={p} className="flex">
               <PlatformIcon platform={p} label className="size-4" />
@@ -106,25 +110,27 @@ function TreeSummaryLine({ model }: { model: ContentTreeModel }) {
 }
 
 function TreeLegend({ pending }: { pending: boolean }) {
+  const t = useT(treeMessages)
   return (
     <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
       <span className="inline-flex items-center gap-1.5">
         <span aria-hidden className="inline-block h-3 w-4 rounded-[3px] border bg-card" />
-        Content item
+        {t("legend_item")}
       </span>
       {pending ? (
         <span className="inline-flex items-center gap-1.5">
           <span aria-hidden className="inline-block h-3 w-4 rounded-[3px] border border-dashed border-muted-foreground/60" />
-          Suggested, not created yet
+          {t("legend_suggested")}
         </span>
       ) : null}
-      <span>Select a node to open it.</span>
+      <span>{t("legend_select")}</span>
     </p>
   )
 }
 
 /** Content Tree (spec §24): how one idea became many assets across platforms. */
 export function ContentTree({ itemId, ideaId }: ContentTreeProps) {
+  const t = useT(treeMessages)
   const db = useDb()
   const settings = useSettings()
   const formats = useLookup("content_formats")
@@ -157,11 +163,11 @@ export function ContentTree({ itemId, ideaId }: ContentTreeProps) {
     return (
       <EmptyState
         icon={SearchX}
-        title="Nothing to draw yet"
-        description="This content or idea doesn’t exist anymore, so there is no tree to show."
+        title={t("empty_title")}
+        description={t("empty_description")}
         action={
           <Button asChild size="sm" variant="outline">
-            <Link href="/studio">Open Content Studio</Link>
+            <Link href="/studio">{t("open_studio")}</Link>
           </Button>
         }
       />
@@ -178,14 +184,14 @@ export function ContentTree({ itemId, ideaId }: ContentTreeProps) {
 
       <div className="hidden min-w-0 @3xl:block">
         <div ref={scrollerRef} className="overflow-x-auto rounded-lg border bg-muted/25 dark:bg-input/10">
-          <ul className="w-max p-4" aria-label="Content tree">
+          <ul className="w-max p-4" aria-label={t("tree_label")}>
             <li>
               <Branch node={model.root} ctx={ctx} />
             </li>
           </ul>
         </div>
       </div>
-      <ul className="min-w-0 rounded-lg border bg-card p-1.5 @3xl:hidden" aria-label="Content tree">
+      <ul className="min-w-0 rounded-lg border bg-card p-1.5 @3xl:hidden" aria-label={t("tree_label")}>
         <ListBranch node={model.root} ctx={ctx} />
       </ul>
 
@@ -193,23 +199,23 @@ export function ContentTree({ itemId, ideaId }: ContentTreeProps) {
         <EmptyState
           compact
           icon={Lightbulb}
-          title="This idea hasn’t produced content yet"
-          description="Convert it into content — one item per platform — and its tree grows from here."
+          title={t("idea_empty_title")}
+          description={t("idea_empty_description")}
           action={
             <Button asChild size="sm" variant="outline">
-              <Link href={`/ideas?open=${model.idea.id}`}>Open in Idea Bank</Link>
+              <Link href={`/ideas?open=${model.idea.id}`}>{t("open_in_idea_bank")}</Link>
             </Button>
           }
         />
       ) : lonely && firstItem ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-2.5">
           <p className="min-w-0 flex-1 basis-64 text-xs text-pretty text-muted-foreground">
-            One good idea should produce multiple content assets. Repurpose this piece into platform-native versions to grow its tree.
+            {t("lonely")}
           </p>
           <Button asChild size="sm" variant="outline">
             <Link href={`/studio/${firstItem.id}?tab=repurpose`}>
               <Sparkles className="text-brand" aria-hidden />
-              Repurpose
+              {t("repurpose")}
             </Link>
           </Button>
         </div>

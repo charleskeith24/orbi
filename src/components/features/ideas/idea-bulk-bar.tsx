@@ -13,15 +13,20 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Separator } from "@/components/ui/separator"
 import { IDEA_STATUS_MAP, PRIORITIES } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { useTable } from "@/lib/store"
 import type { ContentIdea } from "@/lib/types"
 import { formatNumber } from "@/lib/utils"
 import { useIdeaActions } from "./idea-actions"
 import { ACTIVE_STATUSES } from "./idea-model"
+import { ideaBankMessages } from "./messages"
 
 /** Toolbar for the table selection: status, priority, pillar, archive/restore, delete. */
 export function IdeaBulkBar({ selected, onClear }: { selected: ContentIdea[]; onClear: () => void }) {
   const actions = useIdeaActions()
+  const t = useT(ideaBankMessages)
+  const c = useT(commonMessages)
   const pillars = useTable("content_pillars")
   const ids = selected.map((i) => i.id)
   const archived = selected.filter((i) => i.status === "archived").length
@@ -30,22 +35,22 @@ export function IdeaBulkBar({ selected, onClear }: { selected: ContentIdea[]; on
   return (
     <div
       role="toolbar"
-      aria-label="Bulk actions for selected ideas"
+      aria-label={t("bulk_label")}
       className="flex min-w-0 flex-wrap items-center gap-1.5 rounded-lg border bg-card px-2.5 py-1.5 shadow-xs"
     >
-      <span className="px-1 text-sm font-medium num">{formatNumber(selected.length)} selected</span>
+      <span className="px-1 text-sm font-medium num">{t("selected", { count: formatNumber(selected.length) })}</span>
       <Separator orientation="vertical" className="mx-1 data-vertical:h-4" />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button type="button" variant="ghost" size="sm">
             <ArrowRightLeft aria-hidden />
-            Status
+            {t("bulk_status")}
             <ChevronDown className="text-muted-foreground" aria-hidden />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
-          <DropdownMenuLabel>Move {formatNumber(selected.length)} to</DropdownMenuLabel>
+          <DropdownMenuLabel>{t("bulk_move_to", { count: formatNumber(selected.length) })}</DropdownMenuLabel>
           {ACTIVE_STATUSES.map((status) => {
             const Icon = IDEA_STATUS_ICONS[status]
             return (
@@ -57,7 +62,7 @@ export function IdeaBulkBar({ selected, onClear }: { selected: ContentIdea[]; on
           })}
           <DropdownMenuSeparator />
           <p className="px-1.5 py-1 text-xs text-pretty text-muted-foreground">
-            Convert ideas one at a time — each needs its platforms and due date.
+            {t("bulk_convert_note")}
           </p>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -66,7 +71,7 @@ export function IdeaBulkBar({ selected, onClear }: { selected: ContentIdea[]; on
         <DropdownMenuTrigger asChild>
           <Button type="button" variant="ghost" size="sm">
             <Signal aria-hidden />
-            Priority
+            {t("bulk_priority")}
             <ChevronDown className="text-muted-foreground" aria-hidden />
           </Button>
         </DropdownMenuTrigger>
@@ -84,7 +89,7 @@ export function IdeaBulkBar({ selected, onClear }: { selected: ContentIdea[]; on
         <DropdownMenuTrigger asChild>
           <Button type="button" variant="ghost" size="sm">
             <Layers aria-hidden />
-            Pillar
+            {t("bulk_pillar")}
             <ChevronDown className="text-muted-foreground" aria-hidden />
           </Button>
         </DropdownMenuTrigger>
@@ -92,12 +97,12 @@ export function IdeaBulkBar({ selected, onClear }: { selected: ContentIdea[]; on
           {activePillars.map((pillar) => (
             <DropdownMenuItem key={pillar.id} onSelect={() => actions.setPillar(ids, pillar.id)}>
               <ColorDot color={pillar.color} />
-              {pillar.name || "Untitled pillar"}
+              {pillar.name || t("untitled_pillar")}
             </DropdownMenuItem>
           ))}
           {activePillars.length ? <DropdownMenuSeparator /> : null}
           <DropdownMenuItem onSelect={() => actions.setPillar(ids, null)} className="text-muted-foreground">
-            No pillar
+            {t("no_pillar")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -105,7 +110,7 @@ export function IdeaBulkBar({ selected, onClear }: { selected: ContentIdea[]; on
       {archived ? (
         <Button type="button" variant="ghost" size="sm" onClick={() => actions.restore(ids)}>
           <ArchiveRestore aria-hidden />
-          Restore
+          {t("restore")}
         </Button>
       ) : null}
       {archived < selected.length ? (
@@ -119,7 +124,7 @@ export function IdeaBulkBar({ selected, onClear }: { selected: ContentIdea[]; on
           }}
         >
           <Archive aria-hidden />
-          Archive
+          {t("archive")}
         </Button>
       ) : null}
       <Button
@@ -132,12 +137,12 @@ export function IdeaBulkBar({ selected, onClear }: { selected: ContentIdea[]; on
         }}
       >
         <Trash2 aria-hidden />
-        Delete
+        {c("delete")}
       </Button>
 
       <Button type="button" variant="ghost" size="sm" className="ml-auto text-muted-foreground" onClick={onClear}>
         <X aria-hidden />
-        Clear
+        {c("clear")}
       </Button>
     </div>
   )

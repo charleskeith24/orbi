@@ -8,10 +8,12 @@ import { FormField, FormRow, PillarSelect, PlatformIcon, PlatformSelect } from "
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { useT } from "@/lib/i18n"
 import { PLATFORMS, SCRIPT_FORMATS } from "@/lib/constants"
 import { createContentItem, dataActions, formatIdForScriptFormat, useBrand } from "@/lib/store"
 import type { ID, PlatformId, ScriptFormat } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { studioHomeMessages } from "./messages"
 import { studioActions } from "./studio-store"
 import { QUICK_START_FORMATS, quickStartPlatform } from "./studio-utils"
 
@@ -28,6 +30,7 @@ const TILE =
 
 /** Format quick-starts (spec §16) plus "From scratch". */
 export function QuickStartGrid({ onStart, onScratch }: { onStart: (format: ScriptFormat) => void; onScratch: () => void }) {
+  const t = useT(studioHomeMessages)
   const brand = useBrand()
   return (
     <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
@@ -41,7 +44,7 @@ export function QuickStartGrid({ onStart, onScratch }: { onStart: (format: Scrip
               <span className="flex size-7 items-center justify-center rounded-md border bg-background text-muted-foreground transition-colors group-hover:text-foreground dark:bg-input/30">
                 <Icon className="size-4" aria-hidden />
               </span>
-              <PlatformIcon platform={platform} label={`Starts on ${PLATFORMS[platform].label}`} className="size-3.5 text-muted-foreground" />
+              <PlatformIcon platform={platform} label={t("starts_on", { platform: PLATFORMS[platform].label })} className="size-3.5 text-muted-foreground" />
             </span>
             <span className="text-sm font-medium">{spec.label}</span>
             <span className="line-clamp-2 text-xs text-pretty text-muted-foreground">{spec.description}</span>
@@ -52,8 +55,8 @@ export function QuickStartGrid({ onStart, onScratch }: { onStart: (format: Scrip
         <span className="flex size-7 items-center justify-center rounded-md border border-dashed text-muted-foreground transition-colors group-hover:text-foreground">
           <FilePlus2 className="size-4" aria-hidden />
         </span>
-        <span className="text-sm font-medium">From scratch</span>
-        <span className="line-clamp-2 text-xs text-pretty text-muted-foreground">Any platform and format, with full strategy details</span>
+        <span className="text-sm font-medium">{t("from_scratch")}</span>
+        <span className="line-clamp-2 text-xs text-pretty text-muted-foreground">{t("from_scratch_description")}</span>
       </button>
     </div>
   )
@@ -69,6 +72,7 @@ export function QuickStartDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useT(studioHomeMessages)
   const router = useRouter()
   const brand = useBrand()
   const titleId = useId()
@@ -91,7 +95,7 @@ export function QuickStartDialog({
       stage: "scripting",
     })
     studioActions.setFormat(item.id, format)
-    toast.success("Content created", { description: `${spec.label} for ${PLATFORMS[platform].label} — the structure is ready to write.` })
+    toast.success(t("content_created"), { description: t("quick_created_description", { format: spec.label, platform: PLATFORMS[platform].label }) })
     onOpenChange(false)
     router.push(`/studio/${item.id}?tab=script&format=${format}`)
   }
@@ -101,37 +105,43 @@ export function QuickStartDialog({
       <DialogContent className="sm:max-w-md">
         <form onSubmit={submit} className="grid gap-4" noValidate>
           <DialogHeader>
-            <DialogTitle>New {spec.label}</DialogTitle>
+            <DialogTitle>{t("new_format", { format: spec.label })}</DialogTitle>
             <DialogDescription>
-              {spec.description}. You&apos;ll land in the Script tab with {spec.sections.map((s) => s.label.replace(/^Slide \d+ — /, "")).slice(0, 4).join(", ")}
-              {spec.sections.length > 4 ? "…" : ""} ready to write.
+              {t("quick_description", {
+                description: spec.description,
+                sections: spec.sections
+                  .map((s) => s.label.replace(/^Slide \d+ — /, ""))
+                  .slice(0, 4)
+                  .join(", "),
+                more: spec.sections.length > 4 ? "…" : "",
+              })}
             </DialogDescription>
           </DialogHeader>
-          <FormField label="Working title" htmlFor={titleId} required error={touched && !clean ? "Give it a working title — you can change it later." : undefined}>
+          <FormField label={t("working_title")} htmlFor={titleId} required error={touched && !clean ? t("working_title_error") : undefined}>
             <Input
               id={titleId}
               value={title}
               autoFocus
               maxLength={300}
-              placeholder="e.g. 3 numbers to check before you touch ad budget"
+              placeholder={t("working_title_placeholder")}
               aria-invalid={(touched && !clean) || undefined}
               onChange={(event) => setTitle(event.target.value)}
             />
           </FormField>
           <FormRow>
-            <FormField label="Platform">
-              <PlatformSelect value={platform} onChange={(next) => next && setPlatform(next)} aria-label="Platform" />
+            <FormField label={t("platform")}>
+              <PlatformSelect value={platform} onChange={(next) => next && setPlatform(next)} aria-label={t("platform")} />
             </FormField>
-            <FormField label="Content pillar">
-              <PillarSelect value={pillarId} onChange={setPillarId} allowNone aria-label="Content pillar" />
+            <FormField label={t("content_pillar")}>
+              <PillarSelect value={pillarId} onChange={setPillarId} allowNone aria-label={t("content_pillar")} />
             </FormField>
           </FormRow>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button type="submit" disabled={!clean}>
-              Create & open
+              {t("create_open")}
             </Button>
           </DialogFooter>
         </form>

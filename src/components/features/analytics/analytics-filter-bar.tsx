@@ -8,10 +8,12 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { PerformanceRow } from "@/lib/analytics"
 import { PLATFORM_IDS, PLATFORMS } from "@/lib/constants"
 import { toISODate } from "@/lib/dates"
+import { useT, useUiLang } from "@/lib/i18n"
 import { useTable } from "@/lib/store"
 import type { PlatformId } from "@/lib/types"
 import { countBy } from "@/lib/utils"
 import { NO_PILLAR, rangeOptions, type AnalyticsFilters, type RangePreset } from "./filters"
+import { analyticsMessages } from "./messages"
 
 const asPlatforms = (values: string[]) => values.filter((v): v is PlatformId => (PLATFORM_IDS as string[]).includes(v))
 
@@ -39,6 +41,7 @@ export function AnalyticsFilterBar({
   children?: React.ReactNode
   actions?: React.ReactNode
 }) {
+  const t = useT(analyticsMessages)
   const pillars = useTable("content_pillars")
 
   const platformOptions = useMemo<FacetOption[]>(() => {
@@ -56,24 +59,24 @@ export function AnalyticsFilterBar({
     const options: FacetOption[] = [...pillars]
       .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
       .filter((p) => p.is_active || counts[p.id] || filters.pillars.includes(p.id))
-      .map((p) => ({ value: p.id, label: p.name || "Untitled pillar", count: counts[p.id] ?? 0, icon: <ColorDot color={p.color} /> }))
+      .map((p) => ({ value: p.id, label: p.name || t("untitled_pillar"), count: counts[p.id] ?? 0, icon: <ColorDot color={p.color} /> }))
     if (counts[NO_PILLAR] || filters.pillars.includes(NO_PILLAR)) {
-      options.push({ value: NO_PILLAR, label: "No pillar", count: counts[NO_PILLAR] ?? 0, icon: <ColorDot color={null} /> })
+      options.push({ value: NO_PILLAR, label: t("no_pillar"), count: counts[NO_PILLAR] ?? 0, icon: <ColorDot color={null} /> })
     }
     return options
-  }, [rows, pillars, filters.pillars])
+  }, [rows, pillars, filters.pillars, t])
 
   return (
     <FilterBar actions={actions}>
       <RangeControl filters={filters} onChange={onChange} allowAll={allowAll} now={now} />
       <FacetFilter
-        title="Platform"
+        title={t("platform")}
         icon={MonitorSmartphone}
         options={platformOptions}
         value={filters.platforms}
         onChange={(value) => onChange({ platforms: asPlatforms(value) })}
       />
-      <FacetFilter title="Pillar" icon={Layers} options={pillarOptions} value={filters.pillars} onChange={(value) => onChange({ pillars: value })} />
+      <FacetFilter title={t("pillar")} icon={Layers} options={pillarOptions} value={filters.pillars} onChange={(value) => onChange({ pillars: value })} />
       {children}
       <ResetFiltersButton show={showReset} onClick={onReset} />
     </FilterBar>
@@ -91,6 +94,8 @@ function RangeControl({
   allowAll: boolean
   now: Date
 }) {
+  const t = useT(analyticsMessages)
+  const lang = useUiLang()
   const today = toISODate(now)
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -106,9 +111,9 @@ function RangeControl({
             onChange({ range: "custom", from: filters.from ?? toISODate(subDays(now, 29)), to: filters.to ?? today })
           } else onChange({ range: value as RangePreset })
         }}
-        aria-label="Date range"
+        aria-label={t("date_range")}
       >
-        {rangeOptions(allowAll).map((option) => (
+        {rangeOptions(allowAll, lang).map((option) => (
           <ToggleGroupItem
             key={option.id}
             value={option.id}
@@ -128,7 +133,7 @@ function RangeControl({
             value={filters.from}
             maxDate={filters.to ?? today}
             clearable={false}
-            aria-label="From"
+            aria-label={t("from")}
             onChange={(from) => {
               if (from) onChange({ from })
             }}
@@ -143,7 +148,7 @@ function RangeControl({
             minDate={filters.from ?? undefined}
             maxDate={today}
             clearable={false}
-            aria-label="To"
+            aria-label={t("to")}
             onChange={(to) => onChange({ to: to ?? today })}
           />
         </div>

@@ -6,8 +6,10 @@ import { AiNotice, CopyButton, DefinitionList, KeyValue, ProviderBadge, SectionC
 import { Spinner } from "@/components/ui/spinner"
 import { providerLabel, useAiStatus } from "@/lib/ai"
 import { parseDate } from "@/lib/dates"
+import { type Translator, type UiLang, useT, useUiLang } from "@/lib/i18n"
 import { useTable } from "@/lib/store"
 import { AiLog } from "./ai-log"
+import { aiMessages } from "./ai-messages"
 import { BrandContextCard } from "./brand-context-card"
 
 const ENV_SNIPPET = `# .env.local in the project root — read by the server only
@@ -17,12 +19,22 @@ ANTHROPIC_API_KEY=your-anthropic-api-key
 AI_MODEL=claude-opus-5
 AI_EFFORT=high`
 
-const ENV_VARS: { name: string; required: boolean; description: string }[] = [
-  { name: "ANTHROPIC_API_KEY", required: true, description: "Your Anthropic API key. Stays on the server — the browser never sees it." },
-  { name: "AI_MODEL", required: false, description: "Model id. Defaults to claude-opus-5." },
-  { name: "AI_EFFORT", required: false, description: "low · medium · high (default) · xhigh · max — more effort, deeper answers, slower." },
-  { name: "AI_PROVIDER", required: false, description: "Set to offline to force the offline templates even with a key." },
+const ENV_VARS: { name: string; required: boolean; description: "env_api_key" | "env_model" | "env_effort" | "env_provider" }[] = [
+  { name: "ANTHROPIC_API_KEY", required: true, description: "env_api_key" },
+  { name: "AI_MODEL", required: false, description: "env_model" },
+  { name: "AI_EFFORT", required: false, description: "env_effort" },
+  { name: "AI_PROVIDER", required: false, description: "env_provider" },
 ]
+
+/** The gateway's status sentence (English, from the server) in the UI language; unknown reasons pass through. */
+function statusReason(reason: string, model: string, lang: UiLang, t: Translator<(typeof aiMessages)["en"]>): string {
+  if (lang === "en" || !reason) return reason
+  if (reason.startsWith("AI_PROVIDER is set to offline")) return t("reason_forced_offline")
+  if (reason.startsWith("No ANTHROPIC_API_KEY")) return t("reason_no_key")
+  if (reason.startsWith("Couldn't reach")) return t("reason_unreachable")
+  if (reason.startsWith("Using ") && reason.endsWith(" via the Anthropic API.")) return t("reason_using", { model })
+  return reason
+}
 
 export function AiTab({ now }: { now: Date }) {
   return (
@@ -36,6 +48,8 @@ export function AiTab({ now }: { now: Date }) {
 
 function EngineCard({ now }: { now: Date }) {
   const status = useAiStatus()
+  const t = useT(aiMessages)
+  const lang = useUiLang()
   const generations = useTable("ai_generations")
   const last = useMemo(
     () => generations.reduce<(typeof generations)[number] | null>((best, g) => (!best || g.created_at > best.created_at ? g : best), null),
@@ -47,58 +61,47 @@ function EngineCard({ now }: { now: Date }) {
 
   return (
     <>
-      <SectionCard title="AI engine" description="Every AI action in the app runs through one server-side gateway — keys never reach the browser.">
+      <SectionCard title={t("engine_title")} description={t("engine_description")}>
         {status.loading ? (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Spinner /> Checking the AI service…
+            <Spinner /> {t("checking")}
           </p>
         ) : (
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <ProviderBadge provider={status.provider} model={status.model} />
               <StatusPill tone={live ? "good" : unreachable ? "warning" : "neutral"}>
-                {live ? "Claude connected" : unreachable ? "AI service unreachable" : "Offline mode"}
+                {live ? t("claude_connected") : unreachable ? t("unreachable") : t("offline_mode")}
               </StatusPill>
             </div>
             <DefinitionList>
-              <KeyValue label="Engine">{live ? "Claude via the Anthropic API" : "Offline template engine"}</KeyValue>
-              <KeyValue label="Model">
+              <KeyValue label={t("kv_engine")}>{live ? t("engine_claude") : t("engine_offline")}</KeyValue>
+              <KeyValue label={t("kv_model")}>
                 <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{status.model || "—"}</code>
               </KeyValue>
-              <KeyValue label="API key">{status.configured ? "Configured on the server" : "Not set"}</KeyValue>
-              <KeyValue label="Status">{status.reason || "—"}</KeyValue>
-              <KeyValue label="Last generation">
+              <KeyValue label={t("kv_api_key")}>{status.configured ? t("key_configured") : t("key_not_set")}</KeyValue>
+              <KeyValue label={t("kv_status")}>{statusReason(status.reason, status.model, lang, t) || "—"}</KeyValue>
+              <KeyValue label={t("kv_last")}>
                 {last && lastAt
-                  ? `${providerLabel(last.provider, last.model)} · ${lastAt >= now ? "just now" : formatDistanceStrict(lastAt, now, { addSuffix: true })}`
-                  : "None yet"}
+                  ? `${providerLabel(last.provider, last.model)} · ${lastAt >= now ? t("just_now") : formatDistanceStrict(lastAt, now, { addSuffix: true })}`
+                  : t("none_yet")}
               </KeyValue>
             </DefinitionList>
             {!live ? (
-              <AiNotice>
-                Offline templates assemble drafts from your Brand HQ, audience, pillars, winners and stories — genuinely useful, and
-                always labelled “Offline templates”. Claude writes more specific, personal copy.
-              </AiNotice>
+              <AiNotice>{t("offline_notice")}</AiNotice>
             ) : null}
           </div>
         )}
       </SectionCard>
 
       <SectionCard
-        title={live ? "Claude configuration" : "Enable Claude"}
-        description={
-          live
-            ? "Claude is on. Change the model or effort in .env.local and restart the server."
-            : "Three steps. Everything keeps working offline until you do."
-        }
+        title={live ? t("config_title") : t("enable_title")}
+        description={live ? t("config_live") : t("config_offline")}
       >
         <div className="flex flex-col gap-4">
           {!live ? (
             <ol className="flex flex-col gap-2 text-sm">
-              {[
-                "Create an API key in your Anthropic account (Claude Console → API keys).",
-                "Add it to .env.local in the project root, as below.",
-                "Restart the dev server — environment variables are read at startup. This page will then say “Claude connected”.",
-              ].map((step, index) => (
+              {[t("step_1"), t("step_2"), t("step_3")].map((step, index) => (
                 <li key={step} className="flex gap-2.5">
                   <span className="flex size-5 shrink-0 items-center justify-center rounded-full border bg-card text-xs font-medium num">
                     {index + 1}
@@ -112,16 +115,16 @@ function EngineCard({ now }: { now: Date }) {
             <pre className="overflow-x-auto rounded-lg border bg-muted/40 p-3 pr-12 font-mono text-xs leading-relaxed scrollbar-thin">
               {ENV_SNIPPET}
             </pre>
-            <CopyButton text={ENV_SNIPPET} successMessage="Environment snippet copied" className="absolute top-1.5 right-1.5" />
+            <CopyButton text={ENV_SNIPPET} successMessage={t("snippet_copied")} className="absolute top-1.5 right-1.5" />
           </div>
           <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[max-content_minmax(0,1fr)]">
             {ENV_VARS.map((v) => (
               <div key={v.name} className="contents">
                 <dt className="flex items-center gap-2">
                   <code className="font-mono text-xs">{v.name}</code>
-                  {v.required ? <span className="text-xs text-muted-foreground">required</span> : null}
+                  {v.required ? <span className="text-xs text-muted-foreground">{t("required")}</span> : null}
                 </dt>
-                <dd className="mb-1 text-xs text-muted-foreground sm:mb-0">{v.description}</dd>
+                <dd className="mb-1 text-xs text-muted-foreground sm:mb-0">{t(v.description)}</dd>
               </div>
             ))}
           </dl>

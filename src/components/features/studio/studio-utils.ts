@@ -244,17 +244,6 @@ export function relatedStories(
 
 /* ---------------------------------- Misc ---------------------------------- */
 
-/** Labels for AI tasks shown in the workspace's recent AI activity. */
-export const AI_TASK_LABELS: Record<string, string> = {
-  content_brief: "Brief drafted",
-  generate_script: "Script drafted",
-  score_content: "Content scored",
-  generate_hooks: "Hooks generated",
-  repurpose: "Repurposing drafts",
-  winner_replication: "Winner replication",
-  what_to_post: "What to post",
-}
-
 /** Due date (or planned publish time) in ms for sorting; undated items sort last. */
 export function dueSortKey(item: Pick<ContentItem, "due_date" | "scheduled_at">): number {
   return (parseDate(item.due_date) ?? parseDate(item.scheduled_at))?.getTime() ?? Number.POSITIVE_INFINITY

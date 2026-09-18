@@ -2,6 +2,8 @@
 
 import { Sparkles } from "lucide-react"
 import { useId } from "react"
+import { useT } from "@/lib/i18n"
+import { generatorMessages } from "./generator-messages"
 import type { ExampleBrief } from "./generator-model"
 
 /** Before the first generation: what the generator does, plus example briefs built from real workspace gaps. */
@@ -15,6 +17,7 @@ export function GeneratorEmptyState({
   onRun: (example: ExampleBrief) => void
 }) {
   const headingId = useId()
+  const t = useT(generatorMessages)
   return (
     <section aria-labelledby={headingId} className="rounded-lg border border-dashed bg-card/50 px-4 py-8 sm:px-6">
       <div className="mx-auto flex max-w-lg flex-col items-center text-center">
@@ -22,10 +25,10 @@ export function GeneratorEmptyState({
           <Sparkles className="size-5 text-brand" aria-hidden />
         </div>
         <h2 id={headingId} className="text-sm font-medium">
-          Ideas that start from your strategy
+          {t("empty_title")}
         </h2>
         <p className="mt-1 text-sm text-pretty text-muted-foreground">
-          Set a brief, or start from one of these — each is built from a gap in your own workspace.
+          {t("empty_description")}
         </p>
       </div>
       <ul className="mx-auto mt-5 grid max-w-3xl gap-2 sm:grid-cols-2">

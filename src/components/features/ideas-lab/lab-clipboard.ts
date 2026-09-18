@@ -1,9 +1,12 @@
 "use client"
 
 import { toast } from "sonner"
+import { translate } from "@/lib/i18n/core"
+import { getUiLang } from "@/lib/i18n/ui-lang"
+import { labMessages } from "./messages"
 
 /** Copy text with a toast; falls back to a hidden textarea when the Clipboard API is unavailable. */
-export async function copyToClipboard(text: string, successMessage = "Copied to clipboard"): Promise<boolean> {
+export async function copyToClipboard(text: string, successMessage?: string): Promise<boolean> {
   let ok = false
   try {
     if (navigator.clipboard?.writeText) {
@@ -28,7 +31,8 @@ export async function copyToClipboard(text: string, successMessage = "Copied to 
       ok = false
     }
   }
-  if (ok) toast.success(successMessage)
-  else toast.error("Couldn't copy", { description: "Select the text and copy it manually." })
+  const lang = getUiLang()
+  if (ok) toast.success(successMessage ?? translate(labMessages, lang, "copied_to_clipboard"))
+  else toast.error(translate(labMessages, lang, "couldnt_copy"), { description: translate(labMessages, lang, "copy_manually") })
   return ok
 }

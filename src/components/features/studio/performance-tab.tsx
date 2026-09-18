@@ -8,12 +8,14 @@ import { EmptyState, StatTile } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { computeRates, engagementsOf, tieredRows } from "@/lib/analytics"
+import { useT } from "@/lib/i18n"
 import { PLATFORMS } from "@/lib/constants"
 import { formatDate } from "@/lib/dates"
 import { dataActions, moveItemToStage, uiActions, useDb, useSettings, useTable } from "@/lib/store"
 import type { ContentItem, ContentMetric } from "@/lib/types"
-import { formatNumber, formatPercent, pluralize } from "@/lib/utils"
+import { formatNumber, formatPercent } from "@/lib/utils"
 import { LatestSnapshot, RatesCard, SnapshotHistory, TierCard } from "./performance-cards"
+import { performanceMessages } from "./performance-messages"
 import { publishedToast } from "./workspace-chips"
 
 /** Newest first — the same rule analytics use for "latest snapshot". */
@@ -43,13 +45,14 @@ export function PerformanceTab({ item, now, live }: { item: ContentItem; now: Da
 }
 
 function NotLiveYet({ item }: { item: ContentItem }) {
+  const t = useT(performanceMessages)
   const platform = PLATFORMS[item.platform].label
-  const when = item.scheduled_at ? `It's scheduled for ${formatDate(item.scheduled_at, "EEE, MMM d · h:mm a")}. ` : ""
+  const when = item.scheduled_at ? `${t("scheduled_for", { when: formatDate(item.scheduled_at, "EEE, MMM d · h:mm a") })} ` : ""
   return (
     <EmptyState
       icon={ChartNoAxesColumn}
-      title="Performance shows up once this is live"
-      description={`${when}After it goes live, mark it published and log views, reach and engagement from ${platform}'s insights — this tab then shows the rates, how it compares with your ${platform} average and every snapshot you log.`}
+      title={t("not_live_title")}
+      description={`${when}${t("not_live_description", { platform })}`}
       action={
         <Button
           type="button"
@@ -60,12 +63,12 @@ function NotLiveYet({ item }: { item: ContentItem }) {
           }}
         >
           <Send aria-hidden />
-          Mark published
+          {t("mark_published")}
         </Button>
       }
       secondaryAction={
         <Button type="button" size="sm" variant="outline" asChild>
-          <Link href="/analytics">Open Analytics</Link>
+          <Link href="/analytics">{t("open_analytics")}</Link>
         </Button>
       }
     />
@@ -73,6 +76,7 @@ function NotLiveYet({ item }: { item: ContentItem }) {
 }
 
 function LivePerformance({ item, now }: { item: ContentItem; now: Date }) {
+  const t = useT(performanceMessages)
   const db = useDb()
   const settings = useSettings()
   const metrics = useTable("content_metrics")
@@ -87,12 +91,12 @@ function LivePerformance({ item, now }: { item: ContentItem; now: Date }) {
       {!latest ? (
         <EmptyState
           icon={ChartNoAxesColumn}
-          title="No analytics logged yet"
-          description="Copy the numbers from the platform's insights after 48 hours and again after 7 days — winner detection, reports and recommendations learn from them."
+          title={t("no_analytics_title")}
+          description={t("no_analytics_description")}
           action={
             <Button type="button" size="sm" onClick={addAnalytics}>
               <Plus aria-hidden />
-              Add analytics
+              {t("add_analytics")}
             </Button>
           }
         />
@@ -116,6 +120,7 @@ function LivePerformance({ item, now }: { item: ContentItem; now: Date }) {
 /* ------------------------------ Published bar ----------------------------- */
 
 function PublishedBar({ item }: { item: ContentItem }) {
+  const t = useT(performanceMessages)
   const inputId = useId()
   const [draft, setDraft] = useState(item.published_url)
   const [source, setSource] = useState(item.published_url)
@@ -129,13 +134,13 @@ function PublishedBar({ item }: { item: ContentItem }) {
   function save() {
     if (!valid || clean === item.published_url) return
     dataActions.update("content_items", item.id, { published_url: clean })
-    toast.success(clean ? "Published link saved" : "Published link removed")
+    toast.success(clean ? t("link_saved") : t("link_removed"))
   }
 
   return (
     <div className="flex min-w-0 flex-wrap items-start gap-x-6 gap-y-3 rounded-lg border bg-card p-4">
       <div className="min-w-0">
-        <p className="text-xs text-muted-foreground">Published</p>
+        <p className="text-xs text-muted-foreground">{t("published")}</p>
         <p className="mt-1 text-sm font-medium">{item.published_at ? formatDate(item.published_at, "EEE, MMM d, yyyy · h:mm a") : "—"}</p>
       </div>
       <form
@@ -146,7 +151,7 @@ function PublishedBar({ item }: { item: ContentItem }) {
         }}
       >
         <label htmlFor={inputId} className="text-xs text-muted-foreground">
-          Published link
+          {t("published_link")}
         </label>
         <div className="flex min-w-0 gap-2">
           <Input
@@ -160,14 +165,14 @@ function PublishedBar({ item }: { item: ContentItem }) {
             onBlur={save}
           />
           {item.published_url && isHttpUrl(item.published_url) ? (
-            <Button asChild variant="outline" size="icon" aria-label="Open the live post">
+            <Button asChild variant="outline" size="icon" aria-label={t("open_live_post")}>
               <a href={item.published_url} target="_blank" rel="noopener noreferrer">
                 <ExternalLink aria-hidden />
               </a>
             </Button>
           ) : null}
         </div>
-        {!valid ? <p className="text-xs text-destructive">Enter the full link, starting with https://</p> : null}
+        {!valid ? <p className="text-xs text-destructive">{t("link_invalid")}</p> : null}
       </form>
     </div>
   )
@@ -176,35 +181,36 @@ function PublishedBar({ item }: { item: ContentItem }) {
 /* ---------------------------------- KPIs ---------------------------------- */
 
 function KpiTiles({ latest, previous }: { latest: ContentMetric; previous: ContentMetric | null }) {
+  const t = useT(performanceMessages)
   const rates = computeRates(latest)
   const prevRates = previous ? computeRates(previous) : null
-  const since = previous ? `since ${formatDate(previous.recorded_at, "MMM d")}` : undefined
+  const since = previous ? t("since", { date: formatDate(previous.recorded_at, "MMM d") }) : undefined
   const engagements = engagementsOf(latest)
   const er = rates.engagement_rate
   const prevEr = prevRates?.engagement_rate ?? null
   return (
     <div className="grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-4">
       <StatTile
-        label="Views"
+        label={t("views")}
         value={formatNumber(latest.views)}
         delta={growth(latest.views, previous?.views)}
         deltaLabel={since}
-        sublabel={previous ? undefined : `Recorded ${formatDate(latest.recorded_at, "MMM d")}`}
+        sublabel={previous ? undefined : t("recorded_on", { date: formatDate(latest.recorded_at, "MMM d") })}
       />
-      <StatTile label="Reach" value={formatNumber(latest.reach)} delta={growth(latest.reach, previous?.reach)} deltaLabel={since} />
+      <StatTile label={t("reach")} value={formatNumber(latest.reach)} delta={growth(latest.reach, previous?.reach)} deltaLabel={since} />
       <StatTile
-        label="Engagement rate"
+        label={t("engagement_rate")}
         value={formatPercent(er)}
         delta={er !== null && prevEr !== null ? er - prevEr : undefined}
         deltaSuffix=" pts"
-        sublabel={pluralize(engagements, "engagement")}
+        sublabel={t.plural("engagements", engagements, { count: formatNumber(engagements) })}
       />
       <StatTile
-        label="Leads"
+        label={t("leads")}
         value={formatNumber(latest.leads)}
         delta={growth(latest.leads, previous?.leads)}
         deltaLabel={since}
-        sublabel={rates.lead_conversion_rate !== null ? `${formatPercent(rates.lead_conversion_rate)} conversion` : undefined}
+        sublabel={rates.lead_conversion_rate !== null ? t("conversion", { rate: formatPercent(rates.lead_conversion_rate) }) : undefined}
       />
     </div>
   )

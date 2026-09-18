@@ -8,8 +8,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { FORMAT_CATEGORIES, SCRIPT_FORMAT_IDS, SCRIPT_FORMATS } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions, useTable } from "@/lib/store"
 import type { ContentFormat, FormatCategory, ScriptFormat } from "@/lib/types"
+import { formatsMessages } from "./formats-messages"
 
 const NAME_MAX = 60
 
@@ -44,6 +47,8 @@ export function FormatDialog({
 
 function FormatForm({ format, onDone }: { format: ContentFormat | null; onDone: () => void }) {
   const formats = useTable("content_formats")
+  const t = useT(formatsMessages)
+  const c = useT(commonMessages)
   const [values, setValues] = useState<FormatValues>(() => ({
     name: format?.name ?? "",
     category: format?.category ?? "video",
@@ -55,11 +60,11 @@ function FormatForm({ format, onDone }: { format: ContentFormat | null; onDone: 
   const name = values.name.trim()
   const duplicate = formats.some((f) => f.id !== format?.id && f.name.trim().toLowerCase() === name.toLowerCase())
   const nameError = !name
-    ? "Give the format a name."
+    ? t("name_required")
     : name.length > NAME_MAX
-      ? `Keep it under ${NAME_MAX} characters.`
+      ? t("name_too_long", { max: NAME_MAX })
       : duplicate
-        ? "A format with this name already exists."
+        ? t("name_taken")
         : undefined
   const spec = SCRIPT_FORMATS[values.script_format]
   const set = <K extends keyof FormatValues>(key: K, value: FormatValues[K]) => setValues((v) => ({ ...v, [key]: value }))
@@ -76,11 +81,11 @@ function FormatForm({ format, onDone }: { format: ContentFormat | null; onDone: 
     }
     if (format) {
       dataActions.update("content_formats", format.id, payload)
-      toast.success("Format updated", { description: name })
+      toast.success(t("updated"), { description: name })
     } else {
       const sortOrder = formats.reduce((max, f) => Math.max(max, f.sort_order), -1) + 1
       dataActions.insert("content_formats", { ...payload, is_default: false, sort_order: sortOrder })
-      toast.success("Format added", { description: name })
+      toast.success(t("added"), { description: name })
     }
     onDone()
   }
@@ -88,28 +93,28 @@ function FormatForm({ format, onDone }: { format: ContentFormat | null; onDone: 
   return (
     <form onSubmit={submit} noValidate className="flex min-h-0 flex-1 flex-col">
       <DialogHeader className="gap-1 border-b py-3.5 pr-12 pl-4">
-        <DialogTitle>{format ? "Edit format" : "New format"}</DialogTitle>
+        <DialogTitle>{format ? t("edit_title") : t("new_format")}</DialogTitle>
         <DialogDescription className="text-xs">
-          Formats describe what you produce. The script structure is where Content Studio starts a new script.
+          {t("dialog_description")}
         </DialogDescription>
       </DialogHeader>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 scrollbar-thin">
         <div className="flex flex-col gap-4">
-          <FormField label="Name" htmlFor="format-name" required error={touched ? nameError : undefined}>
+          <FormField label={t("name")} htmlFor="format-name" required error={touched ? nameError : undefined}>
             <Input
               id="format-name"
               value={values.name}
               autoFocus
               maxLength={NAME_MAX + 20}
-              placeholder="e.g. Talking-head Reel"
+              placeholder={t("name_placeholder")}
               aria-invalid={Boolean(touched && nameError) || undefined}
               onChange={(event) => set("name", event.target.value)}
               onBlur={() => setTouched(true)}
             />
           </FormField>
 
-          <FormField label="Category">
+          <FormField label={t("category")}>
             <ChipToggleGroup
               required
               options={CATEGORY_OPTIONS}
@@ -117,25 +122,25 @@ function FormatForm({ format, onDone }: { format: ContentFormat | null; onDone: 
               onChange={(next) => {
                 if (next) set("category", next)
               }}
-              aria-label="Format category"
+              aria-label={t("category_aria")}
             />
           </FormField>
 
-          <FormField label="Description" htmlFor="format-description">
+          <FormField label={t("description")} htmlFor="format-description">
             <Textarea
               id="format-description"
               rows={2}
               className="min-h-14"
               value={values.description}
-              placeholder="When you use it and what makes it work."
+              placeholder={t("description_placeholder")}
               onChange={(event) => set("description", event.target.value)}
             />
           </FormField>
 
           <FormField
-            label="Default script structure"
+            label={t("script_label")}
             htmlFor="format-script"
-            description={format ? "Existing scripts keep their structure; new scripts start with this one." : spec.description}
+            description={format ? t("script_existing") : spec.description}
           >
             <OptionSelect
               id="format-script"
@@ -145,7 +150,7 @@ function FormatForm({ format, onDone }: { format: ContentFormat | null; onDone: 
                 if (next) set("script_format", next)
               }}
             />
-            <div className="flex flex-wrap gap-1 pt-1" aria-label={`${spec.label} sections`}>
+            <div className="flex flex-wrap gap-1 pt-1" aria-label={t("script_sections_aria", { label: spec.label })}>
               {spec.sections.map((section) => (
                 <Token key={section.key} className="font-normal text-muted-foreground">
                   {section.label}
@@ -158,10 +163,10 @@ function FormatForm({ format, onDone }: { format: ContentFormat | null; onDone: 
 
       <DialogFooter className="m-0 rounded-b-xl px-4 py-3">
         <Button type="button" variant="outline" onClick={onDone}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={Boolean(touched && nameError)}>
-          {format ? "Save changes" : "Add format"}
+          {format ? c("save_changes") : t("add_format")}
         </Button>
       </DialogFooter>
     </form>

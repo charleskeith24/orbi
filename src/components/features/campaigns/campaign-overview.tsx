@@ -16,10 +16,13 @@ import {
 import { Button } from "@/components/ui/button"
 import { BUFFER_STAGES, GOAL_CATEGORIES, PUBLISHED_STAGES } from "@/lib/constants"
 import { contentItemDate } from "@/lib/dates"
+import { useT, useUiLang } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { useRow } from "@/lib/store"
 import type { ContentCampaign } from "@/lib/types"
 import { cn, formatNumber } from "@/lib/utils"
 import { timeLabel, type CampaignSummary } from "./campaign-utils"
+import { campaignDetailMessages } from "./messages"
 
 function MiniStat({ label, value }: { label: string; value: number }) {
   return (
@@ -32,6 +35,8 @@ function MiniStat({ label, value }: { label: string; value: number }) {
 
 /** Pieces vs target (with today's even-pace tick), time elapsed and where planned work sits. */
 export function CampaignProgressCard({ summary, className }: { summary: CampaignSummary; className?: string }) {
+  const t = useT(campaignDetailMessages)
+  const lang = useUiLang()
   const { campaign, perf, window: win, pace } = summary
   const target = perf.targetPosts
   const unpublished = perf.items.filter((i) => !PUBLISHED_STAGES.includes(i.stage))
@@ -39,11 +44,11 @@ export function CampaignProgressCard({ summary, className }: { summary: Campaign
   const undated = unpublished.filter((i) => !contentItemDate(i)).length
 
   return (
-    <SectionCard title="Progress" icon={Gauge} className={className}>
+    <SectionCard title={t("progress")} icon={Gauge} className={className}>
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-muted-foreground">Pieces published</span>
+            <span className="text-xs text-muted-foreground">{t("pieces_published")}</span>
             {pace ? (
               <StatusPill tone={pace.tone} title={pace.detail}>
                 {pace.label}
@@ -52,38 +57,38 @@ export function CampaignProgressCard({ summary, className }: { summary: Campaign
           </div>
           <div className="flex items-baseline gap-1.5">
             <span className="text-2xl leading-8 font-semibold tracking-tight num">{formatNumber(perf.published)}</span>
-            <span className="text-sm text-muted-foreground num">{target ? `/ ${formatNumber(target)} target` : "published"}</span>
+            <span className="text-sm text-muted-foreground num">{target ? t("target_suffix", { target: formatNumber(target) }) : t("published_lower")}</span>
           </div>
           {target ? (
-            <div title={pace?.expected ? `The tick marks the ${pace.expected} pieces an even pace would have live today.` : undefined}>
+            <div title={pace?.expected ? t("tick_hint", { count: pace.expected }) : undefined}>
               <Meter
                 value={perf.published}
                 max={target}
                 color={campaign.color}
                 target={pace?.expected ?? undefined}
-                aria-label="Pieces published vs target"
-                valueText={`${perf.published} of ${target} published`}
+                aria-label={t("pieces_vs_target")}
+                valueText={t("published_of", { published: perf.published, target })}
               />
             </div>
           ) : null}
           <p className="text-xs text-muted-foreground">
-            {pace?.detail ?? `${formatNumber(perf.planned)} planned · add a target post count to track pace`}
+            {pace?.detail ?? t("planned_add_target", { count: formatNumber(perf.planned) })}
           </p>
         </div>
 
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between gap-2 text-xs">
-            <span className="text-muted-foreground">Time elapsed</span>
+            <span className="text-muted-foreground">{t("time_elapsed")}</span>
             <span className="font-medium num">{win.elapsedPct === null ? "—" : `${Math.round(win.elapsedPct)}%`}</span>
           </div>
-          <Meter value={win.elapsedPct ?? 0} tone="neutral" size="sm" aria-label="Campaign time elapsed" valueText={timeLabel(win)} />
-          <p className="text-xs text-muted-foreground">{timeLabel(win)}</p>
+          <Meter value={win.elapsedPct ?? 0} tone="neutral" size="sm" aria-label={t("time_elapsed_aria")} valueText={timeLabel(win, lang)} />
+          <p className="text-xs text-muted-foreground">{timeLabel(win, lang)}</p>
         </div>
 
         <div className="grid grid-cols-3 divide-x rounded-md border">
-          <MiniStat label="In production" value={unpublished.length - ready} />
-          <MiniStat label="Ready / sched." value={ready} />
-          <MiniStat label="No date" value={undated} />
+          <MiniStat label={t("mini_production")} value={unpublished.length - ready} />
+          <MiniStat label={t("mini_ready")} value={ready} />
+          <MiniStat label={t("mini_no_date")} value={undated} />
         </div>
       </div>
     </SectionCard>
@@ -111,15 +116,17 @@ export function CampaignAboutCard({
   onEdit: () => void
   className?: string
 }) {
+  const t = useT(campaignDetailMessages)
+  const c = useT(commonMessages)
   return (
     <SectionCard
-      title="Message & objective"
+      title={t("about_title")}
       icon={Quote}
       className={className}
       action={
         <Button type="button" variant="ghost" size="sm" onClick={onEdit}>
           <Pencil aria-hidden />
-          Edit
+          {c("edit")}
         </Button>
       }
     >
@@ -133,27 +140,27 @@ export function CampaignAboutCard({
           </blockquote>
         ) : (
           <p className="text-sm text-muted-foreground">
-            No campaign message yet — the one idea every piece should reinforce.{" "}
+            {t("no_message")}{" "}
             <button type="button" onClick={onEdit} className="font-medium text-foreground underline-offset-4 hover:underline">
-              Add a message
+              {t("add_message")}
             </button>
           </p>
         )}
         <DefinitionList>
-          <KeyValue label="Objective">
+          <KeyValue label={t("objective")}>
             {campaign.objective ? <span className="text-pretty">{campaign.objective}</span> : null}
           </KeyValue>
-          <KeyValue label="Description">
+          <KeyValue label={t("description")}>
             {campaign.description ? <span className={cn("text-pretty text-muted-foreground")}>{campaign.description}</span> : null}
           </KeyValue>
-          <KeyValue label="Audience">
+          <KeyValue label={t("audience")}>
             <PersonaBadge personaId={campaign.persona_id} />
           </KeyValue>
-          <KeyValue label="Primary pillar">
+          <KeyValue label={t("primary_pillar")}>
             <PillarBadge pillarId={campaign.pillar_id} />
           </KeyValue>
-          <KeyValue label="Goal">{campaign.goal_id ? <GoalValue goalId={campaign.goal_id} /> : null}</KeyValue>
-          <KeyValue label="Platforms">
+          <KeyValue label={t("goal")}>{campaign.goal_id ? <GoalValue goalId={campaign.goal_id} /> : null}</KeyValue>
+          <KeyValue label={t("platforms")}>
             {campaign.platforms.length ? (
               <span className="flex flex-wrap gap-x-3 gap-y-1">
                 {campaign.platforms.map((p) => (
@@ -162,7 +169,7 @@ export function CampaignAboutCard({
               </span>
             ) : null}
           </KeyValue>
-          <KeyValue label="Tags">
+          <KeyValue label={t("tags")}>
             <EntityTagEditor entityType="content_campaigns" entityId={campaign.id} />
           </KeyValue>
         </DefinitionList>

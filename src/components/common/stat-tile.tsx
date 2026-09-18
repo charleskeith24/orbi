@@ -1,7 +1,11 @@
+"use client"
+
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react"
 import Link from "next/link"
+import { statTileMessages } from "@/components/common/messages"
 import { TONE_ICON, TONE_TEXT } from "@/components/common/tone"
 import type { IconComponent, StatusTone } from "@/components/common/types"
+import { useT } from "@/lib/i18n"
 import { cn, formatDelta } from "@/lib/utils"
 
 /**
@@ -58,6 +62,7 @@ export function Delta({
   suffix?: string
   className?: string
 }) {
+  const t = useT(statTileMessages)
   if (value === null || value === undefined || Number.isNaN(value)) {
     return <span className={cn("text-xs text-muted-foreground", className)}>—</span>
   }
@@ -74,19 +79,19 @@ export function Delta({
       )}
     >
       <Icon className="size-3.5 shrink-0" aria-hidden />
-      <span className="sr-only">{direction === "up" ? "Up" : direction === "down" ? "Down" : "No change"}</span>
+      <span className="sr-only">{direction === "up" ? t("up") : direction === "down" ? t("down") : t("no_change")}</span>
       {formatDelta(rounded, Math.abs(rounded) >= 100 || Number.isInteger(rounded) ? 0 : 1, suffix)}
     </span>
   )
 }
 
 /** Announced with a toned tile so the status isn't carried by icon colour alone. */
-const TONE_LABEL: Record<Exclude<StatusTone, "neutral">, string> = {
-  good: "good",
-  warning: "needs attention",
-  serious: "at risk",
-  critical: "critical",
-}
+const TONE_LABEL = {
+  good: "tone_good",
+  warning: "tone_warning",
+  serious: "tone_serious",
+  critical: "tone_critical",
+} as const satisfies Record<Exclude<StatusTone, "neutral">, keyof (typeof statTileMessages)["en"]>
 
 export interface StatTileProps {
   label: React.ReactNode
@@ -121,6 +126,7 @@ export function StatTile({
   tone,
   className,
 }: StatTileProps) {
+  const t = useT(statTileMessages)
   const Icon = icon ?? (tone && tone !== "neutral" ? TONE_ICON[tone] : undefined)
   const hasFooter = delta !== undefined || deltaLabel || sublabel
   const body = (
@@ -130,7 +136,7 @@ export function StatTile({
         {Icon ? (
           <Icon className={cn("size-4 shrink-0", tone ? TONE_TEXT[tone] : "text-muted-foreground")} aria-hidden />
         ) : null}
-        {tone && tone !== "neutral" ? <span className="sr-only">Status: {TONE_LABEL[tone]}</span> : null}
+        {tone && tone !== "neutral" ? <span className="sr-only">{t("status", { tone: t(TONE_LABEL[tone]) })}</span> : null}
       </div>
       <div className="flex min-w-0 items-end justify-between gap-3">
         <span className="truncate text-2xl leading-8 font-semibold tracking-tight">{value}</span>

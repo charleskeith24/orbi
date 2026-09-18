@@ -6,9 +6,12 @@ import { useMemo, useState } from "react"
 import { CheckboxIndicator, ChipToggleGroup, ColorDot, EmptyState, IdeaStatusBadge, PlatformIcon, SearchInput } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { useLookup, useTable } from "@/lib/store"
 import type { ContentIdea, ID, IdeaStatus } from "@/lib/types"
-import { cn, matchesQuery, pluralize } from "@/lib/utils"
+import { cn, formatNumber, matchesQuery } from "@/lib/utils"
+import { calendarDialogMessages } from "./messages"
 
 /** Open ideas, most committed first. */
 const STATUS_RANK: Partial<Record<IdeaStatus, number>> = { selected: 0, validated: 1, researching: 2, inbox: 3 }
@@ -46,6 +49,8 @@ export function IdeaBankPicker({
 }
 
 function PickerBody({ excludeIds, onCancel, onAdd }: { excludeIds: Set<ID>; onCancel: () => void; onAdd: (ideas: ContentIdea[]) => void }) {
+  const t = useT(calendarDialogMessages)
+  const c = useT(commonMessages)
   const ideas = useTable("content_ideas")
   const pillars = useLookup("content_pillars")
   const [query, setQuery] = useState("")
@@ -69,23 +74,23 @@ function PickerBody({ excludeIds, onCancel, onAdd }: { excludeIds: Set<ID>; onCa
       [...pillars.values()]
         .filter((p) => p.is_active)
         .sort((a, b) => a.sort_order - b.sort_order)
-        .map((p) => ({ value: p.id, label: p.name || "Untitled pillar", color: p.color })),
-    [pillars]
+        .map((p) => ({ value: p.id, label: p.name || t("untitled_pillar"), color: p.color })),
+    [pillars, t]
   )
   const toggle = (id: ID) => setSelected((list) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]))
 
   return (
     <div className="grid min-w-0 gap-4">
       <DialogHeader>
-        <DialogTitle>Add from the Idea Bank</DialogTitle>
-        <DialogDescription>Open ideas — selected and validated first, then by Idea Score.</DialogDescription>
+        <DialogTitle>{t("picker_title")}</DialogTitle>
+        <DialogDescription>{t("picker_description")}</DialogDescription>
       </DialogHeader>
       <div className="grid min-w-0 gap-2">
-        <SearchInput value={query} onChange={setQuery} placeholder="Search ideas…" className="sm:w-full" />
-        {pillarOptions.length ? <ChipToggleGroup options={pillarOptions} value={pillar} onChange={setPillar} size="xs" aria-label="Filter by pillar" /> : null}
+        <SearchInput value={query} onChange={setQuery} placeholder={t("search_ideas")} className="sm:w-full" />
+        {pillarOptions.length ? <ChipToggleGroup options={pillarOptions} value={pillar} onChange={setPillar} size="xs" aria-label={t("filter_by_pillar")} /> : null}
       </div>
       {rows.length ? (
-        <div role="group" aria-label="Open ideas" className="max-h-[min(24rem,45svh)] divide-y overflow-y-auto rounded-lg border scrollbar-thin">
+        <div role="group" aria-label={t("open_ideas")} className="max-h-[min(24rem,45svh)] divide-y overflow-y-auto rounded-lg border scrollbar-thin">
           {rows.slice(0, MAX_ROWS).map((idea) => {
             const checked = selected.includes(idea.id)
             const ideaPillar = idea.pillar_id ? pillars.get(idea.pillar_id) : undefined
@@ -102,7 +107,7 @@ function PickerBody({ excludeIds, onCancel, onAdd }: { excludeIds: Set<ID>; onCa
               >
                 <CheckboxIndicator checked={checked} className="mt-0.5" />
                 <span className="flex min-w-0 flex-1 flex-col gap-1">
-                  <span className="line-clamp-1 text-sm font-medium">{idea.title.trim() || "Untitled idea"}</span>
+                  <span className="line-clamp-1 text-sm font-medium">{idea.title.trim() || t("untitled_idea")}</span>
                   <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
                     <IdeaStatusBadge status={idea.status} />
                     {ideaPillar ? (
@@ -111,7 +116,7 @@ function PickerBody({ excludeIds, onCancel, onAdd }: { excludeIds: Set<ID>; onCa
                         {ideaPillar.name}
                       </span>
                     ) : null}
-                    {idea.score !== null ? <span className="num">Idea Score {Math.round(idea.score)}</span> : null}
+                    {idea.score !== null ? <span className="num">{t("idea_score", { score: Math.round(idea.score) })}</span> : null}
                     {idea.platforms.length ? (
                       <span className="inline-flex items-center gap-1">
                         {idea.platforms.map((p) => (
@@ -129,23 +134,23 @@ function PickerBody({ excludeIds, onCancel, onAdd }: { excludeIds: Set<ID>; onCa
         <EmptyState
           compact
           icon={Lightbulb}
-          title="No open ideas match"
-          description="Capture or generate ideas, then plan them into the week."
+          title={t("no_ideas_match")}
+          description={t("no_ideas_match_hint")}
           action={
             <Button asChild size="sm" variant="outline">
-              <Link href="/ideas/generator">Open the Idea Generator</Link>
+              <Link href="/ideas/generator">{t("open_generator")}</Link>
             </Button>
           }
           className="rounded-lg border border-dashed"
         />
       )}
       <DialogFooter className="items-center">
-        <span className="mr-auto text-xs text-muted-foreground num">{selected.length ? `${pluralize(selected.length, "idea")} selected` : "Nothing selected"}</span>
+        <span className="mr-auto text-xs text-muted-foreground num">{selected.length ? t.plural("ideas_selected", selected.length, { count: formatNumber(selected.length) }) : t("nothing_selected")}</span>
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="button" disabled={!selected.length} onClick={() => onAdd(ideas.filter((i) => selected.includes(i.id)))}>
-          {selected.length > 1 ? `Add ${selected.length} ideas` : "Add idea"}
+          {selected.length > 1 ? t("add_ideas", { count: selected.length }) : t("add_idea")}
         </Button>
       </DialogFooter>
     </div>

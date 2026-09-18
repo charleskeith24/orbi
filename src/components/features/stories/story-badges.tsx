@@ -17,9 +17,11 @@ import {
 import type { SelectOption } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { STORY_TYPES } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import { dataActions } from "@/lib/store"
 import type { Story, StoryType } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { storyVaultMessages } from "./messages"
 import { storyTypeLabel } from "./story-model"
 
 export const STORY_TYPE_ICONS: Record<StoryType, LucideIcon> = {
@@ -59,15 +61,16 @@ export function StoryTypeBadge({ type, className }: { type: StoryType; className
 /** Star toggle for `is_favorite`. */
 export function FavoriteToggle({ story, className }: { story: Story; className?: string }) {
   const on = story.is_favorite
-  const title = story.title.trim() || "this story"
+  const t = useT(storyVaultMessages)
+  const title = story.title.trim() || t("this_story")
   return (
     <Button
       type="button"
       variant="ghost"
       size="icon-xs"
       aria-pressed={on}
-      aria-label={on ? `Remove “${title}” from favourites` : `Add “${title}” to favourites`}
-      title={on ? "Favourite — click to remove" : "Add to favourites"}
+      aria-label={on ? t("unfavourite_label", { title }) : t("favourite_label", { title })}
+      title={on ? t("favourite_title") : t("add_favourite")}
       onClick={() => dataActions.update("stories", story.id, { is_favorite: !on })}
       className={cn(on ? "text-foreground" : "text-muted-foreground", className)}
     >

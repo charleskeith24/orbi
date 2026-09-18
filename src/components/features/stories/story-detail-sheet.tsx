@@ -6,11 +6,14 @@ import { AiButton, DatePicker, DetailSheet, FormField, InlineText, ListEditor, O
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDate, todayISO } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions } from "@/lib/store"
 import type { Story, UpdateRow } from "@/lib/types"
-import { formatNumber, pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
 import { storySessionKey, useAngleSession } from "./angle-store"
 import { AutosaveInput } from "./autosave-field"
+import { storyFormMessages, storyVaultMessages } from "./messages"
 import { SourceUsageList } from "./source-usage"
 import { useStoryActions } from "./story-actions"
 import { StoryActionsMenu } from "./story-actions-menu"
@@ -35,6 +38,8 @@ export function StoryDetailSheet({
   onTabChange: (tab: StorySheetTab) => void
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useT(storyFormMessages)
+  const tv = useT(storyVaultMessages)
   if (!story) return null
   const ideas = usage?.ideas.length ?? 0
   return (
@@ -47,13 +52,15 @@ export function StoryDetailSheet({
           value={story.title}
           required
           maxLength={200}
-          placeholder="Untitled story"
-          aria-label="Story title"
+          placeholder={tv("untitled")}
+          aria-label={t("story_title")}
           className="text-base leading-6 font-semibold"
           onSave={(title) => dataActions.update("stories", story.id, { title })}
         />
       }
-      description={`${storyTypeLabel(story.type)} · ${story.occurred_on ? formatDate(story.occurred_on) : "No date"} · ${ideas ? `used in ${pluralize(ideas, "idea")}` : "not used yet"}`}
+      description={`${storyTypeLabel(story.type)} · ${story.occurred_on ? formatDate(story.occurred_on) : t("no_date")} · ${
+        ideas ? t("used_in", { ideas: tv.plural("ideas", ideas, { count: formatNumber(ideas) }) }) : t("not_used")
+      }`}
       actions={
         <>
           <FavoriteToggle story={story} className="size-7" />
@@ -84,11 +91,13 @@ function SheetBody({
   const angles = useAngleSession(storySessionKey(story.id)).drafts.length
   const ideas = usage?.ideas.length ?? 0
   const set = (patch: UpdateRow<"stories">) => dataActions.update("stories", story.id, patch)
+  const t = useT(storyFormMessages)
+  const tv = useT(storyVaultMessages)
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
       <div className="grid min-w-0 grid-cols-2 gap-3">
-        <FormField label="Type" htmlFor={`${id}-type`}>
+        <FormField label={t("type")} htmlFor={`${id}-type`}>
           <OptionSelect
             id={`${id}-type`}
             size="sm"
@@ -99,50 +108,50 @@ function SheetBody({
             }}
           />
         </FormField>
-        <FormField label="Potential Content Pillar" htmlFor={`${id}-pillar`}>
+        <FormField label={t("potential_pillar")} htmlFor={`${id}-pillar`}>
           <PillarSelect id={`${id}-pillar`} size="sm" allowNone value={story.pillar_id} onChange={(pillar_id) => set({ pillar_id })} />
         </FormField>
-        <FormField label="Date" htmlFor={`${id}-date`}>
+        <FormField label={t("date")} htmlFor={`${id}-date`}>
           <DatePicker
             id={`${id}-date`}
             size="sm"
             value={story.occurred_on}
             maxDate={today}
-            placeholder="When it happened"
+            placeholder={t("date_placeholder")}
             onChange={(occurred_on) => set({ occurred_on })}
           />
         </FormField>
-        <FormField label="Emotion" htmlFor={`${id}-emotion`}>
+        <FormField label={t("emotion")} htmlFor={`${id}-emotion`}>
           <AutosaveInput
             id={`${id}-emotion`}
             className="h-7"
             value={story.emotion}
             maxLength={200}
-            placeholder="How it felt"
+            placeholder={t("emotion_placeholder")}
             onCommit={(emotion) => set({ emotion })}
           />
         </FormField>
       </div>
-      <FormField label="Keywords" htmlFor={`${id}-keywords`} description="The AI uses these to find this story when you write about related topics.">
+      <FormField label={t("keywords")} htmlFor={`${id}-keywords`} description={t("keywords_description")}>
         <ListEditor
           id={`${id}-keywords`}
           value={story.keywords}
           onChange={(keywords) => set({ keywords: keywords.map((k) => k.toLowerCase()) })}
-          placeholder="Add a keyword and press Enter"
+          placeholder={t("keywords_placeholder")}
           maxItems={12}
-          aria-label="Keywords"
+          aria-label={t("keywords")}
         />
       </FormField>
 
       <Tabs value={tab} onValueChange={(next) => onTabChange(next as StorySheetTab)} className="min-w-0 gap-4">
         <TabsList>
-          <TabsTrigger value="story">Story</TabsTrigger>
+          <TabsTrigger value="story">{t("tab_story")}</TabsTrigger>
           <TabsTrigger value="angles">
-            Content angles
+            {t("tab_angles")}
             {angles ? <span className="text-xs text-muted-foreground num">{formatNumber(angles)}</span> : null}
           </TabsTrigger>
           <TabsTrigger value="usage">
-            Usage
+            {t("tab_usage")}
             {ideas ? <span className="text-xs text-muted-foreground num">{formatNumber(ideas)}</span> : null}
           </TabsTrigger>
         </TabsList>
@@ -158,7 +167,7 @@ function SheetBody({
             noun="story"
             emptyAction={
               <AiButton type="button" size="sm" variant="outline" onClick={() => actions.turnIntoIdeas(story)}>
-                Turn into content ideas
+                {tv("turn_into_ideas")}
               </AiButton>
             }
           />
@@ -171,18 +180,21 @@ function SheetBody({
 function SheetFooter({ story }: { story: Story }) {
   const actions = useStoryActions()
   const pending = useAngleSession(storySessionKey(story.id)).status === "pending"
+  const t = useT(storyFormMessages)
+  const tv = useT(storyVaultMessages)
+  const c = useT(commonMessages)
   return (
     <>
       <Button type="button" variant="ghost" size="sm" className="mr-auto text-muted-foreground" onClick={() => void actions.remove(story)}>
         <Trash2 aria-hidden />
-        Delete
+        {c("delete")}
       </Button>
       <Button type="button" variant="outline" size="sm" onClick={() => actions.createIdea(story)}>
         <Lightbulb aria-hidden />
-        Create idea
+        {t("create_idea")}
       </Button>
       <AiButton type="button" size="sm" variant="default" pending={pending} onClick={() => actions.turnIntoIdeas(story)}>
-        Turn into content ideas
+        {tv("turn_into_ideas")}
       </AiButton>
     </>
   )

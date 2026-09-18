@@ -2,9 +2,11 @@ import Link from "next/link"
 import { DefinitionList, KeyValue, StatusPill, TierBadge } from "@/components/common"
 import type { TieredRow } from "@/lib/analytics"
 import { PERFORMANCE_TIERS, PLATFORMS, WINNER_METRIC_MAP } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import type { AppSettings, PerformanceTier } from "@/lib/types"
-import { cn, formatNumber, formatPercent, pluralize } from "@/lib/utils"
+import { cn, formatNumber, formatPercent } from "@/lib/utils"
 import { formatRatio } from "./format"
+import { analyticsMessages } from "./messages"
 
 type TierSettings = Pick<
   AppSettings,
@@ -20,28 +22,29 @@ function formatComparison(value: number | null, settings: TierSettings): string 
 
 /** Why a post has its tier: value vs baseline, ratio, sample size and the thresholds. */
 export function TierExplanation({ row, settings }: { row: TieredRow; settings: TierSettings }) {
+  const t = useT(analyticsMessages)
   const platform = PLATFORMS[row.platform].label
   const metric = WINNER_METRIC_MAP[settings.winner_metric]?.label ?? "Performance"
   const composite = settings.winner_metric === "composite"
   const minSample = Math.min(settings.winner_window, settings.winner_min_sample)
 
   let reason: string | null = null
-  if (!row.metric) reason = "Tiers are assigned once the post has analytics."
+  if (!row.metric) reason = t("explain_no_metric")
   else if (row.ratio === null) {
     if (row.sampleSize < minSample) {
-      reason = `Only ${pluralize(row.sampleSize, `earlier measured ${platform} post`)} — tiers start at ${minSample}.`
-    } else if (row.value === null) reason = `This post has no ${metric.toLowerCase()} value logged.`
-    else reason = "The comparison average is 0, so no ratio can be computed."
+      reason = t.plural("explain_few", row.sampleSize, { count: formatNumber(row.sampleSize), platform, min: minSample })
+    } else if (row.value === null) reason = t("explain_no_value", { metric: metric.toLowerCase() })
+    else reason = t("explain_zero")
   }
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border p-3">
       <div className="flex flex-wrap items-center gap-2">
-        {row.ratio !== null ? <TierBadge tier={row.tier} showNormal /> : <StatusPill tone="neutral">Not tiered</StatusPill>}
+        {row.ratio !== null ? <TierBadge tier={row.tier} showNormal /> : <StatusPill tone="neutral">{t("not_tiered")}</StatusPill>}
         <span className="text-sm">
           {row.ratio !== null ? (
             <>
-              <span className="num font-medium">{formatRatio(row.ratio)}</span> the {platform} average
+              <span className="num font-medium">{formatRatio(row.ratio)}</span> {t("the_average", { platform })}
             </>
           ) : (
             reason
@@ -50,13 +53,13 @@ export function TierExplanation({ row, settings }: { row: TieredRow; settings: T
       </div>
       {row.metric ? (
         <DefinitionList layout="vertical" columns={3}>
-          <KeyValue label={composite ? "Performance index" : `This post · ${metric.toLowerCase()}`}>
+          <KeyValue label={composite ? "Performance index" : t("this_post", { metric: metric.toLowerCase() })}>
             <span className="num">{formatComparison(row.value, settings)}</span>
           </KeyValue>
           <KeyValue label="Baseline">
             <span className="num">{formatComparison(row.baseline, settings)}</span>
             <span className="block text-xs text-muted-foreground">
-              avg of {pluralize(row.sampleSize, "post")}
+              {t.plural("avg_of", row.sampleSize, { count: formatNumber(row.sampleSize) })}
             </span>
           </KeyValue>
           <KeyValue label="Ratio">
@@ -66,13 +69,10 @@ export function TierExplanation({ row, settings }: { row: TieredRow; settings: T
       ) : null}
       <TierScale ratio={row.ratio} active={row.ratio !== null ? row.tier : null} settings={settings} />
       <p className="text-xs text-pretty text-muted-foreground">
-        {composite
-          ? "Composite blends views, engagement rate, shares, saves and leads (1.0 = the window's average). "
-          : null}
-        Compared with the average {metric.toLowerCase()} of the previous {settings.winner_window} measured {platform} posts
-        (minimum {minSample}).{" "}
+        {composite ? t("composite_note") : null}
+        {t("compared_with", { metric: metric.toLowerCase(), window: settings.winner_window, platform, min: minSample })}{" "}
         <Link href="/settings?tab=performance" className="font-medium text-foreground underline-offset-2 hover:underline">
-          Edit thresholds
+          {t("edit_thresholds")}
         </Link>
       </p>
     </div>

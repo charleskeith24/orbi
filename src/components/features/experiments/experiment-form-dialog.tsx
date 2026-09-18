@@ -8,8 +8,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { EXPERIMENT_METRICS, EXPERIMENT_TEMPLATES } from "@/lib/constants"
+import { useT, useUiLang } from "@/lib/i18n"
 import { dataActions } from "@/lib/store"
 import type { ContentExperiment, ExperimentMetric } from "@/lib/types"
+import { experimentFormMessages } from "./detail-messages"
 import { formValuesOf, validateExperiment, type ExperimentFormValues } from "./experiment-model"
 
 const METRIC_OPTIONS = EXPERIMENT_METRICS.map((m) => ({ value: m.id, label: m.label }))
@@ -53,10 +55,12 @@ function ExperimentForm({
   onCancel: () => void
   onSaved: (experiment: ContentExperiment, created: boolean) => void
 }) {
+  const t = useT(experimentFormMessages)
+  const lang = useUiLang()
   const [values, setValues] = useState<ExperimentFormValues>(() => formValuesOf(experiment))
   const [template, setTemplate] = useState<string | null>(null)
   const [touched, setTouched] = useState<Partial<Record<keyof ExperimentFormValues, boolean>>>({})
-  const errors = validateExperiment(values)
+  const errors = validateExperiment(values, lang)
   const valid = Object.keys(errors).length === 0
   const errorOf = (key: keyof ExperimentFormValues) => (touched[key] ? errors[key] : undefined)
   const touch = (key: keyof ExperimentFormValues) => setTouched((t) => (t[key] ? t : { ...t, [key]: true }))
@@ -93,11 +97,11 @@ function ExperimentForm({
     }
     if (experiment) {
       dataActions.update("content_experiments", experiment.id, payload)
-      toast.success("Experiment updated", { description: payload.name })
+      toast.success(t("updated"), { description: payload.name })
       onSaved({ ...experiment, ...payload }, false)
     } else {
       const row = dataActions.insert("content_experiments", { ...payload, status: "planned" })
-      toast.success("Experiment created", { description: "Link published posts to each variant as you post them." })
+      toast.success(t("created"), { description: t("created_description") })
       onSaved(row, true)
     }
   }
@@ -105,69 +109,67 @@ function ExperimentForm({
   return (
     <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col" noValidate>
       <DialogHeader className="gap-1 border-b py-3.5 pr-12 pl-4">
-        <DialogTitle>{experiment ? "Edit experiment" : "New experiment"}</DialogTitle>
-        <DialogDescription className="text-xs">
-          Change one variable, keep everything else the same, and compare the two variants on one metric.
-        </DialogDescription>
+        <DialogTitle>{experiment ? t("edit_title") : t("new_title")}</DialogTitle>
+        <DialogDescription className="text-xs">{t("description")}</DialogDescription>
       </DialogHeader>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4 scrollbar-thin">
         {experiment ? null : (
-          <FormField label="Start from a template" description="Pick one to prefill the design, or leave all unselected to start blank.">
-            <ChipToggleGroup options={TEMPLATE_OPTIONS} value={template} onChange={applyTemplate} size="xs" aria-label="Experiment templates" />
+          <FormField label={t("template")} description={t("template_description")}>
+            <ChipToggleGroup options={TEMPLATE_OPTIONS} value={template} onChange={applyTemplate} size="xs" aria-label={t("templates_aria")} />
           </FormField>
         )}
 
-        <FormField label="Experiment" htmlFor="experiment-name" required error={errorOf("name")}>
+        <FormField label={t("name")} htmlFor="experiment-name" required error={errorOf("name")}>
           <Input
             id="experiment-name"
             value={values.name}
             onChange={(e) => set("name", e.target.value)}
             onBlur={() => touch("name")}
             maxLength={120}
-            placeholder="e.g. Short hooks vs long hooks on TikTok"
+            placeholder={t("name_placeholder")}
             aria-invalid={Boolean(errorOf("name"))}
             autoFocus
           />
         </FormField>
 
-        <FormField label="Hypothesis" htmlFor="experiment-hypothesis" description="What you expect to happen, and why.">
+        <FormField label={t("hypothesis")} htmlFor="experiment-hypothesis" description={t("hypothesis_description")}>
           <Textarea
             id="experiment-hypothesis"
             value={values.hypothesis}
             onChange={(e) => set("hypothesis", e.target.value)}
             rows={2}
             maxLength={500}
-            placeholder="e.g. Hooks under 8 words hold attention better for our TikTok audience."
+            placeholder={t("hypothesis_placeholder")}
           />
         </FormField>
 
         <FormRow>
-          <FormField label="Variant A" htmlFor="experiment-variant-a" required error={errorOf("variant_a")}>
+          <FormField label={t("variant_a")} htmlFor="experiment-variant-a" required error={errorOf("variant_a")}>
             <Input
               id="experiment-variant-a"
               value={values.variant_a}
               onChange={(e) => set("variant_a", e.target.value)}
               onBlur={() => touch("variant_a")}
               maxLength={120}
-              placeholder="e.g. Hook under 8 words"
+              placeholder={t("variant_a_placeholder")}
               aria-invalid={Boolean(errorOf("variant_a"))}
             />
           </FormField>
-          <FormField label="Variant B" htmlFor="experiment-variant-b" required error={errorOf("variant_b")}>
+          <FormField label={t("variant_b")} htmlFor="experiment-variant-b" required error={errorOf("variant_b")}>
             <Input
               id="experiment-variant-b"
               value={values.variant_b}
               onChange={(e) => set("variant_b", e.target.value)}
               onBlur={() => touch("variant_b")}
               maxLength={120}
-              placeholder="e.g. Hook of 15+ words"
+              placeholder={t("variant_b_placeholder")}
               aria-invalid={Boolean(errorOf("variant_b"))}
             />
           </FormField>
         </FormRow>
 
-        <FormField label="Metric" htmlFor="experiment-metric" description="Compared per post, from each post's latest analytics snapshot.">
+        <FormField label={t("metric")} htmlFor="experiment-metric" description={t("metric_description")}>
           <OptionSelect<ExperimentMetric>
             id="experiment-metric"
             value={values.metric}
@@ -177,10 +179,10 @@ function ExperimentForm({
         </FormField>
 
         <FormRow>
-          <FormField label="Start date" htmlFor="experiment-start">
+          <FormField label={t("start_date")} htmlFor="experiment-start">
             <DatePicker id="experiment-start" value={values.start_date} onChange={(next) => set("start_date", next)} />
           </FormField>
-          <FormField label="End date" htmlFor="experiment-end" error={errorOf("end_date") ?? (values.end_date ? errors.end_date : undefined)}>
+          <FormField label={t("end_date")} htmlFor="experiment-end" error={errorOf("end_date") ?? (values.end_date ? errors.end_date : undefined)}>
             <DatePicker
               id="experiment-end"
               value={values.end_date}
@@ -197,10 +199,10 @@ function ExperimentForm({
 
       <DialogFooter className="m-0 items-center rounded-b-xl border-t px-4 py-3">
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {t("cancel")}
         </Button>
         <Button type="submit" disabled={!valid}>
-          {experiment ? "Save changes" : "Create experiment"}
+          {experiment ? t("save_changes") : t("create")}
         </Button>
       </DialogFooter>
     </form>

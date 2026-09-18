@@ -2,7 +2,10 @@
 
 import { CircleCheck, RotateCcw, TriangleAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { cn } from "@/lib/utils"
+import { settingsMessages } from "./settings-messages"
 
 /**
  * Footer of a settings form: "Unsaved changes · Discard · Save changes". Sticks to the bottom of
@@ -14,7 +17,7 @@ export function SaveBar({
   onDiscard,
   onReset,
   resetDisabled = false,
-  invalidMessage = "Fix the highlighted fields to save.",
+  invalidMessage,
 }: {
   dirty: boolean
   valid: boolean
@@ -22,12 +25,15 @@ export function SaveBar({
   /** "Reset to defaults" — fills the form with defaults (still needs saving). */
   onReset?: () => void
   resetDisabled?: boolean
+  /** Shown while the form is invalid; defaults to "Fix the highlighted fields to save." */
   invalidMessage?: string
 }) {
+  const t = useT(settingsMessages)
+  const c = useT(commonMessages)
   return (
     <div
       role="region"
-      aria-label="Save changes"
+      aria-label={c("save_changes")}
       className={cn(
         "z-20 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border px-3 py-2",
         dirty ? "sticky bottom-3 bg-card shadow-md shadow-black/5 dark:shadow-black/40" : "bg-muted/30"
@@ -37,17 +43,17 @@ export function SaveBar({
         {!dirty ? (
           <>
             <CircleCheck className="size-3.5 shrink-0 text-good-fg" aria-hidden />
-            All changes saved
+            {t("all_saved")}
           </>
         ) : valid ? (
           <>
             <span className="size-2 shrink-0 rounded-full bg-brand" aria-hidden />
-            <span className="font-medium text-foreground">Unsaved changes</span>
+            <span className="font-medium text-foreground">{t("unsaved")}</span>
           </>
         ) : (
           <>
             <TriangleAlert className="size-3.5 shrink-0 text-warning-fg" aria-hidden />
-            {invalidMessage}
+            {invalidMessage ?? t("fix_fields")}
           </>
         )}
       </p>
@@ -55,16 +61,16 @@ export function SaveBar({
         {onReset ? (
           <Button type="button" variant="ghost" size="sm" onClick={onReset} disabled={resetDisabled} className="text-muted-foreground">
             <RotateCcw aria-hidden />
-            Reset to defaults
+            {t("reset_defaults")}
           </Button>
         ) : null}
         {dirty ? (
           <Button type="button" variant="outline" size="sm" onClick={onDiscard}>
-            Discard
+            {c("discard")}
           </Button>
         ) : null}
         <Button type="submit" size="sm" disabled={!dirty || !valid}>
-          Save changes
+          {c("save_changes")}
         </Button>
       </div>
     </div>

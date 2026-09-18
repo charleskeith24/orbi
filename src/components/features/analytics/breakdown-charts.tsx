@@ -10,8 +10,12 @@ import {
   type PlatformAggregate,
 } from "@/lib/analytics"
 import { FUNNEL_STAGES } from "@/lib/constants"
+import { useT, type Translator } from "@/lib/i18n"
 import type { PlatformId } from "@/lib/types"
-import { formatCompact, formatNumber, formatPercent, pluralize } from "@/lib/utils"
+import { formatCompact, formatNumber, formatPercent } from "@/lib/utils"
+import { analyticsMessages } from "./messages"
+
+type T = Translator<typeof analyticsMessages.en>
 
 const GROUP_COLUMNS = ["Posts", "Views", "Avg views", "Reach", "Eng. rate", "Leads", "Followers"]
 
@@ -29,22 +33,23 @@ function groupRow(label: string, g: GroupAggregate): (string | number)[] {
 }
 
 /** "12 posts · 4.2% eng. · 3 leads" */
-function groupSummary(g: GroupAggregate): string {
+function groupSummary(t: T, g: GroupAggregate): string {
   return [
-    pluralize(g.posts, "post"),
-    g.engagementRate !== null ? `${formatPercent(g.engagementRate)} eng.` : null,
-    g.leads ? pluralize(g.leads, "lead") : null,
+    t.plural("posts", g.posts, { count: formatNumber(g.posts) }),
+    g.engagementRate !== null ? t("eng_short", { rate: formatPercent(g.engagementRate) }) : null,
+    g.leads ? t.plural("leads", g.leads, { count: formatNumber(g.leads) }) : null,
   ]
     .filter(Boolean)
     .join(" · ")
 }
 
 export function PlatformBreakdown({ groups, hrefFor }: { groups: PlatformAggregate[]; hrefFor: (platform: PlatformId) => string }) {
+  const t = useT(analyticsMessages)
   return (
     <ChartFrame
-      title="By platform"
-      description="Total views of the posts published on each platform"
-      table={{ columns: ["Platform", ...GROUP_COLUMNS], rows: groups.map((g) => groupRow(g.label, g)) }}
+      title={t("by_platform")}
+      description={t("by_platform_description")}
+      table={{ columns: [t("platform"), ...GROUP_COLUMNS], rows: groups.map((g) => groupRow(g.label, g)) }}
     >
       <BarList
         items={groups.map((g) => ({
@@ -52,23 +57,24 @@ export function PlatformBreakdown({ groups, hrefFor }: { groups: PlatformAggrega
           label: g.label,
           value: g.views,
           color: platformColor(g.platform),
-          secondary: groupSummary(g),
+          secondary: groupSummary(t, g),
           href: hrefFor(g.platform),
         }))}
         valueFormatter={formatCompact}
-        emptyMessage="No posts published in this period."
-        aria-label="Views by platform"
+        emptyMessage={t("no_posts_period")}
+        aria-label={t("views_by_platform")}
       />
     </ChartFrame>
   )
 }
 
 export function PillarBreakdown({ groups, hrefFor }: { groups: PillarAggregate[]; hrefFor: (pillarId: string) => string }) {
+  const t = useT(analyticsMessages)
   return (
     <ChartFrame
-      title="By content pillar"
-      description="Average views per measured post"
-      table={{ columns: ["Pillar", ...GROUP_COLUMNS], rows: groups.map((g) => groupRow(g.label, g)) }}
+      title={t("by_pillar")}
+      description={t("avg_per_measured")}
+      table={{ columns: [t("pillar"), ...GROUP_COLUMNS], rows: groups.map((g) => groupRow(g.label, g)) }}
     >
       <BarList
         items={groups.map((g) => ({
@@ -76,22 +82,23 @@ export function PillarBreakdown({ groups, hrefFor }: { groups: PillarAggregate[]
           label: g.label,
           value: g.avgViews ?? 0,
           color: g.color ?? "other",
-          secondary: groupSummary(g),
+          secondary: groupSummary(t, g),
           href: hrefFor(g.pillar?.id ?? NO_KEY),
         }))}
         valueFormatter={formatCompact}
-        emptyMessage="No pillars yet — add pillars in Brand HQ to see which themes perform."
-        aria-label="Average views by content pillar"
+        emptyMessage={t("no_pillars_chart")}
+        aria-label={t("views_by_pillar")}
       />
     </ChartFrame>
   )
 }
 
 export function FormatBreakdown({ groups, hrefFor }: { groups: FormatAggregate[]; hrefFor: (formatId: string) => string }) {
+  const t = useT(analyticsMessages)
   return (
     <ChartFrame
-      title="By format"
-      description="Average views per measured post"
+      title={t("by_format")}
+      description={t("avg_per_measured")}
       table={{ columns: ["Format", ...GROUP_COLUMNS], rows: groups.map((g) => groupRow(g.label, g)) }}
     >
       <BarList
@@ -99,26 +106,27 @@ export function FormatBreakdown({ groups, hrefFor }: { groups: FormatAggregate[]
           id: g.key,
           label: g.label,
           value: g.avgViews ?? 0,
-          secondary: groupSummary(g),
+          secondary: groupSummary(t, g),
           href: g.format ? hrefFor(g.format.id) : undefined,
         }))}
         valueFormatter={formatCompact}
         limit={6}
-        emptyMessage="No posts published in this period."
-        aria-label="Average views by format"
+        emptyMessage={t("no_posts_period")}
+        aria-label={t("views_by_format")}
       />
     </ChartFrame>
   )
 }
 
 export function FunnelBreakdown({ groups }: { groups: FunnelAggregate[] }) {
+  const t = useT(analyticsMessages)
   const hasPosts = groups.some((g) => g.posts > 0)
   return (
     <ChartFrame
-      title="By funnel stage"
-      description="Share of views — TOFU builds reach, BOFU should convert"
+      title={t("by_funnel")}
+      description={t("by_funnel_description")}
       table={{
-        columns: ["Stage", ...GROUP_COLUMNS, "Leads / post"],
+        columns: [t("col_stage"), ...GROUP_COLUMNS, "Leads / post"],
         rows: groups.map((g) => [
           ...groupRow(g.stage ? `${g.label} · ${FUNNEL_STAGES[g.stage].name}` : g.label, g),
           g.leadsPerPost === null ? "—" : g.leadsPerPost.toFixed(1),
@@ -132,13 +140,18 @@ export function FunnelBreakdown({ groups }: { groups: FunnelAggregate[] }) {
                 id: g.key,
                 label: g.stage ? `${g.label} · ${FUNNEL_STAGES[g.stage].name}` : g.label,
                 value: g.views,
-                sublabel: [pluralize(g.posts, "post"), g.leads ? pluralize(g.leads, "lead") : null].filter(Boolean).join(" · "),
+                sublabel: [
+                  t.plural("posts", g.posts, { count: formatNumber(g.posts) }),
+                  g.leads ? t.plural("leads", g.leads, { count: formatNumber(g.leads) }) : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · "),
               }))
             : []
         }
         valueFormatter={formatCompact}
-        emptyMessage="No posts published in this period."
-        aria-label="Views by funnel stage"
+        emptyMessage={t("no_posts_period")}
+        aria-label={t("views_by_funnel")}
       />
     </ChartFrame>
   )

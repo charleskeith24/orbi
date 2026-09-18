@@ -1,4 +1,8 @@
+"use client"
+
+import { formMessages } from "@/components/common/messages"
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 /**
@@ -25,6 +29,7 @@ export function FormField({
   children: React.ReactNode
   className?: string
 }) {
+  const t = useT(formMessages)
   return (
     <Field className={cn("min-w-0 gap-1.5", className)}>
       <div className="flex min-h-5 items-center justify-between gap-2">
@@ -35,7 +40,7 @@ export function FormField({
               <span aria-hidden className="text-muted-foreground">
                 *
               </span>
-              <span className="sr-only">(required)</span>
+              <span className="sr-only">{t("required")}</span>
             </>
           ) : null}
         </FieldLabel>

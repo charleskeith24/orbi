@@ -7,23 +7,34 @@ import { Button } from "@/components/ui/button"
 import type { PerformanceRow } from "@/lib/analytics"
 import { PLATFORMS } from "@/lib/constants"
 import { formatRelativeDay } from "@/lib/dates"
+import { useT, useUiLang, type UiLang } from "@/lib/i18n"
 import { uiActions } from "@/lib/store"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { analyticsMessages } from "./messages"
 
 const VISIBLE = 5
 
+/** "5 days ago" / "today" in English; "kahapon" / "3 araw ang nakalipas" in Taglish. */
+function publishedWhen(row: PerformanceRow, now: Date, lang: UiLang): string {
+  const label = formatRelativeDay(row.publishedAt, now, lang)
+  // "Yesterday" → "yesterday"; short dates keep their capital ("Sep 1").
+  return /^[A-Z][a-z]+$/.test(label) ? label.toLowerCase() : label
+}
+
 /** Published posts in scope with no analytics snapshot — manual entry is the primary data source. */
 export function MissingAnalytics({ rows, viewAllHref, now }: { rows: PerformanceRow[]; viewAllHref: string; now: Date }) {
+  const t = useT(analyticsMessages)
+  const lang = useUiLang()
   if (!rows.length) return null
   return (
     <SectionCard
       icon={ClipboardList}
-      title={`${pluralize(rows.length, "published post")} ${rows.length === 1 ? "has" : "have"} no analytics yet`}
-      description="Log views, reach and engagement so winners, reports and recommendations stay accurate."
+      title={t.plural("missing_title", rows.length, { count: formatNumber(rows.length) })}
+      description={t("missing_description")}
       action={
         rows.length > VISIBLE ? (
           <Button asChild variant="ghost" size="sm">
-            <Link href={viewAllHref}>View all {rows.length}</Link>
+            <Link href={viewAllHref}>{t("view_all", { count: rows.length })}</Link>
           </Button>
         ) : undefined
       }
@@ -38,21 +49,21 @@ export function MissingAnalytics({ rows, viewAllHref, now }: { rows: Performance
                 href={`/analytics/posts?open=${row.id}`}
                 className="block truncate text-sm underline-offset-2 hover:underline"
               >
-                {row.item.title || "Untitled post"}
+                {row.item.title || t("untitled_post")}
               </Link>
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <PlatformIcon platform={row.platform} className="size-3" />
-                {PLATFORMS[row.platform].label} · published {formatRelativeDay(row.publishedAt, now).toLowerCase()}
+                {t("published_when", { platform: PLATFORMS[row.platform].label, when: publishedWhen(row, now, lang) })}
               </p>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => uiActions.openDialog({ type: "add-metrics", itemId: row.id })}
-              aria-label={`Add analytics for ${row.item.title || "untitled post"}`}
+              aria-label={t("add_for", { title: row.item.title || t("untitled_post_lower") })}
             >
               <Plus aria-hidden />
-              Add
+              {t("add")}
             </Button>
           </li>
         ))}

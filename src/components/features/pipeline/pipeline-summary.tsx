@@ -4,9 +4,11 @@ import { ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { Meter, StageIcon, StatusPill } from "@/components/common"
 import type { BufferStatus, ContentBuffer, PipelineCounts } from "@/lib/analytics"
+import { useT } from "@/lib/i18n"
 import type { PipelineStage } from "@/lib/types"
-import { cn, formatNumber, pluralize } from "@/lib/utils"
+import { cn, formatNumber } from "@/lib/utils"
 import { firstStageOfGroup } from "./board-model"
+import { pipelineMessages } from "./messages"
 
 const BUFFER_TONE: Record<BufferStatus, "good" | "warning" | "critical"> = {
   healthy: "good",
@@ -41,15 +43,16 @@ export function PipelineSummary({
 }
 
 function StageGroups({ counts, onJump }: { counts: PipelineCounts; onJump: (stage: PipelineStage) => void }) {
+  const t = useT(pipelineMessages)
   const last = counts.groupList.length - 1
   return (
     <section aria-labelledby="pipeline-groups-title" className="flex min-w-0 flex-col rounded-lg border bg-card">
       <div className="flex items-baseline justify-between gap-3 px-4 pt-3">
         <h2 id="pipeline-groups-title" className="text-xs font-medium text-muted-foreground">
-          Stage groups
+          {t("stage_groups")}
         </h2>
         <p className="text-xs text-muted-foreground">
-          <span className="font-medium text-foreground num">{formatNumber(counts.inProgress)}</span> in progress
+          <span className="font-medium text-foreground num">{formatNumber(counts.inProgress)}</span> {t("in_progress")}
         </p>
       </div>
       <ol className="grid flex-1 grid-cols-4 content-center gap-x-1 gap-y-0.5 p-2 sm:grid-cols-8 lg:grid-cols-4 xl:grid-cols-8">
@@ -61,7 +64,7 @@ function StageGroups({ counts, onJump }: { counts: PipelineCounts; onJump: (stag
               <button
                 type="button"
                 onClick={() => onJump(stage)}
-                title={published ? `Published in the last ${counts.publishedWindowDays} days` : `Show ${group.label} on the board`}
+                title={published ? t("published_window", { days: counts.publishedWindowDays }) : t("show_group", { group: group.label })}
                 className={cn(CELL, "w-full")}
               >
                 <span className="truncate text-xs text-muted-foreground">{group.label}</span>
@@ -100,35 +103,36 @@ type BufferCell = { key: string; label: string; value: number; title: string } &
 )
 
 function BufferPanel({ buffer, empty, onJump }: { buffer: ContentBuffer; empty: boolean; onJump: (stage: PipelineStage) => void }) {
+  const t = useT(pipelineMessages)
   const tone = empty ? "neutral" : BUFFER_TONE[buffer.status]
   const days = formatDays(buffer.days)
   const hint = empty
-    ? `fills as content gets ready · target ${buffer.targetDays} days`
+    ? t("buffer_hint_empty", { days: buffer.targetDays })
     : buffer.status === "low"
-      ? `under your ${buffer.warningDays}-day warning line`
+      ? t("buffer_hint_low", { days: buffer.warningDays })
       : buffer.status === "ok"
-        ? `below your ${buffer.targetDays}-day target`
-        : `target ${buffer.targetDays} days`
+        ? t("buffer_hint_ok", { days: buffer.targetDays })
+        : t("buffer_hint_healthy", { days: buffer.targetDays })
   const cells: BufferCell[] = [
-    { key: "ideas", label: "Ready Ideas", value: buffer.breakdown.readyIdeas, href: "/ideas", title: "Validated or selected ideas in the Idea Bank" },
-    { key: "scripts", label: "Ready Scripts", value: buffer.breakdown.readyScripts, stage: "scripting", title: "Written scripts plus Ready for Production" },
-    { key: "record", label: "Ready to Record", value: buffer.breakdown.readyToRecord, stage: "ready_for_production", title: "Ready for Production" },
-    { key: "edited", label: "Edited Content", value: buffer.breakdown.edited, stage: "editing", title: "Editing, Review and Revision" },
-    { key: "publish", label: "Ready to Publish", value: buffer.breakdown.readyToPublish, stage: "ready_to_post", title: "Ready to Post plus upcoming Scheduled posts" },
+    { key: "ideas", label: t("cell_ideas"), value: buffer.breakdown.readyIdeas, href: "/ideas", title: t("cell_ideas_title") },
+    { key: "scripts", label: t("cell_scripts"), value: buffer.breakdown.readyScripts, stage: "scripting", title: t("cell_scripts_title") },
+    { key: "record", label: t("cell_record"), value: buffer.breakdown.readyToRecord, stage: "ready_for_production", title: t("cell_record_title") },
+    { key: "edited", label: t("cell_edited"), value: buffer.breakdown.edited, stage: "editing", title: t("cell_edited_title") },
+    { key: "publish", label: t("cell_publish"), value: buffer.breakdown.readyToPublish, stage: "ready_to_post", title: t("cell_publish_title") },
   ]
 
   return (
     <section aria-labelledby="pipeline-buffer-title" className="flex min-w-0 flex-col gap-2 rounded-lg border bg-card px-4 pt-3 pb-2">
       <div className="flex items-center justify-between gap-3">
         <h2 id="pipeline-buffer-title" className="text-xs font-medium text-muted-foreground">
-          Content Buffer
+          {t("content_buffer")}
         </h2>
-        <StatusPill tone={tone}>{empty ? "Nothing in production yet" : buffer.label}</StatusPill>
+        <StatusPill tone={tone}>{empty ? t("empty_title") : buffer.label}</StatusPill>
       </div>
       <div className="flex min-w-0 items-center gap-3">
         <p className="shrink-0 leading-7">
           <span className="text-2xl font-semibold tracking-tight num">{days}</span>{" "}
-          <span className="text-sm text-muted-foreground">{buffer.days === 1 ? "day" : "days"}</span>
+          <span className="text-sm text-muted-foreground">{buffer.days === 1 ? t("day") : t("days")}</span>
         </p>
         <div className="min-w-0 flex-1">
           <Meter
@@ -137,11 +141,11 @@ function BufferPanel({ buffer, empty, onJump }: { buffer: ContentBuffer; empty: 
             target={buffer.targetDays}
             tone={tone}
             size="sm"
-            aria-label="Content buffer"
-            valueText={`${days} of ${buffer.targetDays} days`}
+            aria-label={t("buffer_aria")}
+            valueText={t("buffer_value", { days, target: buffer.targetDays })}
           />
           <p className="mt-1 truncate text-[11px] text-muted-foreground">
-            {pluralize(buffer.readyCount, "post")} ready to go live · {hint}
+            {t.plural("posts_ready", buffer.readyCount, { count: formatNumber(buffer.readyCount) })} · {hint}
           </p>
         </div>
       </div>

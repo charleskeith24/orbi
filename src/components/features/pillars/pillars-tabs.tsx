@@ -2,7 +2,9 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
+import { pillarMessages } from "./pillar-messages"
 
 const TABS = [
   { href: "/pillars", label: "Content Pillars" },
@@ -13,8 +15,9 @@ const TABS = [
 /** Sibling navigation for the Pillars, Matrix and Funnel pages (scrolls horizontally on narrow screens). */
 export function PillarsTabs({ className }: { className?: string }) {
   const pathname = usePathname()
+  const t = useT(pillarMessages)
   return (
-    <nav aria-label="Pillar pages" className={cn("-mx-4 min-w-0 md:mx-0", className)}>
+    <nav aria-label={t("pillar_pages")} className={cn("-mx-4 min-w-0 md:mx-0", className)}>
       <ul className="flex gap-1 overflow-x-auto border-b px-4 scrollbar-thin md:px-0">
         {TABS.map((tab) => {
           const active = pathname === tab.href

@@ -1,27 +1,35 @@
 import { z } from "zod"
+import { authValidationMessages } from "@/components/features/auth/messages"
+import { translator, type UiLang } from "@/lib/i18n/core"
 
-const email = z
-  .string()
-  .trim()
-  .min(1, { error: "Enter your email address" })
-  .pipe(z.email({ error: "Enter a valid email address" }))
-
-export const signInSchema = z.object({
-  email,
-  password: z.string().min(1, { error: "Enter your password" }),
-})
-
-export const magicLinkSchema = z.object({ email })
-
-export const signUpSchema = z.object({
-  full_name: z.string().trim().max(120, { error: "Keep your name under 120 characters" }),
-  email,
-  // Supabase hashes passwords with bcrypt, which ignores anything past 72 bytes.
-  password: z
+/** The auth form schemas with validation messages in the UI language. */
+export function authSchemas(lang: UiLang = "en") {
+  const t = translator(authValidationMessages, lang)
+  const email = z
     .string()
-    .min(8, { error: "Use at least 8 characters" })
-    .max(72, { error: "Use 72 characters or fewer" }),
-})
+    .trim()
+    .min(1, { error: t("email_required") })
+    .pipe(z.email({ error: t("email_invalid") }))
+
+  return {
+    signInSchema: z.object({
+      email,
+      password: z.string().min(1, { error: t("password_required") }),
+    }),
+    magicLinkSchema: z.object({ email }),
+    signUpSchema: z.object({
+      full_name: z.string().trim().max(120, { error: t("name_too_long") }),
+      email,
+      // Supabase hashes passwords with bcrypt, which ignores anything past 72 bytes.
+      password: z
+        .string()
+        .min(8, { error: t("password_too_short") })
+        .max(72, { error: t("password_too_long") }),
+    }),
+  }
+}
+
+export const { signInSchema, magicLinkSchema, signUpSchema } = authSchemas()
 
 export type SignInValues = z.input<typeof signInSchema>
 export type SignUpValues = z.input<typeof signUpSchema>

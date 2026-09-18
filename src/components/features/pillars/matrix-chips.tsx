@@ -1,7 +1,9 @@
 import { Target } from "lucide-react"
 import { ColorDot, FormatCategoryIcon, Token } from "@/components/common"
+import { useT } from "@/lib/i18n"
 import type { CategoricalColor, FormatCategory } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { matrixMessages } from "./matrix-messages"
 
 /** Severity 1–5 as five rising bars. Decorative — pair it with text or a title. */
 export function SeverityMark({ severity, className }: { severity: number; className?: string }) {
@@ -38,8 +40,9 @@ export function FormatChip({ name, category }: { name: string; category: FormatC
 }
 
 export function GoalChip({ name }: { name: string }) {
+  const t = useT(matrixMessages)
   return (
-    <Token className="max-w-52 font-normal text-foreground/85" title={`Goal: ${name}`}>
+    <Token className="max-w-52 font-normal text-foreground/85" title={t("goal_title", { name })}>
       <Target className="text-muted-foreground" aria-hidden />
       <span className="truncate">{name}</span>
     </Token>
@@ -48,12 +51,13 @@ export function GoalChip({ name }: { name: string }) {
 
 /** The problem's severity and who has it — the problem itself is already in the working title (full text on hover). */
 export function ProblemChip({ text, severity, persona }: { text: string; severity: number; persona: string | null }) {
-  const audience = persona ?? "Any audience"
+  const t = useT(matrixMessages)
+  const audience = persona ?? t("any_audience")
   return (
-    <Token className="max-w-52 font-normal text-foreground/85" title={`Severity ${severity}/5 for ${audience}: ${text}`}>
+    <Token className="max-w-52 font-normal text-foreground/85" title={t("problem_title", { severity, audience, text })}>
       <SeverityMark severity={severity} />
       <span className="truncate">{audience}</span>
-      <span className="sr-only">, severity {severity} of 5</span>
+      <span className="sr-only">{t("problem_sr", { severity })}</span>
     </Token>
   )
 }

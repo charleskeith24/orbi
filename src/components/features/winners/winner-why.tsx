@@ -6,15 +6,18 @@ import { AiButton, AiNotice, PageSection, ProviderBadge } from "@/components/com
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { buildWinnerReplicationInput, useAiTask } from "@/lib/ai"
+import { useT } from "@/lib/i18n"
 import { dataActions, useDataStore } from "@/lib/store"
 import type { AiProviderId, ContentItem } from "@/lib/types"
 import { AiErrorNotice } from "./ai-error-notice"
+import { winnersMessages } from "./messages"
 
 /** Matches the winner_replication input limit, so a saved note never breaks the next AI run. */
 const MAX_LENGTH = 1000
 
 /** "Why It Worked": the creator's own read of the win, editable, with an AI first draft on request. */
 export function WinnerWhy({ item }: { item: ContentItem }) {
+  const t = useT(winnersMessages)
   const saved = item.why_it_worked
   const [draft, setDraft] = useState(saved)
   const [base, setBase] = useState(saved)
@@ -30,7 +33,7 @@ export function WinnerWhy({ item }: { item: ContentItem }) {
   async function analyze() {
     const input = buildWinnerReplicationInput(useDataStore.getState().db, item.id, new Date())
     if (!input) {
-      toast.error("Only published posts can be analyzed.")
+      toast.error(t("only_published_analyzed"))
       return
     }
     const result = await ai.run(input, { entityType: "content_items", entityId: item.id })
@@ -42,7 +45,7 @@ export function WinnerWhy({ item }: { item: ContentItem }) {
   function save() {
     dataActions.update("content_items", item.id, { why_it_worked: draft.trim().slice(0, MAX_LENGTH) })
     setSource(null)
-    toast.success("“Why it worked” saved")
+    toast.success(t("why_saved"))
   }
 
   function discard() {
@@ -53,11 +56,11 @@ export function WinnerWhy({ item }: { item: ContentItem }) {
   return (
     <PageSection
       id="winner-why"
-      title="Why It Worked"
-      description="Your read of the win — the hook, the timing, the story. It feeds every future generation."
+      title={t("why_title")}
+      description={t("why_description")}
       action={
-        <AiButton size="sm" pending={ai.isPending} pendingLabel="Analyzing…" onClick={analyze}>
-          Analyze with AI
+        <AiButton size="sm" pending={ai.isPending} pendingLabel={t("analyzing")} onClick={analyze}>
+          {t("analyze")}
         </AiButton>
       }
     >
@@ -73,21 +76,21 @@ export function WinnerWhy({ item }: { item: ContentItem }) {
           }}
           maxLength={MAX_LENGTH}
           rows={3}
-          aria-label="Why it worked"
-          placeholder="What made this land? A sharp hook, a real story, perfect timing, a format your audience saves…"
+          aria-label={t("why_aria")}
+          placeholder={t("why_placeholder")}
           className="min-h-20"
         />
         <AiErrorNotice error={ai.error} onRetry={analyze} pending={ai.isPending} />
         {source || dirty ? (
           <div className="flex flex-wrap items-center gap-2">
             {source ? <ProviderBadge provider={source.provider} model={source.model} /> : null}
-            {source ? <AiNotice className="min-w-0 flex-1 basis-48">Edit it until it sounds like you, then save.</AiNotice> : null}
+            {source ? <AiNotice className="min-w-0 flex-1 basis-48">{t("edit_until")}</AiNotice> : null}
             <div className="ml-auto flex items-center gap-2">
               <Button type="button" variant="ghost" size="sm" onClick={discard}>
-                Discard
+                {t("discard")}
               </Button>
               <Button type="button" size="sm" onClick={save} disabled={!dirty}>
-                Save
+                {t("save")}
               </Button>
             </div>
           </div>

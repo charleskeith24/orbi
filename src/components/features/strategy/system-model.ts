@@ -21,8 +21,20 @@ import {
   type DateRange,
 } from "@/lib/analytics"
 import { FLYWHEEL_STEPS } from "@/lib/constants"
+import { translator, type Translator, type UiLang } from "@/lib/i18n/core"
 import type { AppSettings, BrandProfile, Database, ID } from "@/lib/types"
-import { formatCompact, formatNumber, pluralize } from "@/lib/utils"
+import { formatCompact, formatNumber } from "@/lib/utils"
+import { systemEvidenceMessages, systemKnowledgeMessages } from "./system-messages"
+
+type EvidenceT = Translator<(typeof systemEvidenceMessages)["en"]>
+type CountKey = {
+  [K in keyof (typeof systemEvidenceMessages)["en"]]: K extends `${infer B}_one` ? B : never
+}[keyof (typeof systemEvidenceMessages)["en"]]
+
+/** "3 items" / "1 idea" in the UI language (numbers formatted like `pluralize`). */
+export function counted(t: EvidenceT, key: CountKey, n: number): string {
+  return t.plural(key, n, { count: formatNumber(n) })
+}
 
 export type Tone = "good" | "warning" | "serious" | "critical" | "neutral"
 
@@ -80,19 +92,26 @@ export interface FlywheelSummary {
   weakest: FlywheelStep | null
 }
 
-const STEP_META: { key: FlywheelKey; href: string; tip: { text: string; href: string } }[] = [
-  { key: "expertise", href: "/strategy", tip: { text: "Keep Brand HQ current with the expertise you've earned lately.", href: "/strategy" } },
-  { key: "content", href: "/analytics/posts", tip: { text: "Run the Weekly Planner so you post consistently.", href: "/calendar/planner" } },
-  { key: "attention", href: "/analytics", tip: { text: "Test stronger hooks from the Hook Library.", href: "/ideas/hooks" } },
-  { key: "trust", href: "/analytics", tip: { text: "Publish saveable frameworks, checklists and carousels.", href: "/ideas/generator" } },
-  { key: "authority", href: "/winners", tip: { text: "Replicate your winners from new angles.", href: "/winners" } },
-  { key: "community", href: "/today", tip: { text: "Reply to comments and turn audience questions into content.", href: "/audience/questions" } },
-  { key: "opportunity", href: "/analytics", tip: { text: "Add clear conversion calls to action on proven topics.", href: "/pillars/funnel" } },
-  { key: "experience", href: "/stories", tip: { text: "Log this week's wins, failures and lessons in the Story Vault.", href: "/stories" } },
-  { key: "more_content", href: "/ideas", tip: { text: "Turn stories and winners into new ideas.", href: "/stories/experience" } },
+const STEP_META: { key: FlywheelKey; href: string; tipHref: string }[] = [
+  { key: "expertise", href: "/strategy", tipHref: "/strategy" },
+  { key: "content", href: "/analytics/posts", tipHref: "/calendar/planner" },
+  { key: "attention", href: "/analytics", tipHref: "/ideas/hooks" },
+  { key: "trust", href: "/analytics", tipHref: "/ideas/generator" },
+  { key: "authority", href: "/winners", tipHref: "/winners" },
+  { key: "community", href: "/today", tipHref: "/audience/questions" },
+  { key: "opportunity", href: "/analytics", tipHref: "/pillars/funnel" },
+  { key: "experience", href: "/stories", tipHref: "/stories" },
+  { key: "more_content", href: "/ideas", tipHref: "/stories/experience" },
 ]
 
-export function flywheel(db: Database, now: Date, brand: Pick<BrandProfile, "expertise_areas" | "years_experience">): FlywheelSummary {
+export function flywheel(
+  db: Database,
+  now: Date,
+  brand: Pick<BrandProfile, "expertise_areas" | "years_experience">,
+  lang: UiLang = "en"
+): FlywheelSummary {
+  const t = translator(systemEvidenceMessages, lang)
+  const tk = translator(systemKnowledgeMessages, lang)
   const current: DateRange = { start: startOfDay(subDays(now, 29)), end: now }
   const previous = previousPeriod(current.start, current.end)
   const cur = periodTotals(db, current.start, current.end)
@@ -107,7 +126,7 @@ export function flywheel(db: Database, now: Date, brand: Pick<BrandProfile, "exp
   const evidence: Record<FlywheelKey, { value: string; unit: string; delta: number | null }> = {
     expertise: {
       value: formatNumber(brand.expertise_areas.length),
-      unit: `${brand.expertise_areas.length === 1 ? "area" : "areas"}${years !== null ? ` · ${Math.round(years * 10) / 10} yrs` : ""}`,
+      unit: `${t.plural("unit_areas", brand.expertise_areas.length)}${years !== null ? t("unit_years", { count: Math.round(years * 10) / 10 }) : ""}`,
       delta: null,
     },
     content: { value: formatNumber(cur.posts), unit: cur.posts === 1 ? "post" : "posts", delta: deltas.posts },
@@ -118,16 +137,18 @@ export function flywheel(db: Database, now: Date, brand: Pick<BrandProfile, "exp
     opportunity: { value: formatNumber(cur.leads), unit: cur.leads === 1 ? "lead" : "leads", delta: deltas.leads },
     experience: {
       value: formatNumber(db.stories.length),
-      unit: `stories · ${newStories} new`,
+      unit: t("unit_stories_new", { count: newStories }),
       delta: percentChange(newStories, oldStories),
     },
-    more_content: { value: formatNumber(newIdeas), unit: newIdeas === 1 ? "new idea" : "new ideas", delta: percentChange(newIdeas, oldIdeas) },
+    more_content: { value: formatNumber(newIdeas), unit: t.plural("unit_new_ideas", newIdeas), delta: percentChange(newIdeas, oldIdeas) },
   }
 
   const steps = STEP_META.map((meta, i): FlywheelStep => ({
-    ...meta,
-    label: FLYWHEEL_STEPS[i]?.label ?? meta.key,
-    description: FLYWHEEL_STEPS[i]?.description ?? "",
+    key: meta.key,
+    href: meta.href,
+    tip: { text: t(`tip_${meta.key}`), href: meta.tipHref },
+    label: lang === "en" ? (FLYWHEEL_STEPS[i]?.label ?? meta.key) : tk(`fw_${meta.key}_label`),
+    description: lang === "en" ? (FLYWHEEL_STEPS[i]?.description ?? "") : tk(`fw_${meta.key}_description`),
     ...evidence[meta.key],
   }))
   const measured = steps.filter((s) => s.delta !== null)
@@ -156,7 +177,15 @@ export interface PrincipleMetric {
 }
 
 /** One live metric per SYSTEM_PRINCIPLES entry (same order). */
-export function principleMetrics(db: Database, now: Date, settings: AppSettings, brandCompleteness: number): PrincipleMetric[] {
+export function principleMetrics(
+  db: Database,
+  now: Date,
+  settings: AppSettings,
+  brandCompleteness: number,
+  lang: UiLang = "en"
+): PrincipleMetric[] {
+  const t = translator(systemEvidenceMessages, lang)
+  const n = (key: CountKey, count: number) => counted(t, key, count)
   const last90 = { start: startOfDay(subDays(now, 89)), end: now }
   // Active content: everything still in the pipeline plus what went out in the last 90 days.
   const working = db.content_items.filter((i) => !isPublishedItem(i) || inRange(publishedAtOf(i), last90))
@@ -174,13 +203,13 @@ export function principleMetrics(db: Database, now: Date, settings: AppSettings,
   const audience = working.length
     ? {
         value: `${pct(withPersona, working.length)}%`,
-        label: "of active content targets a persona",
+        label: t("audience_label"),
         tone: toneFor(pct(withPersona, working.length)),
-        detail: `${pluralize(working.length - withPersona, "item")} without a persona · ${pluralize(db.audience_personas.length, "persona")} in Audience HQ`,
+        detail: t("audience_detail", { items: n("items", working.length - withPersona), personas: n("personas", db.audience_personas.length) }),
         href: "/audience",
         hrefLabel: "Audience HQ",
       }
-    : none("No content yet", "/audience", "Audience HQ", "Every idea should start from a persona and a real problem.")
+    : none(t("no_content"), "/audience", "Audience HQ", t("audience_none"))
 
   // 2 · Purpose
   const withGoal = working.filter((i) => i.goal_id).length
@@ -189,28 +218,28 @@ export function principleMetrics(db: Database, now: Date, settings: AppSettings,
   const purpose = working.length
     ? {
         value: `${pct(withBoth, working.length)}%`,
-        label: "of active content has a goal and a funnel stage",
+        label: t("purpose_label"),
         tone: toneFor(pct(withBoth, working.length)),
-        detail: `${pct(withGoal, working.length)}% have a goal · ${pct(withFunnel, working.length)}% a funnel stage`,
+        detail: t("purpose_detail", { goal: pct(withGoal, working.length), funnel: pct(withFunnel, working.length) }),
         href: "/strategy/goals",
         hrefLabel: "Goals",
       }
-    : none("No content yet", "/strategy/goals", "Goals", "Each item carries a goal and a funnel stage.")
+    : none(t("no_content"), "/strategy/goals", "Goals", t("purpose_none"))
 
   // 3 · Consistency
   const consistency = consistencyStats(db, now, settings, 8)
-  const buffer = contentBuffer(db, now, settings)
+  const buffer = contentBuffer(db, now, settings, lang)
   const consistent: PrincipleMetric =
     consistency.weeksCounted > 0
       ? {
           value: `${consistency.weeksConsistent}/${consistency.weeksCounted}`,
-          label: "recent weeks at 80%+ of your weekly target",
+          label: t("consistency_label"),
           tone: toneFor(consistency.score),
-          detail: `Content Buffer: ${pluralize(buffer.days, "day")} ready · ${buffer.label}`,
+          detail: t("consistency_detail", { days: n("days", buffer.days), status: buffer.label }),
           href: "/calendar/schedule",
           hrefLabel: "Posting Schedule",
         }
-      : none("No completed week yet", "/calendar/schedule", "Posting Schedule", `Content Buffer: ${pluralize(buffer.days, "day")} ready`)
+      : none(t("consistency_none"), "/calendar/schedule", "Posting Schedule", t("consistency_none_detail", { days: n("days", buffer.days) }))
 
   // 4 · Real problems
   const openIdeas = db.content_ideas.filter((i) => i.status !== "archived")
@@ -221,13 +250,13 @@ export function principleMetrics(db: Database, now: Date, settings: AppSettings,
   const problems = openIdeas.length
     ? {
         value: `${pct(fromProblems, openIdeas.length)}%`,
-        label: "of ideas trace back to a real audience problem or question",
+        label: t("problems_label"),
         tone: toneFor(pct(fromProblems, openIdeas.length) * 1.5),
-        detail: `${pluralize(db.audience_problems.length, "problem")} · ${pluralize(db.audience_questions.length, "question")} in the banks`,
+        detail: t("problems_detail", { problems: n("problems", db.audience_problems.length), questions: n("questions", db.audience_questions.length) }),
         href: "/audience/problems",
         hrefLabel: "Problem Bank",
       }
-    : none("No ideas yet", "/audience/problems", "Problem Bank", "The Problem and Question Banks feed the Idea Bank.")
+    : none(t("problems_none"), "/audience/problems", "Problem Bank", t("problems_none_detail"))
 
   // 5 · Winners repeated
   const winners = getWinners(db, settings, now, { days: 90 })
@@ -242,13 +271,13 @@ export function principleMetrics(db: Database, now: Date, settings: AppSettings,
   const winnersMetric = winners.length
     ? {
         value: `${repeated}/${winners.length}`,
-        label: "recent winners were repeated or repurposed",
+        label: t("winners_label"),
         tone: toneFor(pct(repeated, winners.length)),
-        detail: winners.length - repeated ? `${pluralize(winners.length - repeated, "winner")} still waiting for a follow-up` : "Every recent winner has a follow-up",
+        detail: winners.length - repeated ? t("winners_waiting", { winners: n("winners", winners.length - repeated) }) : t("winners_all_followed"),
         href: "/winners",
         hrefLabel: "Winning Content Library",
       }
-    : none("No winners in the last 90 days yet", "/winners", "Winning Content Library", "Log analytics so Winner detection can find them.")
+    : none(t("winners_none"), "/winners", "Winning Content Library", t("winners_none_detail"))
 
   // 6 · One idea, many assets
   const assetsPerIdea = new Map<ID, number>()
@@ -261,29 +290,29 @@ export function principleMetrics(db: Database, now: Date, settings: AppSettings,
   const multiAssets = converted
     ? {
         value: avg.toFixed(1),
-        label: "content assets per converted idea",
+        label: t("assets_label"),
         tone: (avg >= 2 ? "good" : avg >= 1.5 ? "warning" : avg >= 1.2 ? "serious" : "critical") as Tone,
-        detail: `${pct(multi, converted)}% of ideas became 2+ assets · ${pluralize(repurposedVersions, "repurposed version")}`,
+        detail: t("assets_detail", { pct: pct(multi, converted), versions: n("versions", repurposedVersions) }),
         href: "/studio",
         hrefLabel: "Repurposing Engine",
       }
-    : none("No converted ideas yet", "/studio", "Repurposing Engine", "Repurpose one good idea into several assets.")
+    : none(t("assets_none"), "/studio", "Repurposing Engine", t("assets_none_detail"))
 
   // 7 · Performance influences content
   const rows30 = scopedRows(db, now, { days: 30, settings })
   const measured30 = rows30.filter((r) => r.metric).length
   const lastReview = [...db.weekly_reviews].sort((a, b) => b.week_start.localeCompare(a.week_start))[0]
-  const reviewText = lastReview ? `Last Weekly Report: week of ${format(parseISO(lastReview.week_start), "MMM d")}` : "No Weekly Report yet"
+  const reviewText = lastReview ? t("last_report", { date: format(parseISO(lastReview.week_start), "MMM d") }) : t("no_report")
   const performance = rows30.length
     ? {
         value: `${pct(measured30, rows30.length)}%`,
-        label: "of posts from the last 30 days have analytics logged",
+        label: t("performance_label"),
         tone: toneFor(pct(measured30, rows30.length)),
         detail: reviewText,
         href: "/analytics",
         hrefLabel: "Analytics",
       }
-    : none("No posts in the last 30 days", "/analytics", "Analytics", reviewText)
+    : none(t("performance_none"), "/analytics", "Analytics", reviewText)
 
   // 8 · Personal experiences
   const storyIdeas = db.content_ideas.filter(
@@ -292,9 +321,9 @@ export function principleMetrics(db: Database, now: Date, settings: AppSettings,
   const stories = db.stories.length
   const experiences: PrincipleMetric = {
     value: formatNumber(stories),
-    label: stories === 1 ? "story in the Story Vault" : "stories in the Story Vault",
+    label: t.plural("stories_label", stories),
     tone: stories >= 10 ? "good" : stories >= 5 ? "warning" : stories >= 1 ? "serious" : "critical",
-    detail: `${pluralize(storyIdeas, "idea")} came from stories or experiences in the last 90 days`,
+    detail: t("stories_detail", { ideas: n("ideas", storyIdeas) }),
     href: "/stories",
     hrefLabel: "Story Vault",
   }
@@ -303,26 +332,26 @@ export function principleMetrics(db: Database, now: Date, settings: AppSettings,
   const rows90 = scopedRows(db, now, { days: 90, settings })
   const activePillars = new Set(db.content_pillars.filter((p) => p.is_active).map((p) => p.id))
   const inPillar = rows90.filter((r) => r.pillarId && activePillars.has(r.pillarId)).length
-  const mix = pillarMix(db, now, settings)
+  const mix = pillarMix(db, now, settings, { lang })
   const positioning = rows90.length
     ? {
         value: `${pct(inPillar, rows90.length)}%`,
-        label: "of posts in the last 90 days sit inside a Content Pillar",
+        label: t("positioning_label"),
         tone: toneFor(pct(inPillar, rows90.length)),
-        detail: mix.warnings.length ? `${pluralize(mix.warnings.length, "pillar")} off target in the current mix` : "Pillar mix within tolerance",
+        detail: mix.warnings.length ? t("positioning_off", { pillars: n("pillars", mix.warnings.length) }) : t("positioning_ok"),
         href: "/pillars",
         hrefLabel: "Content Pillars",
       }
-    : none("No posts in the last 90 days", "/pillars", "Content Pillars", "Scores measure quality and fit, not predicted virality.")
+    : none(t("positioning_none"), "/pillars", "Content Pillars", t("positioning_none_detail"))
 
   // 10 · Recognisable expertise
   const brand = db.brand_profiles[0]
   const hasStatement = Boolean(brand?.positioning_audience.trim() && brand?.positioning_result.trim())
   const expertise: PrincipleMetric = {
     value: `${brandCompleteness}%`,
-    label: "of Brand HQ complete",
+    label: t("expertise_label"),
     tone: toneFor(brandCompleteness),
-    detail: `${pluralize(activePillars.size, "active pillar")} · positioning statement ${hasStatement ? "set" : "missing"}`,
+    detail: t("expertise_detail", { pillars: n("active_pillars", activePillars.size), state: hasStatement ? t("statement_set") : t("statement_missing") }),
     href: "/strategy",
     hrefLabel: "Brand HQ",
   }

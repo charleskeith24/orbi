@@ -4,15 +4,17 @@ import { ChartFrame, MixBar, type ChartColor, type ChartTable, type MixSegment, 
 import { TONE_ICON, TONE_TEXT } from "@/components/common"
 import { MIN_MIX_SAMPLE, type FunnelMix, type PillarMix } from "@/lib/analytics"
 import { FUNNEL_STAGES } from "@/lib/constants"
+import { useT, type Translator } from "@/lib/i18n"
 import type { FunnelStage } from "@/lib/types"
 import { cn, formatNumber } from "@/lib/utils"
+import { reportMessages } from "./messages"
 
 /** Funnel stages have no identity colour: fixed categorical slots in funnel order. */
 const FUNNEL_COLORS: Record<FunnelStage, ChartColor> = { tofu: "blue", mofu: "orange", bofu: "aqua" }
 
-function points(deviation: number): string {
+function points(deviation: number, t: Translator<(typeof reportMessages)["en"]>): string {
   const rounded = Math.round(deviation)
-  return rounded === 0 ? "on target" : `${rounded > 0 ? "+" : "−"}${Math.abs(rounded)} pts`
+  return rounded === 0 ? t("on_target") : t("points", { sign: rounded > 0 ? "+" : "−", count: Math.abs(rounded) })
 }
 
 function MixGroup({ label, note, children }: { label: string; note?: string; children: React.ReactNode }) {
@@ -39,6 +41,7 @@ export function ContentMixCard({
   description?: string
   className?: string
 }) {
+  const t = useT(reportMessages)
   const pillarSegments: MixSegment[] = pillars.rows.map((r) => ({ id: r.key, label: r.label, value: r.count, color: r.pillar.color }))
   const pillarTargets: MixTarget[] = pillars.rows.map((r) => ({ id: r.key, value: r.targetPct }))
   const funnelSegments: MixSegment[] = funnel.rows.map((r) => ({
@@ -50,15 +53,21 @@ export function ContentMixCard({
   const funnelTargets: MixTarget[] = funnel.rows.map((r) => ({ id: r.key, value: r.targetPct }))
   const warnings = [...pillars.warnings, ...funnel.warnings]
   const table: ChartTable = {
-    columns: ["Segment", "Posts", "Actual", "Target", "vs target"],
+    columns: [t("col_segment"), t("col_posts"), t("col_actual"), t("col_target"), t("col_vs_target")],
     rows: [
-      ...pillars.rows.map((r) => [`Pillar · ${r.label}`, r.count, `${Math.round(r.actualPct)}%`, `${Math.round(r.targetPct)}%`, points(r.deviation)]),
-      ...funnel.rows.map((r) => [
-        `Funnel · ${FUNNEL_STAGES[r.stage].label}`,
+      ...pillars.rows.map((r) => [
+        t("row_pillar", { label: r.label }),
         r.count,
         `${Math.round(r.actualPct)}%`,
         `${Math.round(r.targetPct)}%`,
-        points(r.deviation),
+        points(r.deviation, t),
+      ]),
+      ...funnel.rows.map((r) => [
+        t("row_funnel", { label: FUNNEL_STAGES[r.stage].label }),
+        r.count,
+        `${Math.round(r.actualPct)}%`,
+        `${Math.round(r.targetPct)}%`,
+        points(r.deviation, t),
       ]),
     ],
   }
@@ -67,33 +76,33 @@ export function ContentMixCard({
   return (
     <ChartFrame title="Content Mix" description={description} table={table} className={cn("print:break-inside-avoid", className)}>
       <div className="flex flex-col gap-5">
-        <MixGroup label="Pillars" note={pillars.unassigned ? `${formatNumber(pillars.unassigned)} without a pillar` : undefined}>
+        <MixGroup label={t("pillars")} note={pillars.unassigned ? t("without_pillar", { count: formatNumber(pillars.unassigned) }) : undefined}>
           <MixBar
             segments={pillarSegments}
             targets={pillarTargets}
-            valueLabel="Posts"
+            valueLabel={t("col_posts")}
             valueFormatter={formatNumber}
-            emptyMessage="No posts with a pillar in this period."
-            aria-label="Pillar mix vs targets"
+            emptyMessage={t("no_pillar_posts")}
+            aria-label={t("pillar_mix_aria")}
           />
         </MixGroup>
-        <MixGroup label="Funnel" note={funnel.unassigned ? `${formatNumber(funnel.unassigned)} without a stage` : undefined}>
+        <MixGroup label={t("funnel")} note={funnel.unassigned ? t("without_stage", { count: formatNumber(funnel.unassigned) }) : undefined}>
           <MixBar
             segments={funnelSegments}
             targets={funnelTargets}
-            valueLabel="Posts"
+            valueLabel={t("col_posts")}
             valueFormatter={formatNumber}
-            emptyMessage="No posts with a funnel stage in this period."
-            aria-label="Funnel mix vs targets"
+            emptyMessage={t("no_funnel_posts")}
+            aria-label={t("funnel_mix_aria")}
           />
         </MixGroup>
         {warnings.length ? (
-          <ul className="flex flex-col gap-1.5" aria-label="Mix warnings">
+          <ul className="flex flex-col gap-1.5" aria-label={t("mix_warnings")}>
             {warnings.map((w) => (
               <li key={`${w.key}-${w.direction}`} className="flex items-start gap-1.5 text-xs text-pretty">
                 <WarningIcon className={cn("mt-px size-3.5 shrink-0", TONE_TEXT.warning)} aria-hidden />
                 <span>
-                  <span className="sr-only">Warning: </span>
+                  <span className="sr-only">{t("warning_sr")}</span>
                   {w.message}
                 </span>
               </li>
@@ -101,9 +110,7 @@ export function ContentMixCard({
           </ul>
         ) : (
           <p className="text-xs text-pretty text-muted-foreground">
-            {pillars.enoughData || funnel.enoughData
-              ? "Pillar and funnel mix are within tolerance of your targets."
-              : `Mix warnings appear once at least ${MIN_MIX_SAMPLE} posts are counted.`}
+            {pillars.enoughData || funnel.enoughData ? t("mix_ok") : t("mix_min", { min: MIN_MIX_SAMPLE })}
           </p>
         )}
       </div>

@@ -13,6 +13,8 @@ import {
 import { format } from "date-fns"
 import { useRef, useState } from "react"
 import { parseDate } from "@/lib/dates"
+import { translator } from "@/lib/i18n/core"
+import { getUiLang } from "@/lib/i18n/ui-lang"
 import { dataActions } from "@/lib/store"
 import type { ID, PostingSlot } from "@/lib/types"
 import { truncate } from "@/lib/utils"
@@ -20,23 +22,28 @@ import type { CalendarActions } from "./calendar-actions"
 import { directionalCoordinates, KEYBOARD_CODES } from "./calendar-dnd"
 import type { ItemKind } from "./calendar-item"
 import { dayKeyFromDrop, dropTime, isLiveItem, placementOf, TRAY_DROP_ID } from "./calendar-model"
+import { calendarMessages } from "./messages"
+
+/** Announcements are built when they're read, in the current UI language. */
+const tr = () => translator(calendarMessages, getUiLang())
 
 const itemTitle = (id: UniqueIdentifier) => {
   const item = dataActions.getDb().content_items.find((row) => row.id === String(id))
-  return `“${truncate(item?.title.trim() || "Untitled content", 60)}”`
+  return `“${truncate(item?.title.trim() || tr()("untitled_content"), 60)}”`
 }
 
 const dropLabel = (id: UniqueIdentifier) => {
-  if (id === TRAY_DROP_ID) return "the Unscheduled tray"
+  if (id === TRAY_DROP_ID) return tr()("dnd_tray")
   const day = parseDate(dayKeyFromDrop(id))
-  return day ? format(day, "EEEE, MMMM d") : "no day"
+  return day ? format(day, "EEEE, MMMM d") : tr()("dnd_no_day")
 }
 
 const announcements: Announcements = {
-  onDragStart: ({ active }) => `Picked up ${itemTitle(active.id)}.`,
-  onDragOver: ({ over }) => (over ? `Over ${dropLabel(over.id)}.` : "Not over a day."),
-  onDragEnd: ({ active, over }) => (over ? `Dropped ${itemTitle(active.id)} on ${dropLabel(over.id)}.` : `${itemTitle(active.id)} was not moved.`),
-  onDragCancel: ({ active }) => `Move cancelled. ${itemTitle(active.id)} stays where it was.`,
+  onDragStart: ({ active }) => tr()("dnd_pick", { title: itemTitle(active.id) }),
+  onDragOver: ({ over }) => (over ? tr()("dnd_over", { target: dropLabel(over.id) }) : tr()("dnd_not_over")),
+  onDragEnd: ({ active, over }) =>
+    over ? tr()("dnd_drop", { title: itemTitle(active.id), target: dropLabel(over.id) }) : tr()("dnd_not_moved", { title: itemTitle(active.id) }),
+  onDragCancel: ({ active }) => tr()("dnd_cancel", { title: itemTitle(active.id) }),
 }
 
 /**

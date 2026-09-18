@@ -26,7 +26,9 @@ import { PLATFORM_IDS } from "@/lib/constants"
 import { parseDate, startOfWeek, toISODate } from "@/lib/dates"
 import { dataActions, useDb, useLookup, useSettings } from "@/lib/store"
 import type { ContentIdea, ContentItem, ID, PlatformId } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { useT, useUiLang } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
+import { formatNumber } from "@/lib/utils"
 import { weekLabel } from "./calendar-model"
 import { IdeaBankPicker } from "./idea-bank-picker"
 import { createPlannedContent, savePlanReview } from "./planner-actions"
@@ -47,6 +49,7 @@ import {
   type PlanEntry,
   type PlanPick,
 } from "./planner-model"
+import { plannerMessages } from "./planner-messages"
 import { DeadlinesStep, deadlinesReady, IdeasStep, PlatformsStep } from "./planner-pick-steps"
 import { FOCUS_MAX, FocusStep, ReviewStep, WinnersStep, type Leaders } from "./planner-review-steps"
 import { buildPlanStats } from "./planner-stats"
@@ -56,15 +59,6 @@ import { useNow } from "./use-now"
 import { emptyDraft, usePlannerDraft } from "./use-planner-draft"
 import { planTotals, WeeklyPlanDocument } from "./weekly-plan-document"
 
-const STEP_HINTS = [
-  "How the week before went — against your target and the week before it.",
-  "What's working, so this week repeats it on purpose.",
-  "One sentence the whole week serves.",
-  "Recommended by the Content Decision Engine, or picked from the Idea Bank.",
-  "Where each idea goes out — one content item per platform.",
-  "Publish times fill your posting slots first; due dates leave time to produce.",
-  "Create the content items with their briefs and save the plan.",
-]
 
 const LEAD_DAYS = 2
 const LAST_STEP = PLANNER_STEPS.length - 1
@@ -101,6 +95,9 @@ export function PlannerView() {
 
 function PlannerWorkspace({ weekKey, thisKey, liveNow, onWeekChange }: { weekKey: string; thisKey: string; liveNow: Date; onWeekChange: (key: string) => void }) {
   const router = useRouter()
+  const t = useT(plannerMessages)
+  const c = useT(commonMessages)
+  const lang = useUiLang()
   const db = useDb()
   const settings = useSettings()
   const pillars = useLookup("content_pillars")
@@ -130,21 +127,21 @@ function PlannerWorkspace({ weekKey, thisKey, liveNow, onWeekChange }: { weekKey
     return list.length ? list : PLATFORM_IDS
   }, [db.content_platforms, db.brand_profiles])
 
-  const report = useMemo(() => weeklyReport(db, weekDate(prevKey), settings, now), [db, prevKey, settings, now])
+  const report = useMemo(() => weeklyReport(db, weekDate(prevKey), settings, now, lang), [db, prevKey, settings, now, lang])
   const recent = useMemo<Leaders>(() => {
-    const rows = scopedRows(db, now, { days: 30, settings })
+    const rows = scopedRows(db, now, { days: 30, settings, lang })
     return {
-      topic: bestGroup(groupByTopic(db, rows), metric),
-      hook: bestGroup(groupByHookCategory(rows), metric),
-      format: bestGroup(groupByFormat(db, rows), metric),
-      platform: bestGroup(groupByPlatform(rows), metric),
-      pillar: bestGroup(groupByPillar(db, rows), metric),
+      topic: bestGroup(groupByTopic(db, rows), metric, lang),
+      hook: bestGroup(groupByHookCategory(rows, lang), metric, lang),
+      format: bestGroup(groupByFormat(db, rows, lang), metric, lang),
+      platform: bestGroup(groupByPlatform(rows), metric, lang),
+      pillar: bestGroup(groupByPillar(db, rows, lang), metric, lang),
     }
-  }, [db, now, settings, metric])
+  }, [db, now, settings, metric, lang])
   const lastWeek: Leaders = { topic: report.bestTopic, hook: report.bestHook, format: report.bestFormat, platform: report.bestPlatform, pillar: report.bestPillar }
   const top = useMemo(() => topPerformers(db, settings, now, { days: 30, limit: 5 }), [db, settings, now])
-  const insights = useMemo(() => strategicInsights(db, now, settings), [db, now, settings])
-  const recs = useMemo(() => recommendNextContent(db, now, settings, { limit: 12 }), [db, now, settings])
+  const insights = useMemo(() => strategicInsights(db, now, settings, lang), [db, now, settings, lang])
+  const recs = useMemo(() => recommendNextContent(db, now, settings, { limit: 12, lang }), [db, now, settings, lang])
   const doc = useMemo(
     () => planDocument({ weekStart, items: db.content_items, slots: db.content_calendar, picks, now: liveNow }),
     [weekStart, db.content_items, db.content_calendar, picks, liveNow]
@@ -176,9 +173,9 @@ function PlannerWorkspace({ weekKey, thisKey, liveNow, onWeekChange }: { weekKey
   }
 
   function addFromBank(list: ContentIdea[]) {
-    const added = list.map((idea) => pickFromIdea(idea, defaultPlatforms(idea, platformChoices[0] ?? "facebook"), "bank", idea.why_it_matters.trim() || "Picked from the Idea Bank"))
+    const added = list.map((idea) => pickFromIdea(idea, defaultPlatforms(idea, platformChoices[0] ?? "facebook"), "bank", idea.why_it_matters.trim() || t("picked_from_bank")))
     updatePicks((current) => [...current, ...added.filter((p) => !current.some((c) => c.key === p.key))])
-    toast.success(`${pluralize(added.length, "idea")} added to the plan`)
+    toast.success(t.plural("bank_added", added.length, { count: formatNumber(added.length) }))
   }
 
   function setEntry(key: string, platform: PlatformId, patch: Partial<PlanEntry>) {
@@ -221,15 +218,16 @@ function PlannerWorkspace({ weekKey, thisKey, liveNow, onWeekChange }: { weekKey
       now: liveNow,
     })
     if (!mapped.length) {
-      toast.info("Nothing to add — the week already meets its post target.")
+      toast.info(t("nothing_to_add"))
       return
     }
     const filled = autoFillPlan(mapped, { ...fillInput, items: latest.content_items, slots: latest.content_calendar }, (id) => latest.content_items.find((i) => i.id === id)?.stage ?? null)
     const previous = draft.picks
     setDraft((d) => ({ ...d, picks: filled, step: 3, aiProvider: result.provider, aiModel: result.model }))
-    toast.success(`AI drafted ${pluralize(plannedPostCount(filled), "post")} for ${weekLabel(weekStart)}`, {
-      description: "Review the picks, platforms and deadlines in steps 4–6.",
-      action: previous.length ? { label: "Undo", onClick: () => setDraft((d) => ({ ...d, picks: previous, aiProvider: null, aiModel: null })) } : undefined,
+    const drafted = plannedPostCount(filled)
+    toast.success(t.plural("ai_drafted", drafted, { count: formatNumber(drafted), week: weekLabel(weekStart) }), {
+      description: t("ai_drafted_hint"),
+      action: previous.length ? { label: t("undo"), onClick: () => setDraft((d) => ({ ...d, picks: previous, aiProvider: null, aiModel: null })) } : undefined,
     })
   }
 
@@ -244,13 +242,13 @@ function PlannerWorkspace({ weekKey, thisKey, liveNow, onWeekChange }: { weekKey
     savePlanReview(weekKey, focus, [...before.existingPostIds, ...createdIds, ...run.scheduledIds], stats)
     setDraft((d) => ({ ...d, picks: [], createdItemIds: [...d.createdItemIds, ...createdIds], step: LAST_STEP }))
     const parts = [
-      createdIds.length ? `${pluralize(createdIds.length, "content item")} created` : "",
-      run.scheduledIds.length ? `${run.scheduledIds.length} scheduled` : "",
-      "plan saved",
+      createdIds.length ? t.plural("items_created", createdIds.length, { count: formatNumber(createdIds.length) }) : "",
+      run.scheduledIds.length ? t("scheduled_count", { count: run.scheduledIds.length }) : "",
+      t("plan_saved_part"),
     ].filter(Boolean)
     toast.success(parts.join(" · ").replace(/^./, (c) => c.toUpperCase()), {
       description: `${weekLabel(weekStart)}${focus ? ` — ${focus}` : ""}`,
-      action: { label: "Open Calendar", onClick: () => router.push(`/calendar?view=week&date=${weekKey}`) },
+      action: { label: t("open_calendar"), onClick: () => router.push(`/calendar?view=week&date=${weekKey}`) },
     })
   }
 
@@ -260,9 +258,9 @@ function PlannerWorkspace({ weekKey, thisKey, liveNow, onWeekChange }: { weekKey
   const missingPlatforms = picks.some((p) => !p.entries.length)
   const timesReady = deadlinesReady(picks, weekStart, liveNow)
   const blockers = [
-    focusTooLong ? `Shorten the focus to ${FOCUS_MAX} characters (step 3).` : "",
-    missingPlatforms ? "Give every pick at least one platform (step 5)." : "",
-    picks.length && !missingPlatforms && !timesReady ? "Fix the publish times in step 6." : "",
+    focusTooLong ? t("blocker_focus", { max: FOCUS_MAX }) : "",
+    missingPlatforms ? t("blocker_platforms") : "",
+    picks.length && !missingPlatforms && !timesReady ? t("blocker_times") : "",
   ].filter(Boolean)
   const canNext = step === 2 ? !focusTooLong : step === 4 ? !missingPlatforms : step === 5 ? !picks.length || timesReady : true
   const done = [
@@ -326,12 +324,12 @@ function PlannerWorkspace({ weekKey, thisKey, liveNow, onWeekChange }: { weekKey
         <PageHeader
           title="Weekly Planner"
           icon={ListChecks}
-          description="Plan the week in seven steps — review what worked, choose a focus, fill your posting slots and generate briefs."
+          description={t("description")}
           actions={
             <>
               <WeekSwitcher weekKey={weekKey} thisKey={thisKey} onChange={onWeekChange} />
               <AiButton type="button" size="sm" pending={aiPlan.isPending} onClick={() => void draftWithAi()}>
-                Draft the plan with AI
+                {t("draft_with_ai")}
               </AiButton>
             </>
           }
@@ -340,9 +338,9 @@ function PlannerWorkspace({ weekKey, thisKey, liveNow, onWeekChange }: { weekKey
         {aiPlan.error ? (
           <div role="alert" className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-destructive/40 px-3 py-2 text-sm">
             <CircleAlert className="size-4 shrink-0 text-destructive" aria-hidden />
-            <span className="min-w-0 flex-1 text-pretty">Couldn&apos;t draft the plan: {aiPlan.error.message}</span>
+            <span className="min-w-0 flex-1 text-pretty">{t("draft_failed", { message: aiPlan.error.message })}</span>
             <Button type="button" size="xs" variant="outline" onClick={() => void draftWithAi()}>
-              Retry
+              {t("retry")}
             </Button>
           </div>
         ) : null}
@@ -350,23 +348,21 @@ function PlannerWorkspace({ weekKey, thisKey, liveNow, onWeekChange }: { weekKey
 
       <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_19rem] print:hidden">
         <SectionCard
-          title={`Step ${step + 1} of ${PLANNER_STEPS.length} · ${PLANNER_STEPS[step].title}`}
-          description={STEP_HINTS[step]}
+          title={t("step_of", { step: step + 1, total: PLANNER_STEPS.length, title: t(`step_${PLANNER_STEPS[step].id}_title`) })}
+          description={t(`hint_${PLANNER_STEPS[step].id}`)}
           footer={
             <div className="flex w-full min-w-0 items-center justify-between gap-2">
               <Button type="button" size="sm" variant="outline" className="text-foreground" disabled={step === 0} onClick={() => setStep(step - 1)}>
                 <ChevronLeft aria-hidden />
-                Back
+                {c("back")}
               </Button>
               {step < LAST_STEP ? (
                 <Button type="button" size="sm" disabled={!canNext} onClick={goNext}>
-                  Next: {PLANNER_STEPS[step + 1].short}
+                  {t("next_step", { step: t(`step_${PLANNER_STEPS[step + 1].id}_short`) })}
                   <ChevronRight aria-hidden />
                 </Button>
               ) : (
-                <span className="num">
-                  {planTotals(doc).planned} of {target} posts planned
-                </span>
+                <span className="num">{t("posts_planned_of", { planned: planTotals(doc).planned, target })}</span>
               )}
             </div>
           }

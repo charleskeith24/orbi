@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useUiLang } from "@/lib/i18n"
 import { useDb, useSettings } from "@/lib/store"
 import { computeDashboard } from "./dashboard-data"
 
@@ -19,5 +20,6 @@ export function useDashboardData() {
   const db = useDb()
   const settings = useSettings()
   const now = useNow()
-  return useMemo(() => computeDashboard(db, settings, now), [db, settings, now])
+  const lang = useUiLang()
+  return useMemo(() => computeDashboard(db, settings, now, lang), [db, settings, now, lang])
 }

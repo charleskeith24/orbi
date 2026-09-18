@@ -2,7 +2,9 @@
 
 import { OptionSelect, type ControlSize, type SelectOption } from "@/components/common"
 import { PROBLEM_CATEGORIES } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import type { ProblemCategory } from "@/lib/types"
+import { problemMessages } from "./problem-messages"
 
 const OPTIONS: SelectOption<ProblemCategory>[] = PROBLEM_CATEGORIES.map((c) => ({ value: c.id, label: c.label }))
 
@@ -18,13 +20,14 @@ export function ProblemCategorySelect({
   id?: string
   size?: ControlSize
 }) {
+  const t = useT(problemMessages)
   return (
     <OptionSelect
       id={id}
       size={size}
       options={OPTIONS}
       value={value}
-      placeholder="Category"
+      placeholder={t("category")}
       onChange={(next) => {
         if (next) onChange(next)
       }}

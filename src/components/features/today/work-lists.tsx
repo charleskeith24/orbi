@@ -19,10 +19,12 @@ import Link from "next/link"
 import { CopyButton, DatePicker, FormatLabel, PillarBadge, StageBadge, StatusPill, type IconComponent } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { formatTime, toISODate } from "@/lib/dates"
+import { useT, useUiLang } from "@/lib/i18n"
 import { uiActions } from "@/lib/store"
 import type { ContentItem } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { approve, markPublished, moveTo, reschedule } from "./today-actions"
+import { todayMessages } from "./messages"
+import { approve, markPublished, moveMessage, moveTo, reschedule } from "./today-actions"
 import { overdueLabel, slotTime, type PostCopy } from "./today-utils"
 import type { TodayData } from "./use-today"
 import { DateMeta, InlineEmpty, OpenButton, WorkRow, WorkSection } from "./work-section"
@@ -44,32 +46,35 @@ function Pillar({ item }: { item: ContentItem }) {
 }
 
 function MarkPublishedButton({ item }: { item: ContentItem }) {
+  const t = useT(todayMessages)
   return (
     <Button type="button" size="sm" variant="outline" onClick={() => markPublished(item)}>
       <Send aria-hidden />
-      Mark published
+      {t("mark_published")}
     </Button>
   )
 }
 
 /** Copy the caption or script; disabled with a reason when there's nothing written yet. */
 function CopyPost({ copy, iconOnly = false }: { copy: PostCopy | undefined; iconOnly?: boolean }) {
+  const t = useT(todayMessages)
   const text = copy?.text ?? ""
-  const label = copy?.label ?? "Copy script"
+  const caption = copy?.label === "Copy caption"
   const button = (
     <CopyButton
       text={text}
-      label={iconOnly ? undefined : label}
+      label={iconOnly ? undefined : caption ? t("copy_caption") : t("copy_script")}
       variant={iconOnly ? "ghost" : "outline"}
-      successMessage={label === "Copy caption" ? "Caption copied" : "Script copied"}
+      successMessage={caption ? t("caption_copied") : t("script_copied")}
     />
   )
-  return text ? button : <span title="No caption or script yet — write it in the Studio">{button}</span>
+  return text ? button : <span title={t("nothing_to_copy")}>{button}</span>
 }
 
 /* ----------------------------- Today's Content ----------------------------- */
 
 export function TodaysContentSection({ data, className }: { data: TodayData; className?: string }) {
+  const t = useT(todayMessages)
   const { todays, today, copies, measured, slots } = data
   const scheduledIds = new Set(today.scheduledToday.map((item) => item.id))
   const rows = [
@@ -79,13 +84,13 @@ export function TodaysContentSection({ data, className }: { data: TodayData; cla
   const slot = slots[0]
   const time = slot ? slotTime(slot.time) : null
   const description = slot
-    ? `Today's slot: ${slot.label.trim() || "Posting slot"}${time ? ` · ${time}` : ""}${slots.length > 1 ? ` (+${slots.length - 1} more)` : ""}`
-    : "Scheduled and due today, then what already went out"
+    ? `${t("todays_slot", { slot: slot.label.trim() || t("posting_slot") })}${time ? ` · ${time}` : ""}${slots.length > 1 ? t("slot_more", { count: slots.length - 1 }) : ""}`
+    : t("todays_description")
 
   return (
     <WorkSection
       id="today-content"
-      title="Today's Content"
+      title={t("todays_title")}
       icon={CalendarCheck}
       description={description}
       action={<SectionLink href="/calendar">Calendar</SectionLink>}
@@ -99,7 +104,7 @@ export function TodaysContentSection({ data, className }: { data: TodayData; cla
             <>
               {live ? (
                 <StatusPill tone="good" icon={CircleCheck}>
-                  Published {formatTime(item.published_at)}
+                  {t("published_at", { time: formatTime(item.published_at) })}
                 </StatusPill>
               ) : scheduledIds.has(item.id) ? (
                 <span className="inline-flex items-center gap-1 whitespace-nowrap text-foreground/80">
@@ -109,7 +114,7 @@ export function TodaysContentSection({ data, className }: { data: TodayData; cla
               ) : (
                 <span className="inline-flex items-center gap-1 whitespace-nowrap">
                   <CalendarDays className="size-3.5" aria-hidden />
-                  Due today
+                  {t("due_today")}
                 </span>
               )}
               {live ? null : <StageBadge stage={item.stage} />}
@@ -127,7 +132,7 @@ export function TodaysContentSection({ data, className }: { data: TodayData; cla
                     onClick={() => uiActions.openDialog({ type: "add-metrics", itemId: item.id })}
                   >
                     <ChartColumn aria-hidden />
-                    Add analytics
+                    {t("add_analytics")}
                   </Button>
                 )}
                 <OpenButton href={studio(item)} />
@@ -147,11 +152,11 @@ export function TodaysContentSection({ data, className }: { data: TodayData; cla
           icon={CalendarCheck}
           action={
             <Button asChild size="sm" variant="outline">
-              <Link href="/calendar/planner">Plan the week</Link>
+              <Link href="/calendar/planner">{t("plan_week")}</Link>
             </Button>
           }
         >
-          Nothing scheduled or due today. Plan the week so every day has something going out.
+          {t("todays_empty")}
         </InlineEmpty>
       }
     />
@@ -161,6 +166,8 @@ export function TodaysContentSection({ data, className }: { data: TodayData; cla
 /* ------------------------------ Content Overdue ------------------------------ */
 
 export function OverdueSection({ data, className }: { data: TodayData; className?: string }) {
+  const t = useT(todayMessages)
+  const lang = useUiLang()
   const { today, now } = data
   const count = today.overdue.length
   const todayIso = toISODate(now)
@@ -168,10 +175,10 @@ export function OverdueSection({ data, className }: { data: TodayData; className
   return (
     <WorkSection
       id="overdue"
-      title="Content Overdue"
+      title={t("overdue_title")}
       icon={count ? CriticalAlarm : AlarmClock}
       urgent
-      description={count ? "Missed publish times and production deadlines — move them or cut them." : "Missed publish times and deadlines show up here."}
+      description={count ? t("overdue_description") : t("overdue_description_empty")}
       items={today.overdue}
       getKey={(item) => item.id}
       className={className}
@@ -182,7 +189,7 @@ export function OverdueSection({ data, className }: { data: TodayData; className
             <>
               <span className="inline-flex items-center gap-1 font-medium whitespace-nowrap text-critical-fg">
                 <AlarmClock className="size-3.5" aria-hidden />
-                {overdueLabel(item, now)}
+                {overdueLabel(item, now, lang)}
               </span>
               <StageBadge stage={item.stage} />
               <Pillar item={item} />
@@ -191,16 +198,16 @@ export function OverdueSection({ data, className }: { data: TodayData; className
           actions={
             <>
               <Button type="button" size="sm" variant="outline" onClick={() => reschedule(item, tomorrow)}>
-                Tomorrow
+                {t("tomorrow")}
               </Button>
               <DatePicker
                 value={null}
                 size="sm"
                 clearable={false}
-                placeholder="Pick date"
+                placeholder={t("pick_date")}
                 minDate={todayIso}
                 className="w-auto"
-                aria-label={`Reschedule “${item.title.trim() || "Untitled content"}”`}
+                aria-label={t("reschedule_aria", { title: item.title.trim() || t("untitled_content") })}
                 onChange={(day) => {
                   if (day) reschedule(item, day)
                 }}
@@ -210,7 +217,7 @@ export function OverdueSection({ data, className }: { data: TodayData; className
           }
         />
       )}
-      empty={<InlineEmpty icon={CircleCheck}>Nothing overdue — every deadline and publish time is on track.</InlineEmpty>}
+      empty={<InlineEmpty icon={CircleCheck}>{t("overdue_empty")}</InlineEmpty>}
     />
   )
 }
@@ -218,13 +225,14 @@ export function OverdueSection({ data, className }: { data: TodayData; className
 /* ------------------------------ Content to Post ------------------------------ */
 
 export function ToPostSection({ data, className }: { data: TodayData; className?: string }) {
+  const t = useT(todayMessages)
   const { today, copies, now } = data
   return (
     <WorkSection
       id="to-post"
-      title="Content to Post"
+      title={t("to_post_title")}
       icon={Send}
-      description="Approved and ready — copy the caption, post it, mark it published."
+      description={t("to_post_description")}
       action={<SectionLink href="/pipeline">Pipeline</SectionLink>}
       items={today.toPost}
       getKey={(item) => item.id}
@@ -253,11 +261,11 @@ export function ToPostSection({ data, className }: { data: TodayData; className?
           icon={Send}
           action={
             <Button asChild size="sm" variant="outline">
-              <Link href="/pipeline">Open Pipeline</Link>
+              <Link href="/pipeline">{t("open_pipeline")}</Link>
             </Button>
           }
         >
-          Nothing is ready to post. Approved content lands here with its caption ready to copy.
+          {t("to_post_empty")}
         </InlineEmpty>
       }
     />
@@ -267,13 +275,14 @@ export function ToPostSection({ data, className }: { data: TodayData; className?
 /* ----------------------------- Content to Review ----------------------------- */
 
 export function ToReviewSection({ data, className }: { data: TodayData; className?: string }) {
+  const t = useT(todayMessages)
   const { today, now } = data
   return (
     <WorkSection
       id="to-review"
-      title="Content to Review"
+      title={t("to_review_title")}
       icon={ClipboardCheck}
-      description="Approve what's good to go, or send it back with changes."
+      description={t("to_review_description")}
       action={<SectionLink href="/pipeline">Pipeline</SectionLink>}
       items={today.toReview}
       getKey={(item) => item.id}
@@ -285,7 +294,7 @@ export function ToReviewSection({ data, className }: { data: TodayData; classNam
             <>
               {item.stage === "revision" ? (
                 <StatusPill tone="warning" icon={RotateCcw}>
-                  Changes requested
+                  {t("changes_requested")}
                 </StatusPill>
               ) : (
                 <StageBadge stage={item.stage} />
@@ -298,11 +307,11 @@ export function ToReviewSection({ data, className }: { data: TodayData; classNam
             <>
               <Button type="button" size="sm" variant="outline" onClick={() => approve(item)}>
                 <Check aria-hidden />
-                Approve
+                {t("approve")}
               </Button>
               {item.stage === "review" ? (
-                <Button type="button" size="sm" variant="ghost" onClick={() => moveTo(item, "revision", "Changes requested")}>
-                  Request revision
+                <Button type="button" size="sm" variant="ghost" onClick={() => moveTo(item, "revision", moveMessage("changes_requested"))}>
+                  {t("request_revision")}
                 </Button>
               ) : null}
               <OpenButton href={studio(item)} />
@@ -310,7 +319,7 @@ export function ToReviewSection({ data, className }: { data: TodayData; classNam
           }
         />
       )}
-      empty={<InlineEmpty icon={ClipboardCheck}>Review queue clear — nothing is waiting for approval.</InlineEmpty>}
+      empty={<InlineEmpty icon={ClipboardCheck}>{t("to_review_empty")}</InlineEmpty>}
     />
   )
 }
@@ -318,13 +327,14 @@ export function ToReviewSection({ data, className }: { data: TodayData; classNam
 /* ----------------------------- Content to Record ----------------------------- */
 
 export function ToRecordSection({ data, className }: { data: TodayData; className?: string }) {
+  const t = useT(todayMessages)
   const { today, now } = data
   return (
     <WorkSection
       id="to-record"
-      title="Content to Record"
+      title={t("to_record_title")}
       icon={Clapperboard}
-      description="Scripts approved for production — start the shoot, then hand it to editing."
+      description={t("to_record_description")}
       action={<SectionLink href="/pipeline">Pipeline</SectionLink>}
       items={today.toRecord}
       getKey={(item) => item.id}
@@ -342,14 +352,14 @@ export function ToRecordSection({ data, className }: { data: TodayData; classNam
           actions={
             <>
               {item.stage === "recording" ? (
-                <Button type="button" size="sm" variant="outline" onClick={() => moveTo(item, "editing", "Recorded · moved to Editing")}>
+                <Button type="button" size="sm" variant="outline" onClick={() => moveTo(item, "editing", moveMessage("recorded"))}>
                   <Check aria-hidden />
-                  Done
+                  {t("done")}
                 </Button>
               ) : (
-                <Button type="button" size="sm" variant="outline" onClick={() => moveTo(item, "recording", "Recording started")}>
+                <Button type="button" size="sm" variant="outline" onClick={() => moveTo(item, "recording", moveMessage("recording_started"))}>
                   <Video aria-hidden />
-                  Start recording
+                  {t("start_recording")}
                 </Button>
               )}
               <OpenButton href={studio(item)} />
@@ -362,11 +372,11 @@ export function ToRecordSection({ data, className }: { data: TodayData; classNam
           icon={Clapperboard}
           action={
             <Button asChild size="sm" variant="outline">
-              <Link href="/pipeline">Open Pipeline</Link>
+              <Link href="/pipeline">{t("open_pipeline")}</Link>
             </Button>
           }
         >
-          Nothing waiting to be recorded. Approved scripts show up here, ready to shoot.
+          {t("to_record_empty")}
         </InlineEmpty>
       }
     />

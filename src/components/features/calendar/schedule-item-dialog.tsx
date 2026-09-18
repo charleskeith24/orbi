@@ -8,13 +8,17 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { PLATFORMS } from "@/lib/constants"
 import { combineDateTime, formatDate, parseDate, toISODate } from "@/lib/dates"
+import { useT, type Translator } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { useTable } from "@/lib/store"
 import type { ContentItem, ISODate, ISODateTime } from "@/lib/types"
 import { cn, truncate } from "@/lib/utils"
 import { openSlotSuggestions } from "./calendar-model"
+import { calendarDialogMessages } from "./messages"
 import { useNow } from "./use-now"
 
-const quoted = (item: ContentItem) => `“${truncate(item.title.trim() || "Untitled content", 80)}”`
+const quoted = (item: ContentItem, t: Translator<typeof calendarDialogMessages.en>) =>
+  `“${truncate(item.title.trim() || t("untitled_content"), 80)}”`
 
 interface ItemDialogProps {
   /** Kept after closing so the content doesn't collapse during the exit animation. */
@@ -47,6 +51,8 @@ export function ScheduleDialog({
 }
 
 function ScheduleForm({ item, onCancel, onConfirm }: { item: ContentItem; onCancel: () => void; onConfirm: (when: ISODateTime) => void }) {
+  const t = useT(calendarDialogMessages)
+  const c = useT(commonMessages)
   const slots = useTable("content_calendar")
   const items = useTable("content_items")
   const now = useNow()
@@ -57,7 +63,7 @@ function ScheduleForm({ item, onCancel, onConfirm }: { item: ContentItem; onCanc
     return suggestions[0]?.at.toISOString() ?? combineDateTime(addDays(startOfDay(now), 1), "09:00")
   })
   const at = parseDate(value)
-  const error = !at ? "Pick a publish date and time." : at.getTime() <= now.getTime() ? "Pick a time in the future." : null
+  const error = !at ? t("pick_datetime") : at.getTime() <= now.getTime() ? t("pick_future") : null
   const rescheduling = Boolean(item.scheduled_at)
   const platform = PLATFORMS[item.platform]?.label ?? item.platform
 
@@ -70,16 +76,16 @@ function ScheduleForm({ item, onCancel, onConfirm }: { item: ContentItem; onCanc
       }}
     >
       <DialogHeader>
-        <DialogTitle>{rescheduling ? "Reschedule" : "Schedule"}</DialogTitle>
+        <DialogTitle>{rescheduling ? t("reschedule") : t("schedule")}</DialogTitle>
         <DialogDescription>
-          {rescheduling ? `Change when ${quoted(item)} goes live on ${platform}.` : `Pick when ${quoted(item)} goes live on ${platform}.`}
-          {item.stage === "ready_to_post" ? " It moves to Scheduled." : ""}
+          {t(rescheduling ? "change_when" : "pick_when", { title: quoted(item, t), platform })}
+          {item.stage === "ready_to_post" ? t("moves_to_scheduled") : ""}
         </DialogDescription>
       </DialogHeader>
 
       {suggestions.length ? (
         <div className="grid gap-1.5">
-          <span className="text-xs font-medium text-muted-foreground">Open posting slots on {platform}</span>
+          <span className="text-xs font-medium text-muted-foreground">{t("open_slots_on", { platform })}</span>
           <div className="flex flex-wrap gap-1.5">
             {suggestions.map((slot) => {
               const iso = slot.at.toISOString()
@@ -98,7 +104,7 @@ function ScheduleForm({ item, onCancel, onConfirm }: { item: ContentItem; onCanc
                   )}
                 >
                   <span className="text-xs font-medium">{formatDate(slot.at, "EEE, MMM d · h:mm a")}</span>
-                  <span className="max-w-full truncate text-[11px] font-normal text-muted-foreground">{slot.label || "Posting slot"}</span>
+                  <span className="max-w-full truncate text-[11px] font-normal text-muted-foreground">{slot.label || t("posting_slot")}</span>
                 </Button>
               )
             })}
@@ -106,15 +112,15 @@ function ScheduleForm({ item, onCancel, onConfirm }: { item: ContentItem; onCanc
         </div>
       ) : (
         <p className="text-xs text-pretty text-muted-foreground">
-          No open posting slots on {platform} in the next two weeks — pick any time, or{" "}
+          {t("no_open_slots", { platform })}{" "}
           <Link href="/calendar/schedule" className="font-medium text-foreground underline-offset-4 hover:underline">
-            edit your Posting Schedule
+            {t("edit_schedule")}
           </Link>
           .
         </p>
       )}
 
-      <FormField label="Publish time" htmlFor="calendar-schedule-at" error={error}>
+      <FormField label={t("publish_time")} htmlFor="calendar-schedule-at" error={error}>
         <DateTimePicker
           id="calendar-schedule-at"
           value={value}
@@ -127,10 +133,10 @@ function ScheduleForm({ item, onCancel, onConfirm }: { item: ContentItem; onCanc
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={Boolean(error)}>
-          {rescheduling ? "Save time" : "Schedule"}
+          {rescheduling ? t("save_time") : t("schedule")}
         </Button>
       </DialogFooter>
     </form>
@@ -157,9 +163,11 @@ export function DueDateDialog({
 }
 
 function DueDateForm({ item, onCancel, onSave }: { item: ContentItem; onCancel: () => void; onSave: (due: ISODate | null) => void }) {
+  const t = useT(calendarDialogMessages)
+  const c = useT(commonMessages)
   const [value, setValue] = useState<ISODate | null>(item.due_date)
   const scheduled = parseDate(item.scheduled_at)
-  const error = value && scheduled && value > toISODate(scheduled) ? "The deadline can't be after the publish date." : null
+  const error = value && scheduled && value > toISODate(scheduled) ? t("deadline_after_publish") : null
   const unchanged = value === item.due_date
   return (
     <form
@@ -170,23 +178,23 @@ function DueDateForm({ item, onCancel, onSave }: { item: ContentItem; onCancel: 
       }}
     >
       <DialogHeader>
-        <DialogTitle>{item.due_date ? "Change due date" : "Set due date"}</DialogTitle>
-        <DialogDescription>The production deadline for {quoted(item)}. Work past its deadline shows as overdue on Today.</DialogDescription>
+        <DialogTitle>{item.due_date ? t("change_due") : t("set_due")}</DialogTitle>
+        <DialogDescription>{t("due_description", { title: quoted(item, t) })}</DialogDescription>
       </DialogHeader>
       <FormField
-        label="Due date"
+        label={t("due_date")}
         htmlFor="calendar-due-date"
         error={error}
-        description={scheduled ? `Goes live ${formatDate(scheduled, "EEE, MMM d · h:mm a")}` : "No publish time yet"}
+        description={scheduled ? t("goes_live", { date: formatDate(scheduled, "EEE, MMM d · h:mm a") }) : t("no_publish_time")}
       >
         <DatePicker id="calendar-due-date" value={value} onChange={setValue} aria-invalid={Boolean(error)} />
       </FormField>
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={unchanged || Boolean(error)}>
-          Save
+          {c("save")}
         </Button>
       </DialogFooter>
     </form>

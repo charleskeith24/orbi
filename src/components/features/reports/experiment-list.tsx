@@ -7,8 +7,10 @@ import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useT } from "@/lib/i18n"
 import { useTable } from "@/lib/store"
 import { cn } from "@/lib/utils"
+import { monthlyReviewMessages } from "./monthly-messages"
 import { createExperimentFromRecommendation } from "./review-actions"
 
 const normalize = (text: string) => text.trim().replace(/\s+/g, " ")
@@ -30,6 +32,7 @@ function ExperimentRow({
   onRemove: () => void
   onCreate: (text: string) => void
 }) {
+  const t = useT(monthlyReviewMessages)
   const [draft, setDraft] = useState(item)
   const [source, setSource] = useState(item)
   // Re-sync when the underlying item changes (AI draft, removal above).
@@ -45,7 +48,7 @@ function ExperimentRow({
       <input
         value={draft}
         disabled={disabled}
-        aria-label={`Experiment ${index + 1}`}
+        aria-label={t("experiment_n", { n: index + 1 })}
         onChange={(event) => setDraft(event.target.value)}
         onBlur={() => onCommit(draft)}
         onKeyDown={(event) => {
@@ -64,7 +67,7 @@ function ExperimentRow({
           <Button asChild size="xs" variant="ghost">
             <Link href={`/experiments?open=${experimentId}`}>
               <ArrowUpRight aria-hidden />
-              Open experiment
+              {t("open_experiment")}
             </Link>
           </Button>
         ) : (
@@ -79,10 +82,10 @@ function ExperimentRow({
             }}
           >
             <FlaskConical aria-hidden />
-            Create experiment
+            {t("create_experiment")}
           </Button>
         )}
-        <Button type="button" variant="ghost" size="icon-xs" aria-label={`Remove experiment ${index + 1}`} disabled={disabled} onClick={onRemove}>
+        <Button type="button" variant="ghost" size="icon-xs" aria-label={t("remove_experiment", { n: index + 1 })} disabled={disabled} onClick={onRemove}>
           <X aria-hidden />
         </Button>
       </div>
@@ -109,6 +112,7 @@ export function ExperimentList({
   disabled?: boolean
   className?: string
 }) {
+  const t = useT(monthlyReviewMessages)
   const router = useRouter()
   const experiments = useTable("content_experiments")
   const linked = useMemo(() => new Map(experiments.map((e) => [normalize(e.hypothesis), e.id])), [experiments])
@@ -124,8 +128,8 @@ export function ExperimentList({
   function create(text: string) {
     if (!normalize(text)) return
     const experiment = createExperimentFromRecommendation(text)
-    toast.success(`Planned experiment “${experiment.name}”`, {
-      action: { label: "Open", onClick: () => router.push(`/experiments?open=${experiment.id}`) },
+    toast.success(t("planned_experiment", { name: experiment.name }), {
+      action: { label: t("open"), onClick: () => router.push(`/experiments?open=${experiment.id}`) },
     })
   }
 
@@ -157,7 +161,7 @@ export function ExperimentList({
           value={draft}
           disabled={disabled}
           placeholder={placeholder}
-          aria-label="New experiment"
+          aria-label={t("new_experiment")}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
@@ -168,7 +172,7 @@ export function ExperimentList({
         />
         <Button type="button" variant="outline" onClick={add} disabled={disabled || !draft.trim()}>
           <Plus aria-hidden />
-          Add
+          {t("add")}
         </Button>
       </div>
     </div>

@@ -11,15 +11,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { HOOK_CATEGORIES } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions } from "@/lib/store"
 import type { ContentPillar, Hook } from "@/lib/types"
 import { cn, formatNumber, truncate } from "@/lib/utils"
-import { countBlanks, formatHookMetric, HOOK_SOURCES, type HookStats } from "./hook-model"
+import { hookMessages } from "./hook-messages"
+import { countBlanks, formatHookMetric, type HookStats } from "./hook-model"
 import { HookText } from "./hook-text"
 import { copyToClipboard } from "./lab-clipboard"
 
 /** Star toggle for `is_favorite`. */
 export function FavoriteButton({ hook, className }: { hook: Hook; className?: string }) {
+  const t = useT(hookMessages)
   const on = hook.is_favorite
   return (
     <Button
@@ -27,8 +31,8 @@ export function FavoriteButton({ hook, className }: { hook: Hook; className?: st
       variant="ghost"
       size="icon-xs"
       aria-pressed={on}
-      aria-label={on ? "Remove from favourites" : "Add to favourites"}
-      title={on ? "Favourite — click to remove" : "Add to favourites"}
+      aria-label={on ? t("remove_favourite") : t("add_favourite")}
+      title={on ? t("favourite_title") : t("add_favourite")}
       onClick={() => dataActions.update("hooks", hook.id, { is_favorite: !on })}
       className={cn(on ? "text-foreground" : "text-muted-foreground", className)}
     >
@@ -49,6 +53,8 @@ export function HookMenu({
   onDelete: (hook: Hook) => void
   className?: string
 }) {
+  const t = useT(hookMessages)
+  const c = useT(commonMessages)
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -56,25 +62,25 @@ export function HookMenu({
           type="button"
           variant="ghost"
           size="icon-xs"
-          aria-label={`Actions for “${truncate(hook.text, 40)}”`}
+          aria-label={t("actions_for", { text: truncate(hook.text, 40) })}
           className={cn("text-muted-foreground", className)}
         >
           <Ellipsis aria-hidden />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuItem onSelect={() => void copyToClipboard(hook.text, "Hook copied")}>
+        <DropdownMenuItem onSelect={() => void copyToClipboard(hook.text, t("hook_copied"))}>
           <Copy aria-hidden />
-          Copy text
+          {t("copy_text")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => onDuplicate(hook)}>
           <CopyPlus aria-hidden />
-          Duplicate
+          {t("duplicate")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={() => onDelete(hook)}>
           <Trash2 aria-hidden />
-          Delete
+          {c("delete")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -82,12 +88,13 @@ export function HookMenu({
 }
 
 function HookRowStats({ stats, className }: { stats: HookStats; className?: string }) {
+  const t = useT(hookMessages)
   const performance = stats.performance
   const cells = [
-    { label: "Uses", value: formatNumber(stats.uses) },
-    { label: "Avg views", value: performance ? formatHookMetric(performance.avgViews, "views") : "—" },
-    { label: "Engagement", value: performance ? formatHookMetric(performance.engagementRate, "engagement") : "—" },
-    { label: "Leads/post", value: performance ? formatHookMetric(performance.leadsPerPost, "leads") : "—" },
+    { label: t("uses"), value: formatNumber(stats.uses) },
+    { label: t("avg_views"), value: performance ? formatHookMetric(performance.avgViews, "views") : "—" },
+    { label: t("engagement"), value: performance ? formatHookMetric(performance.engagementRate, "engagement") : "—" },
+    { label: t("leads_post"), value: performance ? formatHookMetric(performance.leadsPerPost, "leads") : "—" },
   ]
   return (
     <dl className={cn("grid grid-cols-4 gap-x-4", className)}>
@@ -119,6 +126,7 @@ export function HookRow({
   onDuplicate: (hook: Hook) => void
   onDelete: (hook: Hook) => void
 }) {
+  const t = useT(hookMessages)
   return (
     <li className="relative grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2 px-2 py-2.5 hover:bg-muted/40 sm:px-3 lg:grid-cols-[auto_minmax(0,1fr)_minmax(16rem,auto)_auto] lg:gap-x-4">
       <FavoriteButton hook={hook} className="relative z-10 mt-px" />
@@ -128,16 +136,16 @@ export function HookRow({
           onClick={() => onOpen(hook.id)}
           className="block w-full text-left text-sm leading-snug outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring/50 focus-visible:after:ring-inset"
         >
-          <HookText text={hook.text || "Untitled hook"} />
+          <HookText text={hook.text || t("untitled_hook")} />
         </button>
         <p className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
           <span>{HOOK_CATEGORIES[hook.category]?.label ?? "Custom"}</span>
           <span aria-hidden>·</span>
-          <span>{HOOK_SOURCES[hook.source]?.label ?? hook.source}</span>
+          <span>{t(`source_${hook.source}`)}</span>
           {countBlanks(hook.text) ? (
             <>
               <span aria-hidden>·</span>
-              <span>Template</span>
+              <span>{t("template")}</span>
             </>
           ) : null}
           {pillar ? (
@@ -152,7 +160,7 @@ export function HookRow({
       <HookRowStats stats={stats} className="hidden lg:grid" />
       <div className="relative z-10 flex items-center gap-0.5">
         <Button type="button" variant="outline" size="xs" onClick={() => onUse(hook)}>
-          Use
+          {t("use")}
         </Button>
         <HookMenu hook={hook} onDuplicate={onDuplicate} onDelete={onDelete} />
       </div>

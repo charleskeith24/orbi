@@ -2,8 +2,10 @@
 
 import { ChartColumn, Table2 } from "lucide-react"
 import { useId, useState, type ReactNode } from "react"
+import { chartMessages } from "@/components/charts/messages"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 /** Accessible twin of a chart: plain columns and rows (format values before passing them in). */
@@ -38,6 +40,7 @@ export function ChartFrame({
   contentClassName,
   children,
 }: ChartFrameProps) {
+  const t = useT(chartMessages)
   const [view, setView] = useState<"chart" | "table">("chart")
   const titleId = useId()
 
@@ -69,12 +72,12 @@ export function ChartFrame({
                 onValueChange={(value) => {
                   if (value === "chart" || value === "table") setView(value)
                 }}
-                aria-label="Display as"
+                aria-label={t("display_as")}
               >
-                <ToggleGroupItem value="chart" aria-label="Show chart">
+                <ToggleGroupItem value="chart" aria-label={t("show_chart")}>
                   <ChartColumn />
                 </ToggleGroupItem>
-                <ToggleGroupItem value="table" aria-label="Show table">
+                <ToggleGroupItem value="table" aria-label={t("show_table")}>
                   <Table2 />
                 </ToggleGroupItem>
               </ToggleGroup>
@@ -91,6 +94,7 @@ export function ChartFrame({
 }
 
 function ChartDataTable({ table }: { table: ChartTable }) {
+  const t = useT(chartMessages)
   return (
     <Table className="text-xs">
       <TableHeader>
@@ -116,7 +120,7 @@ function ChartDataTable({ table }: { table: ChartTable }) {
         ) : (
           <TableRow>
             <TableCell colSpan={table.columns.length} className="py-6 text-center text-muted-foreground">
-              No rows yet.
+              {t("no_rows")}
             </TableCell>
           </TableRow>
         )}

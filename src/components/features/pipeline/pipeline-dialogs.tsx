@@ -5,14 +5,17 @@ import { DatePicker, DateTimePicker, FormField } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { useT, type Translator } from "@/lib/i18n"
 import { formatDate, parseDate, toISODate } from "@/lib/dates"
 import { useTable } from "@/lib/store"
 import type { ContentItem, ISODate, ISODateTime } from "@/lib/types"
 import { cn, truncate } from "@/lib/utils"
 import { defaultScheduleTime, nextPostingSlots } from "./board-model"
+import { pipelineCardMessages } from "./messages"
 import { useNow } from "./use-now"
 
-const quoted = (item: ContentItem) => `“${truncate(item.title.trim() || "Untitled content", 80)}”`
+const quoted = (item: ContentItem, t: Translator<(typeof pipelineCardMessages)["en"]>) =>
+  `“${truncate(item.title.trim() || t("untitled"), 80)}”`
 
 interface TargetDialogProps {
   /** Kept after closing so the content doesn't collapse during the exit animation. */
@@ -56,13 +59,14 @@ function ScheduleForm({
   onCancel: () => void
   onConfirm: (when: ISODateTime) => void
 }) {
+  const t = useT(pipelineCardMessages)
   const slots = useTable("content_calendar")
   const items = useTable("content_items")
   const now = useNow()
   const suggestions = useMemo(() => nextPostingSlots(slots, items, item, now), [slots, items, item, now])
   const [value, setValue] = useState<ISODateTime | null>(() => defaultScheduleTime(item, suggestions, now).toISOString())
   const at = parseDate(value)
-  const error = !at ? "Pick a publish date and time." : at.getTime() <= now.getTime() ? "Pick a time in the future." : null
+  const error = !at ? t("error_pick_time") : at.getTime() <= now.getTime() ? t("error_future") : null
 
   return (
     <form
@@ -73,17 +77,15 @@ function ScheduleForm({
       }}
     >
       <DialogHeader>
-        <DialogTitle>{move ? "When should it go live?" : "Reschedule"}</DialogTitle>
+        <DialogTitle>{move ? t("schedule_title") : t("reschedule_title")}</DialogTitle>
         <DialogDescription>
-          {move
-            ? `Scheduled posts need a publish time. Pick one for ${quoted(item)} to move it to Scheduled.`
-            : `Change when ${quoted(item)} goes live.`}
+          {move ? t("schedule_description", { title: quoted(item, t) }) : t("reschedule_description", { title: quoted(item, t) })}
         </DialogDescription>
       </DialogHeader>
 
       {suggestions.length ? (
         <div className="grid gap-1.5">
-          <span className="text-xs font-medium text-muted-foreground">Open posting slots</span>
+          <span className="text-xs font-medium text-muted-foreground">{t("open_slots")}</span>
           <div className="flex flex-wrap gap-1.5">
             {suggestions.map((slot) => {
               const iso = slot.at.toISOString()
@@ -103,7 +105,7 @@ function ScheduleForm({
                 >
                   <span className="text-xs font-medium">{formatDate(slot.at, "EEE, MMM d · h:mm a")}</span>
                   <span className="max-w-full truncate text-[11px] font-normal text-muted-foreground">
-                    {slot.label || "Posting slot"}
+                    {slot.label || t("posting_slot")}
                   </span>
                 </Button>
               )
@@ -112,7 +114,7 @@ function ScheduleForm({
         </div>
       ) : null}
 
-      <FormField label="Publish time" htmlFor="pipeline-schedule-at" error={error}>
+      <FormField label={t("publish_time")} htmlFor="pipeline-schedule-at" error={error}>
         <DateTimePicker
           id="pipeline-schedule-at"
           value={value}
@@ -125,10 +127,10 @@ function ScheduleForm({
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {t("cancel")}
         </Button>
         <Button type="submit" disabled={Boolean(error)}>
-          {move ? "Schedule" : "Save time"}
+          {move ? t("schedule") : t("save_time")}
         </Button>
       </DialogFooter>
     </form>
@@ -162,6 +164,7 @@ function DueDateForm({
   onCancel: () => void
   onSave: (due: ISODate | null) => void
 }) {
+  const t = useT(pipelineCardMessages)
   const [value, setValue] = useState<ISODate | null>(item.due_date)
   const unchanged = value === item.due_date
   return (
@@ -173,24 +176,22 @@ function DueDateForm({
       }}
     >
       <DialogHeader>
-        <DialogTitle>Set due date</DialogTitle>
-        <DialogDescription>
-          The production deadline for {quoted(item)}. Work past its deadline shows as overdue on Today.
-        </DialogDescription>
+        <DialogTitle>{t("set_due_date")}</DialogTitle>
+        <DialogDescription>{t("due_description", { title: quoted(item, t) })}</DialogDescription>
       </DialogHeader>
       <FormField
-        label="Due date"
+        label={t("due_date")}
         htmlFor="pipeline-due-date"
-        description={item.scheduled_at ? `Goes live ${formatDate(item.scheduled_at, "EEE, MMM d · h:mm a")}` : undefined}
+        description={item.scheduled_at ? t("goes_live", { when: formatDate(item.scheduled_at, "EEE, MMM d · h:mm a") }) : undefined}
       >
         <DatePicker id="pipeline-due-date" value={value} onChange={setValue} />
       </FormField>
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {t("cancel")}
         </Button>
         <Button type="submit" disabled={unchanged}>
-          Save
+          {t("save")}
         </Button>
       </DialogFooter>
     </form>
@@ -231,9 +232,10 @@ function OwnerForm({
   onCancel: () => void
   onSave: (owner: string) => void
 }) {
+  const t = useT(pipelineCardMessages)
   const [value, setValue] = useState(item.owner)
   const clean = value.trim()
-  const error = clean.length > MAX_OWNER_LENGTH ? `Keep it under ${MAX_OWNER_LENGTH} characters.` : null
+  const error = clean.length > MAX_OWNER_LENGTH ? t("owner_too_long", { max: MAX_OWNER_LENGTH }) : null
   const invalid = !clean || Boolean(error) || clean === item.owner.trim()
   return (
     <form
@@ -244,22 +246,22 @@ function OwnerForm({
       }}
     >
       <DialogHeader>
-        <DialogTitle>Assign owner</DialogTitle>
-        <DialogDescription>Who moves {quoted(item)} forward — you, an editor, a designer.</DialogDescription>
+        <DialogTitle>{t("assign_owner")}</DialogTitle>
+        <DialogDescription>{t("owner_description", { title: quoted(item, t) })}</DialogDescription>
       </DialogHeader>
-      <FormField label="Owner" htmlFor="pipeline-owner" error={error}>
+      <FormField label={t("owner")} htmlFor="pipeline-owner" error={error}>
         <Input
           id="pipeline-owner"
           autoFocus
           autoComplete="off"
           value={value}
           onChange={(event) => setValue(event.target.value)}
-          placeholder="e.g. Bea (Editor)"
+          placeholder={t("owner_placeholder")}
           aria-invalid={Boolean(error)}
         />
       </FormField>
       {owners.length ? (
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="People already on your content">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("people_on_content")}>
           {owners.slice(0, 8).map((owner) => (
             <Button
               key={owner}
@@ -277,10 +279,10 @@ function OwnerForm({
       ) : null}
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {t("cancel")}
         </Button>
         <Button type="submit" disabled={invalid}>
-          Assign
+          {t("assign")}
         </Button>
       </DialogFooter>
     </form>

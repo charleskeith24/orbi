@@ -4,7 +4,9 @@
  */
 import { platformPerformance, type PlatformAggregate } from "@/lib/analytics"
 import { PLATFORM_IDS, PLATFORMS } from "@/lib/constants"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type { AppSettings, Database, ID, PlatformId, PlatformStrategy, UpdateRow } from "@/lib/types"
+import { platformsMessages } from "./platforms-messages"
 
 export interface PlatformPlanRow {
   platform: PlatformId
@@ -50,16 +52,20 @@ export function platformPlan(db: Database, now: Date, settings: AppSettings): Pl
 }
 
 /** Plan vs weekly target: matches within half a post, otherwise a warning with the gap. */
-export function planMessage(plan: Pick<PlatformPlan, "weeklyTotal" | "target" | "delta" | "activeCount">): {
+export function planMessage(
+  plan: Pick<PlatformPlan, "weeklyTotal" | "target" | "delta" | "activeCount">,
+  lang: UiLang = "en"
+): {
   tone: "good" | "warning"
   text: string
 } {
-  if (!plan.activeCount) return { tone: "warning", text: "No active platforms — switch one on to build your weekly plan." }
-  const posts = (n: number) => `${n} ${n === 1 ? "post" : "posts"}`
-  if (Math.abs(plan.delta) < 0.5) return { tone: "good", text: `Matches your weekly target of ${posts(plan.target)}.` }
+  const t = translator(platformsMessages, lang)
+  if (!plan.activeCount) return { tone: "warning", text: t("no_active_plan") }
+  const posts = (n: number) => t.plural("plan_posts", n, { count: String(n) })
+  if (Math.abs(plan.delta) < 0.5) return { tone: "good", text: t("plan_matches", { posts: posts(plan.target) }) }
   return plan.delta > 0
-    ? { tone: "warning", text: `${posts(plan.delta)} a week more than your weekly target of ${plan.target} — raise the target or trim a platform.` }
-    : { tone: "warning", text: `${posts(Math.abs(plan.delta))} a week short of your weekly target of ${plan.target} — add frequency or lower the target.` }
+    ? { tone: "warning", text: t("plan_over", { posts: posts(plan.delta), target: plan.target }) }
+    : { tone: "warning", text: t("plan_under", { posts: posts(Math.abs(plan.delta)), target: plan.target }) }
 }
 
 /** Published posts vs the planned pace; "behind" below 70% of plan. */
@@ -102,13 +108,14 @@ export function platformFormValues(s: PlatformStrategy): PlatformFormValues {
   }
 }
 
-export function validatePlatform(values: PlatformFormValues): PlatformFormErrors {
+export function validatePlatform(values: PlatformFormValues, lang: UiLang = "en"): PlatformFormErrors {
+  const t = translator(platformsMessages, lang)
   const errors: PlatformFormErrors = {}
   const f = values.posting_frequency
-  if (f === null || !Number.isFinite(f)) errors.posting_frequency = "Enter posts per week (0 or more)."
-  else if (f < 0 || f > 50) errors.posting_frequency = "Between 0 and 50 posts a week."
+  if (f === null || !Number.isFinite(f)) errors.posting_frequency = t("error_frequency")
+  else if (f < 0 || f > 50) errors.posting_frequency = t("error_frequency_range")
   const followers = values.current_followers
-  if (followers !== null && (!Number.isFinite(followers) || followers < 0)) errors.current_followers = "Followers can't be negative."
+  if (followers !== null && (!Number.isFinite(followers) || followers < 0)) errors.current_followers = t("error_followers")
   return errors
 }
 

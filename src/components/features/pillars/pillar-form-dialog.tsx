@@ -9,12 +9,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions, useTable } from "@/lib/store"
 import type { CategoricalColor, ContentPillar, UpdateRow } from "@/lib/types"
 import { rebalanceHint } from "./pillar-actions"
 import { PillarIconPicker } from "./pillar-icon-picker"
 import { DEFAULT_PILLAR_ICON, PillarIconTile } from "./pillar-icons"
 import { activeTargetTotal, nextPillarColor, nextSortOrder, TARGET_TOTAL } from "./pillar-math"
+import { pillarMessages } from "./pillar-messages"
 
 interface FormValues {
   name: string
@@ -70,6 +73,8 @@ function PillarForm({
   onSaved: (pillar: ContentPillar, created: boolean) => void
   onSetTargets?: () => void
 }) {
+  const t = useT(pillarMessages)
+  const c = useT(commonMessages)
   const pillars = useTable("content_pillars")
   const [values, setValues] = useState<FormValues>(() =>
     pillar
@@ -97,16 +102,16 @@ function PillarForm({
   const others = pillars.filter((p) => p.id !== pillar?.id)
   const cleanName = values.name.trim()
   const nameError = !cleanName
-    ? "Give the pillar a name."
+    ? t("name_required")
     : others.some((p) => p.name.trim().toLowerCase() === cleanName.toLowerCase())
-      ? "Another pillar already uses this name."
+      ? t("name_taken")
       : undefined
   const valid = !nameError
   const othersTotal = activeTargetTotal(others)
   const newTotal = othersTotal + (values.active ? Math.round(values.target ?? 0) : 0)
   const totalHint = values.active
-    ? `Other active pillars total ${othersTotal}% — ${newTotal}% with this one.${newTotal === TARGET_TOTAL ? "" : " Rebalance with Set targets after saving."}`
-    : "Paused pillars don't count toward the 100%."
+    ? t(newTotal === TARGET_TOTAL ? "total_hint" : "total_hint_rebalance", { others: othersTotal, total: newTotal })
+    : t("paused_hint")
 
   function set<K extends keyof FormValues>(key: K, value: FormValues[K]) {
     setValues((current) => ({ ...current, [key]: value }))
@@ -128,12 +133,12 @@ function PillarForm({
     if (pillar) {
       dataActions.update("content_pillars", pillar.id, payload)
       const hint = rebalanceHint(onSetTargets)
-      toast.success("Pillar updated", { description: hint.description ?? payload.name, action: hint.action })
+      toast.success(t("updated"), { description: hint.description ?? payload.name, action: hint.action })
       onSaved({ ...pillar, ...payload }, false)
     } else {
       const row = dataActions.insert("content_pillars", { ...payload, sort_order: nextSortOrder(pillars) })
       const hint = rebalanceHint(onSetTargets)
-      toast.success("Pillar created", { description: hint.description ?? row.name, action: hint.action })
+      toast.success(t("created"), { description: hint.description ?? row.name, action: hint.action })
       onSaved(row, true)
     }
   }
@@ -143,15 +148,13 @@ function PillarForm({
   return (
     <form onSubmit={submit} noValidate className="flex min-h-0 flex-1 flex-col">
       <DialogHeader className="gap-1 border-b py-3.5 pr-12 pl-4">
-        <DialogTitle>{pillar ? "Edit pillar" : "New pillar"}</DialogTitle>
-        <DialogDescription className="text-xs">
-          A theme you want to be known for. Every idea and post can belong to one pillar.
-        </DialogDescription>
+        <DialogTitle>{pillar ? t("edit_pillar") : t("new_pillar")}</DialogTitle>
+        <DialogDescription className="text-xs">{t("form_description")}</DialogDescription>
       </DialogHeader>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 scrollbar-thin">
         <div className="flex flex-col gap-4">
-          <FormField label="Name" htmlFor="pillar-name" required error={shownNameError}>
+          <FormField label={t("name")} htmlFor="pillar-name" required error={shownNameError}>
             <div className="flex items-center gap-2.5">
               <PillarIconTile name={values.icon} color={values.color} />
               <Input
@@ -159,7 +162,7 @@ function PillarForm({
                 value={values.name}
                 autoFocus
                 maxLength={60}
-                placeholder="e.g. Education"
+                placeholder={t("name_placeholder")}
                 aria-invalid={Boolean(shownNameError) || undefined}
                 onChange={(event) => set("name", event.target.value)}
                 onBlur={() => setTouched(true)}
@@ -167,23 +170,23 @@ function PillarForm({
             </div>
           </FormField>
 
-          <FormField label="Description" htmlFor="pillar-description" description="What this pillar does for your audience, in one line.">
+          <FormField label={t("description_label")} htmlFor="pillar-description" description={t("description_help")}>
             <Textarea
               id="pillar-description"
               rows={2}
               maxLength={200}
               className="min-h-14"
               value={values.description}
-              placeholder="e.g. Teach useful concepts"
+              placeholder={t("description_placeholder")}
               onChange={(event) => set("description", event.target.value)}
             />
           </FormField>
 
           <FormRow>
-            <FormField label="Color" description="Marks this pillar in charts, badges and the calendar.">
-              <ColorSwatchPicker value={values.color} onChange={(color) => set("color", color)} aria-label="Pillar color" />
+            <FormField label={t("color")} description={t("color_help")}>
+              <ColorSwatchPicker value={values.color} onChange={(color) => set("color", color)} aria-label={t("color_aria")} />
             </FormField>
-            <FormField label="Target share" htmlFor="pillar-target" description={totalHint}>
+            <FormField label={t("target_share")} htmlFor="pillar-target" description={totalHint}>
               <NumberField
                 id="pillar-target"
                 integer
@@ -197,31 +200,36 @@ function PillarForm({
             </FormField>
           </FormRow>
 
-          <FormField label="Icon">
-            <PillarIconPicker value={values.icon} color={values.color} onChange={(name) => set("icon", name)} />
+          <FormField label={t("icon")}>
+            <PillarIconPicker
+              value={values.icon}
+              color={values.color}
+              onChange={(name) => set("icon", name)}
+              aria-label={t("icon_aria")}
+            />
           </FormField>
 
           <FormField
-            label="Examples"
+            label={t("examples")}
             htmlFor="pillar-examples"
-            description="Content types that belong here — they guide new ideas and AI drafts."
+            description={t("examples_help")}
           >
             <ListEditor
               id="pillar-examples"
               value={values.examples}
               onChange={(next) => set("examples", next)}
               maxItems={12}
-              placeholder="e.g. How-to, Case studies — press Enter"
-              aria-label="Examples"
+              placeholder={t("examples_placeholder")}
+              aria-label={t("examples")}
             />
           </FormField>
 
           <div className="flex items-center justify-between gap-4 rounded-lg border px-3 py-2.5">
             <div className="min-w-0">
               <Label htmlFor="pillar-active" className="text-sm">
-                Active
+                {t("active")}
               </Label>
-              <p className="text-xs text-muted-foreground">Paused pillars keep their history but leave the mix, targets and pickers.</p>
+              <p className="text-xs text-muted-foreground">{t("active_help")}</p>
             </div>
             <Switch id="pillar-active" checked={values.active} onCheckedChange={(next) => set("active", next)} />
           </div>
@@ -230,10 +238,10 @@ function PillarForm({
 
       <DialogFooter className="m-0 rounded-b-xl px-4 py-3">
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={!valid}>
-          {pillar ? "Save changes" : "Create pillar"}
+          {pillar ? c("save_changes") : t("create_pillar")}
         </Button>
       </DialogFooter>
     </form>

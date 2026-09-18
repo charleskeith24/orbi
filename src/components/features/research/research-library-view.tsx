@@ -9,9 +9,11 @@ import { useUrlState } from "@/components/features/stories/use-url-state"
 import { Button } from "@/components/ui/button"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { RESEARCH_STATUSES } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import { useLookup, useTable } from "@/lib/store"
 import type { ID } from "@/lib/types"
-import { formatNumber, pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { researchMessages } from "./messages"
 import { NeverCopyBanner } from "./never-copy-banner"
 import { ResearchActionsProvider } from "./research-actions"
 import { ResearchCard } from "./research-card"
@@ -39,6 +41,7 @@ const ALL_STATUSES = RESEARCH_STATUSES.map((s) => s.id).join(",")
  * psychology, patterns) and the ideas adapted from them. URL: `?q=`, facet params, `?view=`, `?open=<id>`.
  */
 export function ResearchLibraryView() {
+  const t = useT(researchMessages)
   const [url, update] = useUrlState(RESEARCH_URL_KEYS)
   const isMobile = useIsMobile()
   const items = useTable("research_items")
@@ -57,6 +60,7 @@ export function ResearchLibraryView() {
   const stats = useMemo(() => researchStats(items, usage), [items, usage])
   const filtered = hasResearchFilters(filters)
   const archivedHidden = filters.statuses.length ? 0 : stats.archived
+  const totalReferences = filters.statuses.length ? items.length : stats.references
 
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items])
   const openItem = url.open ? itemById.get(url.open) : undefined
@@ -85,11 +89,11 @@ export function ResearchLibraryView() {
     <EmptyState
       compact
       icon={SearchX}
-      title="No references match"
-      description={archivedHidden ? "Archived references are hidden — include them, or try fewer filters." : "Try a different search or fewer filters."}
+      title={t("nomatch_title")}
+      description={archivedHidden ? t("nomatch_archived") : t("nomatch_description")}
       action={
         <Button type="button" size="sm" variant="outline" onClick={resetFilters}>
-          Reset filters
+          {t("reset_filters")}
         </Button>
       }
     />
@@ -100,7 +104,7 @@ export function ResearchLibraryView() {
       <PageContainer>
         <PageHeader
           title="Research Library"
-          description="Save the posts, videos and trends that caught your attention — then study why they work."
+          description={t("description")}
           actions={
             <>
               <Button type="button" variant="outline" size="sm" asChild>
@@ -111,7 +115,7 @@ export function ResearchLibraryView() {
               </Button>
               <Button type="button" size="sm" onClick={() => setCreating(true)}>
                 <Plus aria-hidden />
-                Add reference
+                {t("add_reference")}
               </Button>
             </>
           }
@@ -121,34 +125,34 @@ export function ResearchLibraryView() {
 
         {url.open && !openItem ? (
           <div role="status" className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">
-            <span className="min-w-0 flex-1">The reference in this link no longer exists — it may have been deleted.</span>
-            <Button type="button" variant="ghost" size="icon-xs" aria-label="Dismiss" onClick={() => update({ open: "" })}>
+            <span className="min-w-0 flex-1">{t("missing_link")}</span>
+            <Button type="button" variant="ghost" size="icon-xs" aria-label={t("dismiss")} onClick={() => update({ open: "" })}>
               <X aria-hidden />
             </Button>
           </div>
         ) : null}
 
         {items.length ? (
-          <section aria-label="References" className="flex min-w-0 flex-col gap-3">
+          <section aria-label={t("references_aria")} className="flex min-w-0 flex-col gap-3">
             <ResearchFilterBar items={items} pillars={pillars} filters={filters} view={view} onChange={update} onReset={resetFilters} />
             <p className="flex min-h-7 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground" aria-live="polite">
               <span className="num">
                 {filtered
-                  ? `${formatNumber(visible.length)} of ${pluralize(filters.statuses.length ? items.length : stats.references, "reference")}`
-                  : pluralize(stats.references, "reference")}
+                  ? t.plural("of_references", totalReferences, { shown: formatNumber(visible.length), count: formatNumber(totalReferences) })
+                  : t.plural("references", stats.references, { count: formatNumber(stats.references) })}
               </span>
               <span aria-hidden>·</span>
-              <span className="num">{formatNumber(stats.analyzed)} analyzed</span>
+              <span className="num">{t("analyzed_count", { count: formatNumber(stats.analyzed) })}</span>
               <span aria-hidden>·</span>
-              <span className="num">{formatNumber(stats.adapted)} adapted</span>
+              <span className="num">{t("adapted_count", { count: formatNumber(stats.adapted) })}</span>
               <span aria-hidden>·</span>
-              <span className="num">used in {pluralize(stats.ideas, "idea")}</span>
+              <span className="num">{t.plural("used_in", stats.ideas, { count: formatNumber(stats.ideas) })}</span>
               {archivedHidden ? (
                 <>
                   <span aria-hidden>·</span>
-                  <span className="num">{formatNumber(archivedHidden)} archived hidden</span>
+                  <span className="num">{t("archived_hidden", { count: formatNumber(archivedHidden) })}</span>
                   <Button type="button" variant="link" size="xs" className="h-auto px-0 text-xs" onClick={() => update({ status: ALL_STATUSES })}>
-                    Show
+                    {t("show")}
                   </Button>
                 </>
               ) : null}
@@ -168,19 +172,19 @@ export function ResearchLibraryView() {
         ) : (
           <EmptyState
             icon={Library}
-            title="Your Research Library is empty"
-            description="Save content that made you stop scrolling — then analyze why it works and turn the pattern into something original."
+            title={t("empty_title")}
+            description={t("empty_description")}
             action={
               <Button type="button" size="sm" onClick={() => setCreating(true)}>
                 <Plus aria-hidden />
-                Add reference
+                {t("add_reference")}
               </Button>
             }
             secondaryAction={
               <Button type="button" size="sm" variant="outline" asChild>
                 <Link href="/research/adapt">
                   <WandSparkles aria-hidden />
-                  Paste a reference to adapt
+                  {t("paste_to_adapt")}
                 </Link>
               </Button>
             }

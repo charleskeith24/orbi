@@ -7,9 +7,11 @@ import { useNow } from "@/components/features/today/use-now"
 import { buildWhatToPostInput, useAiTask } from "@/lib/ai"
 import { recommendNextContent } from "@/lib/analytics"
 import { PLATFORMS } from "@/lib/constants"
+import { useT, useUiLang } from "@/lib/i18n"
 import { convertIdeaToContent, dataActions, ensureBrief, useDb, useSettings } from "@/lib/store"
 import type { ID, UpdateRow } from "@/lib/types"
 import { truncate } from "@/lib/utils"
+import { whatToPostMessages } from "./messages"
 import { fromAiOutput, fromRecommendation, type Suggestion, type SuggestionEdit, type SuggestionLookups } from "./suggestion"
 
 export type SuggestionMode = "engine" | "ai"
@@ -31,6 +33,8 @@ function applyCta(itemId: ID, cta: string, force: boolean) {
  * (the engine pick stays visible until the AI answers), cycling, inline edits and "Create this content".
  */
 export function useWhatToPost() {
+  const t = useT(whatToPostMessages)
+  const lang = useUiLang()
   const router = useRouter()
   const db = useDb()
   const settings = useSettings()
@@ -50,10 +54,10 @@ export function useWhatToPost() {
     [db.content_formats, db.angles, db.content_ideas, db.content_items]
   )
   const engine = useMemo(
-    () => recommendNextContent(db, now, settings, { limit: CANDIDATES }).map((rec) => fromRecommendation(rec, lookups)),
-    [db, now, settings, lookups]
+    () => recommendNextContent(db, now, settings, { limit: CANDIDATES, lang }).map((rec) => fromRecommendation(rec, lookups, lang)),
+    [db, now, settings, lookups, lang]
   )
-  const aiList = useMemo(() => (ai.data ? fromAiOutput(ai.data, engine, lookups) : []), [ai.data, engine, lookups])
+  const aiList = useMemo(() => (ai.data ? fromAiOutput(ai.data, engine, lookups, lang) : []), [ai.data, engine, lookups, lang])
 
   const activeMode: SuggestionMode = mode === "ai" && aiList.length ? "ai" : "engine"
   const list = activeMode === "ai" ? aiList : engine
@@ -97,33 +101,33 @@ export function useWhatToPost() {
     try {
       if (s.kind === "idea") {
         const [item] = convertIdeaToContent(s.id, { platforms: [s.platform] })
-        if (!item) throw new Error("Nothing was created.")
+        if (!item) throw new Error(t("nothing_created"))
         const patch: UpdateRow<"content_items"> = {}
         if (!item.format_id && s.formatId) patch.format_id = s.formatId
         if (!item.angle_id && s.angleId) patch.angle_id = s.angleId
         if (hook && hook !== item.hook) patch.hook = hook
         if (Object.keys(patch).length) dataActions.update("content_items", item.id, patch)
         applyCta(item.id, cta, true)
-        toast.success("Content created", {
+        toast.success(t("content_created"), {
           description: `${truncate(item.title, 60)} · ${PLATFORMS[item.platform]?.label ?? item.platform}`,
         })
         router.push(`/studio/${item.id}`)
         return
       }
       const item = dataActions.getDb().content_items.find((i) => i.id === s.id)
-      if (!item) throw new Error("That content no longer exists.")
+      if (!item) throw new Error(t("no_longer_exists"))
       const patch: UpdateRow<"content_items"> = {}
       if (!item.format_id && s.formatId) patch.format_id = s.formatId
       if (!item.angle_id && s.angleId) patch.angle_id = s.angleId
       if (hook && hook !== item.hook && (edit?.hook !== undefined || !item.hook.trim())) patch.hook = hook
       if (Object.keys(patch).length) {
         dataActions.update("content_items", item.id, patch)
-        toast.success("Suggestion applied", { description: `${truncate(item.title, 60)} · missing details filled in` })
+        toast.success(t("suggestion_applied"), { description: t("details_filled", { title: truncate(item.title, 60) }) })
       }
       applyCta(item.id, cta, edit?.cta !== undefined)
       router.push(`/studio/${item.id}`)
     } catch (error) {
-      toast.error("Couldn't create the content", { description: error instanceof Error ? error.message : String(error) })
+      toast.error(t("couldnt_create"), { description: error instanceof Error ? error.message : String(error) })
     }
   }
 

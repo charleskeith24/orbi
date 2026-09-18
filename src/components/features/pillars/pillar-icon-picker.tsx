@@ -5,19 +5,19 @@ import type { CategoricalColor } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { PILLAR_ICON_OPTIONS } from "./pillar-icons"
 
-/** Radio grid of the curated pillar icons. Arrow keys move and select; the choice wears the pillar colour. */
+/** Radio grid of the curated pillar icons (their names stay English). Arrow keys move and select; the choice wears the pillar colour. */
 export function PillarIconPicker({
   value,
   onChange,
   color,
   className,
-  "aria-label": ariaLabel = "Pillar icon",
+  "aria-label": ariaLabel,
 }: {
   value: string
   onChange: (name: string) => void
   color: CategoricalColor
   className?: string
-  "aria-label"?: string
+  "aria-label": string
 }) {
   const selectedIndex = PILLAR_ICON_OPTIONS.findIndex((o) => o.name === value)
   const focusIndex = Math.max(0, selectedIndex)

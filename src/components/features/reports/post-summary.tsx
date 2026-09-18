@@ -12,7 +12,9 @@ import {
 import type { TieredRow } from "@/lib/analytics"
 import { PLATFORMS } from "@/lib/constants"
 import { formatShortDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import { cn, formatNumber, formatPercent } from "@/lib/utils"
+import { reportMessages } from "./messages"
 import { formatRatio } from "./report-format"
 
 function Figure({ label, value }: { label: string; value: string }) {
@@ -26,7 +28,8 @@ function Figure({ label, value }: { label: string; value: string }) {
 
 /** One published post: thumbnail, title → Studio, platform · pillar · date, key numbers, tier and hook. */
 export function PostSummary({ row, className }: { row: TieredRow; className?: string }) {
-  const title = row.item.title.trim() || "Untitled content"
+  const t = useT(reportMessages)
+  const title = row.item.title.trim() || t("untitled_content")
   const measured = Boolean(row.metric)
   const hook = row.item.hook.trim()
   return (
@@ -53,14 +56,14 @@ export function PostSummary({ row, className }: { row: TieredRow; className?: st
         <TierBadge tier={row.tier} className="shrink-0" />
       </div>
       <dl className="grid grid-cols-4 gap-2 border-t pt-3">
-        <Figure label="Views" value={measured ? formatNumber(row.views) : "—"} />
-        <Figure label="Eng. rate" value={formatPercent(row.rates.engagement_rate)} />
-        <Figure label="Leads" value={measured ? formatNumber(row.leads) : "—"} />
-        <Figure label="vs baseline" value={formatRatio(row.ratio)} />
+        <Figure label={t("views")} value={measured ? formatNumber(row.views) : "—"} />
+        <Figure label={t("eng_rate")} value={formatPercent(row.rates.engagement_rate)} />
+        <Figure label={t("leads")} value={measured ? formatNumber(row.leads) : "—"} />
+        <Figure label={t("vs_baseline")} value={formatRatio(row.ratio)} />
       </dl>
       {hook ? (
         <p className="line-clamp-2 text-xs text-pretty text-muted-foreground">
-          <span className="font-medium text-foreground/80">Hook</span> “{hook}”
+          <span className="font-medium text-foreground/80">{t("hook")}</span> “{hook}”
         </p>
       ) : null}
     </div>

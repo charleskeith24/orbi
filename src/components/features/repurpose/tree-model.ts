@@ -4,8 +4,10 @@
  * pending suggestions. Pure — performance comes in through `perfOf`.
  */
 import { PLATFORM_IDS } from "@/lib/constants"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type { ContentIdea, ContentItem, ContentRepurpose, Database, ID, PerformanceTier, PlatformId } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { treeMessages } from "./messages"
 import { isPendingSuggestion } from "./repurpose-model"
 
 export interface TreePerf {
@@ -176,11 +178,16 @@ export function buildContentTree(
 }
 
 /** "1 idea → 7 assets across 5 platforms" (or "1 post → …" for a family without an idea). */
-export function treeHeadline(model: ContentTreeModel): string {
-  const origin = model.idea ? "1 idea" : "1 post"
+export function treeHeadline(model: ContentTreeModel, lang: UiLang = "en"): string {
+  const t = translator(treeMessages, lang)
+  const origin = model.idea ? t("origin_idea") : t("origin_post")
   const { assets, platforms } = model.summary
-  if (!assets) return `${origin} → no content yet`
-  return `${origin} → ${pluralize(assets, "asset")} across ${pluralize(platforms.length, "platform")}`
+  if (!assets) return t("headline_empty", { origin })
+  return t("headline", {
+    origin,
+    assets: t.plural("assets", assets, { count: formatNumber(assets) }),
+    platforms: t.plural("platforms", platforms.length, { count: formatNumber(platforms.length) }),
+  })
 }
 
 /** Depth-first list of every node (root first) — used by the indented list and tests. */

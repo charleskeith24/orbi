@@ -4,9 +4,11 @@ import { ChartColumn, Circle, CircleCheck } from "lucide-react"
 import Link from "next/link"
 import { EmptyState, SectionCard } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/i18n"
 import { uiActions } from "@/lib/store"
 import { cn } from "@/lib/utils"
 import type { FirstStep } from "./first-run"
+import { dashboardMessages } from "./messages"
 
 function StepButton({ step, primary }: { step: FirstStep; primary: boolean }) {
   const variant = primary ? "default" : "outline"
@@ -27,17 +29,14 @@ function StepButton({ step, primary }: { step: FirstStep; primary: boolean }) {
 
 /** First-run Home: the next best actions for a new workspace, each ticked off from real data. */
 export function FirstStepsCard({ steps, className }: { steps: FirstStep[]; className?: string }) {
+  const t = useT(dashboardMessages)
   const done = steps.filter((s) => s.done).length
   const next = steps.find((s) => !s.done)
   return (
     <SectionCard
-      title="Get your content system running"
-      description="Home fills in as you work — every number here comes from your own ideas, posts and analytics."
-      action={
-        <span className="text-xs text-muted-foreground num">
-          {done} of {steps.length} done
-        </span>
-      }
+      title={t("first_title")}
+      description={t("first_description")}
+      action={<span className="text-xs text-muted-foreground num">{t("steps_done", { done, total: steps.length })}</span>}
       className={className}
     >
       <ol className="grid grid-cols-1 gap-2 @2xl:grid-cols-2 @5xl:grid-cols-3">
@@ -60,11 +59,11 @@ export function FirstStepsCard({ steps, className }: { steps: FirstStep[]; class
               <div className="flex min-w-0 flex-1 flex-col gap-2">
                 <div className="min-w-0">
                   <p className={cn("text-sm font-medium text-pretty", step.done && "text-muted-foreground")}>
-                    <span className="sr-only">Step {index + 1}: </span>
+                    <span className="sr-only">{t("step_sr", { n: index + 1 })}</span>
                     {step.label}
-                    {step.done ? <span className="sr-only"> (done)</span> : null}
+                    {step.done ? <span className="sr-only">{t("done_sr")}</span> : null}
                   </p>
-                  <p className="text-xs text-pretty text-muted-foreground">{step.done ? "Done" : step.detail}</p>
+                  <p className="text-xs text-pretty text-muted-foreground">{step.done ? t("done") : step.detail}</p>
                 </div>
                 {step.done ? null : <StepButton step={step} primary={isNext} />}
               </div>
@@ -78,16 +77,17 @@ export function FirstStepsCard({ steps, className }: { steps: FirstStep[]; class
 
 /** Stands in for the four performance cards until something has been published. */
 export function PerformancePlaceholder({ className }: { className?: string }) {
+  const t = useT(dashboardMessages)
   return (
-    <SectionCard title="Performance" description="Top content, platform growth and pillar performance" className={className}>
+    <SectionCard title={t("performance_title")} description={t("performance_description")} className={className}>
       <EmptyState
         compact
         icon={ChartColumn}
-        title="Performance starts with your first published post"
-        description="Log a post and its analytics — top content, platform growth and pillar performance are all computed from your own numbers."
+        title={t("performance_empty_title")}
+        description={t("performance_empty_description")}
         action={
           <Button type="button" size="sm" variant="outline" onClick={() => uiActions.openDialog({ type: "log-post" })}>
-            Log a published post
+            {t("log_published")}
           </Button>
         }
       />

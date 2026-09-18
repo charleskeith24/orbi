@@ -11,16 +11,10 @@ import type { ReportPeriod } from "./report-periods"
 export type WeeklyFieldKey = "what_worked" | "what_didnt" | "learned" | "double_down" | "stop" | "test_next"
 export type WeeklyReviewFields = Pick<WeeklyReview, WeeklyFieldKey>
 
-export const WEEKLY_FIELDS: { key: WeeklyFieldKey; label: string; placeholder: string }[] = [
-  { key: "what_worked", label: "What worked", placeholder: "Which posts, hooks or formats beat your average — and by how much?" },
-  { key: "what_didnt", label: "What didn't", placeholder: "What missed: consistency, weak posts, a pillar that went quiet…" },
-  { key: "learned", label: "What we learned", placeholder: "The one insight you'll act on next week." },
-  { key: "double_down", label: "What to double down on", placeholder: "The topic, hook or format that deserves more slots." },
-  { key: "stop", label: "What to stop", placeholder: "What you'll cut or change next week." },
-  { key: "test_next", label: "What to test next week", placeholder: "One experiment: hypothesis, variants and the metric to watch." },
-]
+/** The six weekly review sections, in order. Labels and placeholders: `label_<key>` / `placeholder_<key>` in `weekly-messages.ts`. */
+export const WEEKLY_FIELDS: WeeklyFieldKey[] = ["what_worked", "what_didnt", "learned", "double_down", "stop", "test_next"]
 
-const WEEKLY_KEYS = WEEKLY_FIELDS.map((f) => f.key)
+const WEEKLY_KEYS = WEEKLY_FIELDS
 
 export function weeklyFieldsOf(row?: Partial<WeeklyReviewFields> | null): WeeklyReviewFields {
   return {
@@ -60,12 +54,16 @@ export function findWeeklyReview(rows: WeeklyReview[], period: ReportPeriod): We
 export type MonthlyListKey = "continue_doing" | "increase" | "reduce" | "stop" | "experiment"
 export type MonthlyReviewFields = Pick<MonthlyReview, "summary" | MonthlyListKey>
 
-export const MONTHLY_LISTS: { key: MonthlyListKey; label: string; description: string; placeholder: string }[] = [
-  { key: "continue_doing", label: "Continue", description: "Working — keep doing it.", placeholder: "Keep… (cite the numbers)" },
-  { key: "increase", label: "Increase", description: "Deserves more slots.", placeholder: "More…" },
-  { key: "reduce", label: "Reduce", description: "Fewer slots until it improves.", placeholder: "Less…" },
-  { key: "stop", label: "Stop", description: "Cut it or change it completely.", placeholder: "Stop…" },
-  { key: "experiment", label: "Experiment", description: "Tests to run next month.", placeholder: "Test… (and the metric to watch)" },
+/**
+ * The five recommendation lists. `label` stays English in both languages; descriptions and placeholders are
+ * `description_<key>` / `placeholder_<key>` in `monthly-messages.ts`.
+ */
+export const MONTHLY_LISTS: { key: MonthlyListKey; label: string }[] = [
+  { key: "continue_doing", label: "Continue" },
+  { key: "increase", label: "Increase" },
+  { key: "reduce", label: "Reduce" },
+  { key: "stop", label: "Stop" },
+  { key: "experiment", label: "Experiment" },
 ]
 
 const MONTHLY_KEYS = MONTHLY_LISTS.map((l) => l.key)

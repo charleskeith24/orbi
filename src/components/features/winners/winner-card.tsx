@@ -4,8 +4,10 @@ import { Lightbulb, Pin, Repeat2 } from "lucide-react"
 import { ContentThumbnail, PillarBadge, PlatformLabel, StatusPill, TierBadge } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { isWinnerTier } from "@/lib/analytics"
+import { useT } from "@/lib/i18n"
 import type { ID } from "@/lib/types"
-import { cn, formatCompact, formatNumber, formatPercent, pluralize } from "@/lib/utils"
+import { cn, formatCompact, formatNumber, formatPercent } from "@/lib/utils"
+import { winnersMessages } from "./messages"
 import { togglePinnedWinner } from "./winner-actions"
 import { formatRatio, type WinnerEntry } from "./winners-model"
 
@@ -28,6 +30,7 @@ function Detail({ label, value, clamp = false }: { label: string; value: string;
 
 /** One post in the Winning Content Library grid. The title is a stretched button: the whole card opens the detail sheet. */
 export function WinnerCard({ entry, onOpen }: { entry: WinnerEntry; onOpen: (id: ID) => void }) {
+  const t = useT(winnersMessages)
   const { row } = entry
   const { item } = row
   const pinned = item.pinned_winner
@@ -38,10 +41,10 @@ export function WinnerCard({ entry, onOpen }: { entry: WinnerEntry; onOpen: (id:
         <ContentThumbnail item={item} size="md" />
         <div className="min-w-0 flex-1">
           <div className="flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1">
-            {isWinnerTier(row.tier) ? <TierBadge tier={row.tier} /> : <StatusPill icon={Pin}>Pinned</StatusPill>}
+            {isWinnerTier(row.tier) ? <TierBadge tier={row.tier} /> : <StatusPill icon={Pin}>{t("pinned")}</StatusPill>}
             {row.ratio !== null ? (
               <span className="text-xs text-muted-foreground">
-                <span className="font-semibold text-foreground num">{formatRatio(row.ratio)}</span> baseline
+                <span className="font-semibold text-foreground num">{formatRatio(row.ratio)}</span> {t("baseline")}
               </span>
             ) : null}
           </div>
@@ -51,7 +54,7 @@ export function WinnerCard({ entry, onOpen }: { entry: WinnerEntry; onOpen: (id:
               onClick={() => onOpen(row.id)}
               className="block w-full text-left outline-none after:absolute after:inset-0 after:rounded-lg focus-visible:after:ring-2 focus-visible:after:ring-ring/60"
             >
-              <span className="line-clamp-2 text-pretty">{item.title || "Untitled content"}</span>
+              <span className="line-clamp-2 text-pretty">{item.title || t("untitled_content")}</span>
             </button>
           </h3>
           <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
@@ -65,8 +68,8 @@ export function WinnerCard({ entry, onOpen }: { entry: WinnerEntry; onOpen: (id:
           variant="ghost"
           size="icon-sm"
           aria-pressed={pinned}
-          aria-label={pinned ? "Unpin from the library" : "Pin to the library"}
-          title={pinned ? "Pinned — click to unpin" : "Pin to keep it in the library"}
+          aria-label={pinned ? t("unpin_aria") : t("pin_aria")}
+          title={pinned ? t("unpin_title") : t("pin_title")}
           onClick={() => togglePinnedWinner(item, row.tier)}
           className="relative z-10 -mt-1 -mr-2 shrink-0 text-muted-foreground"
         >
@@ -75,29 +78,29 @@ export function WinnerCard({ entry, onOpen }: { entry: WinnerEntry; onOpen: (id:
       </div>
 
       <dl className="flex flex-col gap-1.5 border-t px-4 py-3">
-        <Detail label="Hook" value={item.hook ? `“${item.hook}”` : ""} clamp />
-        <Detail label="Angle" value={entry.angle} />
-        <Detail label="Topic" value={entry.topic} />
-        <Detail label="CTA" value={entry.cta} />
+        <Detail label={t("hook")} value={item.hook ? `“${item.hook}”` : ""} clamp />
+        <Detail label={t("angle")} value={entry.angle} />
+        <Detail label={t("topic")} value={entry.topic} />
+        <Detail label={t("cta")} value={entry.cta} />
       </dl>
 
       <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 border-t px-4 py-2.5 text-xs text-muted-foreground">
         <span>
-          <span className="font-medium text-foreground num">{formatCompact(row.views)}</span> views
+          <span className="font-medium text-foreground num">{formatCompact(row.views)}</span> {t("views")}
         </span>
-        <span title={`${formatNumber(row.engagements)} engagements`}>
-          <span className="font-medium text-foreground num">{formatPercent(row.rates.engagement_rate)}</span> engagement
+        <span title={t("engagements_title", { count: formatNumber(row.engagements) })}>
+          <span className="font-medium text-foreground num">{formatPercent(row.rates.engagement_rate)}</span> {t("engagement")}
         </span>
         <span className="ml-auto flex items-center gap-3">
           <span className="inline-flex items-center gap-1">
             <Repeat2 className="size-3.5" aria-hidden />
-            {entry.childCount ? pluralize(entry.childCount, "version") : "Not repurposed"}
+            {entry.childCount ? t.plural("versions", entry.childCount, { count: formatNumber(entry.childCount) }) : t("not_repurposed")}
           </span>
           {entry.ideaCount ? (
-            <span className="inline-flex items-center gap-1" title="Ideas saved from this winner">
+            <span className="inline-flex items-center gap-1" title={t("ideas_saved_title")}>
               <Lightbulb className="size-3.5" aria-hidden />
               <span className="num">{formatNumber(entry.ideaCount)}</span>
-              <span className="sr-only">{entry.ideaCount === 1 ? "idea" : "ideas"} saved from this winner</span>
+              <span className="sr-only">{t.plural("ideas_saved_sr", entry.ideaCount)}</span>
             </span>
           ) : null}
         </span>

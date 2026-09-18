@@ -8,11 +8,14 @@ import { hasPublishedContent } from "@/components/features/dashboard/first-run"
 import { Button } from "@/components/ui/button"
 import { monthlyReport } from "@/lib/analytics"
 import { parseDate } from "@/lib/dates"
+import { useT, useUiLang } from "@/lib/i18n"
 import { uiActions, useDb, useSettings } from "@/lib/store"
 import { ConsistencyCard } from "./consistency-card"
 import { AudienceGrowthCard, FollowerGrowthCard } from "./growth-cards"
 import { BusinessOpportunitiesCard, LeadGenerationCard } from "./leads-business"
+import { reportMessages } from "./messages"
 import { MonthlyKpis } from "./monthly-kpis"
+import { monthlyReviewMessages } from "./monthly-messages"
 import { MonthlyRecommendations } from "./monthly-recommendations"
 import { PerformanceBreakdowns } from "./performance-breakdowns"
 import { PeriodNav } from "./period-nav"
@@ -31,6 +34,9 @@ import { useNow } from "./use-now"
  * opportunities, consistency, the AI-drafted strategic recommendations (saved per month) and history.
  */
 export function MonthlyReviewView() {
+  const t = useT(monthlyReviewMessages)
+  const r = useT(reportMessages)
+  const lang = useUiLang()
   const now = useNow()
   const db = useDb()
   const settings = useSettings()
@@ -39,14 +45,14 @@ export function MonthlyReviewView() {
   const monthParam = searchParams.get("month")
 
   const period = useMemo(() => resolveMonthParam(monthParam, now), [monthParam, now])
-  const report = useMemo(() => monthlyReport(db, period.start, settings, now), [db, period, settings, now])
+  const report = useMemo(() => monthlyReport(db, period.start, settings, now, lang), [db, period, settings, now, lang])
   const reviews = db.monthly_reviews
   const saved = useMemo(() => findMonthlyReview(reviews, period), [reviews, period])
   const options = useMemo(() => {
     const hints = new Map<string, string>()
-    for (const r of reviews) hints.set(r.month.slice(0, 7), r.status === "final" ? "Reviewed" : "Draft")
-    return monthOptions(now, period, hints)
-  }, [reviews, now, period])
+    for (const review of reviews) hints.set(review.month.slice(0, 7), review.status === "final" ? r("hint_reviewed") : r("hint_draft"))
+    return monthOptions(now, period, hints, 12, lang)
+  }, [reviews, now, period, r, lang])
   const history = useMemo<HistoryEntry[]>(
     () =>
       [...reviews]
@@ -74,15 +80,15 @@ export function MonthlyReviewView() {
   if (!hasPublishedContent(db.content_items) && !reviews.length) {
     return (
       <PageContainer>
-        <PageHeader icon={FileText} title="Monthly Review" description="Your month in growth, reach, content and leads — and what to change next." />
+        <PageHeader icon={FileText} title="Monthly Review" description={t("empty_page_description")} />
         <EmptyState
           icon={FileText}
-          title="No monthly review yet"
-          description="Your first Monthly Review appears after your first month of publishing — audience growth, reach, your top 10 posts, leads and strategic recommendations, all from the analytics you log."
+          title={t("empty_title")}
+          description={t("empty_description")}
           action={
             <Button type="button" size="sm" onClick={() => uiActions.openDialog({ type: "log-post" })}>
               <Plus aria-hidden />
-              Log a published post
+              {r("log_post")}
             </Button>
           }
         />
@@ -98,7 +104,8 @@ export function MonthlyReviewView() {
         description={
           <>
             <span className="num">{period.label}</span>
-            {period.isCurrent ? " · month to date" : ""} · posts ranked by {rankedBy}
+            {period.isCurrent ? t("month_to_date") : ""}
+            {r("ranked_by", { metric: rankedBy })}
           </>
         }
         actions={
@@ -106,7 +113,7 @@ export function MonthlyReviewView() {
             <PeriodNav unit="month" options={options} value={period.key} prev={prev} next={next} onChange={goToMonth} />
             <Button type="button" variant="outline" size="sm" onClick={printReport}>
               <Printer aria-hidden />
-              Print
+              {r("print")}
             </Button>
           </div>
         }
@@ -115,7 +122,7 @@ export function MonthlyReviewView() {
       {period.isCurrent ? (
         <p className="-mt-3 flex items-start gap-1.5 text-xs text-pretty text-muted-foreground">
           <Clock className="mt-px size-3.5 shrink-0" aria-hidden />
-          This month is still in progress — totals run through today and changes compare the same days of last month.
+          {t("in_progress_note")}
         </p>
       ) : null}
 
@@ -128,28 +135,24 @@ export function MonthlyReviewView() {
 
       <div className="grid items-start gap-4 xl:grid-cols-3">
         <PostHighlightCard
-          title="Best Content"
-          description={`Highest by ${rankedBy}`}
+          title={t("best_content")}
+          description={r("highest_by", { metric: rankedBy })}
           icon={Trophy}
           row={report.bestContent}
           empty={
             <EmptyState
               compact
               icon={Trophy}
-              title={published ? "No analytics logged yet" : "Nothing published this month"}
-              description={
-                published
-                  ? "Log views and engagement for this month's posts to find your best content."
-                  : "Published posts and their numbers show up here."
-              }
+              title={published ? r("no_analytics_yet") : t("nothing_published")}
+              description={published ? t("log_this_month") : r("published_show_here")}
               action={
                 published ? (
                   <Button size="sm" variant="outline" onClick={() => uiActions.openDialog({ type: "add-metrics" })}>
-                    Add analytics
+                    {r("add_analytics")}
                   </Button>
                 ) : (
                   <Button size="sm" variant="outline" onClick={() => uiActions.openDialog({ type: "log-post" })}>
-                    Log a published post
+                    {r("log_post")}
                   </Button>
                 )
               }
@@ -158,17 +161,15 @@ export function MonthlyReviewView() {
         />
         <ReportPostsTable
           rows={report.top10}
-          title="Top 10 Posts"
-          description={`Measured posts ranked by ${rankedBy}`}
+          title={t("top_10")}
+          description={t("measured_ranked", { metric: rankedBy })}
           icon={ListOrdered}
-          emptyTitle={published ? "No measured posts this month" : "Nothing published this month"}
-          emptyDescription={
-            published ? "Posts appear here once their analytics are logged." : "Log what you published to build the review."
-          }
+          emptyTitle={published ? t("no_measured") : t("nothing_published")}
+          emptyDescription={published ? t("appear_when_logged") : t("log_to_build")}
           emptyAction={
             published ? (
               <Button size="sm" variant="outline" onClick={() => uiActions.openDialog({ type: "add-metrics" })}>
-                Add analytics
+                {r("add_analytics")}
               </Button>
             ) : undefined
           }
@@ -187,11 +188,11 @@ export function MonthlyReviewView() {
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <MonthlyRecommendations key={period.key} db={db} report={report} period={period} saved={saved} now={now} />
         <ReviewHistory
-          title="Saved reviews"
-          description="Monthly reviews, newest first"
+          title={r("saved_reviews")}
+          description={t("history_description")}
           entries={history}
-          emptyTitle="No saved reviews yet"
-          emptyDescription="Save this month's recommendations to start your history."
+          emptyTitle={r("no_saved_reviews")}
+          emptyDescription={t("history_empty")}
         />
       </div>
     </PageContainer>

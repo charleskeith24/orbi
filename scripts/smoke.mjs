@@ -36,13 +36,19 @@ const browser = await chromium.launch({ channel: "chrome", headless: true })
 // New browser profiles start empty (first run → onboarding). QA runs seed the sample brand through a
 // dev-only flag by default: --seed=demo (default), --seed=fresh (onboarded but empty), --seed=none (true first run).
 const SEED = String(args.seed ?? "demo")
+// --lang=en|tl sets the app language of a newly seeded workspace (dev only).
+const LANG = args.lang ? String(args.lang) : ""
 const newContextRaw = browser.newContext.bind(browser)
 browser.newContext = async (options) => {
   const context = await newContextRaw(options)
   if (SEED !== "none") {
-    await context.addInitScript((seed) => {
-      if (!localStorage.getItem("pbos:dev-seed")) localStorage.setItem("pbos:dev-seed", seed)
-    }, SEED)
+    await context.addInitScript(
+      ({ seed, lang }) => {
+        if (!localStorage.getItem("pbos:dev-seed")) localStorage.setItem("pbos:dev-seed", seed)
+        if (lang && !localStorage.getItem("pbos:dev-ui-lang")) localStorage.setItem("pbos:dev-ui-lang", lang)
+      },
+      { seed: SEED, lang: LANG }
+    )
   }
   return context
 }

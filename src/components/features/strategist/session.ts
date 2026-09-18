@@ -9,8 +9,11 @@ import {
   toAiError,
   type AiRunResult,
 } from "@/lib/ai"
+import { translate } from "@/lib/i18n/core"
+import { getUiLang } from "@/lib/i18n/ui-lang"
 import { dataActions, useDataStore, useTable } from "@/lib/store"
 import { consideredContext } from "./considered-context"
+import { strategistMessages } from "./strategist-messages"
 import {
   historyMessages,
   MAX_QUESTION_CHARS,
@@ -94,6 +97,8 @@ async function ask(question: string) {
       question,
       reply: result.output.reply,
       ideas: parseIdeas(result.output.suggested_ideas),
+      // Chip text is display-only (never sent to the AI), so it is written in the UI language of the moment.
+      lang: getUiLang(),
     })
     persistTurn(result, question, context)
     setPending(null)
@@ -125,7 +130,10 @@ export const strategistSession = {
     if (!question || useDataStore.getState().status !== "ready") return false
     if (useStrategistSession.getState().pending?.status === "sending") {
       useStrategistSession.setState((s) => ({ draft: s.draft.trim() ? s.draft : question }))
-      toast.info("Still answering your last question", { description: "Your new question is waiting in the composer." })
+      const lang = getUiLang()
+      toast.info(translate(strategistMessages, lang, "still_answering"), {
+        description: translate(strategistMessages, lang, "still_answering_description"),
+      })
       return false
     }
     void ask(question)

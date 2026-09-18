@@ -9,6 +9,7 @@ import { EmptyState, PageContainer, PageHeader } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { computeTiers, contentBuffer, pipelineCounts } from "@/lib/analytics"
+import { getUiLang, translate, useT, useUiLang } from "@/lib/i18n"
 import { dataActions, uiActions, useDb, useSettings } from "@/lib/store"
 import type { ID, PerformanceTier, PipelineStage } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -23,6 +24,7 @@ import {
   quickAddDefaults,
   STAGE_IDS,
 } from "./board-model"
+import { pipelineCardMessages, pipelineMessages } from "./messages"
 import { MOBILE_STAGE_LIST_ID, MobileBoard } from "./mobile-board"
 import { PipelineActionsProvider } from "./pipeline-actions"
 import { PipelineBoard } from "./pipeline-board"
@@ -88,6 +90,8 @@ export function PipelineView() {
 }
 
 function PipelineScreen() {
+  const t = useT(pipelineMessages)
+  const lang = useUiLang()
   const isMobile = useIsMobile()
   const db = useDb()
   const settings = useSettings()
@@ -102,7 +106,7 @@ function PipelineScreen() {
 
   const items = db.content_items
   const counts = useMemo(() => pipelineCounts(db, now), [db, now])
-  const buffer = useMemo(() => contentBuffer(db, now, settings), [db, now, settings])
+  const buffer = useMemo(() => contentBuffer(db, now, settings, lang), [db, now, settings, lang])
   const tiers = useMemo(() => {
     const out = new Map<ID, PerformanceTier>()
     for (const [id, info] of computeTiers(db, settings, now)) out.set(id, info.tier)
@@ -170,7 +174,7 @@ function PipelineScreen() {
   const revealCard = useEffectEvent((id: ID) => {
     const item = dataActions.getDb().content_items.find((row) => row.id === id)
     if (!item) {
-      toast.error("That content item no longer exists.")
+      toast.error(translate(pipelineCardMessages, getUiLang(), "not_found"))
       replaceSearchParams((params) => params.delete("open"))
       return
     }
@@ -220,11 +224,11 @@ function PipelineScreen() {
       <PageHeader
         title="Pipeline"
         icon={SquareKanban}
-        description="Every piece of content from idea to published. Drag cards between stages or open one in the Studio."
+        description={t("description")}
         actions={
           <Button type="button" size="sm" onClick={() => uiActions.openDialog({ type: "new-content" })}>
             <Plus aria-hidden />
-            Add content
+            {t("add_content")}
           </Button>
         }
       />
@@ -235,17 +239,17 @@ function PipelineScreen() {
         <EmptyState
           compact
           icon={SquareKanban}
-          title="Nothing in production yet"
-          description="Quick-add a working title or convert an idea from the Idea Bank. Cards move right as they're briefed, scripted, produced and published."
+          title={t("empty_title")}
+          description={t("empty_description")}
           action={
             <Button type="button" size="sm" onClick={() => startQuickAdd("idea")}>
               <Plus aria-hidden />
-              Quick add an idea
+              {t("quick_add_idea")}
             </Button>
           }
           secondaryAction={
             <Button asChild size="sm" variant="outline">
-              <Link href="/ideas">Open Idea Bank</Link>
+              <Link href="/ideas">{t("open_idea_bank")}</Link>
             </Button>
           }
           className="rounded-lg border border-dashed bg-card/50"

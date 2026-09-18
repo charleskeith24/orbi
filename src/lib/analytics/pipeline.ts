@@ -3,6 +3,7 @@
  */
 import { endOfDay, startOfDay } from "date-fns"
 import { BUFFER_STAGES, PIPELINE_STAGE_MAP, PIPELINE_STAGES, PRODUCTION_STAGES, REVIEW_STAGES, STAGE_GROUPS } from "@/lib/constants"
+import { translate, type UiLang } from "@/lib/i18n/core"
 import type {
   AppSettings,
   ContentIdea,
@@ -13,6 +14,7 @@ import type {
   PipelineStage,
   StageGroup,
 } from "@/lib/types"
+import { mixMessages } from "./messages"
 import { compareText, isOverdue, isPublishedItem, plannedMs, publishedMs, roundTo, timeOf, trailingDays } from "./shared"
 
 /** The dashboard's PUBLISHED column counts items published in this many trailing days. */
@@ -149,10 +151,15 @@ export function contentToday(db: Database, now: Date): TodayContent {
 
 export type BufferStatus = "healthy" | "ok" | "low"
 
+/** English labels; use `bufferStatusLabel(status, lang)` in translated UI. */
 export const BUFFER_STATUS_LABELS: Record<BufferStatus, string> = {
   healthy: "Healthy",
   ok: "OK",
   low: "Content Buffer Low",
+}
+
+export function bufferStatusLabel(status: BufferStatus, lang: UiLang = "en"): string {
+  return lang === "en" ? BUFFER_STATUS_LABELS[status] : translate(mixMessages, lang, `buffer_${status}`)
 }
 
 export interface BufferBreakdown {
@@ -197,9 +204,9 @@ function hasScriptContent(script: ContentScript): boolean {
 
 /**
  * Buffer days = (Ready to Post + future Scheduled) ÷ (weekly_post_target ÷ 7);
- * status healthy ≥ buffer_healthy_days, ok ≥ buffer_warning_days, else low.
+ * status healthy ≥ buffer_healthy_days, ok ≥ buffer_warning_days, else low. `label` is in `lang` (default English).
  */
-export function contentBuffer(db: Database, now: Date, settings: AppSettings): ContentBuffer {
+export function contentBuffer(db: Database, now: Date, settings: AppSettings, lang: UiLang = "en"): ContentBuffer {
   const readyItems = sortByPlannedDate(db.content_items.filter((i) => isBufferReady(i, now)))
   const dailyRate = Math.max(1, settings.weekly_post_target) / 7
   const days = roundTo(readyItems.length / dailyRate)
@@ -226,7 +233,7 @@ export function contentBuffer(db: Database, now: Date, settings: AppSettings): C
     targetDays: settings.buffer_healthy_days,
     warningDays: settings.buffer_warning_days,
     status,
-    label: BUFFER_STATUS_LABELS[status],
+    label: bufferStatusLabel(status, lang),
     breakdown: {
       readyIdeas: db.content_ideas.filter((i) => READY_IDEA_STATUSES.includes(i.status)).length,
       readyScripts,

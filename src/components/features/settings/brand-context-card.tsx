@@ -8,8 +8,11 @@ import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { buildBrandContext } from "@/lib/ai"
 import { LANGUAGE_MAP } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { useDb } from "@/lib/store"
-import { cn, formatNumber, pluralize } from "@/lib/utils"
+import { cn, formatNumber } from "@/lib/utils"
+import { aiMessages } from "./ai-messages"
 
 const list = (values: string[], max = 4) =>
   values.length > max ? `${values.slice(0, max).join(", ")} +${values.length - max}` : values.join(", ")
@@ -17,6 +20,9 @@ const list = (values: string[], max = 4) =>
 /** What every AI request is told about the brand (spec §29) — summarised, with the raw JSON. */
 export function BrandContextCard({ now }: { now: Date }) {
   const db = useDb()
+  const t = useT(aiMessages)
+  const c = useT(commonMessages)
+  const count = (key: Parameters<typeof t.plural>[0], n: number) => t.plural(key, n, { count: formatNumber(n) })
   const [open, setOpen] = useState(false)
   const context = useMemo(() => buildBrandContext(db, now), [db, now])
   const json = useMemo(() => JSON.stringify(context, null, 2), [context])
@@ -25,18 +31,18 @@ export function BrandContextCard({ now }: { now: Date }) {
   const { brand } = context
   const primary = context.goals.find((g) => g.is_primary)
   const missing = [
-    !brand.name && "your name",
-    !brand.positioning_statement && "positioning statement",
-    !brand.known_for && "what you want to be known for",
-    !brand.point_of_view && "point of view",
-    !brand.tones.length && "tone",
+    !brand.name && t("missing_name"),
+    !brand.positioning_statement && t("missing_positioning"),
+    !brand.known_for && t("missing_known_for"),
+    !brand.point_of_view && t("missing_pov"),
+    !brand.tones.length && t("missing_tone"),
   ].filter((v): v is string => Boolean(v))
   const topHooks = context.hook_performance.slice(0, 3).map((h) => (h.ratio !== null ? `${h.label} ${h.ratio}×` : h.label))
 
   return (
     <SectionCard
       title="Brand Context"
-      description="Sent with every AI request so drafts sound like you. Each request re-ranks stories, problems and questions by relevance to what you asked."
+      description={t("context_description")}
       action={
         <Button asChild variant="ghost" size="sm">
           <Link href="/strategy">Brand HQ</Link>
@@ -45,48 +51,56 @@ export function BrandContextCard({ now }: { now: Date }) {
     >
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span className="num">
-            ≈ {formatNumber(size / 1024)} KB · ~{formatNumber(size / 4)} tokens
-          </span>
+          <span className="num">{t("context_size", { kb: formatNumber(size / 1024), tokens: formatNumber(size / 4) })}</span>
           {missing.length ? (
-            <StatusPill tone="warning">Missing from Brand HQ: {missing.join(", ")}</StatusPill>
+            <StatusPill tone="warning">{t("missing", { fields: missing.join(", ") })}</StatusPill>
           ) : (
-            <StatusPill tone="good">Brand HQ essentials complete</StatusPill>
+            <StatusPill tone="good">{t("complete")}</StatusPill>
           )}
         </div>
 
         <DefinitionList layout="vertical" columns={2}>
-          <KeyValue label="Who you are">
-            {[brand.name, brand.role, brand.brand_name].filter(Boolean).join(" · ") || "Not set"}
-          </KeyValue>
-          <KeyValue label="Positioning">{brand.positioning_statement || "Not set"}</KeyValue>
-          <KeyValue label="Voice">
+          <KeyValue label={t("kv_who")}>{[brand.name, brand.role, brand.brand_name].filter(Boolean).join(" · ") || t("not_set")}</KeyValue>
+          <KeyValue label={t("kv_positioning")}>{brand.positioning_statement || t("not_set")}</KeyValue>
+          <KeyValue label={t("kv_voice")}>
             {[LANGUAGE_MAP[brand.language]?.label, list(brand.tones, 3), list(brand.personality, 3)].filter(Boolean).join(" · ")}
           </KeyValue>
-          <KeyValue label="Goals">
-            {context.goals.length ? `${pluralize(context.goals.length, "active goal")}${primary ? ` · primary: ${primary.name}` : ""}` : "None"}
+          <KeyValue label={t("kv_goals")}>
+            {context.goals.length
+              ? primary
+                ? t("primary_goal", { goals: count("active_goals", context.goals.length), name: primary.name })
+                : count("active_goals", context.goals.length)
+              : t("none")}
           </KeyValue>
-          <KeyValue label="Content pillars">{context.pillars.length ? list(context.pillars.map((p) => p.name)) : "None"}</KeyValue>
-          <KeyValue label="Audience">
-            {`${pluralize(context.personas.length, "persona")} · ${pluralize(context.problems.length, "problem")} · ${pluralize(context.questions.length, "question")}`}
+          <KeyValue label={t("kv_pillars")}>{context.pillars.length ? list(context.pillars.map((p) => p.name)) : t("none")}</KeyValue>
+          <KeyValue label={t("kv_audience")}>
+            {[count("personas", context.personas.length), count("problems", context.problems.length), count("questions", context.questions.length)].join(
+              " · "
+            )}
           </KeyValue>
-          <KeyValue label="Platforms">
+          <KeyValue label={t("kv_platforms")}>
             {context.platforms.length
-              ? list(context.platforms.map((p) => `${p.label} ${p.posting_frequency}/wk`))
-              : "None active"}
+              ? list(context.platforms.map((p) => t("per_week", { label: p.label, count: p.posting_frequency })))
+              : t("none_active")}
           </KeyValue>
-          <KeyValue label="What works">
+          <KeyValue label={t("kv_works")}>
             {topHooks.length || context.winners.length
-              ? [topHooks.length ? `Hooks: ${topHooks.join(", ")}` : "", pluralize(context.winners.length, "recent winner")]
+              ? [topHooks.length ? t("hooks", { hooks: topHooks.join(", ") }) : "", count("recent_winners", context.winners.length)]
                   .filter(Boolean)
                   .join(" · ")
-              : "Not enough analytics yet"}
+              : t("not_enough")}
           </KeyValue>
-          <KeyValue label="Memory">
-            {`${pluralize(context.stories.length, "story", "stories")} · ${pluralize(context.recent_titles.length, "recent title")} (so ideas don't repeat)`}
+          <KeyValue label={t("kv_memory")}>
+            {t("memory", { stories: count("stories", context.stories.length), titles: count("recent_titles", context.recent_titles.length) })}
           </KeyValue>
-          <KeyValue label="Rhythm & targets">
-            {`${pluralize(context.schedule.length, "weekly slot")} · ${context.settings.weekly_post_target} posts/week · funnel ${context.settings.funnel_targets.tofu}/${context.settings.funnel_targets.mofu}/${context.settings.funnel_targets.bofu}`}
+          <KeyValue label={t("kv_rhythm")}>
+            {t("rhythm", {
+              slots: count("weekly_slots", context.schedule.length),
+              target: context.settings.weekly_post_target,
+              tofu: context.settings.funnel_targets.tofu,
+              mofu: context.settings.funnel_targets.mofu,
+              bofu: context.settings.funnel_targets.bofu,
+            })}
           </KeyValue>
         </DefinitionList>
 
@@ -95,10 +109,10 @@ export function BrandContextCard({ now }: { now: Date }) {
             <CollapsibleTrigger asChild>
               <Button type="button" variant="outline" size="sm">
                 <ChevronDown className={cn("transition-transform", open && "rotate-180")} aria-hidden />
-                {open ? "Hide the exact JSON" : "Show the exact JSON"}
+                {open ? t("hide_json") : t("show_json")}
               </Button>
             </CollapsibleTrigger>
-            {open ? <CopyButton text={json} label="Copy" variant="ghost" successMessage="Brand Context copied" /> : null}
+            {open ? <CopyButton text={json} label={c("copy")} variant="ghost" successMessage={t("context_copied")} /> : null}
           </div>
           <CollapsibleContent>
             <pre className="mt-3 max-h-96 overflow-auto rounded-lg border bg-muted/40 p-3 font-mono text-xs leading-relaxed scrollbar-thin">

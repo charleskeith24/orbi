@@ -6,15 +6,18 @@ import { MixBar, platformColor, type MixSegment } from "@/components/charts"
 import { EmptyState, PlatformLabel, SectionCard } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useT, useUiLang } from "@/lib/i18n"
 import { uiActions } from "@/lib/store"
 import { cn, formatCompact, formatNumber, formatPercent } from "@/lib/utils"
+import { platformsMessages } from "./platforms-messages"
 import { paceVsPlan, planMessage, platformLabel, type PlatformPlan } from "./platforms-model"
 
 const fmtFreq = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1))
 
 /** Weekly plan across platforms vs the weekly posting target. */
 function WeeklyPlanCard({ plan }: { plan: PlatformPlan }) {
-  const status = planMessage(plan)
+  const t = useT(platformsMessages)
+  const status = planMessage(plan, useUiLang())
   const StatusIcon = status.tone === "good" ? CircleCheck : TriangleAlert
   const segments: MixSegment[] = plan.rows
     .filter((r) => r.strategy?.is_active && r.strategy.posting_frequency > 0)
@@ -26,15 +29,15 @@ function WeeklyPlanCard({ plan }: { plan: PlatformPlan }) {
     }))
 
   return (
-    <SectionCard title="Weekly plan" description="Posts per week across active platforms vs your weekly posting target." contentClassName="flex flex-col gap-4">
+    <SectionCard title={t("plan_title")} description={t("plan_description")} contentClassName="flex flex-col gap-4">
       <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
         <div>
           <p className="text-3xl leading-9 font-semibold tracking-tight num">{fmtFreq(plan.weeklyTotal)}</p>
-          <p className="text-xs text-muted-foreground">posts / week planned</p>
+          <p className="text-xs text-muted-foreground">{t("planned")}</p>
         </div>
         <div>
           <p className="text-3xl leading-9 font-semibold tracking-tight text-muted-foreground num">{plan.target}</p>
-          <p className="text-xs text-muted-foreground">weekly target</p>
+          <p className="text-xs text-muted-foreground">{t("weekly_target")}</p>
         </div>
       </div>
       <p className={cn("flex items-start gap-1.5 text-sm text-pretty", status.tone === "good" ? "text-good-fg" : "text-warning-fg")}>
@@ -43,21 +46,21 @@ function WeeklyPlanCard({ plan }: { plan: PlatformPlan }) {
       </p>
       <MixBar
         segments={segments}
-        valueLabel="Posts / week"
+        valueLabel={t("plan_posts_label")}
         valueFormatter={fmtFreq}
-        emptyMessage="No active platform has a posting frequency yet."
-        aria-label="Weekly posts by platform"
+        emptyMessage={t("plan_empty")}
+        aria-label={t("plan_chart_label")}
       />
       <p className="text-xs text-muted-foreground">
-        The target lives in{" "}
+        {t("target_hint_1")}
         <Link href="/settings?tab=general" className="font-medium text-foreground underline-offset-2 hover:underline">
           Settings → General
         </Link>
-        ; posting days and times in the{" "}
+        {t("target_hint_2")}
         <Link href="/calendar/schedule" className="font-medium text-foreground underline-offset-2 hover:underline">
           Posting Schedule
         </Link>
-        .
+        {t("target_hint_3")}
       </p>
     </SectionCard>
   )
@@ -67,10 +70,11 @@ function WeeklyPlanCard({ plan }: { plan: PlatformPlan }) {
 function PerformanceCard({ plan }: { plan: PlatformPlan }) {
   const rows = plan.rows.filter((r) => r.strategy?.is_active || r.perf)
   const anyPosts = rows.some((r) => r.perf)
+  const t = useT(platformsMessages)
   return (
     <SectionCard
-      title="Last 30 days by platform"
-      description="Published posts vs the planned pace, with reach and response from logged analytics."
+      title={t("perf_title")}
+      description={t("perf_description")}
       contentClassName={anyPosts ? "px-0 pb-1" : undefined}
     >
       {anyPosts ? (
@@ -98,12 +102,12 @@ function PerformanceCard({ plan }: { plan: PlatformPlan }) {
                       <Link href={`/strategy/platforms?open=${row.platform}`} className="outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50">
                         <PlatformLabel platform={row.platform} />
                       </Link>
-                      {!row.strategy?.is_active ? <span className="ml-1.5 text-xs text-muted-foreground">paused</span> : null}
+                      {!row.strategy?.is_active ? <span className="ml-1.5 text-xs text-muted-foreground">{t("paused")}</span> : null}
                     </TableCell>
                     <TableCell className="text-right num">{row.strategy?.is_active ? fmtFreq(row.strategy.posting_frequency) : "—"}</TableCell>
                     <TableCell className="text-right num">
                       <span className="inline-flex items-center justify-end gap-1">
-                        {behind ? <TriangleAlert className="size-3.5 text-warning-fg" aria-label="Behind plan" /> : null}
+                        {behind ? <TriangleAlert className="size-3.5 text-warning-fg" aria-label={t("behind_plan")} /> : null}
                         {formatNumber(perf?.posts ?? 0)}
                         {row.planned30 ? <span className="text-xs text-muted-foreground">/ ≈{Math.round(row.planned30)}</span> : null}
                       </span>
@@ -123,11 +127,11 @@ function PerformanceCard({ plan }: { plan: PlatformPlan }) {
         <EmptyState
           compact
           icon={ChartNoAxesColumn}
-          title="No published posts in the last 30 days"
-          description="Log published posts and their analytics to compare platforms against your plan."
+          title={t("perf_empty_title")}
+          description={t("perf_empty_description")}
           action={
             <Button type="button" size="sm" variant="outline" onClick={() => uiActions.openDialog({ type: "log-post" })}>
-              Log a published post
+              {t("log_post")}
             </Button>
           }
         />

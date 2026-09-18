@@ -1,6 +1,10 @@
+"use client"
+
 import { catVar } from "@/components/common/color"
+import { meterMessages } from "@/components/common/messages"
 import { TONE_FILL, TONE_STROKE, toneForScore } from "@/components/common/tone"
 import type { StatusTone } from "@/components/common/types"
+import { useT } from "@/lib/i18n"
 import type { CategoricalColor } from "@/lib/types"
 import { clamp, cn, formatNumber } from "@/lib/utils"
 
@@ -95,6 +99,7 @@ export interface ScoreRingProps {
 
 /** Circular 0–100 score (Content Score, Health Score). Accessible as `role="meter"`. */
 export function ScoreRing({ value, size = 48, strokeWidth = 4, label, tone = "brand", className }: ScoreRingProps) {
+  const t = useT(meterMessages)
   const score = value === null || Number.isNaN(value) ? null : clamp(value, 0, 100)
   const resolvedTone: MeterTone = tone === "auto" ? toneForScore(score) : tone
   const radius = (size - strokeWidth) / 2
@@ -107,11 +112,11 @@ export function ScoreRing({ value, size = 48, strokeWidth = 4, label, tone = "br
   return (
     <div
       role="meter"
-      aria-label={label ?? "Score"}
+      aria-label={label ?? t("score")}
       aria-valuenow={score ?? undefined}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuetext={score === null ? "Not scored" : `${Math.round(score)} out of 100`}
+      aria-valuetext={score === null ? t("not_scored") : t("out_of_100", { score: Math.round(score) })}
       className={cn("relative inline-flex shrink-0 items-center justify-center", className)}
       style={{ width: size, height: size }}
     >

@@ -5,12 +5,14 @@ import Link from "next/link"
 import { useState } from "react"
 import { EmptyState, FunnelBadge, SectionCard } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/i18n"
 import { useLookup } from "@/lib/store"
 import { formatNumber } from "@/lib/utils"
 import { FormatChip, GoalChip, PillarChip, ProblemChip } from "./matrix-chips"
 import type { MatrixData } from "./matrix-data"
 import type { MatrixCombo } from "./matrix-engine"
 import { generatorHref } from "./matrix-idea"
+import { matrixMessages } from "./matrix-messages"
 
 const PAGE_SIZE = 12
 
@@ -31,6 +33,7 @@ export function MatrixResults({
   onSave: (combo: MatrixCombo) => void
   onGenerate: () => void
 }) {
+  const t = useT(matrixMessages)
   const personas = useLookup("audience_personas")
   const [limit, setLimit] = useState(PAGE_SIZE)
   const [source, setSource] = useState(combos)
@@ -46,12 +49,8 @@ export function MatrixResults({
 
   return (
     <SectionCard
-      title="Ranked combinations"
-      description={
-        combos?.length
-          ? `${combos.length} of ${formatNumber(total)} · under-target pillars and severe, untapped problems first. Same inputs, same list.`
-          : undefined
-      }
+      title={t("results_title")}
+      description={combos?.length ? t("results_description", { shown: combos.length, total: formatNumber(total) }) : undefined}
       contentClassName={combos?.length ? "p-0" : undefined}
     >
       {combos?.length ? (
@@ -87,19 +86,19 @@ export function MatrixResults({
                       <Button asChild variant="ghost" size="sm">
                         <Link href={`/ideas?open=${savedId}`}>
                           <Check className="text-good-fg" aria-hidden />
-                          In Idea Bank
+                          {t("in_idea_bank")}
                         </Link>
                       </Button>
                     ) : (
                       <Button type="button" variant="outline" size="sm" onClick={() => onSave(combo)}>
                         <Plus aria-hidden />
-                        Save as idea
+                        {t("save_as_idea")}
                       </Button>
                     )}
                     <Button asChild variant="ghost" size="sm">
                       <Link href={generatorHref(combo)}>
                         <Sparkles className="text-brand" aria-hidden />
-                        Expand with AI
+                        {t("expand_with_ai")}
                       </Link>
                     </Button>
                   </div>
@@ -116,7 +115,7 @@ export function MatrixResults({
                 className="text-muted-foreground"
                 onClick={() => setLimit((current) => current + PAGE_SIZE)}
               >
-                Show {Math.min(PAGE_SIZE, combos.length - limit)} more
+                {t("show_more", { count: Math.min(PAGE_SIZE, combos.length - limit) })}
               </Button>
             </div>
           ) : null}
@@ -125,12 +124,12 @@ export function MatrixResults({
         <EmptyState
           compact
           icon={Grid3x3}
-          title="No combinations yet"
-          description="Pick at least one option in every dimension, then generate — each row becomes a ready-to-save idea."
+          title={t("no_combinations")}
+          description={t("no_combinations_description")}
           action={
             <Button type="button" size="sm" onClick={onGenerate} disabled={!canGenerate}>
               <Grid3x3 aria-hidden />
-              Generate combinations
+              {t("generate")}
             </Button>
           }
         />

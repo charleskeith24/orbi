@@ -11,8 +11,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useT } from "@/lib/i18n"
 import { dataActions } from "@/lib/store"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { seriesMessages } from "./messages"
 import { setSeriesActive, useCreateNextEpisode } from "./series-actions"
 import type { SeriesSummary } from "./series-summary"
 
@@ -27,53 +29,52 @@ export function SeriesActionsMenu({
   onBeforeDelete?: () => void
   showCreate?: boolean
 }) {
+  const t = useT(seriesMessages)
   const [confirm, confirmDialog] = useConfirm()
   const createEpisode = useCreateNextEpisode()
   const { series } = summary
-  const name = series.name || "Untitled series"
+  const name = series.name || t("untitled_series")
 
   async function handleDelete() {
     const episodes = summary.episodes.length
     const ok = await confirm({
-      title: `Delete “${name}”?`,
-      description: episodes
-        ? `The series is removed. Its ${pluralize(episodes, "episode")} stay in your workspace as regular content.`
-        : "The series is removed. This can’t be undone.",
-      confirmLabel: "Delete series",
+      title: t("delete_title", { name }),
+      description: episodes ? t.plural("delete_with_episodes", episodes, { count: formatNumber(episodes) }) : t("delete_plain"),
+      confirmLabel: t("delete_confirm"),
     })
     if (!ok) return
     onBeforeDelete?.()
     dataActions.remove("content_series", series.id)
-    toast.success("Series deleted", { description: name })
+    toast.success(t("deleted"), { description: name })
   }
 
   return (
     <>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button type="button" variant="ghost" size="icon-sm" aria-label={`Actions for ${name}`}>
+          <Button type="button" variant="ghost" size="icon-sm" aria-label={t("actions_for", { name })}>
             <Ellipsis aria-hidden />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
           <DropdownMenuItem onSelect={onEdit}>
             <Pencil aria-hidden />
-            Edit series…
+            {t("edit_series_menu")}
           </DropdownMenuItem>
           {showCreate ? (
             <DropdownMenuItem onSelect={() => createEpisode(summary)}>
               <FilePlus2 aria-hidden />
-              Create episode #{summary.episodes.length + 1}
+              {t("create_episode", { number: summary.episodes.length + 1 })}
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuItem onSelect={() => setSeriesActive(series, !series.is_active)}>
             {series.is_active ? <CirclePause aria-hidden /> : <CirclePlay aria-hidden />}
-            {series.is_active ? "Pause series" : "Resume series"}
+            {series.is_active ? t("pause_series") : t("resume_series")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onSelect={() => void handleDelete()}>
             <Trash2 aria-hidden />
-            Delete series…
+            {t("delete_series_menu")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

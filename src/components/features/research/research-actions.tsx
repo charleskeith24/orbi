@@ -4,9 +4,11 @@ import { createContext, useContext, useMemo } from "react"
 import { toast } from "sonner"
 import { useConfirm } from "@/components/common"
 import { copyText } from "@/components/features/stories/clipboard"
+import { useT } from "@/lib/i18n"
 import { dataActions } from "@/lib/store"
 import type { ID, ResearchItem, ResearchStatus } from "@/lib/types"
 import { canAnalyze, runReferenceAnalysis } from "./analysis-store"
+import { researchMessages } from "./messages"
 import { MIN_REFERENCE_CHARS, researchStatusLabel, type ResearchSheetTab } from "./research-model"
 
 export interface ResearchActions {
@@ -35,6 +37,7 @@ export function ResearchActionsProvider({
   onRemoved: (id: ID) => void
   children: React.ReactNode
 }) {
+  const t = useT(researchMessages)
   const [confirm, confirmDialog] = useConfirm()
 
   const actions = useMemo<ResearchActions>(
@@ -42,8 +45,8 @@ export function ResearchActionsProvider({
       open: onOpen,
       analyze(item) {
         if (!canAnalyze(item)) {
-          toast.info("Paste the reference first", {
-            description: `Analysis needs the text, a transcript or your notes — at least ${MIN_REFERENCE_CHARS} characters.`,
+          toast.info(t("paste_first"), {
+            description: t("paste_first_description", { min: MIN_REFERENCE_CHARS }),
           })
           onOpen(item.id, "details")
           return
@@ -55,25 +58,25 @@ export function ResearchActionsProvider({
         if (status === item.status) return
         const previous = item.status
         dataActions.update("research_items", item.id, { status })
-        toast.success(status === "archived" ? "Reference archived" : `Marked as ${researchStatusLabel(status).toLowerCase()}`, {
+        toast.success(status === "archived" ? t("archived_toast") : t("marked_as", { status: researchStatusLabel(status).toLowerCase() }), {
           description: item.title || undefined,
-          action: { label: "Undo", onClick: () => dataActions.update("research_items", item.id, { status: previous }) },
+          action: { label: t("undo"), onClick: () => dataActions.update("research_items", item.id, { status: previous }) },
         })
       },
       copyLink(item) {
-        void copyText(`${window.location.origin}/research?open=${item.id}`, "Link copied")
+        void copyText(`${window.location.origin}/research?open=${item.id}`, t("link_copied"))
       },
       async remove(item) {
-        const title = item.title.trim() || "Untitled reference"
+        const title = item.title.trim() || t("untitled")
         const cited = dataActions.getDb().content_ideas.filter((i) => i.source_ref_id === item.id).length
         const ok = await confirm({
-          title: "Delete this reference?",
+          title: t("delete_title"),
           description:
             cited === 0
-              ? `“${title}” and its analysis will be removed from your Research Library. This can't be undone.`
+              ? t("delete_none", { title })
               : cited === 1
-                ? `“${title}” and its analysis will be removed. The idea created from it stays in your Idea Bank.`
-                : `“${title}” and its analysis will be removed. The ${cited} ideas created from it stay in your Idea Bank.`,
+                ? t("delete_single", { title })
+                : t("delete_many", { title, count: cited }),
         })
         if (!ok) return
         // Ideas keep their content but stop pointing at a reference that no longer exists.
@@ -81,10 +84,10 @@ export function ResearchActionsProvider({
         if (linked.length) dataActions.updateMany("content_ideas", linked.map((i) => ({ id: i.id, patch: { source_ref_id: null } })))
         dataActions.remove("research_items", item.id)
         onRemoved(item.id)
-        toast.success("Reference deleted", { description: title })
+        toast.success(t("deleted"), { description: title })
       },
     }),
-    [confirm, onOpen, onRemoved]
+    [confirm, onOpen, onRemoved, t]
   )
 
   return (

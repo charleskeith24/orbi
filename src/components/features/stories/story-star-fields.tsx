@@ -2,23 +2,26 @@
 
 import { useId } from "react"
 import { FormField } from "@/components/common"
+import { useT } from "@/lib/i18n"
 import { dataActions } from "@/lib/store"
 import type { Story, UpdateRow } from "@/lib/types"
 import { AutosaveTextarea } from "./autosave-field"
+import { storyFormMessages } from "./messages"
 
 type StarKey = "situation" | "problem" | "action" | "result" | "lesson"
 
-const STAR_FIELDS: { key: StarKey; label: string; description: string; placeholder: string }[] = [
-  { key: "situation", label: "Situation", description: "Where you were and what was at stake.", placeholder: "What was going on…" },
-  { key: "problem", label: "Problem", description: "What went wrong, or what you had to solve.", placeholder: "What made it hard…" },
-  { key: "action", label: "Action", description: "What you actually did — the decisions and the steps.", placeholder: "What you did…" },
-  { key: "result", label: "Result", description: "How it turned out. Numbers make it believable.", placeholder: "What happened next…" },
-  { key: "lesson", label: "Lesson", description: "The transferable lesson your audience can use.", placeholder: "What you'd tell someone in the same spot…" },
-]
+const STAR_FIELDS = [
+  { key: "situation", label: "situation", description: "situation_description", placeholder: "situation_placeholder" },
+  { key: "problem", label: "problem", description: "problem_description", placeholder: "problem_placeholder" },
+  { key: "action", label: "action", description: "action_description", placeholder: "action_placeholder" },
+  { key: "result", label: "result", description: "result_description", placeholder: "result_placeholder" },
+  { key: "lesson", label: "lesson", description: "lesson_star_description", placeholder: "lesson_star_placeholder" },
+] as const satisfies readonly { key: StarKey; label: string; description: string; placeholder: string }[]
 
 /** The STAR fields (+ lesson) of a story, each saved on blur. */
 export function StoryStarFields({ story }: { story: Story }) {
   const id = useId()
+  const t = useT(storyFormMessages)
 
   function commit(key: StarKey, value: string) {
     const patch: UpdateRow<"stories"> = {}
@@ -29,13 +32,13 @@ export function StoryStarFields({ story }: { story: Story }) {
   return (
     <div className="flex min-w-0 flex-col gap-4">
       {STAR_FIELDS.map((field) => (
-        <FormField key={field.key} label={field.label} htmlFor={`${id}-${field.key}`} description={field.description}>
+        <FormField key={field.key} label={t(field.label)} htmlFor={`${id}-${field.key}`} description={t(field.description)}>
           <AutosaveTextarea
             id={`${id}-${field.key}`}
             rows={3}
             className="min-h-16"
             value={story[field.key]}
-            placeholder={field.placeholder}
+            placeholder={t(field.placeholder)}
             onCommit={(value) => commit(field.key, value)}
           />
         </FormField>

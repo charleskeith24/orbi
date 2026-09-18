@@ -9,9 +9,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea"
 import { METRIC_FIELDS, PLATFORMS } from "@/lib/constants"
 import { formatDate, parseDate, toISODate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import { dataActions, logMetrics, type MetricValues } from "@/lib/store"
 import type { ContentItem, ContentMetric, ISODate, MetricKey } from "@/lib/types"
 import { formatNumber } from "@/lib/utils"
+import { postMessages } from "./post-messages"
 
 type MetricInputs = Record<MetricKey, number | null>
 
@@ -68,6 +70,7 @@ function SnapshotForm({
   now: Date
   onDone: () => void
 }) {
+  const t = useT(postMessages)
   const today = toISODate(now)
   const published = parseDate(item.published_at)
   const publishedDay = published ? toISODate(published) : null
@@ -76,11 +79,11 @@ function SnapshotForm({
   const [notes, setNotes] = useState(snapshot?.notes ?? "")
 
   const dateError = !recordedAt
-    ? "Pick the day you read these numbers."
+    ? t("error_pick_day")
     : recordedAt > today
-      ? "The date can't be in the future."
+      ? t("error_future")
       : publishedDay && recordedAt < publishedDay
-        ? `The post went live on ${formatDate(publishedDay)}.`
+        ? t("error_before_live", { date: formatDate(publishedDay) })
         : null
   const hasNumbers = METRIC_FIELDS.some((f) => (values[f.key] ?? 0) > 0)
   const invalid = Boolean(dateError) || !hasNumbers
@@ -100,10 +103,10 @@ function SnapshotForm({
     }
     if (snapshot) {
       dataActions.update("content_metrics", snapshot.id, patch)
-      toast.success("Snapshot updated")
+      toast.success(t("updated"))
     } else {
       logMetrics(item.id, { ...patch, source: "manual" })
-      toast.success("Snapshot added", { description: item.title || undefined })
+      toast.success(t("added"), { description: item.title || undefined })
     }
     onDone()
   }
@@ -111,14 +114,14 @@ function SnapshotForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
       <DialogHeader>
-        <DialogTitle>{snapshot ? "Edit snapshot" : "Add snapshot"}</DialogTitle>
+        <DialogTitle>{snapshot ? t("edit_snapshot") : t("add_snapshot")}</DialogTitle>
         <DialogDescription>
-          {PLATFORMS[item.platform].label} · {item.title || "Untitled post"}
+          {PLATFORMS[item.platform].label} · {item.title || t("untitled_post")}
         </DialogDescription>
       </DialogHeader>
 
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <FormField label="Recorded on" htmlFor="snapshot-recorded" required error={dateError} className="sm:w-56">
+        <FormField label={t("recorded_on")} htmlFor="snapshot-recorded" required error={dateError} className="sm:w-56">
           <DatePicker
             id="snapshot-recorded"
             value={recordedAt}
@@ -132,7 +135,7 @@ function SnapshotForm({
         {previous ? (
           <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setValues(initialInputs(previous))}>
             <CopyPlus aria-hidden />
-            Start from last snapshot
+            {t("start_from_last")}
           </Button>
         ) : null}
       </div>
@@ -149,33 +152,33 @@ function SnapshotForm({
                 min={0}
                 max={field.kind === "percent" ? 100 : undefined}
                 integer={field.kind === "count"}
-                placeholder={typeof hint === "number" ? `was ${formatNumber(hint)}` : "0"}
+                placeholder={typeof hint === "number" ? t("was", { value: formatNumber(hint) }) : "0"}
               />
             </FormField>
           )
         })}
       </div>
 
-      <FormField label="Notes" htmlFor="snapshot-notes">
+      <FormField label={t("notes")} htmlFor="snapshot-notes">
         <Textarea
           id="snapshot-notes"
           rows={2}
           value={notes}
           onChange={(event) => setNotes(event.target.value)}
-          placeholder="e.g. 48-hour check, boosted with ₱500"
+          placeholder={t("notes_placeholder")}
         />
       </FormField>
 
       <DialogFooter className="items-center sm:justify-between">
         <p className="text-xs text-muted-foreground">
-          {hasNumbers ? "Empty fields are saved as 0." : "Enter at least one number from the platform's insights."}
+          {hasNumbers ? t("empty_as_zero") : t("need_number")}
         </p>
         <div className="flex flex-col-reverse gap-2 sm:flex-row">
           <Button type="button" variant="outline" onClick={onDone}>
-            Cancel
+            {t("cancel")}
           </Button>
           <Button type="submit" disabled={invalid}>
-            {snapshot ? "Save changes" : "Add snapshot"}
+            {snapshot ? t("save_changes") : t("add_snapshot")}
           </Button>
         </div>
       </DialogFooter>

@@ -5,7 +5,9 @@
  */
 import { isPublishedItem } from "@/lib/analytics"
 import { parseDate, toISODate } from "@/lib/dates"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type { ContentItem, Database, ISODate } from "@/lib/types"
+import { firstStepMessages } from "./messages"
 
 export function hasPublishedContent(items: readonly Pick<ContentItem, "stage">[]): boolean {
   return items.some(isPublishedItem)
@@ -46,55 +48,56 @@ export interface FirstStep {
   action: FirstStepAction
 }
 
-/** Strategy → Ideas → Create → Publish → Measure, each ticked off from the workspace itself. */
-export function firstSteps(db: Database): FirstStep[] {
+/** Strategy → Ideas → Create → Publish → Measure, each ticked off from the workspace itself. Text in `lang` (default English). */
+export function firstSteps(db: Database, lang: UiLang = "en"): FirstStep[] {
   const brand = db.brand_profiles[0]
+  const t = translator(firstStepMessages, lang)
   return [
     {
       key: "niche",
-      label: "Set your niche",
-      detail: "Brand HQ — every AI draft reads it.",
-      cta: "Open Brand HQ",
+      label: t("niche_label"),
+      detail: t("niche_detail"),
+      cta: t("niche_cta"),
       done: Boolean(brand?.niche.trim()),
       action: { kind: "link", href: "/strategy" },
     },
     {
       key: "pillars",
-      label: "Add your Content Pillars",
-      detail: "The 3–6 themes you want to be known for.",
-      cta: "Set up pillars",
+      label: t("pillars_label"),
+      detail: t("pillars_detail"),
+      cta: t("pillars_cta"),
       done: db.content_pillars.some((p) => p.is_active),
       action: { kind: "link", href: "/pillars" },
     },
     {
       key: "idea",
-      label: "Capture your first idea",
-      detail: "Ideas feed What to post next.",
-      cta: "Capture idea",
+      label: t("idea_label"),
+      detail: t("idea_detail"),
+      cta: t("idea_cta"),
       done: db.content_ideas.length > 0,
       action: { kind: "dialog", dialog: "quick-capture" },
     },
     {
       key: "content",
-      label: "Create your first piece of content",
-      detail: "Brief, script and schedule it in the Studio.",
-      cta: "New content",
+      label: t("content_label"),
+      detail: t("content_detail"),
+      cta: t("content_cta"),
       done: db.content_items.length > 0,
       action: { kind: "dialog", dialog: "new-content" },
     },
     {
       key: "publish",
-      label: "Log your first post",
-      detail: "Already posted somewhere? Log it here.",
-      cta: "Log a post",
+      label: t("publish_label"),
+      detail: t("publish_detail"),
+      cta: t("publish_cta"),
       done: hasPublishedContent(db.content_items),
       action: { kind: "dialog", dialog: "log-post" },
     },
     {
       key: "analytics",
-      label: "Add analytics to a post",
-      detail: "Unlocks winners, reports and your Content Health Score.",
-      cta: "Add analytics",
+      label: t("analytics_label"),
+      detail: t("analytics_detail"),
+      cta: t("analytics_cta"),
       done: db.content_metrics.length > 0,
       action: { kind: "dialog", dialog: "add-metrics" },
     },

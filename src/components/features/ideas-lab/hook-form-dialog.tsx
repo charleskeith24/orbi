@@ -5,8 +5,11 @@ import { useId, useState } from "react"
 import { FormField, FormRow, HookCategorySelect, PillarSelect } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions, useTable } from "@/lib/store"
 import type { Hook, HookCategory, ID } from "@/lib/types"
+import { hookMessages } from "./hook-messages"
 import { countBlanks, newHookValues, normalizeHookText } from "./hook-model"
 import { HookText } from "./hook-text"
 import { LabDialog, LabDialogBody, LabDialogFooter, LabDialogHeader } from "./lab-dialog"
@@ -38,6 +41,8 @@ export function HookFormDialog({
 
 function HookForm({ onClose, onCreated }: { onClose: () => void; onCreated: (hook: Hook) => void }) {
   const id = useId()
+  const t = useT(hookMessages)
+  const c = useT(commonMessages)
   const hooks = useTable("hooks")
   const [text, setText] = useState("")
   const [category, setCategory] = useState<HookCategory>("custom")
@@ -49,12 +54,12 @@ function HookForm({ onClose, onCreated }: { onClose: () => void; onCreated: (hoo
   function submit(event: React.FormEvent) {
     event.preventDefault()
     if (!clean) {
-      setError("Write the hook first.")
+      setError(t("write_first"))
       return
     }
     const key = normalizeHookText(clean)
     if (hooks.some((hook) => normalizeHookText(hook.text) === key)) {
-      setError("This hook is already in your library.")
+      setError(t("already_exists"))
       return
     }
     onCreated(dataActions.insert("hooks", newHookValues({ text: clean, category, source: "user", pillar_id: pillarId, notes })))
@@ -62,16 +67,16 @@ function HookForm({ onClose, onCreated }: { onClose: () => void; onCreated: (hoo
 
   return (
     <form noValidate onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
-      <LabDialogHeader title="New hook" description="Save an opening line you want to reuse. Use ___ for the parts you fill in each time." />
+      <LabDialogHeader title={t("new_hook")} description={t("new_description")} />
       <LabDialogBody className="flex flex-col gap-4">
-        <FormField label="Hook" htmlFor={`${id}-text`} required error={error ?? undefined} description="e.g. “Stop doing ___ if you want ___.”">
+        <FormField label={t("hook")} htmlFor={`${id}-text`} required error={error ?? undefined} description={t("hook_example")}>
           <Textarea
             id={`${id}-text`}
             autoFocus
             rows={3}
             maxLength={MAX_LENGTH}
             value={text}
-            placeholder="The first line, or the first two seconds…"
+            placeholder={t("hook_placeholder")}
             aria-invalid={Boolean(error) || undefined}
             onChange={(event) => {
               setText(event.target.value)
@@ -87,11 +92,11 @@ function HookForm({ onClose, onCreated }: { onClose: () => void; onCreated: (hoo
         </FormField>
         {countBlanks(clean) ? (
           <p className="text-xs text-muted-foreground">
-            Template preview: <HookText text={clean} className="text-foreground" />
+            {t("template_preview")} <HookText text={clean} className="text-foreground" />
           </p>
         ) : null}
         <FormRow>
-          <FormField label="Hook style" htmlFor={`${id}-style`}>
+          <FormField label={t("hook_style")} htmlFor={`${id}-style`}>
             <HookCategorySelect
               id={`${id}-style`}
               value={category}
@@ -100,28 +105,28 @@ function HookForm({ onClose, onCreated }: { onClose: () => void; onCreated: (hoo
               }}
             />
           </FormField>
-          <FormField label="Content Pillar" htmlFor={`${id}-pillar`}>
+          <FormField label={t("content_pillar")} htmlFor={`${id}-pillar`}>
             <PillarSelect id={`${id}-pillar`} allowNone value={pillarId} onChange={setPillarId} />
           </FormField>
         </FormRow>
-        <FormField label="Notes" htmlFor={`${id}-notes`}>
+        <FormField label={t("notes")} htmlFor={`${id}-notes`}>
           <Textarea
             id={`${id}-notes`}
             rows={2}
             maxLength={1000}
             value={notes}
-            placeholder="When to use it, why it works…"
+            placeholder={t("notes_placeholder_form")}
             onChange={(event) => setNotes(event.target.value)}
           />
         </FormField>
       </LabDialogBody>
       <LabDialogFooter status={<span className="num">{text.length} / {MAX_LENGTH}</span>}>
         <Button type="button" variant="ghost" onClick={onClose}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={!clean}>
           <Plus aria-hidden />
-          Add hook
+          {t("add_hook")}
         </Button>
       </LabDialogFooter>
     </form>

@@ -3,6 +3,7 @@
  * Every score, reason and insight is computed from the workspace — nothing is invented.
  */
 import { DAYS_OF_WEEK, HOOK_CATEGORIES, IDEA_STATUS_MAP, PIPELINE_STAGE_MAP, PLATFORMS } from "@/lib/constants"
+import { translator, type Translator, type UiLang } from "@/lib/i18n/core"
 import type {
   AppSettings,
   AudienceProblem,
@@ -17,11 +18,12 @@ import type {
   PlatformId,
   PostingSlot,
 } from "@/lib/types"
-import { clamp, formatPercent, pluralize, truncate } from "@/lib/utils"
+import { clamp, formatNumber, formatPercent, truncate } from "@/lib/utils"
 import { aggregateRows, groupByAngle, groupByFormat, groupByHookCategory, groupByPillar, groupByPlatform, scopedRows } from "./aggregates"
 import { funnelMix, pillarMix, type PillarMix } from "./balance"
 import { weeklyPostingProgress } from "./consistency"
 import { engagementTrend } from "./health"
+import { insightMessages, recommendationMessages } from "./messages"
 import { isWinnerTier, repurposedSourceIds, type TieredRow } from "./performance"
 import { contentBuffer, contentToday } from "./pipeline"
 import { compareText, formatMultiple, jaccard, tokenize } from "./shared"
@@ -46,6 +48,8 @@ export interface RecommendOptions {
   limit?: number
   /** Only candidates that can go out on this platform. */
   platform?: PlatformId
+  /** Language of `reasons` and `signals` (default English). */
+  lang?: UiLang
 }
 
 export interface RecommendationReasons {
@@ -115,7 +119,10 @@ interface WinnerPattern {
   platform: PlatformId | null
 }
 
+type RecommendationTranslator = Translator<typeof recommendationMessages.en>
+
 interface Context {
+  t: RecommendationTranslator
   now: Date
   dayName: string
   pillarNames: Map<ID, string>
@@ -153,24 +160,27 @@ function mostCommon<T extends string>(values: (T | null)[]): [T | null, number] 
 }
 
 /** Shared traits of the most recent winners, e.g. "Your last 3 winners used story hooks on TikTok". */
-function winnerPattern(winners: TieredRow[]): WinnerPattern | null {
+function winnerPattern(winners: TieredRow[], t: RecommendationTranslator): WinnerPattern | null {
   const last = winners.slice(0, 3)
   const n = last.length
   if (n < 2) return null
   const [category, categoryCount] = mostCommon(last.map((w) => w.hookCategory))
   const [platform, platformCount] = mostCommon(last.map((w) => w.platform))
-  const hooks = category ? `${HOOK_CATEGORIES[category].label.toLowerCase()} hooks` : null
+  const hooks = category ? t("hooks", { style: HOOK_CATEGORIES[category].label.toLowerCase() }) : null
   const platformLabel = platform ? PLATFORMS[platform].label : null
   if (hooks && categoryCount === n && platformLabel && platformCount === n) {
-    return { text: `Your last ${n} winners used ${hooks} on ${platformLabel}`, hookCategory: category, platform }
+    return { text: t("pattern_hooks_platform", { count: n, hooks, platform: platformLabel }), hookCategory: category, platform }
   }
-  if (hooks && categoryCount === n) return { text: `Your last ${n} winners used ${hooks}`, hookCategory: category, platform: null }
-  if (platformLabel && platformCount === n) return { text: `Your last ${n} winners were on ${platformLabel}`, hookCategory: null, platform }
-  if (hooks && categoryCount >= 2) return { text: `${categoryCount} of your last ${n} winners used ${hooks}`, hookCategory: category, platform: null }
+  if (hooks && categoryCount === n) return { text: t("pattern_hooks", { count: n, hooks }), hookCategory: category, platform: null }
+  if (platformLabel && platformCount === n) return { text: t("pattern_platform", { count: n, platform: platformLabel }), hookCategory: null, platform }
+  if (hooks && categoryCount >= 2) {
+    return { text: t("pattern_some_hooks", { some: categoryCount, count: n, hooks }), hookCategory: category, platform: null }
+  }
   return null
 }
 
-function buildContext(db: Database, now: Date, settings: AppSettings): Context {
+function buildContext(db: Database, now: Date, settings: AppSettings, lang: UiLang = "en"): Context {
+  const t = translator(recommendationMessages, lang)
   const ideas = new Map(db.content_ideas.map((i) => [i.id, i]))
   const allRows = scopedRows(db, now, { settings })
   const measured = allRows.filter((r) => r.metric && r.ageDays < PERFORMANCE_WINDOW_DAYS)
@@ -261,8 +271,9 @@ function buildContext(db: Database, now: Date, settings: AppSettings): Context {
     }
   })
   return {
+    t,
     now,
-    dayName: DAYS_OF_WEEK[weekday]?.label ?? "Today",
+    dayName: DAYS_OF_WEEK[weekday]?.label ?? t("today"),
     pillarNames: new Map(db.content_pillars.map((p) => [p.id, p.name])),
     formats: new Map(db.content_formats.map((f) => [f.id, f])),
     angleNames: new Map(db.angles.map((a) => [a.id, a.name])),
@@ -274,7 +285,7 @@ function buildContext(db: Database, now: Date, settings: AppSettings): Context {
     demandByItem,
     problems: new Map(db.audience_problems.map((p) => [p.id, p])),
     winners: winnerRows.map((row) => ({ row, tokens: tokenize(topicText(row.item)) })),
-    pattern: winnerPattern(winnerRows),
+    pattern: winnerPattern(winnerRows, t),
     platformRatio,
     platformOrder,
     bestFormatByPlatform,
@@ -288,7 +299,7 @@ function buildContext(db: Database, now: Date, settings: AppSettings): Context {
   }
 }
 
-function ideaCandidate(idea: ContentIdea): Candidate {
+function ideaCandidate(idea: ContentIdea, t: RecommendationTranslator): Candidate {
   return {
     kind: "idea",
     id: idea.id,
@@ -305,7 +316,7 @@ function ideaCandidate(idea: ContentIdea): Candidate {
     ideaScore: idea.score,
     scoreLabel: "Idea Score",
     problemId: idea.problem_id,
-    statusText: `${IDEA_STATUS_MAP[idea.status]?.label ?? "Open"} idea in your Idea Bank`,
+    statusText: t("status_idea", { status: IDEA_STATUS_MAP[idea.status]?.label ?? "Open" }),
   }
 }
 
@@ -328,7 +339,7 @@ function itemCandidate(item: ContentItem, ctx: Context): Candidate {
     ideaScore: ideaScore ?? item.quality_score?.total ?? null,
     scoreLabel: ideaScore !== null ? "Idea Score" : "Content Score",
     problemId: item.problem_id ?? idea?.problem_id ?? null,
-    statusText: `Already in ${PIPELINE_STAGE_MAP[item.stage]?.label ?? "production"} — no date yet`,
+    statusText: ctx.t("status_item", { stage: PIPELINE_STAGE_MAP[item.stage]?.label ?? "production" }),
   }
 }
 
@@ -366,6 +377,7 @@ function slotLabel(slot: PostingSlot, ctx: Context): string {
 }
 
 function evaluate(c: Candidate, ctx: Context, requested?: PlatformId): ContentRecommendation {
+  const { t } = ctx
   const W = RECOMMENDATION_WEIGHTS
   const signals: Signal[] = []
   const push = (kind: Signal["kind"], text: string, weight: number) => signals.push({ kind, text, weight })
@@ -378,9 +390,9 @@ function evaluate(c: Candidate, ctx: Context, requested?: PlatformId): ContentRe
   if (mixRow && mixRow.deviation < 0) {
     pillarGap = Math.min(1, -mixRow.deviation / 10) * W.pillarGap
     if (mixRow.count === 0) {
-      push("topic", `No ${mixRow.label} posts in the last 30 days — target is ${Math.round(mixRow.targetPct)}%`, pillarGap)
+      push("topic", t("pillar_empty", { pillar: mixRow.label, target: Math.round(mixRow.targetPct) }), pillarGap)
     } else if (-mixRow.deviation >= 3) {
-      push("topic", `${mixRow.label} is ${Math.round(-mixRow.deviation)} points under target over the last 30 days`, pillarGap)
+      push("topic", t("pillar_under", { pillar: mixRow.label, points: Math.round(-mixRow.deviation) }), pillarGap)
     }
   }
 
@@ -399,14 +411,14 @@ function evaluate(c: Candidate, ctx: Context, requested?: PlatformId): ContentRe
   }
   const matchedSlotLabel = matchedSlot ? slotLabel(matchedSlot, ctx) : ""
   if (matchedSlot && matchedSlotLabel && (matchedSlot.pillar_id === c.pillarId || matchedSlot.format_id === c.formatId)) {
-    push("topic", `${ctx.dayName}'s slot is ${matchedSlotLabel}`, slot)
+    push("topic", t("slot_is", { day: ctx.dayName, slot: matchedSlotLabel }), slot)
   }
 
   // Idea score (unscored → neutral half, no signal).
   const ideaScore = c.ideaScore !== null ? (clamp(c.ideaScore, 0, 100) / 100) * W.ideaScore : W.ideaScore / 2
   if (c.ideaScore !== null) {
     const text = `${c.scoreLabel} ${Math.round(c.ideaScore)}`
-    push("topic", c.scoreLabel === "Idea Score" && c.ideaScore >= 75 ? `${text} — high priority` : text, ideaScore * 0.8)
+    push("topic", c.scoreLabel === "Idea Score" && c.ideaScore >= 75 ? t("score_high", { score: text }) : text, ideaScore * 0.8)
   }
 
   // Audience demand: question frequency (5+ asks = full) or problem severity (5/5 = full).
@@ -416,9 +428,9 @@ function evaluate(c: Candidate, ctx: Context, requested?: PlatformId): ContentRe
   const problemShare = problem ? clamp(problem.severity, 0, 5) / 5 : 0
   const demand = Math.max(questionShare, problemShare) * W.demand
   if (frequency > 0 && questionShare >= problemShare) {
-    push("topic", `Asked ${frequency}× in your Question Bank`, demand)
+    push("topic", t("asked", { count: frequency }), demand)
   } else if (problem) {
-    push("topic", `Solves a severity ${problem.severity}/5 audience problem: “${truncate(problem.problem, 60)}”`, demand)
+    push("topic", t("problem", { severity: problem.severity, problem: truncate(problem.problem, 60) }), demand)
   }
 
   // Similarity to recent winners: pillar 0.4 + hook style 0.3 + topic overlap 0.3.
@@ -433,7 +445,7 @@ function evaluate(c: Candidate, ctx: Context, requested?: PlatformId): ContentRe
       similarity = sim
       closest = {
         row: w.row,
-        traits: [pillarHit ? "pillar" : "", hookHit ? "hook style" : "", topicShare >= 1 ? "topic" : ""].filter(Boolean),
+        traits: [pillarHit ? t("trait_pillar") : "", hookHit ? t("trait_hook") : "", topicShare >= 1 ? t("trait_topic") : ""].filter(Boolean),
       }
     }
   }
@@ -446,14 +458,14 @@ function evaluate(c: Candidate, ctx: Context, requested?: PlatformId): ContentRe
   if (pattern && matchesPattern) {
     push("topic", pattern.text, Math.max(winnerSimilarity, W.winnerSimilarity * 0.3))
   } else if (closest && closest.traits.length && similarity >= 0.4) {
-    push("topic", `Same ${closest.traits.join(" and ")} as your winner “${truncate(closest.row.item.title, 50)}”`, winnerSimilarity)
+    push("topic", t("same_traits", { traits: closest.traits.join(t("trait_join")), title: truncate(closest.row.item.title, 50) }), winnerSimilarity)
   }
 
   // Platform performance: 0.5x → 20%, 1.0x → 60%, 1.5x+ → 100% of the weight; unknown → half.
   const multiple = ctx.platformRatio.get(platform) ?? null
   const platformPoints = multiple === null ? W.platform / 2 : W.platform * clamp(0.2 + (multiple - 0.5) * 0.8, 0.2, 1)
   if (multiple !== null && multiple >= 1.15) {
-    push("platform", `${platformLabel} posts average ${formatMultiple(multiple)} your overall views`, platformPoints)
+    push("platform", t("platform_average", { platform: platformLabel, multiple: formatMultiple(multiple) }), platformPoints)
   }
 
   // Freshness: nothing near-identical published in the last 30 days (same-idea cross-posts excluded).
@@ -473,11 +485,12 @@ function evaluate(c: Candidate, ctx: Context, requested?: PlatformId): ContentRe
   const hook = ownHook || ctx.hookSuggestion
   if (!ownHook && ctx.hookSuggestion && ctx.bestHookStyle) {
     const label = HOOK_CATEGORIES[ctx.bestHookStyle.category].label
-    push("other", `Suggested hook: ${label} hooks average ${formatMultiple(ctx.bestHookStyle.ratio)} your views`, 1)
+    push("other", t("hook_suggestion", { style: label, multiple: formatMultiple(ctx.bestHookStyle.ratio) }), 1)
   }
   if (duplicate) {
-    const when = duplicate.ageDays === 0 ? "today" : duplicate.ageDays === 1 ? "yesterday" : `${duplicate.ageDays} days ago`
-    push("other", `Close to “${truncate(duplicate.item.title, 50)}”, published ${when}`, 0)
+    const when =
+      duplicate.ageDays === 0 ? t("when_today") : duplicate.ageDays === 1 ? t("when_yesterday") : t("when_days_ago", { count: duplicate.ageDays })
+    push("other", t("close_to", { title: truncate(duplicate.item.title, 50), when }), 0)
   }
 
   const breakdown: Record<RecommendationFactor, number> = {
@@ -498,53 +511,55 @@ function evaluate(c: Candidate, ctx: Context, requested?: PlatformId): ContentRe
   const topic = topicSignal?.text ?? `${c.statusText}${pillarName ? ` · ${pillarName}` : ""}`
 
   const platformSignal = signals.find((s) => s.kind === "platform")
-  const multipleSuffix = multiple !== null ? ` (${formatMultiple(multiple)} your overall views)` : ""
+  const multipleSuffix = multiple !== null ? t("multiple_suffix", { multiple: formatMultiple(multiple) }) : ""
   const platformReason =
     platformSignal?.text ??
     (matchedSlot?.platforms.includes(platform)
-      ? `${ctx.dayName}'s slot includes ${platformLabel}`
+      ? t("platform_slot", { day: ctx.dayName, platform: platformLabel })
       : source === "requested"
-        ? `Filtered to ${platformLabel}`
+        ? t("platform_filtered", { platform: platformLabel })
         : source === "planned"
-          ? `Planned for ${platformLabel}${multipleSuffix}`
+          ? t("platform_planned", { platform: platformLabel, suffix: multipleSuffix })
           : source === "performance"
-            ? `${platformLabel} averages ${formatMultiple(multiple ?? 1)} your overall views`
+            ? t("platform_performance", { platform: platformLabel, multiple: formatMultiple(multiple ?? 1) })
             : source === "strategy"
-              ? `${platformLabel} is one of your active platforms`
-              : `No platform set — defaulting to ${platformLabel}`)
+              ? t("platform_strategy", { platform: platformLabel })
+              : t("platform_default", { platform: platformLabel }))
 
   let formatId = c.formatId && ctx.formats.has(c.formatId) ? c.formatId : null
   let formatReason: string
   const bestFormat = ctx.bestFormatByPlatform.get(platform)
   const referenceSlot = matchedSlot ?? ctx.slots[0] ?? null
   if (formatId) {
-    const name = ctx.formats.get(formatId)?.name ?? "this format"
+    const name = ctx.formats.get(formatId)?.name ?? t("this_format")
     formatReason =
       referenceSlot?.format_id === formatId
-        ? `${ctx.dayName}'s slot calls for ${name}`
+        ? t("format_slot", { day: ctx.dayName, format: name })
         : bestFormat && bestFormat.id === formatId && bestFormat.ratio >= NOTABLE_MULTIPLE
-          ? `${name} is your best format on ${platformLabel} (${formatMultiple(bestFormat.ratio)} views)`
-          : `Planned as ${name}`
+          ? t("format_best", { format: name, platform: platformLabel, multiple: formatMultiple(bestFormat.ratio) })
+          : t("format_planned", { format: name })
   } else if (referenceSlot?.format_id && ctx.formats.has(referenceSlot.format_id)) {
     formatId = referenceSlot.format_id
-    formatReason = `${ctx.dayName}'s slot calls for ${ctx.formats.get(formatId)?.name ?? "this format"}`
+    formatReason = t("format_slot", { day: ctx.dayName, format: ctx.formats.get(formatId)?.name ?? t("this_format") })
   } else if (bestFormat && bestFormat.ratio >= NOTABLE_MULTIPLE) {
     formatId = bestFormat.id
-    formatReason = `${bestFormat.label} posts average ${formatMultiple(bestFormat.ratio)} your ${platformLabel} views`
+    formatReason = t("format_best_average", { format: bestFormat.label, multiple: formatMultiple(bestFormat.ratio), platform: platformLabel })
   } else {
-    formatReason = "No format set yet"
+    formatReason = t("format_none")
   }
 
   let angleId = c.angleId && ctx.angleNames.has(c.angleId) ? c.angleId : null
   let angleReason: string
   if (angleId) {
     const ratio = ctx.angleRatio.get(angleId)
-    angleReason = `Uses the “${ctx.angleNames.get(angleId)}” angle${ratio && ratio >= NOTABLE_MULTIPLE ? ` — averages ${formatMultiple(ratio)} your views` : ""}`
+    const angle = String(ctx.angleNames.get(angleId))
+    angleReason =
+      ratio && ratio >= NOTABLE_MULTIPLE ? t("angle_uses_average", { angle, multiple: formatMultiple(ratio) }) : t("angle_uses", { angle })
   } else if (ctx.bestAngle) {
     angleId = ctx.bestAngle.id
-    angleReason = `“${ctx.bestAngle.label}” posts average ${formatMultiple(ctx.bestAngle.ratio)} your views`
+    angleReason = t("angle_best", { angle: ctx.bestAngle.label, multiple: formatMultiple(ctx.bestAngle.ratio) })
   } else {
-    angleReason = "No angle set yet"
+    angleReason = t("angle_none")
   }
 
   return {
@@ -568,6 +583,7 @@ function evaluate(c: Candidate, ctx: Context, requested?: PlatformId): ContentRe
  * Ranked "what to make next": open ideas (validated, selected, inbox) and undated Idea/Selected/Brief/Scripting items,
  * scored 0–100 = pillar gap 20 + today's slot 15 + idea score 20 + audience demand 15 +
  * winner similarity 15 + platform performance 10 + freshness 5 (see RECOMMENDATION_WEIGHTS).
+ * Reasons and signals are in `options.lang` (default English).
  */
 export function recommendNextContent(
   db: Database,
@@ -575,7 +591,7 @@ export function recommendNextContent(
   settings: AppSettings,
   options: RecommendOptions = {}
 ): ContentRecommendation[] {
-  const ctx = buildContext(db, now, settings)
+  const ctx = buildContext(db, now, settings, options.lang)
   const requested = options.platform
   const candidates: Candidate[] = []
   const ideasOnBoard = new Set<ID>()
@@ -586,7 +602,7 @@ export function recommendNextContent(
   }
   // An open idea that already has an undated item is recommended once, through that item.
   for (const idea of db.content_ideas) {
-    if (CANDIDATE_IDEA_STATUSES.includes(idea.status) && !ideasOnBoard.has(idea.id)) candidates.push(ideaCandidate(idea))
+    if (CANDIDATE_IDEA_STATUSES.includes(idea.status) && !ideasOnBoard.has(idea.id)) candidates.push(ideaCandidate(idea, ctx.t))
   }
   return candidates
     .filter((c) => !requested || (c.kind === "item" ? c.platforms[0] === requested : !c.platforms.length || c.platforms.includes(requested)))
@@ -618,8 +634,10 @@ const INSIGHT_MIN_POSTS = 3
  * Up to 8 short, data-backed insights (buffer, weekly pace, overdue work, engagement trend,
  * pillar / funnel mix, winners to replicate or repurpose, best pillar / hook style / format / platform,
  * audience questions, idea backlog), most urgent first. Nothing is emitted without the data to back it.
+ * Text is in `lang` (default English).
  */
-export function strategicInsights(db: Database, now: Date, settings: AppSettings): StrategicInsight[] {
+export function strategicInsights(db: Database, now: Date, settings: AppSettings, lang: UiLang = "en"): StrategicInsight[] {
+  const t = translator(insightMessages, lang)
   const out: StrategicInsight[] = []
   const add = (id: string, type: InsightType, priority: number, text: string, href?: string) =>
     out.push({ id, type, text, priority, ...(href ? { href } : {}) })
@@ -631,8 +649,8 @@ export function strategicInsights(db: Database, now: Date, settings: AppSettings
       "warning",
       buffer.status === "low" ? 95 : 70,
       buffer.readyCount
-        ? `Buffer is ${buffer.days} days — below your ${settings.buffer_healthy_days}-day target`
-        : `Nothing is ready to post — your ${settings.buffer_healthy_days}-day buffer is empty`,
+        ? t("buffer_low", { days: buffer.days, target: settings.buffer_healthy_days })
+        : t("buffer_empty", { target: settings.buffer_healthy_days }),
       "/pipeline"
     )
   }
@@ -644,7 +662,13 @@ export function strategicInsights(db: Database, now: Date, settings: AppSettings
       "weekly-pace",
       "warning",
       85,
-      `${week.published} of ${week.target} posts out this week${week.scheduledRemaining ? ` (+${week.scheduledRemaining} scheduled)` : ""} — ${gap} more needed with ${pluralize(week.daysLeft, "day")} left`,
+      t.plural("pace", week.daysLeft, {
+        count: formatNumber(week.daysLeft),
+        published: week.published,
+        target: week.target,
+        scheduled: week.scheduledRemaining ? t("pace_scheduled", { count: week.scheduledRemaining }) : "",
+        gap,
+      }),
       "/calendar/planner"
     )
   }
@@ -652,10 +676,10 @@ export function strategicInsights(db: Database, now: Date, settings: AppSettings
   const today = contentToday(db, now)
   if (today.overdue.length) {
     const n = today.overdue.length
-    add("overdue", "fix", 80, `${pluralize(n, "item")} ${n === 1 ? "is" : "are"} overdue — reschedule or cut ${n === 1 ? "it" : "them"}`, "/pipeline")
+    add("overdue", "fix", 80, t.plural("overdue", n, { count: formatNumber(n) }), "/pipeline")
   }
   if (today.toReview.length >= 3) {
-    add("review-queue", "fix", 64, `${today.toReview.length} items are waiting for review — approve them to refill the buffer`, "/pipeline")
+    add("review-queue", "fix", 64, t("review_queue", { count: today.toReview.length }), "/pipeline")
   }
 
   const trend = engagementTrend(db, now)
@@ -666,18 +690,18 @@ export function strategicInsights(db: Database, now: Date, settings: AppSettings
         "engagement-down",
         "fix",
         75,
-        `Engagement rate is down ${-change}% over the last 30 days vs the 90 days before (${formatPercent(trend.current)} vs ${formatPercent(trend.previous)})`,
+        t("engagement_down", { change: -change, current: formatPercent(trend.current), previous: formatPercent(trend.previous) }),
         "/analytics"
       )
     } else if (change >= 15) {
-      add("engagement-up", "double_down", 48, `Engagement rate is up ${change}% over the last 30 days vs the 90 days before — keep this mix going`, "/analytics")
+      add("engagement-up", "double_down", 48, t("engagement_up", { change }), "/analytics")
     }
   }
 
-  const mix = pillarMix(db, now, settings)
+  const mix = pillarMix(db, now, settings, { lang })
   const pillarWarning = mix.warnings[0]
   if (pillarWarning) add(`pillar-mix-${pillarWarning.key}`, "fix", 70, pillarWarning.message, `/pillars?open=${pillarWarning.key}`)
-  const funnelWarning = funnelMix(db, now, settings).warnings[0]
+  const funnelWarning = funnelMix(db, now, settings, { lang }).warnings[0]
   if (funnelWarning) add(`funnel-mix-${funnelWarning.key}`, "fix", 60, funnelWarning.message, "/pillars/funnel")
 
   const rows = scopedRows(db, now, { days: PERFORMANCE_WINDOW_DAYS, settings }).filter((r) => r.metric)
@@ -695,7 +719,7 @@ export function strategicInsights(db: Database, now: Date, settings: AppSettings
         "pillar-double-down",
         "double_down",
         72,
-        `${best.label} posts average ${formatMultiple(multiple)} the views of ${worst.label} — make more of them`,
+        t("pillar_double_down", { best: best.label, multiple: formatMultiple(multiple), worst: worst.label }),
         `/pillars?open=${best.key}`
       )
     }
@@ -705,7 +729,7 @@ export function strategicInsights(db: Database, now: Date, settings: AppSettings
   const winners = rows.filter((r) => isWinnerTier(r.tier) || r.item.pinned_winner)
   const unrepurposed = winners.filter((w) => !repurposed.has(w.id)).length
   if (unrepurposed) {
-    add("repurpose-winners", "opportunity", 68, `${pluralize(unrepurposed, "winner")} ${unrepurposed === 1 ? "hasn't" : "haven't"} been repurposed yet`, "/winners")
+    add("repurpose-winners", "opportunity", 68, t.plural("repurpose", unrepurposed, { count: formatNumber(unrepurposed) }), "/winners")
   }
   const recentWinner = winners
     .filter((w) => isWinnerTier(w.tier) && w.ratio !== null && w.ageDays < 30)
@@ -715,7 +739,11 @@ export function strategicInsights(db: Database, now: Date, settings: AppSettings
       "recent-winner",
       "double_down",
       66,
-      `“${truncate(recentWinner.item.title, 60)}” hit ${formatMultiple(recentWinner.ratio)} your ${PLATFORMS[recentWinner.platform]?.label ?? recentWinner.platform} average — make a follow-up`,
+      t("recent_winner", {
+        title: truncate(recentWinner.item.title, 60),
+        multiple: formatMultiple(recentWinner.ratio),
+        platform: PLATFORMS[recentWinner.platform]?.label ?? recentWinner.platform,
+      }),
       `/studio/${recentWinner.id}`
     )
   }
@@ -724,13 +752,13 @@ export function strategicInsights(db: Database, now: Date, settings: AppSettings
     const avg = overall.avgViews
     const hookStyle = groupByHookCategory(rows).find((g) => g.category && g.measured >= INSIGHT_MIN_POSTS && g.avgViews)
     if (hookStyle?.avgViews && hookStyle.avgViews / avg >= INSIGHT_MULTIPLE) {
-      add("hook-style", "double_down", 62, `${hookStyle.label} hooks average ${formatMultiple(hookStyle.avgViews / avg)} your overall views — use them more`, "/ideas/hooks")
+      add("hook-style", "double_down", 62, t("hook_style", { style: hookStyle.label, multiple: formatMultiple(hookStyle.avgViews / avg) }), "/ideas/hooks")
     }
     const format = groupByFormat(db, rows)
       .filter((g) => g.format && g.measured >= INSIGHT_MIN_POSTS && g.avgViews)
       .sort((a, b) => (b.avgViews ?? 0) - (a.avgViews ?? 0))[0]
     if (format?.avgViews && format.avgViews / avg >= INSIGHT_MULTIPLE) {
-      add("format", "double_down", 52, `${format.label} posts average ${formatMultiple(format.avgViews / avg)} your overall views`, "/analytics")
+      add("format", "double_down", 52, t("format", { format: format.label, multiple: formatMultiple(format.avgViews / avg) }), "/analytics")
     }
   }
 
@@ -742,7 +770,11 @@ export function strategicInsights(db: Database, now: Date, settings: AppSettings
         "platform",
         "double_down",
         55,
-        `${best.label} engagement rate is ${formatMultiple(best.engagementRate / overall.engagementRate)} your average (${formatPercent(best.engagementRate)}) — prioritise it`,
+        t("platform", {
+          platform: best.label,
+          multiple: formatMultiple(best.engagementRate / overall.engagementRate),
+          rate: formatPercent(best.engagementRate),
+        }),
         "/analytics"
       )
     }
@@ -754,7 +786,7 @@ export function strategicInsights(db: Database, now: Date, settings: AppSettings
       "questions",
       "opportunity",
       58,
-      `${pluralize(hotQuestions, "audience question")} asked 3+ times ${hotQuestions === 1 ? "has" : "have"} no content yet`,
+      t.plural("questions", hotQuestions, { count: formatNumber(hotQuestions) }),
       "/audience/questions"
     )
   }
@@ -765,9 +797,7 @@ export function strategicInsights(db: Database, now: Date, settings: AppSettings
       "idea-backlog",
       "opportunity",
       50,
-      readyIdeas
-        ? `Only ${pluralize(readyIdeas, "validated idea")} left — run the Idea Generator`
-        : "No validated ideas in the Idea Bank — run the Idea Generator",
+      readyIdeas ? t.plural("ideas_few", readyIdeas, { count: formatNumber(readyIdeas) }) : t("ideas_none"),
       "/ideas/generator"
     )
   }

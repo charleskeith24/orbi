@@ -4,6 +4,7 @@
  */
 import { addDays, differenceInCalendarDays, endOfMonth, startOfMonth, subMonths, subWeeks } from "date-fns"
 import { startOfWeek, weekRange } from "@/lib/dates"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type { AppSettings, Database, PlatformId, WinnerMetric } from "@/lib/types"
 import {
   comparePeriods,
@@ -26,6 +27,7 @@ import {
 } from "./aggregates"
 import { funnelMix, pillarMix, type FunnelMix, type PillarMix } from "./balance"
 import { postingWeeks, type PostingWeek } from "./consistency"
+import { aggregateMessages } from "./messages"
 import { isWinnerTier, performanceValue, type TieredRow } from "./performance"
 import { calendarDays, compareNullableDesc, compareText, NO_KEY, toISORange, type DateRange, type ISORange } from "./shared"
 
@@ -55,21 +57,29 @@ export function rankRows(rows: TieredRow[], metric: WinnerMetric): TieredRow[] {
 
 type LabeledAggregate = GroupAggregate & { label: string }
 
-const GROUP_PICKERS: Record<Exclude<WinnerMetric, "composite">, { label: string; pick: (g: GroupAggregate) => number | null }> = {
-  views: { label: "avg. views", pick: (g) => g.avgViews },
-  engagement_rate: { label: "engagement rate", pick: (g) => g.engagementRate },
-  engagements: { label: "avg. engagements", pick: (g) => g.avgEngagements },
-  leads: { label: "leads per post", pick: (g) => g.leadsPerPost },
+/** `label` is a key of `aggregateMessages`. */
+const GROUP_PICKERS: Record<
+  Exclude<WinnerMetric, "composite">,
+  { label: keyof typeof aggregateMessages.en; pick: (g: GroupAggregate) => number | null }
+> = {
+  views: { label: "metric_views", pick: (g) => g.avgViews },
+  engagement_rate: { label: "metric_engagement_rate", pick: (g) => g.engagementRate },
+  engagements: { label: "metric_engagements", pick: (g) => g.avgEngagements },
+  leads: { label: "metric_leads", pick: (g) => g.leadsPerPost },
 }
 
-/** Best measured group under the winner metric (composite → avg. tier ratio, falling back to avg. views); unassigned groups excluded. */
-export function bestGroup(groups: LabeledAggregate[], metric: WinnerMetric): ReportHighlight | null {
+/**
+ * Best measured group under the winner metric (composite → avg. tier ratio, falling back to avg. views); unassigned
+ * groups excluded. `metricLabel` is in `lang` (default English).
+ */
+export function bestGroup(groups: LabeledAggregate[], metric: WinnerMetric, lang: UiLang = "en"): ReportHighlight | null {
+  const t = translator(aggregateMessages, lang)
   const candidates = groups.filter((g) => g.measured > 0 && g.key !== NO_KEY)
   const picker =
     metric !== "composite"
       ? GROUP_PICKERS[metric]
       : candidates.some((g) => g.avgRatio !== null)
-        ? { label: "× platform baseline", pick: (g: GroupAggregate) => g.avgRatio }
+        ? { label: "metric_baseline" as const, pick: (g: GroupAggregate) => g.avgRatio }
         : GROUP_PICKERS.views
   let best: { group: LabeledAggregate; value: number } | null = null
   for (const group of candidates) {
@@ -78,7 +88,7 @@ export function bestGroup(groups: LabeledAggregate[], metric: WinnerMetric): Rep
     if (!best || value > best.value || (value === best.value && group.posts > best.group.posts)) best = { group, value }
   }
   return best
-    ? { key: best.group.key, label: best.group.label, value: best.value, metricLabel: picker.label, posts: best.group.posts }
+    ? { key: best.group.key, label: best.group.label, value: best.value, metricLabel: t(picker.label), posts: best.group.posts }
     : null
 }
 
@@ -131,8 +141,9 @@ export interface WeeklyReport {
  * The week containing `weekStart` (settings.week_starts_on): totals, deltas vs the previous week,
  * best/worst post and best platform/pillar/topic/format/hook style ranked by settings.winner_metric.
  * `now` (optional) caps a week still in progress; its deltas then compare the same days of last week.
+ * Generated labels ("No pillar", metric labels, mix warnings) are in `lang` (default English).
  */
-export function weeklyReport(db: Database, weekStart: Date, settings: AppSettings, now?: Date): WeeklyReport {
+export function weeklyReport(db: Database, weekStart: Date, settings: AppSettings, now?: Date, lang: UiLang = "en"): WeeklyReport {
   const range = weekRange(weekStart, settings.week_starts_on)
   const previous = weekRange(subWeeks(range.start, 1), settings.week_starts_on)
   const asOf = asOfDate(range, now)
@@ -142,7 +153,7 @@ export function weeklyReport(db: Database, weekStart: Date, settings: AppSetting
   const totals = periodTotals(db, range.start, asOf)
   const previousTotals = periodTotals(db, previous.start, comparableEnd(range, previous, asOf))
   const target = Math.max(0, Math.round(settings.weekly_post_target))
-  const mixOptions = { start: range.start, end: range.end, upcomingDays: 0 }
+  const mixOptions = { start: range.start, end: range.end, upcomingDays: 0, lang }
   return {
     range: toISORange(range),
     previousRange: toISORange(previous),
@@ -154,11 +165,11 @@ export function weeklyReport(db: Database, weekStart: Date, settings: AppSetting
     deltas: comparePeriods(totals, previousTotals),
     bestPost: ranked[0] ?? null,
     worstPost: ranked.length >= 2 ? ranked[ranked.length - 1] : null,
-    bestPlatform: bestGroup(groupByPlatform(rows), metric),
-    bestPillar: bestGroup(groupByPillar(db, rows), metric),
-    bestTopic: bestGroup(groupByTopic(db, rows), metric),
-    bestFormat: bestGroup(groupByFormat(db, rows), metric),
-    bestHook: bestGroup(groupByHookCategory(rows), metric),
+    bestPlatform: bestGroup(groupByPlatform(rows), metric, lang),
+    bestPillar: bestGroup(groupByPillar(db, rows, lang), metric, lang),
+    bestTopic: bestGroup(groupByTopic(db, rows), metric, lang),
+    bestFormat: bestGroup(groupByFormat(db, rows, lang), metric, lang),
+    bestHook: bestGroup(groupByHookCategory(rows, lang), metric, lang),
     contentMix: {
       pillars: pillarMix(db, asOf, settings, mixOptions),
       funnel: funnelMix(db, asOf, settings, mixOptions),
@@ -217,9 +228,9 @@ function leadSplit(groups: LabeledAggregate[]): LeadSplit[] {
  * The calendar month containing `monthStart`: audience growth, reach, best/top-10 content,
  * platform/pillar/topic/format performance, follower growth, lead generation, BOFU outcomes,
  * weekly consistency and deltas vs the previous month. `now` (optional) caps a month in progress;
- * its deltas then compare the same number of days of last month.
+ * its deltas then compare the same number of days of last month. Generated labels are in `lang` (default English).
  */
-export function monthlyReport(db: Database, monthStart: Date, settings: AppSettings, now?: Date): MonthlyReport {
+export function monthlyReport(db: Database, monthStart: Date, settings: AppSettings, now?: Date, lang: UiLang = "en"): MonthlyReport {
   const range: DateRange = { start: startOfMonth(monthStart), end: endOfMonth(monthStart) }
   const previousStart = startOfMonth(subMonths(range.start, 1))
   const previous: DateRange = { start: previousStart, end: endOfMonth(previousStart) }
@@ -232,7 +243,7 @@ export function monthlyReport(db: Database, monthStart: Date, settings: AppSetti
   const totals = periodTotals(db, range.start, asOf)
   const previousTotals = periodTotals(db, previous.start, comparableEnd(range, previous, asOf))
   const platforms = groupByPlatform(rows)
-  const pillars = groupByPillar(db, rows)
+  const pillars = groupByPillar(db, rows, lang)
   const bofu = rows.filter((r) => r.funnelStage === "bofu")
 
   const firstWeek = startOfWeek(range.start, weekStartsOn)
@@ -258,7 +269,7 @@ export function monthlyReport(db: Database, monthStart: Date, settings: AppSetti
     platformPerformance: platforms,
     pillarPerformance: pillars,
     topicPerformance: groupByTopic(db, rows),
-    formatPerformance: groupByFormat(db, rows),
+    formatPerformance: groupByFormat(db, rows, lang),
     followerGrowthSeries: followerGrowthSeries(db, asOf, { start: range.start, end: asOf, bucket: "day" }),
     leadGeneration: { total: totals.leads, byPillar: leadSplit(pillars), byPlatform: leadSplit(platforms) },
     businessOpportunities: {

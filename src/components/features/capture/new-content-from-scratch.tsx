@@ -18,9 +18,12 @@ import {
 } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { createContentItem, useBrand, useSettings } from "@/lib/store"
 import type { FunnelStage, ID, ISODate, PipelineStage, PlatformId } from "@/lib/types"
 import { CaptureBody, CaptureFooter, ShortcutHint } from "./capture-dialog"
+import { captureMessages, newContentMessages } from "./capture-messages"
 import { submitOnModEnter } from "./capture-utils"
 import { createLabel, platformsFor, withoutId, type ContentDefaults, type OnContentCreated } from "./new-content-shared"
 
@@ -54,6 +57,9 @@ export function FromScratchForm({
   const brand = useBrand()
   const settings = useSettings()
   const formId = useId()
+  const t = useT(newContentMessages)
+  const f = useT(captureMessages)
+  const c = useT(commonMessages)
   const field = (name: string) => `${formId}-${name}`
   const [values, setValues] = useState<ScratchValues>(() => ({
     title: defaults?.title ?? "",
@@ -72,8 +78,8 @@ export function FromScratchForm({
   const [touched, setTouched] = useState<{ title?: boolean; platforms?: boolean }>({})
 
   const errors = {
-    title: values.title.trim() ? null : "Give it a working title.",
-    platforms: values.platforms.length ? null : "Pick at least one platform.",
+    title: values.title.trim() ? null : t("title_required"),
+    platforms: values.platforms.length ? null : t("pick_platform"),
   }
   const firstError = errors.title ?? errors.platforms
   const valid = firstError === null
@@ -108,7 +114,7 @@ export function FromScratchForm({
       )
       onCreated(items, title)
     } catch (error) {
-      toast.error("Couldn't create the content", { description: error instanceof Error ? error.message : String(error) })
+      toast.error(t("create_failed"), { description: error instanceof Error ? error.message : String(error) })
     }
   }
 
@@ -123,13 +129,13 @@ export function FromScratchForm({
       onKeyDown={(event) => submitOnModEnter(event, submit)}
     >
       <CaptureBody className="flex flex-col gap-4">
-        <FormField label="Working title" htmlFor={field("title")} required error={touched.title ? (errors.title ?? undefined) : undefined}>
+        <FormField label={t("working_title")} htmlFor={field("title")} required error={touched.title ? (errors.title ?? undefined) : undefined}>
           <Input
             id={field("title")}
             autoFocus={autoFocus}
             value={values.title}
             maxLength={200}
-            placeholder="What's the piece about?"
+            placeholder={t("title_placeholder")}
             aria-invalid={Boolean(touched.title && errors.title) || undefined}
             onChange={(event) => set("title", event.target.value)}
             onBlur={() => setTouched((t) => ({ ...t, title: true }))}
@@ -137,51 +143,51 @@ export function FromScratchForm({
         </FormField>
 
         <FormField
-          label="Platforms"
+          label={f("platforms")}
           required
-          description="One content item per platform, each with its own brief."
+          description={t("per_platform")}
           error={touched.platforms ? (errors.platforms ?? undefined) : undefined}
         >
-          <PlatformToggleGroup value={values.platforms} onChange={(next) => set("platforms", next)} aria-label="Platforms" />
+          <PlatformToggleGroup value={values.platforms} onChange={(next) => set("platforms", next)} aria-label={f("platforms")} />
         </FormField>
 
         <FormRow>
-          <FormField label="Pillar" htmlFor={field("pillar")}>
+          <FormField label={f("pillar")} htmlFor={field("pillar")}>
             <PillarSelect id={field("pillar")} allowNone value={values.pillarId} onChange={(next) => set("pillarId", next)} />
           </FormField>
-          <FormField label="Format" htmlFor={field("format")}>
+          <FormField label={f("format")} htmlFor={field("format")}>
             <FormatSelect id={field("format")} allowNone value={values.formatId} onChange={(next) => set("formatId", next)} />
           </FormField>
         </FormRow>
 
         <FormRow>
-          <FormField label="Persona" htmlFor={field("persona")}>
+          <FormField label={f("persona")} htmlFor={field("persona")}>
             <PersonaSelect id={field("persona")} allowNone value={values.personaId} onChange={(next) => set("personaId", next)} />
           </FormField>
-          <FormField label="Goal" htmlFor={field("goal")}>
+          <FormField label={f("goal")} htmlFor={field("goal")}>
             <GoalSelect id={field("goal")} allowNone value={values.goalId} onChange={(next) => set("goalId", next)} />
           </FormField>
         </FormRow>
 
         <FormRow>
-          <FormField label="Funnel stage" htmlFor={field("funnel")}>
+          <FormField label={f("funnel_stage")} htmlFor={field("funnel")}>
             <FunnelSelect id={field("funnel")} allowNone value={values.funnel} onChange={(next) => set("funnel", next)} />
           </FormField>
-          <FormField label="Stage" htmlFor={field("stage")}>
+          <FormField label={f("stage")} htmlFor={field("stage")}>
             <StageSelect id={field("stage")} value={values.stage} onChange={(next) => next && set("stage", next)} />
           </FormField>
         </FormRow>
 
         <FormRow>
-          <FormField label="Due date" htmlFor={field("due")}>
-            <DatePicker id={field("due")} value={values.due} placeholder="No deadline" onChange={(next) => set("due", next)} />
+          <FormField label={f("due_date")} htmlFor={field("due")}>
+            <DatePicker id={field("due")} value={values.due} placeholder={f("no_deadline")} onChange={(next) => set("due", next)} />
           </FormField>
-          <FormField label="Owner" htmlFor={field("owner")}>
+          <FormField label={f("owner")} htmlFor={field("owner")}>
             <Input
               id={field("owner")}
               value={values.owner}
               maxLength={80}
-              placeholder="Who's producing it?"
+              placeholder={t("owner_placeholder")}
               autoComplete="off"
               onChange={(event) => set("owner", event.target.value)}
             />
@@ -189,20 +195,20 @@ export function FromScratchForm({
         </FormRow>
 
         <FormRow>
-          <FormField label="Campaign" htmlFor={field("campaign")}>
+          <FormField label={f("campaign")} htmlFor={field("campaign")}>
             <CampaignSelect id={field("campaign")} allowNone value={values.campaignId} onChange={(next) => set("campaignId", next)} />
           </FormField>
-          <FormField label="Series" htmlFor={field("series")}>
+          <FormField label={f("series")} htmlFor={field("series")}>
             <SeriesSelect id={field("series")} allowNone value={values.seriesId} onChange={(next) => set("seriesId", next)} />
           </FormField>
         </FormRow>
       </CaptureBody>
-      <CaptureFooter status={valid ? <ShortcutHint label="to create" /> : <span className="truncate max-sm:hidden">{firstError}</span>}>
+      <CaptureFooter status={valid ? <ShortcutHint label={f("to_create")} /> : <span className="truncate max-sm:hidden">{firstError}</span>}>
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={!valid}>
-          {createLabel(values.platforms.length)}
+          {createLabel(values.platforms.length, t)}
         </Button>
       </CaptureFooter>
     </form>

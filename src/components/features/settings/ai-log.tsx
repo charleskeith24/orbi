@@ -20,63 +20,69 @@ import {
 import { Button } from "@/components/ui/button"
 import type { AiTaskName } from "@/lib/ai"
 import { formatDateTime, parseDate } from "@/lib/dates"
+import { useT, type Translator } from "@/lib/i18n"
 import { dataActions, useDb, useTable } from "@/lib/store"
 import type { AiGeneration, Database } from "@/lib/types"
-import { formatNumber, pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { aiMessages } from "./ai-messages"
 
-const TASK_LABELS: Partial<Record<AiTaskName, string>> = {
+type AiT = Translator<(typeof aiMessages)["en"]>
+type AiKey = keyof (typeof aiMessages)["en"] & string
+
+/** Product names (ARCHITECTURE §9) stay English; the rest are message keys. */
+const TASK_LABELS: Partial<Record<AiTaskName, string | { key: AiKey }>> = {
   capture_idea: "Quick Capture",
   generate_ideas: "Idea Generator",
-  generate_hooks: "Hook generation",
+  generate_hooks: { key: "task_hook_generation" },
   score_idea: "Idea Score",
   content_brief: "Content Brief",
   generate_script: "Script",
   score_content: "Content Score",
-  repurpose: "Repurposing",
+  repurpose: { key: "task_repurpose" },
   experience_to_content: "Experience → Content",
-  analyze_reference: "Reference analysis",
+  analyze_reference: { key: "task_analyze_reference" },
   adapt_reference: "Inspiration → Original",
-  what_to_post: "What to post",
-  winner_replication: "Winner replication",
+  what_to_post: { key: "task_what_to_post" },
+  winner_replication: { key: "task_winner_replication" },
   weekly_review: "Weekly Report",
   monthly_review: "Monthly Review",
   weekly_plan: "Weekly Planner",
   strategist_chat: "Content Strategist",
-  onboarding_strategy: "Onboarding strategy",
+  onboarding_strategy: { key: "task_onboarding_strategy" },
   niche_discovery: "Niche Discovery",
 }
 
-export function taskLabel(task: string): string {
+export function taskLabel(task: string, t: AiT): string {
   const label = TASK_LABELS[task as AiTaskName]
-  if (label) return label
+  if (label) return typeof label === "string" ? label : t(label.key)
   const words = task.replace(/_/g, " ").trim()
-  return words ? words[0].toUpperCase() + words.slice(1) : "Unknown task"
+  return words ? words[0].toUpperCase() + words.slice(1) : t("unknown_task")
 }
 
 /** Where a logged generation's record lives (only when the record still exists). */
-function entityLink(db: Database, row: AiGeneration): { href: string; label: string } | null {
+function entityLink(db: Database, row: AiGeneration, t: AiT): { href: string; label: string } | null {
   const id = row.entity_id
   if (!id || !row.entity_type) return null
   switch (row.entity_type) {
     case "content_items": {
       const item = db.content_items.find((i) => i.id === id)
-      return item ? { href: `/studio/${id}`, label: item.title || "Content item" } : null
+      return item ? { href: `/studio/${id}`, label: item.title || t("entity_item") } : null
     }
     case "content_ideas": {
       const idea = db.content_ideas.find((i) => i.id === id)
-      return idea ? { href: `/ideas?open=${id}`, label: idea.title || "Idea" } : null
+      return idea ? { href: `/ideas?open=${id}`, label: idea.title || t("entity_idea") } : null
     }
     case "stories": {
       const story = db.stories.find((s) => s.id === id)
-      return story ? { href: `/stories?open=${id}`, label: story.title || "Story" } : null
+      return story ? { href: `/stories?open=${id}`, label: story.title || t("entity_story") } : null
     }
     case "research_items": {
       const item = db.research_items.find((r) => r.id === id)
-      return item ? { href: `/research?open=${id}`, label: item.title || "Reference" } : null
+      return item ? { href: `/research?open=${id}`, label: item.title || t("entity_reference") } : null
     }
     case "content_campaigns": {
       const campaign = db.content_campaigns.find((c) => c.id === id)
-      return campaign ? { href: `/campaigns/${id}`, label: campaign.name || "Campaign" } : null
+      return campaign ? { href: `/campaigns/${id}`, label: campaign.name || t("entity_campaign") } : null
     }
     default:
       return null
@@ -93,6 +99,8 @@ export function AiLog({ now }: { now: Date }) {
   const db = useDb()
   const generations = useTable("ai_generations")
   const [confirm, confirmDialog] = useConfirm()
+  const t = useT(aiMessages)
+  const count = (key: Parameters<AiT["plural"]>[0], n: number) => t.plural(key, n, { count: formatNumber(n) })
   const [statuses, setStatuses] = useState<string[]>([])
   const [tasks, setTasks] = useState<string[]>([])
 
@@ -114,20 +122,20 @@ export function AiLog({ now }: { now: Date }) {
     const counts = new Map<string, number>()
     for (const g of generations) counts.set(g.task, (counts.get(g.task) ?? 0) + 1)
     return [...counts.entries()]
-      .map(([value, count]) => ({ value, label: taskLabel(value), count }))
+      .map(([value, count]) => ({ value, label: taskLabel(value, t), count }))
       .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
-  }, [generations])
+  }, [generations, t])
   const statusOptions = [
-    { value: "success", label: "Success", count: stats.success },
-    { value: "error", label: "Error", count: stats.errors },
+    { value: "success", label: t("status_success"), count: stats.success },
+    { value: "error", label: t("status_error"), count: stats.errors },
   ]
 
   async function clearLog() {
-    const count = generations.length
+    const total = generations.length
     const ok = await confirm({
-      title: "Clear the AI log?",
-      description: `Deletes all ${pluralize(count, "generation record")} — including the Content Strategist conversation and the Idea Generator results you could restore. Anything you already saved from AI output stays.`,
-      confirmLabel: "Clear log",
+      title: t("clear_title"),
+      description: t("clear_description", { records: count("generation_records", total) }),
+      confirmLabel: t("clear_action"),
     })
     if (!ok) return
     dataActions.remove(
@@ -136,32 +144,32 @@ export function AiLog({ now }: { now: Date }) {
     )
     setStatuses([])
     setTasks([])
-    toast.success("AI log cleared", { description: `${pluralize(count, "record")} deleted` })
+    toast.success(t("cleared"), { description: t("cleared_description", { records: count("records", total) }) })
   }
 
   const columns: DataTableColumn<AiGeneration>[] = [
     {
       id: "when",
-      header: "When",
+      header: t("col_when"),
       sortValue: (g) => g.created_at,
       cell: (g) => {
         const at = parseDate(g.created_at)
         return (
           <span className="whitespace-nowrap text-muted-foreground" title={formatDateTime(g.created_at)}>
-            {at ? (at.getTime() >= now.getTime() ? "Just now" : formatDistanceStrict(at, now, { addSuffix: true })) : "—"}
+            {at ? (at.getTime() >= now.getTime() ? t("just_now_title") : formatDistanceStrict(at, now, { addSuffix: true })) : "—"}
           </span>
         )
       },
     },
     {
       id: "task",
-      header: "Task",
-      sortValue: (g) => taskLabel(g.task),
+      header: t("col_task"),
+      sortValue: (g) => taskLabel(g.task, t),
       cell: (g) => {
-        const link = entityLink(db, g)
+        const link = entityLink(db, g, t)
         return (
           <div className="min-w-0">
-            <p className="font-medium whitespace-nowrap">{taskLabel(g.task)}</p>
+            <p className="font-medium whitespace-nowrap">{taskLabel(g.task, t)}</p>
             {link ? (
               <Link
                 href={link.href}
@@ -176,14 +184,14 @@ export function AiLog({ now }: { now: Date }) {
     },
     {
       id: "engine",
-      header: "Engine",
+      header: t("col_engine"),
       hideBelow: "sm",
       sortValue: (g) => g.provider,
       cell: (g) => <ProviderBadge provider={g.provider} model={g.model || undefined} />,
     },
     {
       id: "duration",
-      header: "Duration",
+      header: t("col_duration"),
       align: "right",
       hideBelow: "md",
       sortValue: (g) => g.duration_ms,
@@ -191,14 +199,14 @@ export function AiLog({ now }: { now: Date }) {
     },
     {
       id: "status",
-      header: "Status",
+      header: t("col_status"),
       sortValue: (g) => g.status,
       cell: (g) =>
         g.status === "success" ? (
-          <StatusPill tone="good">Success</StatusPill>
+          <StatusPill tone="good">{t("status_success")}</StatusPill>
         ) : (
           <StatusPill tone="critical" title={g.error ?? undefined} className="max-w-[14rem]">
-            {g.error ? `Error · ${g.error}` : "Error"}
+            {g.error ? t("error_detail", { message: g.error }) : t("status_error")}
           </StatusPill>
         ),
     },
@@ -208,19 +216,26 @@ export function AiLog({ now }: { now: Date }) {
 
   return (
     <SectionCard
-      title="Recent generations"
+      title={t("log_title")}
       description={
         generations.length
-          ? `${pluralize(generations.length, "generation")} · ${stats.errors ? `${pluralize(stats.errors, "error")} · ` : ""}${
-              stats.avgMs !== null ? `avg ${formatDuration(stats.avgMs)}` : "no timings"
-            } · ${stats.live ? `${formatNumber(stats.live)} by Claude` : "all by offline templates"}. The newest 200 are kept.`
-          : "Every AI action is logged here with its engine, timing and outcome."
+          ? t("log_summary", {
+              summary: [
+                count("generations", generations.length),
+                stats.errors ? count("errors", stats.errors) : "",
+                stats.avgMs !== null ? t("avg", { duration: formatDuration(stats.avgMs) }) : t("no_timings"),
+                stats.live ? t("by_claude", { count: formatNumber(stats.live) }) : t("all_offline"),
+              ]
+                .filter(Boolean)
+                .join(" · "),
+            })
+          : t("log_empty_description")
       }
       action={
         generations.length ? (
           <Button type="button" variant="outline" size="sm" onClick={() => void clearLog()}>
             <Trash2 aria-hidden />
-            Clear log
+            {t("clear_action")}
           </Button>
         ) : undefined
       }
@@ -231,12 +246,12 @@ export function AiLog({ now }: { now: Date }) {
           <FilterBar
             actions={
               <span className="text-xs text-muted-foreground num">
-                {filtered.length === sorted.length ? pluralize(sorted.length, "record") : `${filtered.length} of ${sorted.length}`}
+                {filtered.length === sorted.length ? count("records", sorted.length) : t("filtered", { shown: filtered.length, total: sorted.length })}
               </span>
             }
           >
-            <FacetFilter title="Task" options={taskOptions} value={tasks} onChange={setTasks} />
-            <FacetFilter title="Status" options={statusOptions} value={statuses} onChange={setStatuses} />
+            <FacetFilter title={t("col_task")} options={taskOptions} value={tasks} onChange={setTasks} />
+            <FacetFilter title={t("col_status")} options={statusOptions} value={statuses} onChange={setStatuses} />
             <ResetFiltersButton
               show={filtering}
               onClick={() => {
@@ -251,20 +266,20 @@ export function AiLog({ now }: { now: Date }) {
             getRowId={(g) => g.id}
             dense
             pageSize={15}
-            aria-label="AI generations"
+            aria-label={t("table_aria")}
             defaultSort={{ id: "when", desc: true }}
-            empty={<p className="px-4 py-8 text-center text-sm text-muted-foreground">No generations match these filters.</p>}
+            empty={<p className="px-4 py-8 text-center text-sm text-muted-foreground">{t("no_match")}</p>}
           />
         </>
       ) : (
         <EmptyState
           compact
           icon={Sparkles}
-          title="No AI generations yet"
-          description="Briefs, scripts, scores and ideas the AI writes for you are logged here with the engine that produced them."
+          title={t("empty_title")}
+          description={t("empty_description")}
           action={
             <Button asChild size="sm" variant="outline">
-              <Link href="/ideas/generator">Open the Idea Generator</Link>
+              <Link href="/ideas/generator">{t("open_generator")}</Link>
             </Button>
           }
         />

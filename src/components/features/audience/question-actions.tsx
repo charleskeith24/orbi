@@ -26,10 +26,14 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { PRIORITY_MAP } from "@/lib/constants"
 import { toISODate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { createIdea, dataActions } from "@/lib/store"
 import type { AudienceQuestion, ContentIdea, ID, QuestionStatus } from "@/lib/types"
 import { cn, formatNumber, truncate } from "@/lib/utils"
 import { askedAgainPatch, questionIdeaValues, questionPriority } from "./audience-model"
+import { audienceMessages } from "./messages"
+import { questionMessages } from "./question-messages"
 
 /**
  * +1 asked again, convert to idea, mark answered, dismiss/restore, copy link and delete for
@@ -46,6 +50,8 @@ export function useQuestionActions({
 }) {
   const router = useRouter()
   const [confirm, confirmDialog] = useConfirm()
+  const t = useT(questionMessages)
+  const a = useT(audienceMessages)
 
   function askedAgain(question: AudienceQuestion) {
     const patch = askedAgainPatch(question, toISODate(new Date()))
@@ -53,10 +59,10 @@ export function useQuestionActions({
     const frequency = patch.frequency ?? question.frequency
     const before = questionPriority(question.frequency)
     const after = questionPriority(frequency)
-    toast.success(`Asked again — now ${formatNumber(frequency)}×`, {
+    toast.success(t("asked_again_toast", { count: formatNumber(frequency) }), {
       description:
         after !== before
-          ? `Now ${PRIORITY_MAP[after].label.toLowerCase()} priority · ${truncate(question.question, 60)}`
+          ? t("now_priority", { priority: PRIORITY_MAP[after].label.toLowerCase(), text: truncate(question.question, 60) })
           : truncate(question.question, 80),
     })
   }
@@ -73,9 +79,9 @@ export function useQuestionActions({
       // An answered question keeps its answer; the idea is an extra piece.
       ...(question.status === "answered" ? {} : { status: "idea_created" as const }),
     })
-    toast.success("Idea added to the Idea Bank", {
+    toast.success(a("idea_added"), {
       description: idea.title,
-      action: { label: "Open idea", onClick: () => router.push(`/ideas?open=${idea.id}`) },
+      action: { label: a("open_idea"), onClick: () => router.push(`/ideas?open=${idea.id}`) },
     })
     return idea
   }
@@ -83,50 +89,49 @@ export function useQuestionActions({
   function answer(question: AudienceQuestion, itemId: ID) {
     dataActions.update("audience_questions", question.id, { content_item_id: itemId, status: "answered" })
     const item = dataActions.getDb().content_items.find((i) => i.id === itemId)
-    toast.success("Marked as answered", {
+    toast.success(t("marked_answered"), {
       description: item ? truncate(item.title, 80) : undefined,
-      action: { label: "Open content", onClick: () => router.push(`/studio/${itemId}`) },
+      action: { label: t("open_content"), onClick: () => router.push(`/studio/${itemId}`) },
     })
   }
 
   function dismiss(question: AudienceQuestion) {
     const previous: QuestionStatus = question.status
     dataActions.update("audience_questions", question.id, { status: "dismissed" })
-    toast.success("Question dismissed", {
+    toast.success(t("dismissed"), {
       description: truncate(question.question, 80),
-      action: { label: "Undo", onClick: () => dataActions.update("audience_questions", question.id, { status: previous }) },
+      action: { label: t("undo"), onClick: () => dataActions.update("audience_questions", question.id, { status: previous }) },
     })
   }
 
   function restore(question: AudienceQuestion) {
     const status: QuestionStatus = question.content_item_id ? "answered" : question.idea_id ? "idea_created" : "new"
     dataActions.update("audience_questions", question.id, { status })
-    toast.success("Question restored", { description: truncate(question.question, 80) })
+    toast.success(t("restored"), { description: truncate(question.question, 80) })
   }
 
   async function copyLink(question: AudienceQuestion) {
     const url = `${window.location.origin}/audience/questions?open=${question.id}`
     try {
       await navigator.clipboard.writeText(url)
-      toast.success("Link copied", { description: url })
+      toast.success(a("link_copied"), { description: url })
     } catch {
-      toast.error("Couldn't copy the link", { description: url })
+      toast.error(a("copy_failed"), { description: url })
     }
   }
 
   async function remove(question: AudienceQuestion): Promise<boolean> {
     const linked = question.idea_id || question.content_item_id
+    const vars = { text: truncate(question.question || t("untitled"), 140), count: formatNumber(question.frequency) }
     const ok = await confirm({
-      title: "Delete this question?",
-      description: `“${truncate(question.question || "Untitled question", 140)}” and its count (${formatNumber(
-        question.frequency
-      )}×) leave the Question Bank.${linked ? " The linked idea and content stay." : ""} This can't be undone.`,
-      confirmLabel: "Delete question",
+      title: t("delete_title"),
+      description: linked ? t("delete_description_linked", vars) : t("delete_description", vars),
+      confirmLabel: t("delete_confirm"),
     })
     if (!ok) return false
     dataActions.remove("audience_questions", question.id)
     onDeleted?.(question.id)
-    toast.success("Question deleted", { description: truncate(question.question, 80) })
+    toast.success(t("deleted"), { description: truncate(question.question, 80) })
     return true
   }
 
@@ -158,6 +163,9 @@ export function QuestionActionsMenu({
   showOpen?: boolean
   className?: string
 }) {
+  const t = useT(questionMessages)
+  const a = useT(audienceMessages)
+  const c = useT(commonMessages)
   const answered = question.status === "answered"
   return (
     <DropdownMenu>
@@ -166,7 +174,7 @@ export function QuestionActionsMenu({
           type="button"
           variant="ghost"
           size="icon-xs"
-          aria-label={`Actions for question: ${truncate(question.question || "Untitled question", 60)}`}
+          aria-label={t("actions_for", { text: truncate(question.question || t("untitled"), 60) })}
           className={cn("text-muted-foreground", className)}
         >
           <Ellipsis aria-hidden />
@@ -176,48 +184,48 @@ export function QuestionActionsMenu({
         {showOpen ? (
           <DropdownMenuItem onSelect={() => actions.open(question.id)}>
             <PanelRightOpen aria-hidden />
-            Open details
+            {a("open_details")}
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem onSelect={() => actions.askedAgain(question)}>
           <Plus aria-hidden />
-          Asked again (+1)
+          {t("asked_again_menu")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => actions.convertToIdea(question)}>
           <Lightbulb aria-hidden />
-          {question.idea_id ? "Open idea" : "Convert to idea"}
+          {question.idea_id ? a("open_idea") : t("convert_to_idea")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => actions.markAnswered(question)}>
           <CircleCheck aria-hidden />
-          {answered ? "Change answer…" : "Mark answered…"}
+          {answered ? t("change_answer") : t("mark_answered")}
         </DropdownMenuItem>
         {answered && question.content_item_id ? (
           <DropdownMenuItem asChild>
             <Link href={`/studio/${question.content_item_id}`}>
               <ExternalLink aria-hidden />
-              Open answer
+              {t("open_answer")}
             </Link>
           </DropdownMenuItem>
         ) : null}
         {question.status === "dismissed" ? (
           <DropdownMenuItem onSelect={() => actions.restore(question)}>
             <RotateCcw aria-hidden />
-            Restore
+            {t("restore")}
           </DropdownMenuItem>
         ) : (
           <DropdownMenuItem onSelect={() => actions.dismiss(question)}>
             <CircleMinus aria-hidden />
-            Dismiss
+            {t("dismiss")}
           </DropdownMenuItem>
         )}
         <DropdownMenuItem onSelect={() => void actions.copyLink(question)}>
           <Link2 aria-hidden />
-          Copy link
+          {a("copy_link")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={() => void actions.remove(question)}>
           <Trash2 aria-hidden />
-          Delete
+          {c("delete")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

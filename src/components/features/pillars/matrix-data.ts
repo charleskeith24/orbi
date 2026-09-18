@@ -1,6 +1,7 @@
 /** Workspace → Content Matrix inputs: dimension lists with need scores, coverage counts and existing matrix ideas. */
 import { funnelMix, pillarMix } from "@/lib/analytics"
 import { FORMAT_CATEGORIES, FUNNEL_STAGE_IDS, FUNNEL_STAGES, GOAL_CATEGORIES, PUBLISHED_STAGES } from "@/lib/constants"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type { AppSettings, CategoricalColor, Database, FormatCategory, FunnelStage, ID } from "@/lib/types"
 import {
   comboKey,
@@ -12,6 +13,7 @@ import {
   type MatrixSelection,
   type MatrixStage,
 } from "./matrix-engine"
+import { matrixMessages } from "./matrix-messages"
 import { sortPillars } from "./pillar-math"
 
 export type MatrixPillarOption = MatrixPillar & { color: CategoricalColor }
@@ -58,9 +60,10 @@ function needOf(row: { targetPct: number; actualPct: number } | undefined, enoug
   return Math.max(-1, Math.min(1, (row.targetPct - row.actualPct) / Math.max(row.targetPct, 5)))
 }
 
-export function buildMatrixData(db: Database, now: Date, settings: AppSettings): MatrixData {
-  const pMix = pillarMix(db, now, settings)
-  const fMix = funnelMix(db, now, settings)
+export function buildMatrixData(db: Database, now: Date, settings: AppSettings, lang: UiLang = "en"): MatrixData {
+  const t = translator(matrixMessages, lang)
+  const pMix = pillarMix(db, now, settings, { lang })
+  const fMix = funnelMix(db, now, settings, { lang })
   const pillarRows = new Map(pMix.rows.map((r) => [r.pillar.id, r]))
   const stageRows = new Map(fMix.rows.map((r) => [r.stage, r]))
 
@@ -68,7 +71,7 @@ export function buildMatrixData(db: Database, now: Date, settings: AppSettings):
     const row = pillarRows.get(p.id)
     return {
       id: p.id,
-      name: p.name || "Untitled pillar",
+      name: p.name || t("untitled_pillar"),
       color: p.color,
       need: needOf(row, pMix.enoughData),
       deviation: row && pMix.enoughData ? row.deviation : null,
@@ -83,7 +86,7 @@ export function buildMatrixData(db: Database, now: Date, settings: AppSettings):
         a.sort_order - b.sort_order ||
         a.name.localeCompare(b.name)
     )
-    .map((f) => ({ id: f.id, name: f.name || "Untitled format", category: f.category }))
+    .map((f) => ({ id: f.id, name: f.name || t("untitled_format"), category: f.category }))
 
   const ideaCount = new Map<string, number>()
   const itemCount = new Map<string, number>()
@@ -116,7 +119,7 @@ export function buildMatrixData(db: Database, now: Date, settings: AppSettings):
   const problems = db.audience_problems
     .map((p) => ({
       id: p.id,
-      text: p.problem.trim() || "Untitled problem",
+      text: p.problem.trim() || t("untitled_problem"),
       severity: p.severity,
       personaId: p.persona_id,
       pillarId: p.pillar_id,
@@ -130,7 +133,7 @@ export function buildMatrixData(db: Database, now: Date, settings: AppSettings):
 
   const goals = db.content_goals
     .filter((g) => g.is_active)
-    .map((g) => ({ id: g.id, name: g.name || GOAL_CATEGORIES[g.category]?.label || "Untitled goal", category: g.category }))
+    .map((g) => ({ id: g.id, name: g.name || GOAL_CATEGORIES[g.category]?.label || t("untitled_goal"), category: g.category }))
 
   const stages = FUNNEL_STAGE_IDS.map((id) => ({
     id,
@@ -232,7 +235,8 @@ export interface CoverageGap {
 }
 
 /** Empty or thin pillar × format cells, weighted by pillar need and how much the format is used overall. */
-export function coverageGaps(data: MatrixData, counts: Map<string, number>, limit = 6): CoverageGap[] {
+export function coverageGaps(data: MatrixData, counts: Map<string, number>, limit = 6, lang: UiLang = "en"): CoverageGap[] {
+  const t = translator(matrixMessages, lang)
   let totalUsage = 0
   for (const n of data.formatUsage.values()) totalUsage += n
   const candidates: (CoverageGap & { score: number })[] = []
@@ -243,7 +247,11 @@ export function coverageGaps(data: MatrixData, counts: Map<string, number>, limi
       const share = totalUsage ? (data.formatUsage.get(f.id) ?? 0) / totalUsage : 0
       const score = (count === 0 ? 1 : 0.5) * (1 + Math.max(0, p.need)) * (0.3 + share * 3)
       const reason =
-        p.need > 0.1 ? `${p.name} is under target` : share >= 0.1 ? `${f.name} is one of your most-used formats` : "Untested combination"
+        p.need > 0.1
+          ? t("gap_under_target", { pillar: p.name })
+          : share >= 0.1
+            ? t("gap_most_used", { format: f.name })
+            : t("gap_untested")
       candidates.push({ pillarId: p.id, formatId: f.id, count, reason, score })
     }
   }

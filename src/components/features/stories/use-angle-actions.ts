@@ -2,23 +2,28 @@
 
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { useTable } from "@/lib/store"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
 import { createContentFromAngle, saveAngleAsIdea, type AngleDraft, type AngleOrigin } from "./angle-model"
 import { updateAngleDraft, useAngleSession } from "./angle-store"
+import { angleMessages } from "./experience-messages"
 
 /** Save angles as ideas (one or many) or turn one into content and open it in the Content Studio. */
 export function useAngleActions(sessionKey: string, origin: AngleOrigin) {
   const router = useRouter()
   const formats = useTable("content_formats")
   const provider = useAngleSession(sessionKey).provider
+  const t = useT(angleMessages)
+  const c = useT(commonMessages)
 
   function save(draft: AngleDraft) {
     const idea = saveAngleAsIdea(draft, origin, formats)
     updateAngleDraft(sessionKey, draft.key, { ideaId: idea.id })
-    toast.success("Saved to your Idea Bank", {
+    toast.success(t("saved_to_bank"), {
       description: idea.title,
-      action: { label: "Open", onClick: () => router.push(`/ideas?open=${idea.id}`) },
+      action: { label: c("open"), onClick: () => router.push(`/ideas?open=${idea.id}`) },
     })
   }
 
@@ -30,9 +35,9 @@ export function useAngleActions(sessionKey: string, origin: AngleOrigin) {
     })
     if (!ideas.length) return
     const from = origin.storyTitle.trim()
-    toast.success(`${pluralize(ideas.length, "idea")} saved to your Idea Bank`, {
-      description: from ? `From “${from}”` : undefined,
-      action: { label: "Open Idea Bank", onClick: () => router.push("/ideas") },
+    toast.success(t.plural("saved_many", ideas.length, { count: formatNumber(ideas.length) }), {
+      description: from ? t("from", { title: from }) : undefined,
+      action: { label: t("open_bank"), onClick: () => router.push("/ideas") },
     })
   }
 
@@ -40,10 +45,10 @@ export function useAngleActions(sessionKey: string, origin: AngleOrigin) {
     try {
       const { idea, item } = createContentFromAngle(draft, origin, formats, draft.edited ? "manual" : (provider ?? "offline"))
       updateAngleDraft(sessionKey, draft.key, { ideaId: idea.id, itemId: item.id })
-      toast.success("Content created", { description: `${item.title} — opening the Content Studio` })
+      toast.success(t("content_created"), { description: t("created_description", { title: item.title }) })
       router.push(`/studio/${item.id}`)
     } catch (error) {
-      toast.error("Couldn't create the content", { description: error instanceof Error ? error.message : String(error) })
+      toast.error(t("create_failed"), { description: error instanceof Error ? error.message : String(error) })
     }
   }
 

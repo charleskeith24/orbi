@@ -19,9 +19,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { DAYS_OF_WEEK } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions, useLookup, useTable } from "@/lib/store"
 import type { ID, PlatformId, PostingSlot, UpdateRow } from "@/lib/types"
+import { formatNumber } from "@/lib/utils"
 import { weekdayOrder } from "./calendar-model"
+import { scheduleMessages } from "./schedule-messages"
 import { insertionPlan, RECOMMENDED_THEMES } from "./schedule-model"
 
 export interface SlotDraftTarget {
@@ -81,6 +85,8 @@ function SlotForm({
   onCancel: () => void
   onSaved: (slot: PostingSlot, created: boolean) => void
 }) {
+  const t = useT(scheduleMessages)
+  const c = useT(commonMessages)
   const slots = useTable("content_calendar")
   const pillars = useLookup("content_pillars")
   const editing = target.slot
@@ -94,13 +100,9 @@ function SlotForm({
   const [touched, setTouched] = useState(false)
 
   const clean = label.trim()
-  const labelError = !clean
-    ? "Name the slot's theme, e.g. “Tutorial / Framework”."
-    : clean.length > MAX_LABEL
-      ? `Keep it under ${MAX_LABEL} characters.`
-      : null
+  const labelError = !clean ? t("theme_required") : clean.length > MAX_LABEL ? t("theme_too_long", { max: MAX_LABEL }) : null
   const dayOptions: SelectOption<string>[] = weekdayOrder(weekStartsOn).map((d) => ({ value: String(d), label: DAYS_OF_WEEK[d]?.label ?? "" }))
-  const dayName = DAYS_OF_WEEK[Number(day)]?.label ?? "that day"
+  const dayName = DAYS_OF_WEEK[Number(day)]?.label ?? t("that_day")
 
   function pickPillar(id: ID | null) {
     setPillarId(id)
@@ -122,47 +124,45 @@ function SlotForm({
         patch.sort_order = plan.sortOrder
       }
       dataActions.update("content_calendar", editing.id, patch)
-      toast.success("Posting slot updated", { description: `${dayName} · ${clean}` })
+      toast.success(t("slot_updated"), { description: `${dayName} · ${clean}` })
       onSaved({ ...editing, ...patch }, false)
       return
     }
     const plan = insertionPlan(slots, dayNumber, time)
     if (plan.updates.length) dataActions.updateMany("content_calendar", plan.updates)
     const row = dataActions.insert("content_calendar", { ...values, sort_order: plan.sortOrder })
-    toast.success(`Posting slot added to ${dayName}`, { description: clean })
+    toast.success(t("slot_added_to", { day: dayName }), { description: clean })
     onSaved(row, true)
   }
 
   return (
     <form className="grid min-w-0 gap-4" onSubmit={submit} noValidate>
       <DialogHeader>
-        <DialogTitle>{editing ? "Edit posting slot" : "Add posting slot"}</DialogTitle>
-        <DialogDescription>
-          A recurring weekly target. The Calendar shows it as a lane every {dayName}, and the Weekly Planner fills it first.
-        </DialogDescription>
+        <DialogTitle>{editing ? t("edit_title") : t("add_title")}</DialogTitle>
+        <DialogDescription>{t("form_description", { day: dayName })}</DialogDescription>
       </DialogHeader>
 
       <FormRow>
-        <FormField label="Day" htmlFor="slot-day">
+        <FormField label={t("day")} htmlFor="slot-day">
           <OptionSelect id="slot-day" options={dayOptions} value={day} onChange={(value) => value && setDay(value)} />
         </FormField>
-        <FormField label="Time" htmlFor="slot-time" description="Clear it for “any time”.">
+        <FormField label={c("time")} htmlFor="slot-time" description={t("time_hint")}>
           <TimeInput id="slot-time" value={time} onChange={setTime} className="w-full" />
         </FormField>
       </FormRow>
 
-      <FormField label="Theme" htmlFor="slot-label" required error={touched ? labelError : null}>
+      <FormField label={t("theme")} htmlFor="slot-label" required error={touched ? labelError : null}>
         <Input
           id="slot-label"
           value={label}
           autoFocus={!editing}
           autoComplete="off"
-          placeholder="e.g. Tutorial / Framework"
+          placeholder={t("theme_placeholder")}
           aria-invalid={touched && Boolean(labelError)}
           onChange={(event) => setLabel(event.target.value)}
           onBlur={() => setTouched(true)}
         />
-        <div className="flex flex-wrap gap-1.5 pt-1" role="group" aria-label="Recommended themes">
+        <div className="flex flex-wrap gap-1.5 pt-1" role="group" aria-label={t("recommended_themes")}>
           {RECOMMENDED_THEMES.map((theme) => (
             <button
               key={theme}
@@ -178,20 +178,18 @@ function SlotForm({
       </FormField>
 
       <FormRow>
-        <FormField label="Pillar" htmlFor="slot-pillar">
+        <FormField label={t("pillar")} htmlFor="slot-pillar">
           <PillarSelect id="slot-pillar" value={pillarId} onChange={pickPillar} allowNone />
         </FormField>
-        <FormField label="Format" htmlFor="slot-format">
+        <FormField label={t("format")} htmlFor="slot-format">
           <FormatSelect id="slot-format" value={formatId} onChange={setFormatId} allowNone />
         </FormField>
       </FormRow>
 
       <FormField
-        label="Platforms"
+        label={t("platforms")}
         description={
-          platforms.length
-            ? `${platforms.length} ${platforms.length === 1 ? "post" : "posts"} a week from this slot — one per platform.`
-            : "No platform picked — any post that day fills it."
+          platforms.length ? t.plural("platforms_count", platforms.length, { count: formatNumber(platforms.length) }) : t("platforms_none")
         }
       >
         <PlatformToggleGroup value={platforms} onChange={setPlatforms} size="xs" />
@@ -200,17 +198,17 @@ function SlotForm({
       <div className="flex items-start gap-2.5">
         <Switch id="slot-active" checked={active} onCheckedChange={setActive} className="mt-0.5" />
         <Label htmlFor="slot-active" className="flex-col items-start gap-0.5 font-normal">
-          <span className="text-sm font-medium">Active</span>
-          <span className="text-xs text-muted-foreground">Counts toward weekly capacity and shows on the Calendar. Pause it to keep it for later.</span>
+          <span className="text-sm font-medium">{t("active")}</span>
+          <span className="text-xs text-muted-foreground">{t("active_hint")}</span>
         </Label>
       </div>
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={Boolean(labelError)}>
-          {editing ? "Save slot" : "Add slot"}
+          {editing ? t("save_slot") : t("add_slot")}
         </Button>
       </DialogFooter>
     </form>

@@ -4,10 +4,12 @@ import { Plus } from "lucide-react"
 import { useMemo, useState } from "react"
 import { ColorDot } from "@/components/common/color"
 import { TagChip } from "@/components/common/entity-badges"
+import { tagPickerMessages } from "@/components/common/messages"
 import { CheckboxIndicator, keywordFilter } from "@/components/common/multi-select"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useT } from "@/lib/i18n"
 import { ensureTag, setEntityTags, useEntityTags, useTable } from "@/lib/store"
 import type { ID, Tag, TaggableEntity } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -27,7 +29,7 @@ function tagFilter(value: string, search: string, keywords?: string[]): number {
 export function TagPicker({
   value,
   onChange,
-  placeholder = "Add tag",
+  placeholder,
   disabled,
   className,
 }: {
@@ -37,15 +39,16 @@ export function TagPicker({
   disabled?: boolean
   className?: string
 }) {
+  const t = useT(tagPickerMessages)
   const tags = useTable("tags")
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
 
-  const byId = useMemo(() => new Map(tags.map((t) => [t.id, t])), [tags])
+  const byId = useMemo(() => new Map(tags.map((tag) => [tag.id, tag])), [tags])
   const sorted = useMemo(() => [...tags].sort((a, b) => a.name.localeCompare(b.name)), [tags])
   const selected = value.map((id) => byId.get(id)).filter((t): t is Tag => Boolean(t))
   const clean = normalizeTagName(search)
-  const exists = clean ? tags.some((t) => t.name.toLowerCase() === clean) : true
+  const exists = clean ? tags.some((tag) => tag.name.toLowerCase() === clean) : true
 
   function toggle(id: ID) {
     onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id])
@@ -81,21 +84,21 @@ export function TagPicker({
             size="xs"
             disabled={disabled}
             className="text-muted-foreground"
-            aria-label={selected.length ? "Edit tags" : undefined}
+            aria-label={selected.length ? t("edit_tags") : undefined}
           >
             <Plus aria-hidden />
-            {selected.length ? "Tag" : placeholder}
+            {selected.length ? t("tag") : (placeholder ?? t("add_tag"))}
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-64 gap-0 p-0">
           <Command filter={tagFilter}>
-            <CommandInput value={search} onValueChange={setSearch} placeholder="Search or create…" />
-            <CommandList>
+            <CommandInput value={search} onValueChange={setSearch} placeholder={t("search_or_create")} />
+            <CommandList label={t("options_label")}>
               {exists ? (
-                <CommandEmpty>{tags.length ? "No matching tags" : "No tags yet — type to create one"}</CommandEmpty>
+                <CommandEmpty>{tags.length ? t("no_matching") : t("no_tags_yet")}</CommandEmpty>
               ) : null}
               {sorted.length ? (
-                <CommandGroup heading="Tags">
+                <CommandGroup heading={t("tags")}>
                   {sorted.map((tag) => {
                     const checked = value.includes(tag.id)
                     return (
@@ -124,7 +127,7 @@ export function TagPicker({
                   <CommandItem value={`${CREATE_PREFIX}${clean}`} forceMount onSelect={create}>
                     <Plus aria-hidden />
                     <span className="min-w-0 truncate">
-                      Create <span className="font-medium">#{clean}</span>
+                      <CreateLabel template={t("create")} tag={`#${clean}`} />
                     </span>
                   </CommandItem>
                 </CommandGroup>
@@ -134,6 +137,18 @@ export function TagPicker({
         </PopoverContent>
       </Popover>
     </div>
+  )
+}
+
+/** "Create {tag}" with the tag name emphasized, in either word order. */
+function CreateLabel({ template, tag }: { template: string; tag: string }) {
+  const [before, after = ""] = template.split("{tag}")
+  return (
+    <>
+      {before}
+      <span className="font-medium">{tag}</span>
+      {after}
+    </>
   )
 }
 

@@ -8,7 +8,7 @@ export function formatHighlightMetric(h: Pick<ReportHighlight, "value" | "metric
   const label = h.metricLabel
   if (label.startsWith("×")) return `${h.value.toFixed(1)}${label}`
   if (/rate/i.test(label)) return `${formatPercent(h.value)} ${label}`
-  if (/per post/i.test(label)) return `${h.value.toFixed(1)} ${label}`
+  if (/per post|kada post/i.test(label)) return `${h.value.toFixed(1)} ${label}`
   return `${formatNumber(h.value)} ${label}`
 }
 
@@ -20,9 +20,4 @@ export function rankedByLabel(metric: WinnerMetric): string {
 /** 2.14 → "2.1×"; null → "—". */
 export function formatRatio(ratio: number | null | undefined): string {
   return ratio === null || ratio === undefined || !Number.isFinite(ratio) ? "—" : `${ratio.toFixed(1)}×`
-}
-
-/** 1 → "1 post", 3 → "3 posts" (thousands-comma'd). */
-export function countLabel(count: number, singular: string, plural = `${singular}s`): string {
-  return `${formatNumber(count)} ${count === 1 ? singular : plural}`
 }

@@ -9,9 +9,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { contentItemDate, formatDate, parseDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions, useTable } from "@/lib/store"
 import type { ContentCampaign, ID } from "@/lib/types"
-import { matchesQuery, pluralize } from "@/lib/utils"
+import { formatNumber, matchesQuery } from "@/lib/utils"
+import { campaignDetailMessages } from "./messages"
 
 const MAX_ROWS = 60
 
@@ -35,6 +38,8 @@ export function AddItemsDialog({
 }
 
 function AddItemsForm({ campaign, onDone }: { campaign: ContentCampaign; onDone: () => void }) {
+  const t = useT(campaignDetailMessages)
+  const c = useT(commonMessages)
   const items = useTable("content_items")
   const [query, setQuery] = useState("")
   const [onlyUnassigned, setOnlyUnassigned] = useState(true)
@@ -71,32 +76,30 @@ function AddItemsForm({ campaign, onDone }: { campaign: ContentCampaign; onDone:
       "content_items",
       selected.map((id) => ({ id, patch: { campaign_id: campaign.id } }))
     )
-    toast.success(`${pluralize(selected.length, "piece")} added to campaign`, { description: campaign.name })
+    toast.success(t.plural("added", selected.length, { count: formatNumber(selected.length) }), { description: campaign.name })
     onDone()
   }
 
   return (
     <>
       <DialogHeader className="gap-1 border-b py-3.5 pr-12 pl-4">
-        <DialogTitle>Add existing content</DialogTitle>
-        <DialogDescription className="text-xs">
-          Pieces dated inside the campaign window are listed first.
-        </DialogDescription>
+        <DialogTitle>{t("add_title")}</DialogTitle>
+        <DialogDescription className="text-xs">{t("add_description")}</DialogDescription>
       </DialogHeader>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-2.5">
-        <SearchInput value={query} onChange={setQuery} placeholder="Search content…" className="sm:w-64" autoFocus />
+        <SearchInput value={query} onChange={setQuery} placeholder={t("search_content")} className="sm:w-64" autoFocus />
         <div className="flex items-center gap-2 sm:ml-auto">
           <Switch id="only-unassigned" size="sm" checked={onlyUnassigned} onCheckedChange={setOnlyUnassigned} />
           <Label htmlFor="only-unassigned" className="text-xs font-normal text-muted-foreground">
-            Only pieces without a campaign
+            {t("only_unassigned")}
           </Label>
         </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin">
         {shown.length ? (
-          <ul className="divide-y" aria-label="Content you can add">
+          <ul className="divide-y" aria-label={t("can_add_aria")}>
             {shown.map(({ item, date, inWindow }) => {
               const checked = chosen.has(item.id)
               const inputId = `add-item-${item.id}`
@@ -106,11 +109,11 @@ function AddItemsForm({ campaign, onDone }: { campaign: ContentCampaign; onDone:
                   <label htmlFor={inputId} className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
                     <PlatformIcon platform={item.platform} label className="size-3.5 shrink-0 text-muted-foreground" />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm">{item.title || "Untitled content"}</span>
+                      <span className="block truncate text-sm">{item.title || t("untitled_content")}</span>
                       <span className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
                         <span className="shrink-0">
-                          {date ? formatDate(date, "MMM d") : "No date"}
-                          {inWindow ? " · in window" : ""}
+                          {date ? formatDate(date, "MMM d") : t("no_date")}
+                          {inWindow ? t("in_window") : ""}
                         </span>
                         {item.campaign_id ? <CampaignBadge campaignId={item.campaign_id} variant="plain" className="min-w-0" /> : null}
                       </span>
@@ -124,31 +127,27 @@ function AddItemsForm({ campaign, onDone }: { campaign: ContentCampaign; onDone:
         ) : (
           <EmptyState
             compact
-            title="Nothing to add"
-            description={
-              onlyUnassigned
-                ? "Every matching piece already belongs to a campaign. Turn off the filter to move pieces from another campaign."
-                : "No content matches your search."
-            }
+            title={t("nothing_to_add")}
+            description={onlyUnassigned ? t("nothing_unassigned") : t("nothing_matches")}
           />
         )}
         {candidates.length > shown.length ? (
           <p className="border-t px-4 py-2 text-xs text-muted-foreground">
-            Showing {MAX_ROWS} of {candidates.length} — search to narrow the list.
+            {t("showing_of", { max: MAX_ROWS, count: candidates.length })}
           </p>
         ) : null}
       </div>
 
       <DialogFooter className="m-0 items-center rounded-b-xl px-4 py-3 sm:justify-between">
         <span className="text-xs text-muted-foreground num">
-          {selected.length ? `${pluralize(selected.length, "piece")} selected` : "Select pieces to add"}
+          {selected.length ? t.plural("selected", selected.length, { count: formatNumber(selected.length) }) : t("select_to_add")}
         </span>
         <div className="flex flex-col-reverse gap-2 sm:flex-row">
           <Button type="button" variant="outline" onClick={onDone}>
-            Cancel
+            {c("cancel")}
           </Button>
           <Button type="button" disabled={!selected.length} onClick={add}>
-            {selected.length ? `Add ${pluralize(selected.length, "piece")}` : "Add pieces"}
+            {selected.length ? t.plural("add_pieces", selected.length, { count: formatNumber(selected.length) }) : t("add_pieces")}
           </Button>
         </div>
       </DialogFooter>

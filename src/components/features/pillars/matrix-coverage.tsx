@@ -4,20 +4,23 @@ import { useMemo, useState } from "react"
 import { ChartFrame, Heatmap, type ChartTable } from "@/components/charts"
 import { SectionCard } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { useT, useUiLang } from "@/lib/i18n"
 import type { ID } from "@/lib/types"
 import { FormatChip, PillarChip } from "./matrix-chips"
 import { coverageGaps, type MatrixData } from "./matrix-data"
+import { matrixMessages } from "./matrix-messages"
 import { SegmentedToggle, type SegmentOption } from "./segmented-toggle"
 
 type Scope = "all" | "published"
 
-const SCOPE_OPTIONS: SegmentOption<Scope>[] = [
-  { value: "all", label: "All content" },
-  { value: "published", label: "Published" },
-]
-
 /** Format × pillar coverage heatmap of existing content (table twin) plus the biggest gaps, each one click from the matrix. */
 export function MatrixCoverage({ data, onPlan }: { data: MatrixData; onPlan: (pillarId: ID, formatId: ID) => void }) {
+  const t = useT(matrixMessages)
+  const lang = useUiLang()
+  const scopeOptions: SegmentOption<Scope>[] = [
+    { value: "all", label: t("all_content") },
+    { value: "published", label: t("published") },
+  ]
   const [scope, setScope] = useState<Scope>("all")
   const counts = scope === "all" ? data.counts.all : data.counts.published
 
@@ -25,14 +28,14 @@ export function MatrixCoverage({ data, onPlan }: { data: MatrixData; onPlan: (pi
     const cellValue = (pillarId: ID, formatId: ID) => counts.get(`${pillarId}|${formatId}`) ?? 0
     const cells = data.formats.flatMap((f) => data.pillars.map((p) => ({ row: f.id, col: p.id, value: cellValue(p.id, f.id) })))
     const table: ChartTable = {
-      columns: ["Format", ...data.pillars.map((p) => p.name), "Total"],
+      columns: [t("format"), ...data.pillars.map((p) => p.name), t("total")],
       rows: data.formats.map((f) => {
         const values = data.pillars.map((p) => cellValue(p.id, f.id))
         return [f.name, ...values, values.reduce((a, b) => a + b, 0)]
       }),
     }
-    return { cells, table, gaps: coverageGaps(data, counts) }
-  }, [data, counts])
+    return { cells, table, gaps: coverageGaps(data, counts, undefined, lang) }
+  }, [data, counts, t, lang])
 
   const pillarById = new Map(data.pillars.map((p) => [p.id, p]))
   const formatById = new Map(data.formats.map((f) => [f.id, f]))
@@ -40,26 +43,22 @@ export function MatrixCoverage({ data, onPlan }: { data: MatrixData; onPlan: (pi
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       <ChartFrame
-        title="Coverage by format and pillar"
-        description={
-          scope === "all"
-            ? "Every content item, any stage — empty cells are gaps."
-            : "Published content only — empty cells are gaps your audience hasn't seen."
-        }
+        title={t("coverage_title")}
+        description={scope === "all" ? t("coverage_all") : t("coverage_published")}
         table={view.table}
       >
         {/* Scope switch lives in the body so the header title keeps its width on narrow screens. */}
         <div className="flex flex-col gap-4">
-          <SegmentedToggle value={scope} options={SCOPE_OPTIONS} onChange={setScope} aria-label="Coverage scope" className="self-start" />
+          <SegmentedToggle value={scope} options={scopeOptions} onChange={setScope} aria-label={t("scope_aria")} className="self-start" />
           <div className="-mx-1 overflow-x-auto px-1 pb-1">
             <div className="min-w-[520px]">
               <Heatmap
                 rows={data.formats.map((f) => ({ id: f.id, label: f.name }))}
                 cols={data.pillars.map((p) => ({ id: p.id, label: p.name }))}
                 cells={view.cells}
-                valueLabel="Items"
-                aria-label="Content coverage by format and pillar"
-                emptyMessage="No content has both a pillar and a format yet."
+                valueLabel={t("items")}
+                aria-label={t("heatmap_aria")}
+                emptyMessage={t("heatmap_empty")}
               />
             </div>
           </div>
@@ -67,8 +66,8 @@ export function MatrixCoverage({ data, onPlan }: { data: MatrixData; onPlan: (pi
       </ChartFrame>
 
       <SectionCard
-        title="Biggest gaps"
-        description="Empty or thin cells, weighted by pillar need and how much you use the format."
+        title={t("gaps_title")}
+        description={t("gaps_description")}
         contentClassName={view.gaps.length ? "p-0" : undefined}
       >
         {view.gaps.length ? (
@@ -88,7 +87,7 @@ export function MatrixCoverage({ data, onPlan }: { data: MatrixData; onPlan: (pi
                       <FormatChip name={format.name} category={format.category} />
                     </div>
                     <p className="mt-1 truncate text-xs text-muted-foreground">
-                      {gap.count ? `Only ${gap.count} item` : "No content yet"} · {gap.reason}
+                      {gap.count ? t("only_items", { count: gap.count }) : t("no_content_yet")} · {gap.reason}
                     </p>
                   </div>
                   <Button
@@ -96,16 +95,16 @@ export function MatrixCoverage({ data, onPlan }: { data: MatrixData; onPlan: (pi
                     size="sm"
                     variant="ghost"
                     onClick={() => onPlan(gap.pillarId, gap.formatId)}
-                    aria-label={`Plan ${pillar.name} × ${format.name} in the matrix`}
+                    aria-label={t("plan_aria", { pillar: pillar.name, format: format.name })}
                   >
-                    Plan
+                    {t("plan")}
                   </Button>
                 </li>
               )
             })}
           </ul>
         ) : (
-          <p className="text-xs text-muted-foreground">Every pillar already has content in every format.</p>
+          <p className="text-xs text-muted-foreground">{t("no_gaps")}</p>
         )}
       </SectionCard>
     </div>

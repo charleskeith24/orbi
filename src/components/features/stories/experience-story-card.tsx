@@ -8,20 +8,17 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { todayISO } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import { dataActions } from "@/lib/store"
 import type { AiProviderId, ID, Story, StoryType } from "@/lib/types"
 import type { ExtractedStory } from "./angle-model"
+import { experienceMessages } from "./experience-messages"
+import { storyFormMessages } from "./messages"
 import { STORY_TYPE_OPTIONS, StoryTypeBadge } from "./story-badges"
 
 type StarKey = "situation" | "problem" | "action" | "result" | "lesson"
 
-const FIELDS: { key: StarKey; label: string }[] = [
-  { key: "situation", label: "Situation" },
-  { key: "problem", label: "Problem" },
-  { key: "action", label: "Action" },
-  { key: "result", label: "Result" },
-  { key: "lesson", label: "Lesson" },
-]
+const FIELDS: StarKey[] = ["situation", "problem", "action", "result", "lesson"]
 
 /** The Story Vault entry extracted from an experience — editable, then saved to the vault. */
 export function ExperienceStoryCard({
@@ -45,15 +42,17 @@ export function ExperienceStoryCard({
   const field = (name: string) => `${id}-${name}`
   const [type, setType] = useState<StoryType>("experience")
   const [pillarId, setPillarId] = useState<ID | null>(defaultPillarId)
-  const titleError = story.title.trim() ? undefined : "Give the story a title."
+  const t = useT(experienceMessages)
+  const tf = useT(storyFormMessages)
+  const titleError = story.title.trim() ? undefined : t("title_required")
 
   if (savedStory) {
     return (
       <SectionCard
-        title="Story Vault entry"
+        title={t("entry_title")}
         action={
           <StatusPill tone="good" icon={CircleCheck}>
-            Saved
+            {t("entry_saved")}
           </StatusPill>
         }
       >
@@ -61,11 +60,11 @@ export function ExperienceStoryCard({
           <StoryTypeBadge type={savedStory.type} />
           <p className="text-sm font-medium text-pretty">{savedStory.title}</p>
           {savedStory.lesson ? <p className="text-sm text-pretty text-muted-foreground">{savedStory.lesson}</p> : null}
-          <p className="text-xs text-pretty text-muted-foreground">Ideas you save from these angles link back to this story.</p>
+          <p className="text-xs text-pretty text-muted-foreground">{t("entry_linked")}</p>
           <Button type="button" size="sm" variant="outline" className="mt-1 w-fit" asChild>
             <Link href={`/stories?open=${savedStory.id}`}>
               <ExternalLink aria-hidden />
-              Open in Story Vault
+              {t("open_in_vault")}
             </Link>
           </Button>
         </div>
@@ -99,12 +98,12 @@ export function ExperienceStoryCard({
 
   return (
     <SectionCard
-      title="Story Vault entry"
-      description="Pulled from what you wrote — nothing invented. Edit it, then keep it."
+      title={t("entry_title")}
+      description={t("entry_description")}
       action={provider ? <ProviderBadge provider={provider} model={model ?? undefined} /> : null}
     >
       <div className="flex min-w-0 flex-col gap-3">
-        <FormField label="Story title" htmlFor={field("title")} required error={titleError}>
+        <FormField label={t("story_title")} htmlFor={field("title")} required error={titleError}>
           <Input
             id={field("title")}
             value={story.title}
@@ -114,7 +113,7 @@ export function ExperienceStoryCard({
           />
         </FormField>
         <div className="grid min-w-0 grid-cols-2 gap-3">
-          <FormField label="Type" htmlFor={field("type")}>
+          <FormField label={t("type")} htmlFor={field("type")}>
             <OptionSelect
               id={field("type")}
               size="sm"
@@ -125,38 +124,44 @@ export function ExperienceStoryCard({
               }}
             />
           </FormField>
-          <FormField label="Content Pillar" htmlFor={field("pillar")}>
+          <FormField label={t("content_pillar")} htmlFor={field("pillar")}>
             <PillarSelect id={field("pillar")} size="sm" allowNone value={pillarId} onChange={setPillarId} />
           </FormField>
         </div>
-        {FIELDS.map((f) => (
-          <FormField key={f.key} label={f.label} htmlFor={field(f.key)}>
+        {FIELDS.map((key) => (
+          <FormField key={key} label={tf(key)} htmlFor={field(key)}>
             <Textarea
-              id={field(f.key)}
+              id={field(key)}
               rows={2}
               className="min-h-14"
-              value={story[f.key]}
-              placeholder="Not mentioned — add it if it matters"
-              onChange={(event) => setField(f.key, event.target.value)}
+              value={story[key]}
+              placeholder={t("not_mentioned")}
+              onChange={(event) => setField(key, event.target.value)}
             />
           </FormField>
         ))}
-        <FormField label="Emotion" htmlFor={field("emotion")}>
-          <Input id={field("emotion")} value={story.emotion} maxLength={200} placeholder="How it felt" onChange={(event) => setField("emotion", event.target.value)} />
+        <FormField label={t("emotion")} htmlFor={field("emotion")}>
+          <Input
+            id={field("emotion")}
+            value={story.emotion}
+            maxLength={200}
+            placeholder={t("emotion_placeholder")}
+            onChange={(event) => setField("emotion", event.target.value)}
+          />
         </FormField>
-        <FormField label="Keywords" htmlFor={field("keywords")}>
+        <FormField label={t("keywords")} htmlFor={field("keywords")}>
           <ListEditor
             id={field("keywords")}
             value={story.keywords}
             onChange={(keywords) => onChange({ keywords: keywords.map((k) => k.toLowerCase()) })}
             maxItems={12}
-            placeholder="Add a keyword and press Enter"
-            aria-label="Keywords"
+            placeholder={t("keywords_placeholder")}
+            aria-label={t("keywords")}
           />
         </FormField>
         <Button type="button" size="sm" className="w-full sm:w-fit" disabled={Boolean(titleError)} onClick={save}>
           <BookmarkPlus aria-hidden />
-          Save to Story Vault
+          {t("save_to_vault")}
         </Button>
       </div>
     </SectionCard>

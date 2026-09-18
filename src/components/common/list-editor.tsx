@@ -3,8 +3,11 @@
 import { ArrowDown, ArrowUp, Plus, X } from "lucide-react"
 import { useRef, useState } from "react"
 import { Token } from "@/components/common/chip"
+import { listEditorMessages } from "@/components/common/messages"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { cn, splitList } from "@/lib/utils"
 
 export interface ListEditorProps {
@@ -31,7 +34,8 @@ export function ListEditor({ variant = "chips", ...props }: ListEditorProps) {
 }
 
 function MaxNote({ max }: { max: number }) {
-  return <p className="text-xs text-muted-foreground">Maximum of {max} items reached.</p>
+  const t = useT(listEditorMessages)
+  return <p className="text-xs text-muted-foreground">{t("max_reached", { max })}</p>
 }
 
 /* ---------------------------------- Chips --------------------------------- */
@@ -39,13 +43,14 @@ function MaxNote({ max }: { max: number }) {
 function ChipsEditor({
   value,
   onChange,
-  placeholder = "Type and press Enter",
+  placeholder,
   maxItems,
   id,
   disabled,
   className,
   "aria-label": ariaLabel,
 }: Omit<ListEditorProps, "variant">) {
+  const t = useT(listEditorMessages)
   const [draft, setDraft] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
   const full = maxItems !== undefined && value.length >= maxItems
@@ -101,7 +106,7 @@ function ChipsEditor({
                 event.stopPropagation()
                 onChange(value.filter((_, i) => i !== index))
               }}
-              aria-label={`Remove ${item}`}
+              aria-label={t("remove_named", { item })}
               className="flex size-4 items-center justify-center rounded-sm text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60"
             >
               <X aria-hidden />
@@ -117,7 +122,7 @@ function ChipsEditor({
           onKeyDown={onKeyDown}
           onPaste={onPaste}
           onBlur={() => draft.trim() && add(draft)}
-          placeholder={full ? "" : value.length ? "Add more…" : placeholder}
+          placeholder={full ? "" : value.length ? t("add_more") : (placeholder ?? t("chips_placeholder"))}
           aria-label={ariaLabel}
           className="h-6 min-w-24 flex-1 bg-transparent px-1 text-base outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed md:text-sm"
         />
@@ -132,14 +137,17 @@ function ChipsEditor({
 function LinesEditor({
   value,
   onChange,
-  placeholder = "Add an item",
-  addLabel = "Add",
+  placeholder: placeholderProp,
+  addLabel,
   maxItems,
   id,
   disabled,
   className,
   "aria-label": ariaLabel,
 }: Omit<ListEditorProps, "variant">) {
+  const t = useT(listEditorMessages)
+  const c = useT(commonMessages)
+  const placeholder = placeholderProp ?? t("lines_placeholder")
   const [draft, setDraft] = useState("")
   const listRef = useRef<HTMLOListElement>(null)
   const full = maxItems !== undefined && value.length >= maxItems
@@ -185,7 +193,7 @@ function LinesEditor({
               key={index}
               index={index}
               item={item}
-              itemLabel={ariaLabel ?? "Item"}
+              itemLabel={ariaLabel ?? t("item")}
               count={value.length}
               disabled={disabled}
               onCommit={(text) => commit(index, text)}
@@ -207,7 +215,7 @@ function LinesEditor({
             value={draft}
             disabled={disabled}
             placeholder={placeholder}
-            aria-label={ariaLabel ? `New ${ariaLabel.toLowerCase()} item` : placeholder}
+            aria-label={ariaLabel ? t("new_item", { label: ariaLabel.toLowerCase() }) : placeholder}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
@@ -218,7 +226,7 @@ function LinesEditor({
           />
           <Button type="button" variant="outline" onClick={addDraft} disabled={disabled || !draft.trim()}>
             <Plus aria-hidden />
-            {addLabel}
+            {addLabel ?? c("add")}
           </Button>
         </div>
       )}
@@ -245,6 +253,7 @@ function LineRow({
   onMove: (direction: -1 | 1, from: "input" | "button", text?: string) => void
   onRemove: () => void
 }) {
+  const t = useT(listEditorMessages)
   const [draft, setDraft] = useState(item)
   const [source, setSource] = useState(item)
   // Re-sync the draft when the underlying item changes (reorder, external edit).
@@ -285,7 +294,7 @@ function LineRow({
           variant="ghost"
           size="icon-xs"
           data-action="up"
-          aria-label={`Move item ${index + 1} up`}
+          aria-label={t("move_up", { n: index + 1 })}
           disabled={disabled || index === 0}
           onClick={() => onMove(-1, "button")}
         >
@@ -296,7 +305,7 @@ function LineRow({
           variant="ghost"
           size="icon-xs"
           data-action="down"
-          aria-label={`Move item ${index + 1} down`}
+          aria-label={t("move_down", { n: index + 1 })}
           disabled={disabled || index === count - 1}
           onClick={() => onMove(1, "button")}
         >
@@ -306,7 +315,7 @@ function LineRow({
           type="button"
           variant="ghost"
           size="icon-xs"
-          aria-label={`Remove item ${index + 1}`}
+          aria-label={t("remove_item", { n: index + 1 })}
           disabled={disabled}
           onClick={onRemove}
         >

@@ -5,8 +5,10 @@ import Link from "next/link"
 import { ChartFrame, MixBar, type ChartTable } from "@/components/charts"
 import { Button } from "@/components/ui/button"
 import { MIN_MIX_SAMPLE, type PillarMix } from "@/lib/analytics"
-import { pluralize } from "@/lib/utils"
+import { useT, useUiLang } from "@/lib/i18n"
+import { formatNumber } from "@/lib/utils"
 import { formatPoints } from "./pillar-math"
+import { pillarMessages } from "./pillar-messages"
 
 /** Pillar mix: actual share vs targets (MixBar + table twin), imbalance warnings and a target-total check. */
 export function PillarMixCard({
@@ -25,29 +27,37 @@ export function PillarMixCard({
   onSetTargets: () => void
   className?: string
 }) {
+  const t = useT(pillarMessages)
+  const lang = useUiLang()
   const table: ChartTable = {
-    columns: ["Pillar", "Items", "Actual", "Target", "vs target"],
-    rows: mix.rows.map((r) => [r.label, r.count, `${Math.round(r.actualPct)}%`, `${Math.round(r.targetPct)}%`, formatPoints(r.deviation)]),
+    columns: [t("pillar"), t("items"), t("actual"), t("target"), t("vs_target")],
+    rows: mix.rows.map((r) => [
+      r.label,
+      r.count,
+      `${Math.round(r.actualPct)}%`,
+      `${Math.round(r.targetPct)}%`,
+      formatPoints(r.deviation, lang),
+    ]),
   }
   const description = [
-    `Published in the ${windowLabel} plus scheduled for the next 7 days`,
-    pluralize(mix.total, "item"),
-    mix.unassigned ? `${mix.unassigned} without a pillar` : null,
+    t("mix_window", { window: windowLabel }),
+    t.plural("items", mix.total, { count: formatNumber(mix.total) }),
+    mix.unassigned ? t("without_pillar", { count: mix.unassigned }) : null,
   ]
     .filter(Boolean)
     .join(" · ")
 
   return (
     <ChartFrame
-      title="Content mix vs targets"
+      title={t("mix_title")}
       description={description}
       table={table}
       className={className}
       footer={
         <>
-          Pillars more than ±{tolerance} pts from target are flagged ·{" "}
+          {t("tolerance_note", { tolerance })}{" "}
           <Link href="/settings" className="underline-offset-4 hover:text-foreground hover:underline">
-            change the tolerance in Settings
+            {t("tolerance_link")}
           </Link>
         </>
       }
@@ -56,9 +66,9 @@ export function PillarMixCard({
         <MixBar
           segments={mix.rows.map((r) => ({ id: r.key, label: r.label, value: r.count, color: r.pillar.color }))}
           targets={mix.rows.map((r) => ({ id: r.key, value: r.targetPct }))}
-          valueLabel="Items"
-          aria-label="Pillar mix, actual vs target"
-          emptyMessage="Nothing published or scheduled in this window yet."
+          valueLabel={t("items")}
+          aria-label={t("mix_aria")}
+          emptyMessage={t("mix_empty")}
         />
         {targetTotal !== null && targetTotal !== 100 ? (
           <div
@@ -67,12 +77,11 @@ export function PillarMixCard({
           >
             <TriangleAlert className="size-3.5 shrink-0 text-warning-fg" aria-hidden />
             <span className="min-w-0 flex-1">
-              Active pillar targets add up to <strong className="num font-semibold">{targetTotal}%</strong> — rebalance them to 100% so the
-              comparison stays honest.
+              {t("targets_total_before")} <strong className="num font-semibold">{targetTotal}%</strong> {t("targets_total_after")}
             </span>
             <Button type="button" size="xs" variant="outline" onClick={onSetTargets}>
               <Scale aria-hidden />
-              Set targets
+              {t("set_targets")}
             </Button>
           </div>
         ) : null}
@@ -83,20 +92,21 @@ export function PillarMixCard({
 }
 
 function MixNotes({ mix }: { mix: PillarMix }) {
+  const t = useT(pillarMessages)
   if (!mix.total) return null
   if (!mix.enoughData) {
-    return <p className="text-xs text-muted-foreground">Balance warnings start once {MIN_MIX_SAMPLE} or more items are in the window.</p>
+    return <p className="text-xs text-muted-foreground">{t("balance_warnings_start", { count: MIN_MIX_SAMPLE })}</p>
   }
   if (!mix.warnings.length) {
     return (
       <p className="flex items-center gap-1.5 text-xs text-good-fg">
         <CircleCheck className="size-3.5 shrink-0" aria-hidden />
-        Every pillar is within its target range.
+        {t("every_pillar_ok")}
       </p>
     )
   }
   return (
-    <ul className="flex flex-col gap-1.5" aria-label="Imbalance warnings">
+    <ul className="flex flex-col gap-1.5" aria-label={t("imbalance_aria")}>
       {mix.warnings.map((warning) => (
         <li key={warning.key} className="flex items-start gap-2 text-xs">
           <TriangleAlert className="mt-px size-3.5 shrink-0 text-warning-fg" aria-hidden />

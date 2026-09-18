@@ -4,9 +4,16 @@ import { describe, expect, it } from "vitest"
 import { prettyModelName, ProviderBadge } from "@/components/common/ai"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { contentDateInfo } from "@/components/common/content-card"
+import {
+  funnelGoalMessages,
+  ideaStatusDescriptionMessages,
+  stageDescriptionMessages,
+  tierDescriptionMessages,
+} from "@/components/common/messages"
 import { Markdown, parseMarkdown } from "@/components/common/markdown"
 import { parseNumberInput } from "@/components/common/number-field"
 import { toneForScore } from "@/components/common/tone"
+import { FUNNEL_STAGES, IDEA_STATUSES, PERFORMANCE_TIERS, PIPELINE_STAGES } from "@/lib/constants"
 
 describe("parseNumberInput", () => {
   it("accepts separators, shorthand and percentages", () => {
@@ -117,5 +124,29 @@ describe("contentDateInfo", () => {
   })
   it("returns null without any date", () => {
     expect(contentDateInfo(base, now)).toBeNull()
+  })
+})
+
+describe("contentDateInfo in Taglish", () => {
+  const now = new Date(2026, 8, 10, 15, 0)
+  const base = { published_at: null, scheduled_at: null, due_date: null, stage: "scripting" as const }
+
+  it("builds its own relative phrases", () => {
+    expect(contentDateInfo({ ...base, due_date: "2026-09-08" }, now, "tl")?.label).toBe("Overdue ng 2 araw")
+    expect(contentDateInfo({ ...base, due_date: "2026-09-11" }, now, "tl")?.label).toBe("Due bukas")
+    const scheduled = contentDateInfo({ ...base, scheduled_at: new Date(2026, 8, 11, 18).toISOString() }, now, "tl")
+    expect(scheduled?.label).toBe("Bukas")
+    const published = contentDateInfo({ ...base, stage: "published", published_at: new Date(2026, 8, 5).toISOString() }, now, "tl")
+    expect(published?.label).toBe("5 araw ang nakalipas")
+  })
+})
+
+describe("badge helper text", () => {
+  // The English tooltips must stay identical to the option descriptions in constants.
+  it("mirrors the descriptions in constants", () => {
+    expect(stageDescriptionMessages.en).toEqual(Object.fromEntries(PIPELINE_STAGES.map((s) => [s.id, s.description])))
+    expect(ideaStatusDescriptionMessages.en).toEqual(Object.fromEntries(IDEA_STATUSES.map((s) => [s.id, s.description])))
+    expect(tierDescriptionMessages.en).toEqual(Object.fromEntries(Object.values(PERFORMANCE_TIERS).map((t) => [t.id, t.description])))
+    expect(funnelGoalMessages.en).toEqual(Object.fromEntries(Object.values(FUNNEL_STAGES).map((f) => [f.id, f.goal])))
   })
 })

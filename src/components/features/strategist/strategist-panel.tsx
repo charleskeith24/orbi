@@ -9,16 +9,21 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useAiStatus } from "@/lib/ai"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { useDataStore, useUIStore } from "@/lib/store"
 import { useClearConversation } from "./clear-conversation"
 import { Conversation } from "./conversation"
 import { strategistSession } from "./session"
+import { strategistMessages } from "./strategist-messages"
 
 const FULL_PAGE = "/strategist"
 
 function PanelHeader({ onClose }: { onClose: () => void }) {
   const ai = useAiStatus()
   const { clear, dialog, count } = useClearConversation()
+  const t = useT(strategistMessages)
+  const c = useT(commonMessages)
   return (
     <header className="flex shrink-0 items-start gap-3 border-b px-4 py-3">
       <span aria-hidden className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-brand-soft text-brand">
@@ -29,29 +34,29 @@ function PanelHeader({ onClose }: { onClose: () => void }) {
           <SheetTitle className="text-sm leading-5 font-semibold">Content Strategist</SheetTitle>
           {ai.loading ? null : <ProviderBadge provider={ai.provider} model={ai.model || undefined} />}
         </div>
-        <SheetDescription className="mt-0.5 truncate text-xs">Uses your Brand HQ and live analytics</SheetDescription>
+        <SheetDescription className="mt-0.5 truncate text-xs">{t("panel_description")}</SheetDescription>
       </div>
       <div className="-mr-1 flex shrink-0 items-center gap-0.5">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon-sm" asChild>
-              <Link href={FULL_PAGE} onClick={onClose} aria-label="Open full page">
+              <Link href={FULL_PAGE} onClick={onClose} aria-label={t("open_full_page")}>
                 <Maximize2 aria-hidden />
               </Link>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Open full page</TooltipContent>
+          <TooltipContent>{t("open_full_page")}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon-sm" aria-label="Clear conversation" disabled={!count} onClick={() => void clear()}>
+            <Button variant="ghost" size="icon-sm" aria-label={t("clear")} disabled={!count} onClick={() => void clear()}>
               <Trash2 aria-hidden />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Clear conversation</TooltipContent>
+          <TooltipContent>{t("clear")}</TooltipContent>
         </Tooltip>
         <SheetClose asChild>
-          <Button variant="ghost" size="icon-sm" aria-label="Close">
+          <Button variant="ghost" size="icon-sm" aria-label={c("close")}>
             <X aria-hidden />
           </Button>
         </SheetClose>

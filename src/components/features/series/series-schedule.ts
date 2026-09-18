@@ -4,7 +4,9 @@
  */
 import { addDays, addMonths, differenceInCalendarDays, startOfDay } from "date-fns"
 import { DAYS_OF_WEEK, SERIES_FREQUENCY_MAP } from "@/lib/constants"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type { ContentSeries, SeriesFrequency } from "@/lib/types"
+import { seriesMessages } from "./messages"
 
 /** First date on or after `date` that falls on `day` (0 = Sunday). `null` day → `date` itself. */
 export function nextOnOrAfter(date: Date, day: number | null): Date {
@@ -52,20 +54,21 @@ export function nextEpisodeDate(
   return candidate < today ? nextOnOrAfter(today, day) : candidate
 }
 
-/** "today", "tomorrow", "in 12 days", "22 days ago" — never falls back to a date. */
-export function relativeDayLabel(date: Date, now: Date): string {
+/** "today", "tomorrow", "in 12 days", "22 days ago" — never falls back to a date. In `lang` (default English). */
+export function relativeDayLabel(date: Date, now: Date, lang: UiLang = "en"): string {
+  const t = translator(seriesMessages, lang)
   const diff = differenceInCalendarDays(date, now)
-  if (diff === 0) return "today"
-  if (diff === 1) return "tomorrow"
-  if (diff === -1) return "yesterday"
-  return diff > 0 ? `in ${diff} days` : `${-diff} days ago`
+  if (diff === 0) return t("today")
+  if (diff === 1) return t("tomorrow")
+  if (diff === -1) return t("yesterday")
+  return diff > 0 ? t("in_days", { count: diff }) : t("days_ago", { count: -diff })
 }
 
-/** "Weekly · Mondays", "Every 2 weeks · Wednesdays", "Daily". */
-export function cadenceLabel(series: Pick<ContentSeries, "frequency" | "day_of_week">, short = false): string {
+/** "Weekly · Mondays", "Every 2 weeks · Wednesdays", "Daily". Frequency and day names stay English; the glue is in `lang`. */
+export function cadenceLabel(series: Pick<ContentSeries, "frequency" | "day_of_week">, short = false, lang: UiLang = "en"): string {
   const frequency = SERIES_FREQUENCY_MAP[series.frequency]?.label ?? series.frequency
   if (series.frequency === "daily" || series.day_of_week === null) return frequency
   const day = DAYS_OF_WEEK.find((d) => d.value === series.day_of_week)
   if (!day) return frequency
-  return `${frequency} · ${short ? day.short : `${day.label}s`}`
+  return short ? `${frequency} · ${day.short}` : translator(seriesMessages, lang)("cadence_days", { frequency, day: day.label })
 }

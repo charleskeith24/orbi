@@ -21,9 +21,12 @@ import { ColumnChart } from "@/components/charts"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { PLATFORMS } from "@/lib/constants"
+import { useT, useUiLang } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { useBrand, useRow } from "@/lib/store"
 import type { ContentSeries } from "@/lib/types"
-import { cn, formatCompact, formatNumber, formatPercent, pluralize } from "@/lib/utils"
+import { cn, formatCompact, formatNumber, formatPercent } from "@/lib/utils"
+import { seriesMessages } from "./messages"
 import { episodeTitle, setSeriesActive, useCreateNextEpisode } from "./series-actions"
 import { SeriesActionsMenu } from "./series-actions-menu"
 import { cadenceLabel } from "./series-schedule"
@@ -43,6 +46,7 @@ function MiniStat({ label, value, hint }: { label: string; value: string; hint?:
 }
 
 function NextEpisodePanel({ summary }: { summary: SeriesSummary }) {
+  const t = useT(seriesMessages)
   const brand = useBrand()
   const createEpisode = useCreateNextEpisode()
   const { series, nextPlanned, suggestedNext } = summary
@@ -50,10 +54,10 @@ function NextEpisodePanel({ summary }: { summary: SeriesSummary }) {
   const platform = series.platforms[0] ?? brand.main_platforms[0] ?? "facebook"
 
   return (
-    <section aria-label="Next episode" className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3 dark:bg-muted/15">
+    <section aria-label={t("next_episode")} className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3 dark:bg-muted/15">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1 basis-56">
-          <p className="text-xs text-muted-foreground">{nextPlanned ? "Next planned episode" : "No upcoming episode planned"}</p>
+          <p className="text-xs text-muted-foreground">{nextPlanned ? t("next_planned") : t("none_planned")}</p>
           {nextPlanned?.date ? (
             <p className="mt-0.5 text-sm">
               <span className="font-medium">
@@ -63,30 +67,36 @@ function NextEpisodePanel({ summary }: { summary: SeriesSummary }) {
                 href={`/studio/${nextPlanned.primary.id}`}
                 className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
               >
-                {nextPlanned.primary.title || "Untitled"}
+                {nextPlanned.primary.title || t("untitled")}
               </Link>
             </p>
           ) : (
-            <p className="mt-0.5 text-sm font-medium">Suggested: {format(suggestedNext, "EEEE, MMM d")}</p>
+            <p className="mt-0.5 text-sm font-medium">{t("suggested", { date: format(suggestedNext, "EEEE, MMM d") })}</p>
           )}
         </div>
         <Button type="button" size="sm" onClick={() => createEpisode(summary)}>
           <FilePlus2 aria-hidden />
-          Create episode #{number}
+          {t("create_episode", { number })}
         </Button>
       </div>
       <p className="text-xs text-pretty text-muted-foreground">
-        Creates “{episodeTitle(series.name, number)}” due {format(suggestedNext, "EEE, MMM d")} on {PLATFORMS[platform].label}
-        {series.hook_template ? <> with the starting hook “{series.hook_template}”</> : null}.
-        {!series.is_active ? " This series is paused." : ""}
+        {t("creates_episode", {
+          title: episodeTitle(series.name, number),
+          date: format(suggestedNext, "EEE, MMM d"),
+          platform: PLATFORMS[platform].label,
+          hook: series.hook_template ? t("creates_hook", { hook: series.hook_template }) : "",
+        })}
+        {!series.is_active ? t("creates_paused") : ""}
       </p>
     </section>
   )
 }
 
 function EpisodeRow({ episode, now }: { episode: Episode; now: Date }) {
+  const t = useT(seriesMessages)
+  const lang = useUiLang()
   const { primary } = episode
-  const info = contentDateInfo(primary, now)
+  const info = contentDateInfo(primary, now, lang)
   const Icon = info?.icon
   return (
     <li className="flex min-w-0 items-center gap-3 py-2">
@@ -97,7 +107,7 @@ function EpisodeRow({ episode, now }: { episode: Episode; now: Date }) {
           className="block truncate text-sm outline-none hover:underline focus-visible:underline"
           title={primary.title}
         >
-          {primary.title || "Untitled content"}
+          {primary.title || t("untitled_content")}
         </Link>
         <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs">
           <span className="flex shrink-0 items-center gap-1">
@@ -105,7 +115,7 @@ function EpisodeRow({ episode, now }: { episode: Episode; now: Date }) {
               <Link
                 key={item.id}
                 href={`/studio/${item.id}`}
-                aria-label={`Open the ${PLATFORMS[item.platform].label} version`}
+                aria-label={t("open_version", { platform: PLATFORMS[item.platform].label })}
                 title={PLATFORMS[item.platform].label}
                 className="rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60"
               >
@@ -125,7 +135,7 @@ function EpisodeRow({ episode, now }: { episode: Episode; now: Date }) {
               {info.label}
             </span>
           ) : (
-            <span className="text-muted-foreground">No date yet</span>
+            <span className="text-muted-foreground">{t("no_date_yet")}</span>
           )}
         </div>
       </div>
@@ -133,7 +143,7 @@ function EpisodeRow({ episode, now }: { episode: Episode; now: Date }) {
         <>
           <TierBadge tier={episode.tier} />
           <span className="w-16 shrink-0 text-right text-xs text-muted-foreground num">
-            {episode.views === null ? "No data" : `${formatCompact(episode.views)} views`}
+            {episode.views === null ? t("no_data") : t("views", { count: formatCompact(episode.views) })}
           </span>
         </>
       ) : (
@@ -144,6 +154,7 @@ function EpisodeRow({ episode, now }: { episode: Episode; now: Date }) {
 }
 
 function SeriesPerformance({ summary }: { summary: SeriesSummary }) {
+  const t = useT(seriesMessages)
   const pillar = useRow("content_pillars", summary.series.pillar_id)
   const { totals, best } = summary
   const charted = summary.published.filter((e) => e.views !== null).slice(-CHART_EPISODES)
@@ -151,7 +162,7 @@ function SeriesPerformance({ summary }: { summary: SeriesSummary }) {
   if (!summary.published.length) {
     return (
       <p className="rounded-lg border border-dashed px-3 py-4 text-center text-xs text-muted-foreground">
-        Performance appears once episodes are published and their analytics are logged.
+        {t("performance_empty")}
       </p>
     )
   }
@@ -160,27 +171,27 @@ function SeriesPerformance({ summary }: { summary: SeriesSummary }) {
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <MiniStat
-          label="Episodes live"
+          label={t("episodes_live")}
           value={formatNumber(summary.published.length)}
-          hint={`${pluralize(totals.posts, "post")} across platforms`}
+          hint={t.plural("posts_across", totals.posts, { count: formatNumber(totals.posts) })}
         />
-        <MiniStat label="Total views" value={formatCompact(totals.views)} />
+        <MiniStat label={t("total_views")} value={formatCompact(totals.views)} />
         <MiniStat
-          label="Views / episode"
+          label={t("views_per_episode")}
           value={summary.avgEpisodeViews === null ? "—" : formatCompact(summary.avgEpisodeViews)}
-          hint="Platform versions of an episode are added together"
+          hint={t("views_per_episode_hint")}
         />
-        <MiniStat label="Engagement rate" value={formatPercent(totals.engagementRate)} />
+        <MiniStat label={t("engagement_rate")} value={formatPercent(totals.engagementRate)} />
       </div>
       {charted.length ? (
         <div className="flex flex-col gap-1.5">
-          <p className="text-xs text-muted-foreground">Views per episode · last {pluralize(charted.length, "episode")} with analytics</p>
+          <p className="text-xs text-muted-foreground">{t.plural("chart_title", charted.length, { count: formatNumber(charted.length) })}</p>
           <ColumnChart
             height={150}
             color={pillar?.color ?? "blue"}
-            valueLabel="Views"
+            valueLabel={t("chart_value")}
             highlight={best?.key}
-            aria-label="Views per episode"
+            aria-label={t("chart_aria")}
             data={charted.map((e) => ({
               id: e.key,
               label: e.date ? format(e.date, "MMM d") : `#${e.number}`,
@@ -191,13 +202,13 @@ function SeriesPerformance({ summary }: { summary: SeriesSummary }) {
       ) : null}
       {best ? (
         <p className="text-xs text-pretty text-muted-foreground">
-          Best episode:{" "}
+          {t("best_episode")}{" "}
           <Link href={`/studio/${best.primary.id}`} className="font-medium text-foreground underline-offset-4 hover:underline">
-            {best.primary.title || "Untitled"}
+            {best.primary.title || t("untitled")}
           </Link>{" "}
-          · {formatCompact(best.views)} views
-          {best.engagementRate !== null ? ` · ${formatPercent(best.engagementRate)} engagement` : ""}
-          {totals.leads ? ` · ${pluralize(totals.leads, "lead")} across the series` : ""}
+          {t("best_views", { count: formatCompact(best.views) })}
+          {best.engagementRate !== null ? t("best_engagement", { rate: formatPercent(best.engagementRate) }) : ""}
+          {totals.leads ? t.plural("best_leads", totals.leads, { count: formatNumber(totals.leads) }) : ""}
         </p>
       ) : null}
     </div>
@@ -205,6 +216,8 @@ function SeriesPerformance({ summary }: { summary: SeriesSummary }) {
 }
 
 function Episodes({ summary, now }: { summary: SeriesSummary; now: Date }) {
+  const t = useT(seriesMessages)
+  const c = useT(commonMessages)
   const [showAll, setShowAll] = useState(false)
   const published = [...summary.published].reverse()
   const shown = showAll ? published : published.slice(0, PUBLISHED_LIMIT)
@@ -214,8 +227,8 @@ function Episodes({ summary, now }: { summary: SeriesSummary; now: Date }) {
       <EmptyState
         compact
         icon={ListVideo}
-        title="No episodes yet"
-        description="Create the first episode above — it starts with the series pillar, format, platform and hook."
+        title={t("no_episodes")}
+        description={t("no_episodes_description")}
       />
     )
   }
@@ -224,7 +237,7 @@ function Episodes({ summary, now }: { summary: SeriesSummary; now: Date }) {
     <div className="flex flex-col gap-4">
       {summary.upcoming.length ? (
         <div>
-          <h4 className="border-b pb-1.5 text-xs font-medium text-muted-foreground">Upcoming · {summary.upcoming.length}</h4>
+          <h4 className="border-b pb-1.5 text-xs font-medium text-muted-foreground">{t("upcoming_count", { count: summary.upcoming.length })}</h4>
           <ul className="divide-y divide-border/60">
             {summary.upcoming.map((e) => (
               <EpisodeRow key={e.key} episode={e} now={now} />
@@ -234,7 +247,7 @@ function Episodes({ summary, now }: { summary: SeriesSummary; now: Date }) {
       ) : null}
       {published.length ? (
         <div>
-          <h4 className="border-b pb-1.5 text-xs font-medium text-muted-foreground">Published · {published.length}</h4>
+          <h4 className="border-b pb-1.5 text-xs font-medium text-muted-foreground">{t("published_heading", { count: published.length })}</h4>
           <ul className="divide-y divide-border/60">
             {shown.map((e) => (
               <EpisodeRow key={e.key} episode={e} now={now} />
@@ -242,7 +255,7 @@ function Episodes({ summary, now }: { summary: SeriesSummary; now: Date }) {
           </ul>
           {published.length > PUBLISHED_LIMIT ? (
             <Button type="button" variant="ghost" size="xs" className="mt-1 text-muted-foreground" onClick={() => setShowAll((v) => !v)}>
-              {showAll ? "Show less" : `Show all ${published.length}`}
+              {showAll ? c("show_less") : t("show_all", { count: published.length })}
             </Button>
           ) : null}
         </div>
@@ -267,6 +280,8 @@ export function SeriesDetailSheet({
   onEdit: (series: ContentSeries) => void
   onBeforeDelete: () => void
 }) {
+  const t = useT(seriesMessages)
+  const lang = useUiLang()
   if (!summary) return null
   const { series } = summary
 
@@ -274,11 +289,15 @@ export function SeriesDetailSheet({
     <DetailSheet
       open={open}
       onOpenChange={onOpenChange}
-      title={series.name || "Untitled series"}
-      description={`${cadenceLabel(series)}${series.is_active ? "" : " · paused"} · ${pluralize(summary.episodes.length, "episode")}`}
+      title={series.name || t("untitled_series")}
+      description={t.plural("sheet_description", summary.episodes.length, {
+        cadence: cadenceLabel(series, false, lang),
+        paused: series.is_active ? "" : t("paused_suffix"),
+        count: formatNumber(summary.episodes.length),
+      })}
       actions={
         <>
-          <Button type="button" variant="ghost" size="icon-sm" aria-label="Edit series" onClick={() => onEdit(series)}>
+          <Button type="button" variant="ghost" size="icon-sm" aria-label={t("edit_series_aria")} onClick={() => onEdit(series)}>
             <Pencil aria-hidden />
           </Button>
           <SeriesActionsMenu summary={summary} onEdit={() => onEdit(series)} onBeforeDelete={onBeforeDelete} showCreate={false} />
@@ -288,11 +307,11 @@ export function SeriesDetailSheet({
       <div className="flex flex-col gap-6">
         <NextEpisodePanel summary={summary} />
 
-        <section aria-label="Series details" className="flex flex-col gap-3">
+        <section aria-label={t("details_aria")} className="flex flex-col gap-3">
           {series.description ? <p className="text-sm text-pretty">{series.description}</p> : null}
           <DefinitionList>
-            <KeyValue label="Frequency">{cadenceLabel(series)}</KeyValue>
-            <KeyValue label="Platforms">
+            <KeyValue label={t("frequency")}>{cadenceLabel(series, false, lang)}</KeyValue>
+            <KeyValue label={t("platforms")}>
               {series.platforms.length ? (
                 <span className="flex flex-wrap gap-x-3 gap-y-1">
                   {series.platforms.map((p, i) => (
@@ -301,36 +320,36 @@ export function SeriesDetailSheet({
                 </span>
               ) : null}
             </KeyValue>
-            <KeyValue label="Default pillar">
+            <KeyValue label={t("default_pillar")}>
               <PillarBadge pillarId={series.pillar_id} />
             </KeyValue>
-            <KeyValue label="Default format">
+            <KeyValue label={t("default_format")}>
               <FormatLabel formatId={series.format_id} className="text-sm text-foreground" />
             </KeyValue>
-            <KeyValue label="Hook template">
+            <KeyValue label={t("hook_template")}>
               {series.hook_template ? <span className="text-pretty">“{series.hook_template}”</span> : null}
             </KeyValue>
-            <KeyValue label="Active">
+            <KeyValue label={t("active")}>
               <Switch
                 checked={series.is_active}
                 onCheckedChange={(next) => setSeriesActive(series, next)}
-                aria-label={`${series.name || "Series"} active`}
+                aria-label={t("active_aria", { name: series.name || t("series_fallback") })}
               />
-              <span className="text-xs text-muted-foreground">{series.is_active ? "Active" : "Paused"}</span>
+              <span className="text-xs text-muted-foreground">{series.is_active ? t("active") : t("paused")}</span>
             </KeyValue>
           </DefinitionList>
         </section>
 
         <section aria-labelledby="series-performance" className="flex flex-col gap-3">
           <h3 id="series-performance" className="text-sm font-medium">
-            Performance
+            {t("performance")}
           </h3>
           <SeriesPerformance summary={summary} />
         </section>
 
         <section aria-labelledby="series-episodes" className="flex flex-col gap-2">
           <h3 id="series-episodes" className="text-sm font-medium">
-            Episodes
+            {t("episodes")}
           </h3>
           <Episodes summary={summary} now={now} />
         </section>

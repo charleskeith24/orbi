@@ -8,12 +8,14 @@ import { AiButton, AiNotice, OptionSelect, useConfirm, type SelectOption } from 
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { buildScriptInput, useAiTask } from "@/lib/ai"
+import { useT } from "@/lib/i18n"
 import { SCRIPT_FORMAT_IDS, SCRIPT_FORMATS } from "@/lib/constants"
 import { dataActions, moveItemToStage, renderScriptBody, saveScriptVersion, useRow, useTable } from "@/lib/store"
 import type { ContentItem, ContentScript, PipelineStage, ScriptFormat } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
 import { CaptionCard, SectionEditor, SlidePreview } from "./script-editor"
 import { ScriptHistorySheet } from "./script-history-sheet"
+import { scriptMessages } from "./script-messages"
 import { ScriptStats, ScriptStatusBar } from "./script-status"
 import { AiErrorNotice } from "./studio-ai"
 import { draftKey, studioActions, useDraftFormatsKey, useStudioStore, type ScriptDraft } from "./studio-store"
@@ -37,6 +39,7 @@ const EARLY_STAGES = new Set<PipelineStage>(["idea", "selected", "brief"])
 
 /** The Script (spec §16): format structures, section editor, AI drafts, versions, caption and slide preview. */
 export function ScriptTab({ item }: { item: ContentItem }) {
+  const t = useT(scriptMessages)
   const scripts = useTable("content_scripts")
   const formatRows = useTable("content_formats")
   const briefs = useTable("content_briefs")
@@ -80,26 +83,26 @@ export function ScriptTab({ item }: { item: ContentItem }) {
     const inPiece = SCRIPT_FORMAT_IDS.filter((f) => withScript.has(f) || withDraft.has(f))
     const option = (f: ScriptFormat, group: string) => ({
       value: f,
-      label: `${SCRIPT_FORMATS[f].label}${withDraft.has(f) ? " · unsaved" : ""}`,
+      label: `${SCRIPT_FORMATS[f].label}${withDraft.has(f) ? ` · ${t("unsaved")}` : ""}`,
       group,
     })
     return [
-      ...inPiece.map((f) => option(f, "In this piece")),
-      ...SCRIPT_FORMAT_IDS.filter((f) => !inPiece.includes(f)).map((f) => option(f, inPiece.length ? "Other formats" : "Formats")),
+      ...inPiece.map((f) => option(f, t("group_in_piece"))),
+      ...SCRIPT_FORMAT_IDS.filter((f) => !inPiece.includes(f)).map((f) => option(f, inPiece.length ? t("group_other_formats") : t("group_formats"))),
     ]
-  }, [scripts, item.id, draftFormats])
+  }, [scripts, item.id, draftFormats, t])
 
   const storyOptions = useMemo<SelectOption[]>(() => {
     const related = relatedStories(stories, item, brief, 5)
     const relatedIds = new Set(related.map((r) => r.story.id))
     return [
-      ...related.map((r) => ({ value: r.story.id, label: r.story.title || "Untitled story", group: "Related to this piece" })),
+      ...related.map((r) => ({ value: r.story.id, label: r.story.title || t("untitled_story"), group: t("group_related") })),
       ...stories
         .filter((s) => !relatedIds.has(s.id))
         .sort((a, b) => Number(b.is_favorite) - Number(a.is_favorite) || a.title.localeCompare(b.title))
-        .map((s) => ({ value: s.id, label: s.title || "Untitled story", group: "Story Vault" })),
+        .map((s) => ({ value: s.id, label: s.title || t("untitled_story"), group: t("group_story_vault") })),
     ]
-  }, [stories, item, brief])
+  }, [stories, item, brief, t])
 
   function edit(patch: Partial<Pick<ScriptDraft, "sections" | "caption" | "hashtags">>) {
     const base: ScriptDraft = draft ?? {
@@ -116,8 +119,8 @@ export function ScriptTab({ item }: { item: ContentItem }) {
 
   function save() {
     if (!canSave) {
-      toast.info(dirty ? "Add some copy before saving" : "No changes to save", {
-        description: dirty ? undefined : saved ? `Version ${saved.version} is up to date.` : "Write a section or generate a draft first.",
+      toast.info(dirty ? t("add_copy_first") : t("no_changes"), {
+        description: dirty ? undefined : saved ? t("version_up_to_date", { version: saved.version }) : t("write_first"),
       })
       return
     }
@@ -130,14 +133,15 @@ export function ScriptTab({ item }: { item: ContentItem }) {
       generated_by: draft?.source ?? "manual",
     })
     studioActions.clearDraft(item.id, format)
+    const savedWords = wordsIn(script.sections)
     toast.success(
-      `Saved as version ${script.version}`,
+      t("saved_as_version", { version: script.version }),
       EARLY_STAGES.has(item.stage)
         ? {
-            description: "Ready to move this piece into Scripting?",
-            action: { label: "Move to Scripting", onClick: () => moveItemToStage(item.id, "scripting") },
+            description: t("move_to_scripting_question"),
+            action: { label: t("move_to_scripting"), onClick: () => moveItemToStage(item.id, "scripting") },
           }
-        : { description: `${SCRIPT_FORMATS[format].label} · ${pluralize(wordsIn(script.sections), "word")}` }
+        : { description: `${SCRIPT_FORMATS[format].label} · ${t.plural("words", savedWords, { count: formatNumber(savedWords) })}` }
     )
   }
 
@@ -147,22 +151,22 @@ export function ScriptTab({ item }: { item: ContentItem }) {
     if (!draft) return
     if (dirty) {
       const ok = await confirm({
-        title: "Discard unsaved changes?",
-        description: saved ? `The editor goes back to version ${saved.version}.` : "The editor goes back to a blank script.",
-        confirmLabel: "Discard changes",
+        title: t("discard_title"),
+        description: saved ? t("discard_to_version", { version: saved.version }) : t("discard_to_blank"),
+        confirmLabel: t("discard_confirm"),
       })
       if (!ok) return
     }
     studioActions.clearDraft(item.id, format)
-    toast.success("Changes discarded")
+    toast.success(t("discarded"))
   }
 
   async function generate() {
     if (dirty) {
       const ok = await confirm({
-        title: "Replace your unsaved edits?",
-        description: "The AI draft replaces what's in the editor. Every saved version stays in the history.",
-        confirmLabel: "Replace with AI draft",
+        title: t("replace_title"),
+        description: t("replace_description"),
+        confirmLabel: t("replace_confirm"),
         destructive: false,
       })
       if (!ok) return
@@ -186,9 +190,9 @@ export function ScriptTab({ item }: { item: ContentItem }) {
   async function restore(version: ContentScript) {
     if (dirty) {
       const ok = await confirm({
-        title: "Restore over your unsaved edits?",
-        description: "Restoring saves the old version as the newest one and clears the edits in the editor.",
-        confirmLabel: "Restore version",
+        title: t("restore_title"),
+        description: t("restore_description"),
+        confirmLabel: t("restore_confirm"),
         destructive: false,
       })
       if (!ok) return
@@ -203,13 +207,13 @@ export function ScriptTab({ item }: { item: ContentItem }) {
     })
     studioActions.clearDraft(item.id, format)
     setHistoryOpen(false)
-    toast.success(`Restored version ${version.version}`, { description: `Saved as version ${script.version} — the history keeps every version.` })
+    toast.success(t("restored", { version: version.version }), { description: t("restored_description", { version: script.version }) })
   }
 
   async function copy(text: string, message: string) {
     if (!text.trim()) return
     if (await copyText(text)) toast.success(message)
-    else toast.error("Couldn't copy", { description: "Select the text and copy it manually." })
+    else toast.error(t("copy_failed"), { description: t("copy_failed_description") })
   }
 
   const body = renderScriptBody(sections)
@@ -223,39 +227,39 @@ export function ScriptTab({ item }: { item: ContentItem }) {
           onChange={(next) => next && studioActions.setFormat(item.id, next)}
           options={formatOptions}
           size="sm"
-          aria-label="Script format"
+          aria-label={t("script_format")}
           className="w-auto max-w-80 font-medium"
         />
         <span className="hidden text-xs text-muted-foreground lg:inline">{SCRIPT_FORMATS[format].description}</span>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <Button type="button" variant="ghost" size="sm" disabled={!versions.length} onClick={() => setHistoryOpen(true)}>
             <History aria-hidden />
-            History
+            {t("history")}
             {versions.length ? <span className="text-muted-foreground num">{versions.length}</span> : null}
           </Button>
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button type="button" variant="outline" size="sm" disabled={!words && !postCaption}>
                 <ClipboardCopy aria-hidden />
-                Copy
+                {t("copy")}
                 <ChevronDown className="text-muted-foreground" aria-hidden />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-60">
-              <DropdownMenuItem disabled={!words} onSelect={() => void copy(body, "Script copied")}>
-                Script — ready to post
+              <DropdownMenuItem disabled={!words} onSelect={() => void copy(body, t("script_copied"))}>
+                {t("copy_script")}
               </DropdownMenuItem>
-              <DropdownMenuItem disabled={!words} onSelect={() => void copy(scriptWithLabels(sections), "Script with section labels copied")}>
-                With section labels
+              <DropdownMenuItem disabled={!words} onSelect={() => void copy(scriptWithLabels(sections), t("labels_copied"))}>
+                {t("copy_labels")}
               </DropdownMenuItem>
-              <DropdownMenuItem disabled={!postCaption} onSelect={() => void copy(postCaption, "Caption and hashtags copied")}>
-                Caption + hashtags
+              <DropdownMenuItem disabled={!postCaption} onSelect={() => void copy(postCaption, t("caption_copied"))}>
+                {t("copy_caption")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={!words}
-                onSelect={() => void copy([body, postCaption].filter(Boolean).join("\n\n"), "Script and caption copied")}
+                onSelect={() => void copy([body, postCaption].filter(Boolean).join("\n\n"), t("all_copied"))}
               >
-                Everything
+                {t("copy_all")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -263,21 +267,21 @@ export function ScriptTab({ item }: { item: ContentItem }) {
       </div>
 
       <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border bg-muted/30 p-2 dark:bg-input/10">
-        <span className="pl-1 text-xs text-muted-foreground">Story</span>
+        <span className="pl-1 text-xs text-muted-foreground">{t("story")}</span>
         <OptionSelect
           value={storyId}
           onChange={(id) => studioActions.setStory(item.id, id)}
           options={storyOptions}
           allowNone
-          noneLabel="No story — use a [placeholder]"
-          placeholder="Choose a story"
-          emptyText="Your Story Vault is empty."
+          noneLabel={t("no_story")}
+          placeholder={t("choose_story")}
+          emptyText={t("story_vault_empty")}
           size="sm"
-          aria-label="Story Vault story to weave into the AI draft"
+          aria-label={t("story_aria")}
           className="w-auto max-w-72 min-w-0 flex-1 bg-card sm:flex-none"
         />
         <AiButton type="button" size="sm" variant="default" pending={ai.isPending} className="ml-auto" onClick={() => void generate()}>
-          {saved || draft ? "Regenerate with AI" : "Generate with AI"}
+          {saved || draft ? t("regenerate") : t("generate")}
         </AiButton>
       </div>
 
@@ -296,7 +300,7 @@ export function ScriptTab({ item }: { item: ContentItem }) {
 
       <SectionEditor format={format} sections={sections} onChange={(key, content) => edit({ sections: sections.map((s) => (s.key === key ? { ...s, content } : s)) })} />
       <ScriptStats format={format} words={words} />
-      {draft && draft.source !== "manual" ? <AiNotice>AI output is a first draft — edit it until it sounds like you, then save it as a version.</AiNotice> : null}
+      {draft && draft.source !== "manual" ? <AiNotice>{t("ai_notice")}</AiNotice> : null}
 
       {format === "carousel" || format === "story_sequence" ? <SlidePreview format={format} sections={sections} color={pillar?.color ?? null} /> : null}
 

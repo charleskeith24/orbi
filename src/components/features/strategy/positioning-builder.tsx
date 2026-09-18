@@ -3,34 +3,20 @@
 import { CopyButton } from "@/components/common"
 import { Textarea } from "@/components/ui/textarea"
 import { positioningStatement } from "@/lib/ai"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { cn } from "@/lib/utils"
 import { BrandSection, LimitHint, type BrandSectionProps } from "./brand-fields"
+import { brandFieldMessages } from "./brand-messages"
 import { CONTEXT_LIMITS, fieldId, type BrandTextField } from "./brand-model"
 
 type PartField = Extract<BrandTextField, "positioning_audience" | "positioning_result" | "positioning_method">
 
-const ROWS: { field: PartField; connector: string; label: string; placeholder: string; hint: string }[] = [
-  {
-    field: "positioning_audience",
-    connector: "I help",
-    label: "Audience",
-    placeholder: "e.g. e-commerce founders and marketing leads in Southeast Asia",
-    hint: "Who, specifically — role, stage, market.",
-  },
-  {
-    field: "positioning_result",
-    connector: "to",
-    label: "Desired result",
-    placeholder: "e.g. build predictable, profitable growth",
-    hint: "What they get. Start with a verb — achieve, build, grow, land…",
-  },
-  {
-    field: "positioning_method",
-    connector: "through",
-    label: "Method / expertise",
-    placeholder: "e.g. performance-marketing systems and accountable teams",
-    hint: "How you deliver it — your system, expertise or approach.",
-  },
+// The connectors are part of the statement itself ("I help … to … through …"), so they stay English.
+const ROWS: { field: PartField; connector: string; key: "audience" | "result" | "method" }[] = [
+  { field: "positioning_audience", connector: "I help", key: "audience" },
+  { field: "positioning_result", connector: "to", key: "result" },
+  { field: "positioning_method", connector: "through", key: "method" },
 ]
 
 function Part({ value, placeholder }: { value: string; placeholder: string }) {
@@ -44,11 +30,13 @@ export function StatementSection({ values, set }: BrandSectionProps) {
   const result = values.positioning_result.trim().replace(/^to\s+/i, "")
   const method = values.positioning_method.trim()
   const statement = positioningStatement(values.positioning_audience, values.positioning_result, values.positioning_method)
+  const t = useT(brandFieldMessages)
+  const c = useT(commonMessages)
 
   return (
     <BrandSection sectionKey="statement">
       <p className="text-xs text-muted-foreground">
-        Template: <span className="font-medium text-foreground">I help [AUDIENCE] achieve [DESIRED RESULT] through [METHOD / EXPERTISE].</span>
+        {t("template")} <span className="font-medium text-foreground">{t("template_text")}</span>
       </p>
       <div className="flex flex-col gap-3">
         {ROWS.map((row) => {
@@ -59,21 +47,21 @@ export function StatementSection({ values, set }: BrandSectionProps) {
             <div key={row.field} className="grid min-w-0 gap-1.5 sm:grid-cols-[6.5rem_minmax(0,1fr)] sm:gap-x-3">
               <label htmlFor={id} className="flex items-baseline gap-2 sm:flex-col sm:items-start sm:gap-0.5 sm:pt-1.5">
                 <span className="text-sm font-medium">{row.connector}</span>
-                <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{row.label}</span>
+                <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{t(`${row.key}_label`)}</span>
               </label>
               <div className="flex min-w-0 flex-col gap-1">
                 <Textarea
                   id={id}
                   rows={1}
                   value={value}
-                  placeholder={row.placeholder}
+                  placeholder={t(`${row.key}_placeholder`)}
                   className="min-h-9 leading-relaxed"
                   aria-describedby={`${id}-hint`}
                   onChange={(event) => set(row.field, event.target.value)}
                 />
                 <div className="flex items-start justify-between gap-2">
                   <p id={`${id}-hint`} className="text-xs text-muted-foreground">
-                    {row.hint}
+                    {t(`${row.key}_hint`)}
                   </p>
                   {limit ? <LimitHint length={value.trim().length} limit={limit} /> : null}
                 </div>
@@ -85,17 +73,17 @@ export function StatementSection({ values, set }: BrandSectionProps) {
 
       <figure className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-4 dark:bg-input/20">
         <figcaption className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span>Live preview</span>
-          <CopyButton text={statement} label="Copy" variant="outline" successMessage="Positioning statement copied" />
+          <span>{t("live_preview")}</span>
+          <CopyButton text={statement} label={c("copy")} variant="outline" successMessage={t("statement_copied")} />
         </figcaption>
         <blockquote className={cn("text-base leading-relaxed text-pretty", !statement && "text-foreground/80")}>
-          I help <Part value={audience} placeholder="[audience]" /> <Part value={result} placeholder="[desired result]" /> through{" "}
-          <Part value={method} placeholder="[method / expertise]" />.
+          I help <Part value={audience} placeholder={t("part_audience")} /> <Part value={result} placeholder={t("part_result")} /> through{" "}
+          <Part value={method} placeholder={t("part_method")} />.
         </blockquote>
         {!statement ? (
-          <p className="text-xs text-muted-foreground">Add an audience and a desired result to complete the statement.</p>
+          <p className="text-xs text-muted-foreground">{t("statement_incomplete")}</p>
         ) : !method ? (
-          <p className="text-xs text-muted-foreground">Without a method the statement ends after the result.</p>
+          <p className="text-xs text-muted-foreground">{t("statement_no_method")}</p>
         ) : null}
       </figure>
     </BrandSection>

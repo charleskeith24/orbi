@@ -75,6 +75,22 @@ describe("recommendNextContent", () => {
     expect(recommendNextContent(db, NOW, settings, { platform: "linkedin" }).map((r) => r.id)).toEqual([draft.id])
   })
 
+  it("writes reasons and signals in Taglish with lang: tl, with the same ranking", () => {
+    const { db } = workspace()
+    const settings = settingsOf(db)
+    const en = recommendNextContent(db, NOW, settings, { limit: 10 })
+    expect(recommendNextContent(db, NOW, settings, { limit: 10, lang: "en" })).toEqual(en)
+    const tl = recommendNextContent(db, NOW, settings, { limit: 10, lang: "tl" })
+    expect(tl.map((r) => [r.id, r.score])).toEqual(en.map((r) => [r.id, r.score]))
+    const [top] = tl
+    expect(top.reasons.topic).toBe("Kulang ng 30 points ang Leadership vs target sa huling 30 araw")
+    expect(top.reasons.format).toBe("Ang slot ng Thursday ay para sa Tutorial")
+    expect(top.signals).toContain("Slot ng Thursday: Leadership / Tutorial")
+    for (const rec of tl) {
+      for (const text of [...Object.values(rec.reasons), ...rec.signals]) expect(text).not.toMatch(/\{\w+\}/)
+    }
+  })
+
   it("flags near-duplicates of recent posts and drops their freshness points", () => {
     const { db } = workspace()
     const repeat = add(db, "content_ideas", { title: "Education post again", status: "validated" })

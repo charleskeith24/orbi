@@ -4,11 +4,13 @@ import { Plus } from "lucide-react"
 import { ContentThumbnail, FormatLabel, PillarBadge, PlatformLabel, TierBadge, type DataTableColumn } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import type { TieredRow } from "@/lib/analytics"
+import type { Translator } from "@/lib/i18n"
 import { PLATFORMS } from "@/lib/constants"
 import { formatDate } from "@/lib/dates"
 import type { PerformanceTier } from "@/lib/types"
 import { formatRatio, formatValue } from "./format"
 import type { PostLookups } from "./post-csv"
+import type { postMessages } from "./post-messages"
 import { POST_METRIC_FIELDS, type PostColumnId } from "./post-fields"
 
 const TIER_RANK: Record<PerformanceTier, number> = { normal: 1, good: 2, winner: 3, breakout: 4 }
@@ -22,10 +24,13 @@ export function tierKey(row: TieredRow): string {
 export function buildPostColumns({
   visible,
   lookups,
+  t,
   onAddAnalytics,
 }: {
   visible: ReadonlySet<PostColumnId>
   lookups: PostLookups
+  /** `useT(postMessages)` from the page. */
+  t: Translator<typeof postMessages.en>
   onAddAnalytics: (row: TieredRow) => void
 }): DataTableColumn<TieredRow>[] {
   const { pillars, formats } = lookups
@@ -35,13 +40,13 @@ export function buildPostColumns({
   const columns: DataTableColumn<TieredRow>[] = [
     {
       id: "title",
-      header: "Post",
+      header: t("col_post"),
       className: "min-w-[15rem] max-w-[22rem]",
       sortValue: (r) => r.item.title.toLowerCase(),
       cell: (r) => (
         <div className="flex min-w-0 items-center gap-2.5">
           <ContentThumbnail item={r.item} size="sm" aspect="square" />
-          <span className="line-clamp-2 min-w-0 text-sm leading-5 whitespace-normal">{r.item.title || "Untitled post"}</span>
+          <span className="line-clamp-2 min-w-0 text-sm leading-5 whitespace-normal">{r.item.title || t("untitled_post")}</span>
         </div>
       ),
     },
@@ -58,7 +63,7 @@ export function buildPostColumns({
   if (visible.has("date")) {
     columns.push({
       id: "date",
-      header: "Published",
+      header: t("col_published"),
       sortValue: (r) => r.publishedAt.getTime(),
       cell: (r) => <span className="text-xs whitespace-nowrap text-muted-foreground">{formatDate(r.publishedAt, "MMM d, yyyy")}</span>,
     })
@@ -105,14 +110,14 @@ export function buildPostColumns({
               variant="outline"
               size="xs"
               onClick={() => onAddAnalytics(r)}
-              aria-label={`Add analytics for ${r.item.title || "untitled post"}`}
+              aria-label={t("add_for", { title: r.item.title || t("untitled_post_lower") })}
             >
               <Plus aria-hidden />
-              Add
+              {t("add")}
             </Button>
           )
         }
-        if (r.ratio === null) return <span className="text-xs whitespace-nowrap text-muted-foreground">Not tiered</span>
+        if (r.ratio === null) return <span className="text-xs whitespace-nowrap text-muted-foreground">{t("not_tiered")}</span>
         return r.tier === "normal" ? <span className="text-xs text-muted-foreground">Normal</span> : <TierBadge tier={r.tier} />
       },
     })
@@ -120,7 +125,7 @@ export function buildPostColumns({
   if (visible.has("ratio")) {
     columns.push({
       id: "ratio",
-      header: "vs avg",
+      header: t("col_vs_avg"),
       align: "right",
       sortValue: (r) => r.ratio,
       cell: (r) => formatRatio(r.ratio),

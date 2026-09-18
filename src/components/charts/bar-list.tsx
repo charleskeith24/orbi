@@ -4,8 +4,10 @@ import Link from "next/link"
 import { useState } from "react"
 import { seriesColor, type ChartColor } from "@/components/charts/colors"
 import { EmptyChart } from "@/components/charts/empty-chart"
+import { chartMessages } from "@/components/charts/messages"
 import { defaultValueFormatter } from "@/components/charts/utils"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 export interface BarListItem {
@@ -42,12 +44,13 @@ export function BarList({
   color = "blue",
   sort = "desc",
   limit,
-  emptyMessage = "Nothing to rank yet.",
+  emptyMessage,
   className,
   "aria-label": ariaLabel,
 }: BarListProps) {
+  const t = useT(chartMessages)
   const [expanded, setExpanded] = useState(false)
-  if (!items.length) return <EmptyChart message={emptyMessage} height={120} className={className} />
+  if (!items.length) return <EmptyChart message={emptyMessage ?? t("nothing_to_rank")} height={120} className={className} />
 
   const ordered = sort === "desc" ? [...items].sort((a, b) => b.value - a.value) : items
   const scaleMax = max ?? Math.max(0, ...ordered.map((item) => item.value))
@@ -103,7 +106,7 @@ export function BarList({
           className="self-start text-muted-foreground"
           onClick={() => setExpanded((value) => !value)}
         >
-          {expanded ? "Show less" : `Show all ${ordered.length}`}
+          {expanded ? t("show_less") : t("show_all", { count: ordered.length })}
         </Button>
       ) : null}
     </div>

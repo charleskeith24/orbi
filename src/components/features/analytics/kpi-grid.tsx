@@ -3,7 +3,9 @@
 import { useSyncExternalStore } from "react"
 import { StatTile } from "@/components/common"
 import { percentChange } from "@/lib/analytics"
+import { useT } from "@/lib/i18n"
 import { formatCompact, formatNumber, formatPercent } from "@/lib/utils"
+import { analyticsMessages } from "./messages"
 import type { BucketPoint, KpiTotals } from "./scope"
 
 interface KpiDef {
@@ -16,7 +18,6 @@ interface KpiDef {
   href?: string
 }
 
-const withRate = (value: number | null, label: string) => (value === null ? undefined : `${formatPercent(value)} ${label}`)
 
 // Two tiles share a phone-width row: sparklines there would truncate the numbers.
 const WIDE_QUERY = "(min-width: 640px)"
@@ -45,71 +46,74 @@ export function KpiGrid({
   points: BucketPoint[]
   postsHref: string
 }) {
+  const t = useT(analyticsMessages)
+  const withRate = (value: number | null, key: "rate_engagement" | "rate_profile_visits" | "rate_lead" | "rate_save" | "rate_share") =>
+    value === null ? undefined : t(key, { rate: formatPercent(value) })
   const showTrends = useIsWide() && points.length >= 4
   const tiles: KpiDef[] = [
     {
       key: "posts",
-      label: "Posts published",
-      value: (t) => t.posts,
+      label: t("kpi_posts"),
+      value: (k) => k.posts,
       format: formatNumber,
-      sublabel: (t) => (t.posts > t.measured ? `${formatNumber(t.posts - t.measured)} without analytics` : "All with analytics"),
+      sublabel: (k) => (k.posts > k.measured ? t("without_analytics", { count: formatNumber(k.posts - k.measured) }) : t("all_with_analytics")),
       trend: (p) => p.posts,
       href: postsHref,
     },
     {
       key: "views",
       label: "Views",
-      value: (t) => t.views,
+      value: (k) => k.views,
       format: formatCompact,
-      sublabel: (t) => (t.avgViews === null ? undefined : `${formatCompact(t.avgViews)} avg / post`),
+      sublabel: (k) => (k.avgViews === null ? undefined : t("avg_per_post", { value: formatCompact(k.avgViews) })),
       trend: (p) => p.views,
     },
     {
       key: "reach",
       label: "Reach",
-      value: (t) => t.reach,
+      value: (k) => k.reach,
       format: formatCompact,
-      sublabel: (t) => (t.measured ? `${formatCompact(t.reach / t.measured)} avg / post` : undefined),
+      sublabel: (k) => (k.measured ? t("avg_per_post", { value: formatCompact(k.reach / k.measured) }) : undefined),
       trend: (p) => p.reach,
     },
     {
       key: "engagements",
       label: "Engagements",
-      value: (t) => t.engagements,
+      value: (k) => k.engagements,
       format: formatCompact,
-      sublabel: (t) => withRate(t.engagementRate, "engagement rate"),
+      sublabel: (k) => withRate(k.engagementRate, "rate_engagement"),
       trend: (p) => p.engagements,
     },
     {
       key: "followers",
-      label: "Followers gained",
-      value: (t) => t.followersGained,
+      label: t("kpi_followers"),
+      value: (k) => k.followersGained,
       format: formatCompact,
-      sublabel: (t) => withRate(t.followerConversion, "of profile visits"),
+      sublabel: (k) => withRate(k.followerConversion, "rate_profile_visits"),
       trend: (p) => p.followers,
     },
     {
       key: "leads",
       label: "Leads",
-      value: (t) => t.leads,
+      value: (k) => k.leads,
       format: formatNumber,
-      sublabel: (t) => withRate(t.leadConversion, "lead conversion"),
+      sublabel: (k) => withRate(k.leadConversion, "rate_lead"),
       trend: (p) => p.leads,
     },
     {
       key: "saves",
       label: "Saves",
-      value: (t) => t.saves,
+      value: (k) => k.saves,
       format: formatCompact,
-      sublabel: (t) => withRate(t.saveRate, "save rate"),
+      sublabel: (k) => withRate(k.saveRate, "rate_save"),
       trend: (p) => p.saves,
     },
     {
       key: "shares",
       label: "Shares",
-      value: (t) => t.shares,
+      value: (k) => k.shares,
       format: formatCompact,
-      sublabel: (t) => withRate(t.shareRate, "share rate"),
+      sublabel: (k) => withRate(k.shareRate, "rate_share"),
       trend: (p) => p.shares,
     },
   ]

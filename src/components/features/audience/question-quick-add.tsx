@@ -7,10 +7,14 @@ import { PlatformSelect } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toISODate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions } from "@/lib/store"
 import type { ID, PlatformId } from "@/lib/types"
 import { formatNumber, truncate } from "@/lib/utils"
 import { askedAgainPatch, findDuplicateQuestion } from "./audience-model"
+import { audienceMessages } from "./messages"
+import { questionMessages } from "./question-messages"
 
 export interface QuestionDefaults {
   persona_id: ID | null
@@ -24,6 +28,9 @@ export interface QuestionDefaults {
  */
 export function QuestionQuickAdd({ defaults, onOpen }: { defaults: QuestionDefaults; onOpen: (id: ID) => void }) {
   const id = useId()
+  const t = useT(questionMessages)
+  const a = useT(audienceMessages)
+  const c = useT(commonMessages)
   const inputRef = useRef<HTMLInputElement>(null)
   const [text, setText] = useState("")
   const [platform, setPlatform] = useState<PlatformId | null>(defaults.platform)
@@ -40,9 +47,9 @@ export function QuestionQuickAdd({ defaults, onOpen }: { defaults: QuestionDefau
         ...patch,
         ...(existing.platform || !platform ? {} : { platform }),
       })
-      toast.success(`Already in the bank — now asked ${formatNumber(patch.frequency ?? existing.frequency)}×`, {
+      toast.success(t("already_in_bank_now", { count: formatNumber(patch.frequency ?? existing.frequency) }), {
         description: truncate(existing.question, 80),
-        action: { label: "Open", onClick: () => onOpen(existing.id) },
+        action: { label: a("open"), onClick: () => onOpen(existing.id) },
       })
     } else {
       const row = dataActions.insert("audience_questions", {
@@ -54,9 +61,9 @@ export function QuestionQuickAdd({ defaults, onOpen }: { defaults: QuestionDefau
         persona_id: defaults.persona_id,
         pillar_id: defaults.pillar_id,
       })
-      toast.success("Question added to the bank", {
+      toast.success(t("added"), {
         description: truncate(clean, 80),
-        action: { label: "Open", onClick: () => onOpen(row.id) },
+        action: { label: a("open"), onClick: () => onOpen(row.id) },
       })
     }
     setText("")
@@ -64,9 +71,9 @@ export function QuestionQuickAdd({ defaults, onOpen }: { defaults: QuestionDefau
   }
 
   return (
-    <form onSubmit={submit} aria-label="Quick add a question" className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+    <form onSubmit={submit} aria-label={t("quick_add_aria")} className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
       <label htmlFor={`${id}-question`} className="sr-only">
-        Question your audience asked
+        {t("quick_add_label")}
       </label>
       <Input
         ref={inputRef}
@@ -74,23 +81,23 @@ export function QuestionQuickAdd({ defaults, onOpen }: { defaults: QuestionDefau
         value={text}
         maxLength={300}
         enterKeyHint="done"
-        placeholder="Log a question your audience asked…"
+        placeholder={t("quick_add_placeholder")}
         className="min-w-0 flex-1"
         onChange={(event) => setText(event.target.value)}
       />
       <div className="flex items-center gap-2">
         <PlatformSelect
           allowNone
-          noneLabel="No platform"
-          placeholder="Platform"
-          aria-label="Where it was asked (optional)"
+          noneLabel={a("no_platform")}
+          placeholder={a("platform")}
+          aria-label={t("where_asked")}
           value={platform}
           onChange={setPlatform}
           className="w-full sm:w-40"
         />
         <Button type="submit" disabled={!clean}>
           <Plus aria-hidden />
-          Add
+          {c("add")}
         </Button>
       </div>
     </form>

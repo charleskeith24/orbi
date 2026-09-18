@@ -3,11 +3,14 @@
 import { DataTable, PillarBadge, PlatformLabel, PriorityBadge, type DataTableColumn } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { PLATFORMS } from "@/lib/constants"
-import { formatDate, formatRelativeDay } from "@/lib/dates"
+import { formatDate } from "@/lib/dates"
+import { useT, useUiLang } from "@/lib/i18n"
 import type { AudienceQuestion, ContentPillar, ID } from "@/lib/types"
 import { cn, formatNumber, truncate } from "@/lib/utils"
-import { questionPriority } from "./audience-model"
+import { questionPriority, relativeDayLabel } from "./audience-model"
+import { audienceMessages } from "./messages"
 import { QuestionActionsMenu, type QuestionActions } from "./question-actions"
+import { questionMessages } from "./question-messages"
 import { QUESTION_STATUS_ORDER, QuestionStatusBadge, questionStatusLabel } from "./question-status"
 
 /** Question Bank table, sorted by how often each question was asked. Rows open the detail sheet. */
@@ -24,12 +27,15 @@ export function QuestionTable({
   actions: QuestionActions
   empty: React.ReactNode
 }) {
+  const t = useT(questionMessages)
+  const a = useT(audienceMessages)
+  const lang = useUiLang()
   const pillarOf = (question: AudienceQuestion) => (question.pillar_id ? (pillars.get(question.pillar_id) ?? null) : null)
 
   const columns: DataTableColumn<AudienceQuestion>[] = [
     {
       id: "question",
-      header: "Question",
+      header: t("question"),
       sortValue: (q) => q.question.toLowerCase(),
       // Plain wrapping text (no nowrap/truncate) keeps the column's min-content small, so the
       // table fits a 360px screen with the count and +1 visible.
@@ -37,7 +43,7 @@ export function QuestionTable({
       cell: (q) => (
         <div className="min-w-0">
           <p className={cn("line-clamp-2 text-sm leading-snug", q.status === "dismissed" && "text-muted-foreground")}>
-            {q.question || "Untitled question"}
+            {q.question || t("untitled")}
           </p>
           <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
             {q.topic ? <span className="font-medium text-foreground/75">{q.topic}</span> : null}
@@ -53,21 +59,21 @@ export function QuestionTable({
     },
     {
       id: "frequency",
-      header: "Asked",
+      header: t("asked"),
       align: "right",
       sortValue: (q) => q.frequency,
       cell: (q) => <span className="font-medium">{formatNumber(q.frequency)}×</span>,
     },
     {
       id: "priority",
-      header: "Priority",
+      header: t("priority"),
       hideBelow: "md",
       sortValue: (q) => q.frequency,
       cell: (q) => <PriorityBadge priority={questionPriority(q.frequency)} />,
     },
     {
       id: "platform",
-      header: "Platform",
+      header: a("platform"),
       hideBelow: "md",
       sortValue: (q) => (q.platform ? PLATFORMS[q.platform].label : null),
       cell: (q) =>
@@ -79,32 +85,32 @@ export function QuestionTable({
     },
     {
       id: "pillar",
-      header: "Pillar",
+      header: a("pillar"),
       hideBelow: "lg",
       sortValue: (q) => pillarOf(q)?.name ?? null,
       cell: (q) => <PillarBadge pillar={pillarOf(q)} variant="plain" />,
     },
     {
       id: "last_asked_at",
-      header: "Last asked",
+      header: t("last_asked"),
       hideBelow: "lg",
       sortValue: (q) => q.last_asked_at || null,
       cell: (q) => (
         <span className="text-xs text-muted-foreground" title={formatDate(q.last_asked_at)}>
-          {q.last_asked_at ? formatRelativeDay(q.last_asked_at, now) : "—"}
+          {q.last_asked_at ? relativeDayLabel(q.last_asked_at, now, lang) : "—"}
         </span>
       ),
     },
     {
       id: "status",
-      header: "Converted",
+      header: t("converted"),
       hideBelow: "sm",
       sortValue: (q) => QUESTION_STATUS_ORDER[q.status],
       cell: (q) => <QuestionStatusBadge status={q.status} />,
     },
     {
       id: "actions",
-      header: <span className="sr-only">Actions</span>,
+      header: <span className="sr-only">{t("actions")}</span>,
       align: "right",
       className: "w-px",
       cell: (q) => (
@@ -113,11 +119,11 @@ export function QuestionTable({
             type="button"
             variant="ghost"
             size="xs"
-            title="Asked again"
+            title={t("asked_again_title")}
             className="text-muted-foreground"
             onClick={() => actions.askedAgain(q)}
           >
-            +1<span className="sr-only"> asked again: {truncate(q.question, 50)}</span>
+            +1<span className="sr-only"> {t("asked_again_sr", { text: truncate(q.question, 50) })}</span>
           </Button>
           <QuestionActionsMenu question={q} actions={actions} />
         </div>
@@ -130,7 +136,7 @@ export function QuestionTable({
       rows={questions}
       columns={columns}
       getRowId={(q) => q.id}
-      rowLabel={(q) => q.question || "Untitled question"}
+      rowLabel={(q) => q.question || t("untitled")}
       onRowClick={(q) => actions.open(q.id)}
       defaultSort={{ id: "frequency", desc: true }}
       pageSize={50}

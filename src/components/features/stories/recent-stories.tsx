@@ -6,24 +6,27 @@ import { useMemo } from "react"
 import { EmptyState, SectionCard } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { formatDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import { useTable } from "@/lib/store"
+import { experienceMessages } from "./experience-messages"
 import { storyDay, storyTypeLabel } from "./story-model"
 
 /** The five most recently captured stories, linking into the Story Vault. */
 export function RecentStories({ className }: { className?: string }) {
   const stories = useTable("stories")
+  const t = useT(experienceMessages)
   const recent = useMemo(
     () => [...stories].sort((a, b) => b.created_at.localeCompare(a.created_at) || storyDay(b).localeCompare(storyDay(a))).slice(0, 5),
     [stories]
   )
   return (
     <SectionCard
-      title="Recent stories"
+      title={t("recent_title")}
       className={className}
       contentClassName="pt-1.5 pb-2"
       action={
         <Button type="button" variant="ghost" size="xs" asChild>
-          <Link href="/stories">View all</Link>
+          <Link href="/stories">{t("view_all")}</Link>
         </Button>
       }
     >
@@ -35,7 +38,7 @@ export function RecentStories({ className }: { className?: string }) {
                 href={`/stories?open=${story.id}`}
                 className="flex min-w-0 flex-col gap-0.5 rounded-md px-1.5 py-1.5 outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/60"
               >
-                <span className="truncate text-sm">{story.title || "Untitled story"}</span>
+                <span className="truncate text-sm">{story.title || t("untitled_story")}</span>
                 <span className="truncate text-xs text-muted-foreground">
                   {storyTypeLabel(story.type)} · {formatDate(storyDay(story), "MMM d, yyyy")}
                 </span>
@@ -44,7 +47,7 @@ export function RecentStories({ className }: { className?: string }) {
           ))}
         </ul>
       ) : (
-        <EmptyState compact icon={BookOpen} title="No stories yet" description="Stories you save from here become your content memory." />
+        <EmptyState compact icon={BookOpen} title={t("recent_empty_title")} description={t("recent_empty_description")} />
       )}
     </SectionCard>
   )

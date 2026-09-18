@@ -3,8 +3,11 @@
 import Link from "next/link"
 import { ChartFrame, TrendChart } from "@/components/charts"
 import { formatDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import type { ISODate } from "@/lib/types"
-import { formatCompact, formatNumber, pluralize } from "@/lib/utils"
+import { formatCompact, formatNumber } from "@/lib/utils"
+import { analyticsMessages } from "./messages"
+import { postMessages } from "./post-messages"
 import type { Bucket, BucketPoint } from "./scope"
 
 export interface AudienceSummary {
@@ -29,24 +32,26 @@ export function TrendCharts({
   bucket: Bucket
   audience: AudienceSummary | null
 }) {
-  const byDate = new Map(points.map((p) => [p.date, p]))
+  const t = useT(analyticsMessages)
+  const p = useT(postMessages)
+  const byDate = new Map(points.map((point) => [point.date, point]))
   const tooltipLabel = (date: ISODate) => periodLabel(byDate.get(date), bucket)
-  const firstColumn = bucket === "week" ? "7 days" : "Day"
-  const unit = bucket === "week" ? "7-day period" : "day"
+  const firstColumn = bucket === "week" ? t("col_7_days") : t("col_day")
+  const unit = bucket === "week" ? t("unit_week") : t("unit_day")
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <ChartFrame
         className="lg:col-span-2"
-        title="Views & reach"
-        description={`Totals of the posts published in each ${unit}, latest ${unit} ending today`}
+        title={t("views_reach_title")}
+        description={t("views_reach_description", { unit })}
         table={{
           columns: [firstColumn, "Posts", "Views", "Reach"],
-          rows: points.map((p) => [periodLabel(p, bucket, true), p.posts, formatNumber(p.views), formatNumber(p.reach)]),
+          rows: points.map((point) => [periodLabel(point, bucket, true), point.posts, formatNumber(point.views), formatNumber(point.reach)]),
         }}
       >
         <TrendChart
-          data={points.map((p) => ({ date: p.date, views: p.views, reach: p.reach }))}
+          data={points.map((point) => ({ date: point.date, views: point.views, reach: point.reach }))}
           series={[
             { key: "views", label: "Views", color: "blue" },
             { key: "reach", label: "Reach", color: "orange" },
@@ -54,23 +59,27 @@ export function TrendCharts({
           height={240}
           valueFormatter={formatNumber}
           tooltipDateFormatter={tooltipLabel}
-          emptyMessage="No posts published in this period yet."
-          aria-label="Views and reach over time"
+          emptyMessage={t("no_posts_period_yet")}
+          aria-label={t("views_reach_aria")}
         />
       </ChartFrame>
       <ChartFrame
-        title="Follower growth"
-        description="Followers gained from these posts, running total"
+        title={t("follower_title")}
+        description={t("follower_description")}
         table={{
-          columns: [firstColumn, "Gained", "Running total"],
-          rows: points.map((p) => [periodLabel(p, bucket, true), formatNumber(p.followers), formatNumber(p.cumulativeFollowers)]),
+          columns: [firstColumn, t("col_gained"), t("col_running")],
+          rows: points.map((point) => [periodLabel(point, bucket, true), formatNumber(point.followers), formatNumber(point.cumulativeFollowers)]),
         }}
         footer={
           audience ? (
             <>
-              {formatCompact(audience.followers)} current followers across {pluralize(audience.platforms, "platform")} ·{" "}
+              {t.plural("current_followers", audience.platforms, {
+                count: formatNumber(audience.platforms),
+                followers: formatCompact(audience.followers),
+              })}{" "}
+              ·{" "}
               <Link href="/strategy/platforms" className="underline-offset-2 hover:text-foreground hover:underline">
-                Platform strategy
+                {t("platform_strategy")}
               </Link>
             </>
           ) : undefined
@@ -78,13 +87,13 @@ export function TrendCharts({
       >
         <TrendChart
           type="area"
-          data={points.map((p) => ({ date: p.date, followers: p.cumulativeFollowers }))}
-          series={[{ key: "followers", label: "Followers gained", color: "blue" }]}
+          data={points.map((point) => ({ date: point.date, followers: point.cumulativeFollowers }))}
+          series={[{ key: "followers", label: p("followers_gained"), color: "blue" }]}
           height={240}
           valueFormatter={formatNumber}
           tooltipDateFormatter={tooltipLabel}
-          emptyMessage="No posts published in this period yet."
-          aria-label="Followers gained over time"
+          emptyMessage={t("no_posts_period_yet")}
+          aria-label={t("followers_aria")}
         />
       </ChartFrame>
     </div>

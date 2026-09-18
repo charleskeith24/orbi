@@ -24,6 +24,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useT } from "@/lib/i18n"
 import { IDEA_SOURCES, PLATFORM_IDS, PLATFORMS, PRIORITIES } from "@/lib/constants"
 import type { ContentIdea, ID } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -44,12 +45,9 @@ import {
 } from "./idea-model"
 import { IdeaStatusFilter } from "./idea-status-filter"
 import type { IdeaLookups } from "./idea-table"
+import { ideaBankMessages } from "./messages"
 
-const VIEW_OPTIONS: ViewOption<IdeaView>[] = [
-  { value: "table", label: "Table", icon: Rows3 },
-  { value: "cards", label: "Cards", icon: LayoutGrid },
-  { value: "kanban", label: "Kanban", icon: Columns3 },
-]
+const VIEW_ICONS: Record<IdeaView, ViewOption<IdeaView>["icon"]> = { table: Rows3, cards: LayoutGrid, kanban: Columns3 }
 
 const NoneDot = () => <span aria-hidden className="size-2 shrink-0 rounded-full border border-dashed border-muted-foreground/70" />
 
@@ -73,7 +71,12 @@ export function IdeaFilterBar({
   view: IdeaView
   onChange: (patch: Partial<IdeaBankState>) => void
 }) {
+  const t = useT(ideaBankMessages)
   const [showFacets, setShowFacets] = useState(false)
+  const viewOptions = useMemo<ViewOption<IdeaView>[]>(
+    () => (["table", "cards", "kanban"] as const).map((value) => ({ value, label: t(`view_${value}`), icon: VIEW_ICONS[value] })),
+    [t]
+  )
 
   const counts = useMemo(
     () => Object.fromEntries(FACET_KEYS.map((key) => [key, facetCounts(ideas, criteria, key, tagIndex)])) as Record<FacetKey, Map<string, number>>,
@@ -100,16 +103,16 @@ export function IdeaFilterBar({
     const pillars = [...lookups.pillars.values()]
       .filter((p) => keep("pillar", p.id, p.is_active || count("pillar", p.id) > 0))
       .sort((a, b) => a.sort_order - b.sort_order)
-      .map((p) => ({ value: p.id, label: p.name || "Untitled pillar", count: count("pillar", p.id), icon: <ColorDot color={p.color} /> }))
+      .map((p) => ({ value: p.id, label: p.name || t("untitled_pillar"), count: count("pillar", p.id), icon: <ColorDot color={p.color} /> }))
     const personas = [...lookups.personas.values()]
       .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.name.localeCompare(b.name))
-      .map((p) => ({ value: p.id, label: p.name || "Untitled persona", count: count("persona", p.id), icon: <ColorDot color={p.color} /> }))
+      .map((p) => ({ value: p.id, label: p.name || t("untitled_persona"), count: count("persona", p.id), icon: <ColorDot color={p.color} /> }))
     const formats = [...lookups.formats.values()]
       .filter((f) => keep("format", f.id, used.format.has(f.id)))
       .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
       .map((f) => ({
         value: f.id,
-        label: f.name || "Untitled format",
+        label: f.name || t("untitled_format"),
         count: count("format", f.id),
         icon: <FormatCategoryIcon category={f.category} className="size-3.5 text-muted-foreground" />,
       }))
@@ -117,16 +120,16 @@ export function IdeaFilterBar({
       .filter((g) => keep("goal", g.id, g.is_active || used.goal.has(g.id)))
       .map((g) => ({
         value: g.id,
-        label: g.name || "Untitled goal",
+        label: g.name || t("untitled_goal"),
         count: count("goal", g.id),
         icon: <Target className="size-3.5 text-muted-foreground" aria-hidden />,
       }))
 
     return {
-      pillar: withNone("pillar", pillars, "No pillar"),
-      persona: withNone("persona", personas, "No persona"),
-      format: withNone("format", formats, "No format"),
-      goal: withNone("goal", goals, "No goal"),
+      pillar: withNone("pillar", pillars, t("no_pillar")),
+      persona: withNone("persona", personas, t("no_persona")),
+      format: withNone("format", formats, t("no_format")),
+      goal: withNone("goal", goals, t("no_goal")),
       platform: withNone(
         "platform",
         PLATFORM_IDS.map((p) => ({
@@ -135,7 +138,7 @@ export function IdeaFilterBar({
           count: count("platform", p),
           icon: <PlatformIcon platform={p} className="size-3.5 text-muted-foreground" />,
         })),
-        "No platform"
+        t("no_platform")
       ),
       priority: PRIORITIES.map((p) => ({
         value: p.id,
@@ -149,11 +152,11 @@ export function IdeaFilterBar({
         count: count("source", s.id),
       })),
     } satisfies Record<FacetKey, FacetOption[]>
-  }, [counts, criteria, lookups, used])
+  }, [counts, criteria, lookups, used, t])
 
   const setFacet = (key: FacetKey, values: string[]) => onChange({ facets: { ...criteria.facets, [key]: values } })
   const facetCount = FACET_KEYS.reduce((acc, key) => acc + (criteria.facets[key].length ? 1 : 0), 0)
-  const sortLabel = IDEA_SORTS.find((s) => s.id === sort)?.label ?? "Idea Score"
+  const sortLabel = t(`sort_${IDEA_SORTS.includes(sort) ? sort : "score"}`)
 
   return (
     <FilterBar
@@ -161,30 +164,30 @@ export function IdeaFilterBar({
         <>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button type="button" variant="outline" size="sm" aria-label={`Sort by ${sortLabel}`}>
+              <Button type="button" variant="outline" size="sm" aria-label={t("sort_by_label", { label: sortLabel })}>
                 <ArrowDownUp className="text-muted-foreground" aria-hidden />
                 {sortLabel}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+              <DropdownMenuLabel>{t("sort_by")}</DropdownMenuLabel>
               <DropdownMenuRadioGroup value={sort} onValueChange={(next) => onChange({ sort: next as IdeaSort })}>
                 {IDEA_SORTS.map((option) => (
-                  <DropdownMenuRadioItem key={option.id} value={option.id}>
+                  <DropdownMenuRadioItem key={option} value={option}>
                     <span className="flex min-w-0 flex-col">
-                      <span>{option.label}</span>
-                      <span className="text-xs text-muted-foreground">{option.description}</span>
+                      <span>{t(`sort_${option}`)}</span>
+                      <span className="text-xs text-muted-foreground">{t(`sort_${option}_description`)}</span>
                     </span>
                   </DropdownMenuRadioItem>
                 ))}
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-          <ViewToggle value={view} onChange={(next) => onChange({ view: next })} options={VIEW_OPTIONS} aria-label="Idea Bank view" />
+          <ViewToggle value={view} onChange={(next) => onChange({ view: next })} options={viewOptions} aria-label={t("view_label")} />
         </>
       }
     >
-      <SearchInput value={criteria.q} onChange={(q) => onChange({ q })} placeholder="Search ideas…" className="sm:w-56" />
+      <SearchInput value={criteria.q} onChange={(q) => onChange({ q })} placeholder={t("search_placeholder")} className="sm:w-56" />
       <IdeaStatusFilter value={criteria.status} counts={statusCounts} onChange={(status) => onChange({ status })} />
       <Button
         type="button"
@@ -195,7 +198,7 @@ export function IdeaFilterBar({
         onClick={() => setShowFacets((v) => !v)}
       >
         <ListFilter className="text-muted-foreground" aria-hidden />
-        Filters
+        {t("filters")}
         {facetCount ? <span className="rounded-sm bg-muted px-1 text-xs font-medium num">{facetCount}</span> : null}
       </Button>
       <div className={cn("contents", !showFacets && "max-sm:hidden")}>

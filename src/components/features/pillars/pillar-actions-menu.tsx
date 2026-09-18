@@ -10,7 +10,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useT } from "@/lib/i18n"
 import type { ContentPillar } from "@/lib/types"
+import { pillarMessages } from "./pillar-messages"
 
 /** Pillar overflow menu: edit, reorder, pause/activate, cross-links and delete. */
 export function PillarActionsMenu({
@@ -34,11 +36,12 @@ export function PillarActionsMenu({
   onDelete: () => void
   className?: string
 }) {
-  const name = pillar.name || "Untitled pillar"
+  const t = useT(pillarMessages)
+  const name = pillar.name || t("untitled_pillar")
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="ghost" size="icon-sm" aria-label={`Actions for ${name}`} className={className}>
+        <Button type="button" variant="ghost" size="icon-sm" aria-label={t("actions_for", { name })} className={className}>
           <Ellipsis aria-hidden />
         </Button>
       </DropdownMenuTrigger>
@@ -46,42 +49,42 @@ export function PillarActionsMenu({
         {onEdit ? (
           <DropdownMenuItem onSelect={onEdit}>
             <Pencil aria-hidden />
-            Edit pillar
+            {t("edit_pillar")}
           </DropdownMenuItem>
         ) : null}
         {onMove ? (
           <>
             <DropdownMenuItem disabled={!canMoveUp} onSelect={() => onMove(-1)}>
               <ArrowUp aria-hidden />
-              Move earlier
+              {t("move_earlier")}
             </DropdownMenuItem>
             <DropdownMenuItem disabled={!canMoveDown} onSelect={() => onMove(1)}>
               <ArrowDown aria-hidden />
-              Move later
+              {t("move_later")}
             </DropdownMenuItem>
           </>
         ) : null}
         <DropdownMenuItem onSelect={onToggleActive}>
           {pillar.is_active ? <Pause aria-hidden /> : <Play aria-hidden />}
-          {pillar.is_active ? "Pause pillar" : "Activate pillar"}
+          {pillar.is_active ? t("pause_pillar") : t("activate_pillar")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href={`/ideas/generator?pillar=${pillar.id}`}>
             <Lightbulb aria-hidden />
-            Generate ideas
+            {t("generate_ideas")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href={`/pillars/matrix?pillar=${pillar.id}`}>
             <Grid3x3 aria-hidden />
-            Plan in Content Matrix
+            {t("plan_in_matrix_menu")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={onDelete}>
           <Trash2 aria-hidden />
-          Delete pillar
+          {t("delete_pillar")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

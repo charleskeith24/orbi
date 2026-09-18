@@ -4,10 +4,13 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions } from "@/lib/store"
 import type { ContentPillar, ID } from "@/lib/types"
 import { PillarIconTile } from "./pillar-icons"
 import { sumValues, TARGET_TOTAL } from "./pillar-math"
+import { pillarMessages } from "./pillar-messages"
 import { TargetsEditor, type TargetValues } from "./targets-editor"
 
 /** Set Target % for every active pillar — saves only when the whole numbers add up to exactly 100. */
@@ -46,6 +49,8 @@ function TargetsForm({
   windowLabel: string
   onDone: () => void
 }) {
+  const t = useT(pillarMessages)
+  const c = useT(commonMessages)
   const [values, setValues] = useState<TargetValues>(() =>
     Object.fromEntries(pillars.map((p) => [p.id, p.target_percentage]))
   )
@@ -60,7 +65,7 @@ function TargetsForm({
       return next === p.target_percentage ? [] : [{ id: p.id, patch: { target_percentage: next } }]
     })
     if (updates.length) dataActions.updateMany("content_pillars", updates)
-    toast.success(updates.length ? "Pillar targets saved" : "Targets unchanged", {
+    toast.success(updates.length ? t("targets_saved") : t("targets_unchanged"), {
       description: pillars.map((p) => `${p.name} ${Math.round(values[p.id] ?? 0)}%`).join(" · "),
     })
     onDone()
@@ -69,10 +74,8 @@ function TargetsForm({
   return (
     <form onSubmit={submit} noValidate className="flex min-h-0 flex-1 flex-col">
       <DialogHeader className="gap-1 border-b py-3.5 pr-12 pl-4">
-        <DialogTitle>Set pillar targets</DialogTitle>
-        <DialogDescription className="text-xs">
-          The share of your content each active pillar should get. Whole numbers that add up to 100%.
-        </DialogDescription>
+        <DialogTitle>{t("targets_title")}</DialogTitle>
+        <DialogDescription className="text-xs">{t("targets_description")}</DialogDescription>
       </DialogHeader>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 scrollbar-thin">
@@ -83,22 +86,22 @@ function TargetsForm({
             onChange={setValues}
             rows={pillars.map((p) => ({
               id: p.id,
-              label: p.name || "Untitled pillar",
+              label: p.name || t("untitled_pillar"),
               mark: <PillarIconTile name={p.icon} color={p.color} size="sm" />,
-              hint: `Actual ${Math.round(actualById.get(p.id) ?? 0)}% · ${windowLabel}`,
+              hint: t("actual_hint", { pct: Math.round(actualById.get(p.id) ?? 0), window: windowLabel }),
             }))}
           />
         ) : (
-          <p className="text-sm text-muted-foreground">Activate or create a pillar first — only active pillars get targets.</p>
+          <p className="text-sm text-muted-foreground">{t("no_active_pillars")}</p>
         )}
       </div>
 
       <DialogFooter className="m-0 rounded-b-xl px-4 py-3">
         <Button type="button" variant="outline" onClick={onDone}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={!valid}>
-          Save targets
+          {t("save_targets")}
         </Button>
       </DialogFooter>
     </form>

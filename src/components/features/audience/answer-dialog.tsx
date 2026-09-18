@@ -6,10 +6,13 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { PIPELINE_STAGE_MAP, PLATFORMS, PUBLISHED_STAGES } from "@/lib/constants"
 import { contentItemDate, formatShortDate } from "@/lib/dates"
+import { useT, type Translator } from "@/lib/i18n"
 import { useTable } from "@/lib/store"
 import type { AudienceQuestion, ContentItem, ID } from "@/lib/types"
 import { truncate } from "@/lib/utils"
 import { rankAnswerCandidates } from "./audience-model"
+import { audienceMessages } from "./messages"
+import { questionMessages } from "./question-messages"
 
 /** "Mark answered": pick the content item that answers the question (suggestions first). */
 export function AnswerDialog({
@@ -23,16 +26,29 @@ export function AnswerDialog({
   onOpenChange: (open: boolean) => void
   onPick: (question: AudienceQuestion, itemId: ID) => void
 }) {
+  // Translated here (always mounted) so the picker doesn't subscribe to the store while the dialog opens.
+  const t = useT(questionMessages)
+  const untitled = useT(audienceMessages)("untitled_content")
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-lg">
-        {question ? <Picker question={question} onPick={(itemId) => onPick(question, itemId)} /> : null}
+        {question ? <Picker question={question} t={t} untitled={untitled} onPick={(itemId) => onPick(question, itemId)} /> : null}
       </DialogContent>
     </Dialog>
   )
 }
 
-function Picker({ question, onPick }: { question: AudienceQuestion; onPick: (itemId: ID) => void }) {
+function Picker({
+  question,
+  t,
+  untitled,
+  onPick,
+}: {
+  question: AudienceQuestion
+  t: Translator<(typeof questionMessages)["en"]>
+  untitled: string
+  onPick: (itemId: ID) => void
+}) {
   const items = useTable("content_items")
   const { suggested, published, inProgress } = useMemo(() => {
     const ranked = rankAnswerCandidates(question, items)
@@ -44,29 +60,45 @@ function Picker({ question, onPick }: { question: AudienceQuestion; onPick: (ite
   }, [question, items])
 
   const option = (item: ContentItem) => (
-    <ItemOption key={item.id} item={item} current={item.id === question.content_item_id} onPick={onPick} />
+    <ItemOption
+      key={item.id}
+      item={item}
+      current={item.id === question.content_item_id}
+      untitled={untitled}
+      onPick={onPick}
+    />
   )
 
   return (
     <>
       <DialogHeader className="px-4 pt-4 pr-12 pb-3">
-        <DialogTitle>Mark answered</DialogTitle>
-        <DialogDescription>Link the content that answers “{truncate(question.question, 90)}”.</DialogDescription>
+        <DialogTitle>{t("answer_title")}</DialogTitle>
+        <DialogDescription>{t("answer_description", { text: truncate(question.question, 90) })}</DialogDescription>
       </DialogHeader>
       <Command filter={keywordFilter} className="rounded-none border-t bg-transparent">
-        <CommandInput placeholder="Search content by title, platform or stage…" autoFocus />
+        <CommandInput placeholder={t("answer_search")} autoFocus />
         <CommandList className="max-h-[min(24rem,60vh)]">
-          <CommandEmpty>No content matches.</CommandEmpty>
-          {suggested.length ? <CommandGroup heading="Suggested">{suggested.map(option)}</CommandGroup> : null}
-          {published.length ? <CommandGroup heading="Published">{published.map(option)}</CommandGroup> : null}
-          {inProgress.length ? <CommandGroup heading="In the pipeline">{inProgress.map(option)}</CommandGroup> : null}
+          <CommandEmpty>{t("answer_empty")}</CommandEmpty>
+          {suggested.length ? <CommandGroup heading={t("suggested")}>{suggested.map(option)}</CommandGroup> : null}
+          {published.length ? <CommandGroup heading={t("published")}>{published.map(option)}</CommandGroup> : null}
+          {inProgress.length ? <CommandGroup heading={t("in_pipeline")}>{inProgress.map(option)}</CommandGroup> : null}
         </CommandList>
       </Command>
     </>
   )
 }
 
-function ItemOption({ item, current, onPick }: { item: ContentItem; current: boolean; onPick: (itemId: ID) => void }) {
+function ItemOption({
+  item,
+  current,
+  untitled,
+  onPick,
+}: {
+  item: ContentItem
+  current: boolean
+  untitled: string
+  onPick: (itemId: ID) => void
+}) {
   const date = contentItemDate(item)
   const stage = PIPELINE_STAGE_MAP[item.stage]?.label ?? item.stage
   return (
@@ -77,7 +109,7 @@ function ItemOption({ item, current, onPick }: { item: ContentItem; current: boo
       onSelect={() => onPick(item.id)}
     >
       <PlatformIcon platform={item.platform} className="text-muted-foreground" />
-      <span className="min-w-0 flex-1 truncate">{item.title || "Untitled content"}</span>
+      <span className="min-w-0 flex-1 truncate">{item.title || untitled}</span>
       <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground" title={stage}>
         <StageIcon stage={item.stage} />
         {date ? formatShortDate(date) : stage}

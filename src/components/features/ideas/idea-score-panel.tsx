@@ -8,12 +8,15 @@ import { AiButton, AiNotice, ProviderBadge, ScoreRing, StatusPill } from "@/comp
 import { Button } from "@/components/ui/button"
 import { buildScoreIdeaInput, useAiTask } from "@/lib/ai"
 import { IDEA_SCORE_DIMENSIONS, IDEA_SCORE_THRESHOLDS } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { computeIdeaScore, NEUTRAL_IDEA_SCORES, priorityFromScore } from "@/lib/scoring"
 import { dataActions, setIdeaScores } from "@/lib/store"
 import type { ContentIdea, IdeaScores, Priority } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { IdeaAiError } from "./idea-ai-error"
 import { SCORE_BAND_LABEL } from "./idea-badges"
+import { ideaScoreMessages } from "./idea-detail-messages"
 
 const BAND_ICON: Record<Priority, typeof TrendingUp> = { high: TrendingUp, medium: Minus, low: TrendingDown }
 
@@ -74,6 +77,7 @@ function DimensionRow({
   onCommit: (value: number) => void
 }) {
   const id = useId()
+  const t = useT(ideaScoreMessages)
   const changed = saved !== null && saved !== value
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
@@ -82,13 +86,13 @@ function DimensionRow({
           {dimension.label}
         </span>
         <span className="shrink-0 text-xs text-muted-foreground">
-          <span className="num" title="Weight in the Idea Score">
+          <span className="num" title={t("weight")}>
             {Math.round(dimension.weight * 100)}%
           </span>
           <span aria-hidden> · </span>
           <span className={cn("font-semibold num", changed ? "text-brand" : "text-foreground")}>{value}</span>
           <span className="num">/10</span>
-          {changed ? <span className="sr-only"> (saved {saved})</span> : null}
+          {changed ? <span className="sr-only">{t("saved_value", { value: saved })}</span> : null}
         </span>
       </div>
       <p className="text-xs text-pretty text-muted-foreground">{dimension.description}</p>
@@ -108,6 +112,8 @@ function DimensionRow({
  * band. Sliders save on release; "Score with AI" proposes scores with a rationale to review first.
  */
 export function IdeaScorePanel({ idea }: { idea: ContentIdea }) {
+  const t = useT(ideaScoreMessages)
+  const c = useT(commonMessages)
   const ai = useAiTask("score_idea")
   const [draft, setDraft] = useState<IdeaScores | null>(null)
   const [live, setLive] = useState<IdeaScores | null>(null)
@@ -139,21 +145,21 @@ export function IdeaScorePanel({ idea }: { idea: ContentIdea }) {
     const score = computeIdeaScore(draft)
     setIdeaScores(idea.id, draft)
     setDraft(null)
-    toast.success(`Idea Score ${score} / 100`, { description: `${SCORE_BAND_LABEL[priorityFromScore(score)]} priority — scores saved` })
+    toast.success(t("toast_score", { score }), { description: t("toast_saved", { band: SCORE_BAND_LABEL[priorityFromScore(score)] }) })
   }
 
   const state = draft
-    ? "Suggested scores — adjust any slider, then apply."
+    ? t("state_draft")
     : saved
-      ? `Priority follows the score: High ≥ ${IDEA_SCORE_THRESHOLDS.high}, Medium ≥ ${IDEA_SCORE_THRESHOLDS.medium}.`
-      : "Not scored yet — move a slider or score with AI."
+      ? t("state_saved", { high: IDEA_SCORE_THRESHOLDS.high, medium: IDEA_SCORE_THRESHOLDS.medium })
+      : t("state_empty")
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border bg-muted/30 p-3 dark:bg-muted/15">
-        <ScoreRing value={hasScore ? total : null} size={56} label="Idea Score" />
+        <ScoreRing value={hasScore ? total : null} size={56} label={t("idea_score")} />
         <div className="min-w-0 flex-1 basis-48">
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Idea Score</p>
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{t("idea_score")}</p>
           <p className="flex flex-wrap items-center gap-2">
             <span className="text-lg font-semibold num">
               {hasScore ? total : "—"}
@@ -163,8 +169,8 @@ export function IdeaScorePanel({ idea }: { idea: ContentIdea }) {
           </p>
           <p className="text-xs text-pretty text-muted-foreground">{state}</p>
         </div>
-        <AiButton type="button" size="sm" pending={ai.isPending} pendingLabel="Scoring…" onClick={() => void scoreWithAi()}>
-          {ai.data ? "Re-score with AI" : "Score with AI"}
+        <AiButton type="button" size="sm" pending={ai.isPending} pendingLabel={t("scoring")} onClick={() => void scoreWithAi()}>
+          {ai.data ? t("rescore") : t("score")}
         </AiButton>
       </div>
 
@@ -173,16 +179,16 @@ export function IdeaScorePanel({ idea }: { idea: ContentIdea }) {
       {draft && ai.data ? (
         <div className="flex flex-col gap-2.5 rounded-lg border border-brand/30 bg-brand-soft/50 p-3">
           <div className="flex flex-wrap items-center gap-2">
-            <h4 className="text-sm font-medium">AI suggestion</h4>
+            <h4 className="text-sm font-medium">{t("ai_suggestion")}</h4>
             <ProviderBadge provider={ai.provider ?? "offline"} model={ai.model ?? undefined} />
           </div>
           <p className="text-sm text-pretty">{ai.data.summary}</p>
           <div className="flex flex-wrap gap-2">
             <Button type="button" size="sm" onClick={apply}>
-              Apply scores
+              {t("apply")}
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => setDraft(null)}>
-              Discard
+              {c("discard")}
             </Button>
           </div>
         </div>
@@ -202,7 +208,7 @@ export function IdeaScorePanel({ idea }: { idea: ContentIdea }) {
         ))}
       </div>
 
-      <AiNotice>The Idea Score is a prioritisation aid for your strategy — weighted toward audience relevance — not a prediction of views.</AiNotice>
+      <AiNotice>{t("notice")}</AiNotice>
     </div>
   )
 }

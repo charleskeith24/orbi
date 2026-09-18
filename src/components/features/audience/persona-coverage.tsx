@@ -3,10 +3,13 @@
 import Link from "next/link"
 import { SectionCard, StatusPill } from "@/components/common"
 import { MixBar, type MixSegment } from "@/components/charts"
+import { useT, useUiLang } from "@/lib/i18n"
 import type { AudiencePersona } from "@/lib/types"
 import { formatNumber, formatPercent } from "@/lib/utils"
 import { NONE, RECENT_DAYS, type ContentShare } from "./audience-model"
+import { audienceMessages } from "./messages"
 import { personaName } from "./persona-actions"
+import { personaMessages } from "./persona-messages"
 
 const MAX_PERSONA_SEGMENTS = 7
 /** Untargeted share above which the mix gets a warning. */
@@ -22,6 +25,9 @@ export function PersonaCoverage({
   share: ContentShare
   className?: string
 }) {
+  const t = useT(personaMessages)
+  const a = useT(audienceMessages)
+  const lang = useUiLang()
   const ranked = personas
     .map((persona) => ({ persona, value: share.counts.get(persona.id) ?? 0 }))
     .sort((a, b) => b.value - a.value)
@@ -34,9 +40,9 @@ export function PersonaCoverage({
   // Colour follows the entity; the display order follows the persona list, not the rank.
   const segments: MixSegment[] = personas
     .filter((persona) => shown.some((r) => r.persona.id === persona.id))
-    .map((persona) => ({ id: persona.id, label: personaName(persona), value: share.counts.get(persona.id) ?? 0, color: persona.color }))
+    .map((persona) => ({ id: persona.id, label: personaName(persona, lang), value: share.counts.get(persona.id) ?? 0, color: persona.color }))
   if (folded + untargeted > 0) {
-    segments.push({ id: NONE, label: folded ? "Other personas / none" : "No persona", value: folded + untargeted, color: "other" })
+    segments.push({ id: NONE, label: folded ? t("other_personas") : a("no_persona"), value: folded + untargeted, color: "other" })
   }
 
   const untargetedPct = share.total ? (untargeted / share.total) * 100 : 0
@@ -45,39 +51,39 @@ export function PersonaCoverage({
   return (
     <SectionCard
       className={className}
-      title="Content by persona"
-      description={`Pieces published, scheduled or due in the last ${RECENT_DAYS} days, by the persona they target.`}
+      title={t("coverage_title")}
+      description={t("coverage_description", { days: RECENT_DAYS })}
     >
       <div className="flex min-w-0 flex-col gap-4">
         <MixBar
           segments={segments}
-          valueLabel="Pieces"
+          valueLabel={t("pieces")}
           valueFormatter={formatNumber}
-          emptyMessage={`No dated content in the last ${RECENT_DAYS} days yet.`}
-          aria-label="Share of recent content by persona"
+          emptyMessage={t("coverage_empty", { days: RECENT_DAYS })}
+          aria-label={t("coverage_aria")}
         />
         {share.total ? (
           <ul className="flex flex-col gap-2 text-xs">
             {untargetedPct >= UNTARGETED_WARNING ? (
               <li className="flex flex-wrap items-center gap-2">
-                <StatusPill tone="warning">{formatPercent(untargetedPct, 0)} targets no persona</StatusPill>
-                <span className="text-muted-foreground">Set a persona on each piece in the Content Studio — content for everyone reaches no one.</span>
+                <StatusPill tone="warning">{t("targets_no_persona", { pct: formatPercent(untargetedPct, 0) })}</StatusPill>
+                <span className="text-muted-foreground">{t("targets_no_persona_hint")}</span>
               </li>
             ) : null}
             {missing.map((persona) => (
               <li key={persona.id} className="flex flex-wrap items-center gap-2">
-                <StatusPill tone="warning">No recent content for {personaName(persona)}</StatusPill>
+                <StatusPill tone="warning">{t("no_recent_for", { name: personaName(persona, lang) })}</StatusPill>
                 <Link
                   href={`/ideas/generator?persona=${persona.id}`}
                   className="text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:underline"
                 >
-                  Generate ideas for them
+                  {t("generate_for_them")}
                 </Link>
               </li>
             ))}
             {untargetedPct < UNTARGETED_WARNING && !missing.length ? (
               <li>
-                <StatusPill tone="good">Every persona got content in the last {RECENT_DAYS} days</StatusPill>
+                <StatusPill tone="good">{t("every_persona_covered", { days: RECENT_DAYS })}</StatusPill>
               </li>
             ) : null}
           </ul>

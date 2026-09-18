@@ -30,17 +30,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { IDEA_STATUSES, PRIORITIES } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
+import { translate } from "@/lib/i18n/core"
+import { getUiLang } from "@/lib/i18n/ui-lang"
 import type { ContentIdea, IdeaStatus, Priority } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useIdeaActions } from "./idea-actions"
+import { ideaActionsMessages } from "./messages"
 
 async function copyIdeaLink(id: string) {
   const url = `${window.location.origin}/ideas?open=${id}`
   try {
     await navigator.clipboard.writeText(url)
-    toast.success("Link copied", { description: url })
+    toast.success(translate(ideaActionsMessages, getUiLang(), "link_copied"), { description: url })
   } catch {
-    toast.error("Couldn't copy the link", { description: url })
+    toast.error(translate(ideaActionsMessages, getUiLang(), "link_copy_failed"), { description: url })
   }
 }
 
@@ -56,7 +61,9 @@ export function IdeaActionsMenu({
   className?: string
 }) {
   const actions = useIdeaActions()
-  const title = idea.title.trim() || "Untitled idea"
+  const t = useT(ideaActionsMessages)
+  const c = useT(commonMessages)
+  const title = idea.title.trim() || t("untitled_idea")
   const hasContent = Boolean(idea.converted_item_id)
 
   return (
@@ -66,7 +73,7 @@ export function IdeaActionsMenu({
           type="button"
           variant="ghost"
           size="icon-xs"
-          aria-label={`Actions for ${title}`}
+          aria-label={t("actions_for", { title })}
           className={cn("text-muted-foreground", className)}
         >
           <Ellipsis aria-hidden />
@@ -81,26 +88,26 @@ export function IdeaActionsMenu({
         {showOpen ? (
           <DropdownMenuItem onSelect={() => actions.open(idea.id)}>
             <PanelRightOpen aria-hidden />
-            Open details
+            {t("open_details")}
           </DropdownMenuItem>
         ) : null}
         {hasContent ? (
           <DropdownMenuItem asChild>
             <Link href={`/studio/${idea.converted_item_id}`}>
               <ExternalLink aria-hidden />
-              Open in Content Studio
+              {t("open_in_studio")}
             </Link>
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem onSelect={() => actions.convert(idea.id)}>
           <FilePlus2 aria-hidden />
-          {hasContent ? "Create more content…" : "Convert to content…"}
+          {hasContent ? t("create_more") : t("convert")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <ArrowRightLeft aria-hidden />
-            Move to
+            {t("move_to")}
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="w-52">
             <DropdownMenuRadioGroup value={idea.status} onValueChange={(next) => actions.setStatus([idea.id], next as IdeaStatus)}>
@@ -119,7 +126,7 @@ export function IdeaActionsMenu({
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Signal aria-hidden />
-            Priority
+            {t("priority")}
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="w-40">
             <DropdownMenuRadioGroup value={idea.priority} onValueChange={(next) => actions.setPriority([idea.id], next as Priority)}>
@@ -134,27 +141,27 @@ export function IdeaActionsMenu({
         </DropdownMenuSub>
         <DropdownMenuItem onSelect={() => actions.duplicate(idea.id)}>
           <Copy aria-hidden />
-          Duplicate
+          {t("duplicate")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => void copyIdeaLink(idea.id)}>
           <Link2 aria-hidden />
-          Copy link
+          {t("copy_link")}
         </DropdownMenuItem>
         {idea.status === "archived" ? (
           <DropdownMenuItem onSelect={() => actions.restore([idea.id])}>
             <ArchiveRestore aria-hidden />
-            Restore
+            {t("restore")}
           </DropdownMenuItem>
         ) : (
           <DropdownMenuItem onSelect={() => actions.archive([idea.id])}>
             <Archive aria-hidden />
-            Archive
+            {t("archive")}
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={() => void actions.remove([idea.id])}>
           <Trash2 aria-hidden />
-          Delete
+          {c("delete")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

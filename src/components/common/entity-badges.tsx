@@ -2,7 +2,9 @@
 
 import { AlignLeft, BookOpen, ImageIcon, Mic, Radio, Video, X, type LucideIcon } from "lucide-react"
 import { catVar } from "@/components/common/color"
+import { entityBadgeMessages } from "@/components/common/messages"
 import { FORMAT_CATEGORY_MAP } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import { useRow } from "@/lib/store"
 import type {
   AudiencePersona,
@@ -122,39 +124,42 @@ interface EntityBadgeProps {
 export function PillarBadge({
   pillarId,
   pillar,
-  emptyLabel = "No pillar",
+  emptyLabel,
   ...rest
 }: EntityBadgeProps & { pillarId?: ID | null; pillar?: ContentPillar | null }) {
+  const t = useT(entityBadgeMessages)
   const stored = useRow("content_pillars", pillar === undefined ? pillarId : null)
   const row = pillar === undefined ? stored : pillar
-  if (!row) return <IdentityChip label={emptyLabel} muted {...rest} />
-  return <IdentityChip color={row.color} label={row.name || "Untitled pillar"} title={row.description || undefined} {...rest} />
+  if (!row) return <IdentityChip label={emptyLabel ?? t("no_pillar")} muted {...rest} />
+  return <IdentityChip color={row.color} label={row.name || t("untitled_pillar")} title={row.description || undefined} {...rest} />
 }
 
 /** Persona dot + name. */
 export function PersonaBadge({
   personaId,
   persona,
-  emptyLabel = "No persona",
+  emptyLabel,
   ...rest
 }: EntityBadgeProps & { personaId?: ID | null; persona?: AudiencePersona | null }) {
+  const t = useT(entityBadgeMessages)
   const stored = useRow("audience_personas", persona === undefined ? personaId : null)
   const row = persona === undefined ? stored : persona
-  if (!row) return <IdentityChip label={emptyLabel} muted {...rest} />
-  return <IdentityChip color={row.color} label={row.name || "Untitled persona"} {...rest} />
+  if (!row) return <IdentityChip label={emptyLabel ?? t("no_persona")} muted {...rest} />
+  return <IdentityChip color={row.color} label={row.name || t("untitled_persona")} {...rest} />
 }
 
 /** Campaign square swatch + name (square distinguishes campaigns from pillars). */
 export function CampaignBadge({
   campaignId,
   campaign,
-  emptyLabel = "No campaign",
+  emptyLabel,
   ...rest
 }: EntityBadgeProps & { campaignId?: ID | null; campaign?: ContentCampaign | null }) {
+  const t = useT(entityBadgeMessages)
   const stored = useRow("content_campaigns", campaign === undefined ? campaignId : null)
   const row = campaign === undefined ? stored : campaign
-  if (!row) return <IdentityChip label={emptyLabel} shape="square" muted {...rest} />
-  return <IdentityChip color={row.color} shape="square" label={row.name || "Untitled campaign"} {...rest} />
+  if (!row) return <IdentityChip label={emptyLabel ?? t("no_campaign")} shape="square" muted {...rest} />
+  return <IdentityChip color={row.color} shape="square" label={row.name || t("untitled_campaign")} {...rest} />
 }
 
 /* ---------------------------------- Tags ---------------------------------- */
@@ -173,6 +178,7 @@ export function TagChip({
   onRemove?: () => void
   className?: string
 }) {
+  const t = useT(entityBadgeMessages)
   const label = tag?.name ?? name ?? ""
   const swatch = tag?.color ?? color ?? "gray"
   return (
@@ -192,7 +198,7 @@ export function TagChip({
         <button
           type="button"
           onClick={onRemove}
-          aria-label={`Remove tag ${label}`}
+          aria-label={t("remove_tag", { name: label })}
           className="flex size-4 items-center justify-center rounded-sm text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60"
         >
           <X className="size-3" aria-hidden />
@@ -204,6 +210,7 @@ export function TagChip({
 
 /** Tag chips with a "+N" overflow token. */
 export function TagList({ tags, max = 3, className }: { tags: Tag[]; max?: number; className?: string }) {
+  const t = useT(entityBadgeMessages)
   if (!tags.length) return null
   const shown = tags.slice(0, max)
   const hidden = tags.slice(max)
@@ -214,11 +221,11 @@ export function TagList({ tags, max = 3, className }: { tags: Tag[]; max?: numbe
       ))}
       {hidden.length ? (
         <span
-          title={hidden.map((t) => `#${t.name}`).join(", ")}
+          title={hidden.map((tag) => `#${tag.name}`).join(", ")}
           className="inline-flex h-5 items-center rounded-md px-1 text-xs text-muted-foreground"
         >
           <span aria-hidden>+{hidden.length}</span>
-          <span className="sr-only">and {hidden.map((t) => `#${t.name}`).join(", ")}</span>
+          <span className="sr-only">{t("and_more", { tags: hidden.map((tag) => `#${tag.name}`).join(", ") })}</span>
         </span>
       ) : null}
     </span>
@@ -232,7 +239,7 @@ export function FormatLabel({
   formatId,
   format,
   showIcon = true,
-  emptyLabel = "No format",
+  emptyLabel,
   className,
 }: {
   formatId?: ID | null
@@ -241,6 +248,7 @@ export function FormatLabel({
   emptyLabel?: string
   className?: string
 }) {
+  const t = useT(entityBadgeMessages)
   const stored = useRow("content_formats", format === undefined ? formatId : null)
   const row = format === undefined ? stored : format
   return (
@@ -249,7 +257,7 @@ export function FormatLabel({
       className={cn("inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground", className)}
     >
       {showIcon ? <FormatCategoryIcon category={row?.category} className="size-3.5 shrink-0" /> : null}
-      <span className="truncate">{row?.name || emptyLabel}</span>
+      <span className="truncate">{row?.name || (emptyLabel ?? t("no_format"))}</span>
     </span>
   )
 }

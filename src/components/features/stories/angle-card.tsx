@@ -8,10 +8,13 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { PLATFORMS } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import type { ContentPillar, ID } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { AngleEditor } from "./angle-editor"
 import { ANGLE_META, angleCopyText, type AngleDraft } from "./angle-model"
+import { angleMessages } from "./experience-messages"
 
 const LABEL = "text-[11px] leading-4 font-medium tracking-wide text-muted-foreground uppercase"
 
@@ -44,7 +47,9 @@ export function AngleCard({ draft, pillars, selected = false, onSelectedChange, 
   const meta = ANGLE_META[draft.type]
   const pillar = draft.pillar_id ? pillars.get(draft.pillar_id) : undefined
   const saved = Boolean(draft.ideaId)
-  const title = draft.title.trim() || "Untitled angle"
+  const t = useT(angleMessages)
+  const c = useT(commonMessages)
+  const title = draft.title.trim() || t("untitled")
   const canSave = Boolean(draft.title.trim())
 
   return (
@@ -62,7 +67,7 @@ export function AngleCard({ draft, pillars, selected = false, onSelectedChange, 
             checked={selected}
             disabled={saved || editing || !canSave}
             onCheckedChange={(value) => onSelectedChange(value === true)}
-            aria-label={saved ? `“${title}” is saved to the Idea Bank` : `Select “${title}”`}
+            aria-label={saved ? t("saved_label", { title }) : t("select_label", { title })}
             className="mt-0.5"
           />
         ) : null}
@@ -84,14 +89,14 @@ export function AngleCard({ draft, pillars, selected = false, onSelectedChange, 
             {pillar ? <PillarBadge pillar={pillar} /> : null}
             {draft.itemId ? (
               <StatusPill tone="good" icon={CircleCheck}>
-                Content created
+                {t("content_created")}
               </StatusPill>
             ) : saved ? (
               <StatusPill tone="good" icon={CircleCheck}>
-                Saved as idea
+                {t("saved_as_idea")}
               </StatusPill>
             ) : draft.edited ? (
-              <StatusPill icon={PenLine}>Edited</StatusPill>
+              <StatusPill icon={PenLine}>{t("edited")}</StatusPill>
             ) : null}
           </div>
         </div>
@@ -110,12 +115,12 @@ export function AngleCard({ draft, pillars, selected = false, onSelectedChange, 
         <>
           <div className="flex min-w-0 flex-1 flex-col gap-3 px-4 pt-3 pb-4 text-sm">
             {draft.hook ? (
-              <Section label="Hook">
+              <Section label={t("hook")}>
                 <p className="text-pretty">“{draft.hook}”</p>
               </Section>
             ) : null}
             {draft.outline.length ? (
-              <Section label="Outline">
+              <Section label={t("outline")}>
                 <ol className="flex list-decimal flex-col gap-1 pl-4 text-pretty marker:text-muted-foreground">
                   {draft.outline.map((step, index) => (
                     <li key={index}>{step}</li>
@@ -128,7 +133,7 @@ export function AngleCard({ draft, pillars, selected = false, onSelectedChange, 
                 <CollapsibleTrigger asChild>
                   <Button type="button" variant="ghost" size="xs" className="-ml-2 w-fit text-muted-foreground">
                     <ChevronRight className={cn("transition-transform", showDraft && "rotate-90")} aria-hidden />
-                    {showDraft ? "Hide draft" : "Show draft"}
+                    {showDraft ? t("hide_draft") : t("show_draft")}
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
@@ -144,34 +149,34 @@ export function AngleCard({ draft, pillars, selected = false, onSelectedChange, 
               <Button type="button" size="sm" variant="outline" asChild>
                 <Link href={`/ideas?open=${draft.ideaId}`}>
                   <ExternalLink aria-hidden />
-                  Open idea
+                  {t("open_idea")}
                 </Link>
               </Button>
             ) : (
               <Button type="button" size="sm" variant="outline" disabled={!canSave} onClick={onSave}>
                 <BookmarkPlus aria-hidden />
-                Save as idea
+                {t("save_as_idea")}
               </Button>
             )}
             {draft.itemId ? (
               <Button type="button" size="sm" variant="outline" asChild>
                 <Link href={`/studio/${draft.itemId}`}>
                   <ExternalLink aria-hidden />
-                  Open in Studio
+                  {t("open_in_studio")}
                 </Link>
               </Button>
             ) : (
               <Button type="button" size="sm" variant="outline" disabled={!canSave} onClick={onCreate}>
                 <FilePlus2 aria-hidden />
-                Create content
+                {t("create_content")}
               </Button>
             )}
             <div className="ml-auto flex items-center gap-0.5">
-              <CopyButton text={angleCopyText(draft)} successMessage="Draft copied" />
+              <CopyButton text={angleCopyText(draft)} successMessage={t("draft_copied")} />
               {saved ? null : (
                 <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(true)}>
                   <Pencil aria-hidden />
-                  Edit
+                  {c("edit")}
                 </Button>
               )}
             </div>

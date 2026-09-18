@@ -25,22 +25,25 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { GOAL_CATEGORIES } from "@/lib/constants"
 import { formatShortDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import { cn, formatNumber } from "@/lib/utils"
+import { goalCardMessages, goalsMessages } from "./goals-messages"
 import { CATEGORY_COLORS, goalPace, metricLabel, periodNoun, type GoalPace, type GoalRole, type GoalRow } from "./goals-model"
 
-const PACE: Record<GoalPace, { label: string; tone: StatusTone; meter: MeterTone; icon: LucideIcon }> = {
-  hit: { label: "Target hit", tone: "good", meter: "good", icon: Trophy },
-  on_track: { label: "On track", tone: "good", meter: "brand", icon: CircleCheck },
-  behind: { label: "Behind pace", tone: "warning", meter: "warning", icon: TriangleAlert },
-  not_started: { label: "Starts with your first post", tone: "neutral", meter: "neutral", icon: CircleDashed },
-  no_target: { label: "No target", tone: "neutral", meter: "neutral", icon: CircleDashed },
+const PACE: Record<GoalPace, { tone: StatusTone; meter: MeterTone; icon: LucideIcon }> = {
+  hit: { tone: "good", meter: "good", icon: Trophy },
+  on_track: { tone: "good", meter: "brand", icon: CircleCheck },
+  behind: { tone: "warning", meter: "warning", icon: TriangleAlert },
+  not_started: { tone: "neutral", meter: "neutral", icon: CircleDashed },
+  no_target: { tone: "neutral", meter: "neutral", icon: CircleDashed },
 }
 
 export function RoleBadge({ role }: { role: GoalRole }) {
+  const t = useT(goalCardMessages)
   return (
     <span className="inline-flex h-5 shrink-0 items-center gap-1 rounded-md bg-brand-soft px-1.5 text-xs font-medium text-foreground">
       <Star className={cn("size-3 text-brand", role === "primary" && "fill-current")} aria-hidden />
-      {role === "primary" ? "Primary" : "Secondary"}
+      {role === "primary" ? t("primary") : t("secondary")}
     </span>
   )
 }
@@ -54,44 +57,45 @@ export interface GoalCardActions {
 }
 
 function GoalMenu({ name, role, active, actions }: { name: string; role: GoalRole | null; active: boolean; actions: GoalCardActions }) {
+  const t = useT(goalCardMessages)
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="ghost" size="icon-sm" className="-mt-1 -mr-1.5" aria-label={`Actions for ${name}`}>
+        <Button type="button" variant="ghost" size="icon-sm" className="-mt-1 -mr-1.5" aria-label={t("actions_for", { name })}>
           <Ellipsis aria-hidden />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuItem onSelect={actions.onEdit}>
           <Pencil aria-hidden />
-          Edit goal…
+          {t("edit")}
         </DropdownMenuItem>
         {role !== "primary" ? (
           <DropdownMenuItem disabled={!active} onSelect={() => actions.onSetRole("primary")}>
             <Star aria-hidden />
-            Make primary goal
+            {t("make_primary")}
           </DropdownMenuItem>
         ) : null}
         {role !== "secondary" ? (
           <DropdownMenuItem disabled={!active} onSelect={() => actions.onSetRole("secondary")}>
             <Star aria-hidden />
-            Make secondary goal
+            {t("make_secondary")}
           </DropdownMenuItem>
         ) : null}
         {role ? (
           <DropdownMenuItem onSelect={actions.onClearRole}>
             <StarOff aria-hidden />
-            Remove from focus
+            {t("remove_focus")}
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem onSelect={actions.onToggleActive}>
           {active ? <PowerOff aria-hidden /> : <Power aria-hidden />}
-          {active ? "Deactivate" : "Activate"}
+          {active ? t("deactivate") : t("activate")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={actions.onDelete}>
           <Trash2 aria-hidden />
-          Delete goal…
+          {t("delete")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -101,8 +105,12 @@ function GoalMenu({ name, role, active, actions }: { name: string; role: GoalRol
 /** One goal: category, focus role, progress toward its target this period and the content serving it. */
 export function GoalCard({ row, actions, started = true }: { row: GoalRow; actions: GoalCardActions; started?: boolean }) {
   const { goal, progress: p, role } = row
-  const pace = PACE[goalPace(p, started)]
-  const name = goal.name || "Untitled goal"
+  const paceKey = goalPace(p, started)
+  const pace = PACE[paceKey]
+  const t = useT(goalCardMessages)
+  const tg = useT(goalsMessages)
+  const paceLabel = t(`pace_${paceKey}`)
+  const name = goal.name || tg("untitled")
   const unit = metricLabel(p.metric)
   const period = periodNoun(goal.period)
 
@@ -121,7 +129,7 @@ export function GoalCard({ row, actions, started = true }: { row: GoalRow; actio
             {role ? <RoleBadge role={role} /> : null}
             {!goal.is_active ? (
               <StatusPill tone="neutral" icon={PowerOff}>
-                Inactive
+                {t("inactive")}
               </StatusPill>
             ) : null}
           </div>
@@ -156,15 +164,15 @@ export function GoalCard({ row, actions, started = true }: { row: GoalRow; actio
             max={p.target}
             target={Math.round((p.target * p.elapsedPct) / 100)}
             tone={pace.meter}
-            valueText={`${p.pct}% of target`}
-            aria-label={`${name}: ${formatNumber(p.current)} of ${formatNumber(p.target)} ${unit} this ${period}`}
+            valueText={t("pct_of_target", { pct: String(p.pct) })}
+            aria-label={t("progress_aria", { name, current: formatNumber(p.current), target: formatNumber(p.target), unit, period })}
           />
           <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs text-muted-foreground">
             <StatusPill tone={pace.tone} icon={pace.icon}>
-              {pace.label}
+              {paceLabel}
             </StatusPill>
-            <span className="num" title="The tick on the bar marks where you'd be at an even pace.">
-              {formatShortDate(p.periodStart)} – {formatShortDate(p.periodEnd)} · {p.elapsedPct}% elapsed
+            <span className="num" title={t("tick_title")}>
+              {formatShortDate(p.periodStart)} – {formatShortDate(p.periodEnd)} · {t("elapsed", { pct: p.elapsedPct })}
             </span>
           </div>
         </div>
@@ -174,15 +182,15 @@ export function GoalCard({ row, actions, started = true }: { row: GoalRow; actio
             <span className="font-semibold num">{formatNumber(p.current)}</span>
             <span className="text-muted-foreground">
               {" "}
-              {unit} this {period}
+              {t("unit_this_period", { unit, period })}
             </span>
           </p>
           <div className="flex items-center justify-between gap-2">
             <StatusPill tone={pace.tone} icon={pace.icon}>
-              {pace.label}
+              {paceLabel}
             </StatusPill>
             <Button type="button" variant="ghost" size="xs" onClick={actions.onEdit}>
-              Set a target
+              {t("set_target")}
             </Button>
           </div>
         </div>
@@ -190,10 +198,10 @@ export function GoalCard({ row, actions, started = true }: { row: GoalRow; actio
 
       <footer className="mt-auto flex flex-col gap-2 border-t pt-3 text-xs text-muted-foreground">
         <p className="text-pretty">
-          <span className="font-medium text-foreground num">{row.published30}</span> {row.published30 === 1 ? "post" : "posts"} in the last 30 days
+          <span className="font-medium text-foreground num">{row.published30}</span> {t.plural("footer_posts", row.published30)}
           {row.share30 !== null ? <span className="num"> ({row.share30}%)</span> : null} ·{" "}
-          <span className="font-medium text-foreground num">{row.inProduction}</span> in production ·{" "}
-          <span className="font-medium text-foreground num">{row.ideas}</span> {row.ideas === 1 ? "open idea" : "open ideas"}
+          <span className="font-medium text-foreground num">{row.inProduction}</span> {t("footer_production")} ·{" "}
+          <span className="font-medium text-foreground num">{row.ideas}</span> {t.plural("footer_ideas", row.ideas)}
         </p>
         {goal.kpis.length ? (
           <div className="flex flex-wrap items-center gap-1">

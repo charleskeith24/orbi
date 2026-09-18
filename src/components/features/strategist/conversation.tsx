@@ -2,12 +2,14 @@
 
 import { useEffect, useRef } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useT } from "@/lib/i18n"
 import { useDataStore } from "@/lib/store"
 import { cn } from "@/lib/utils"
 import { Composer } from "./composer"
 import { EmptyConversation } from "./empty-conversation"
 import { PendingView, TurnView } from "./messages"
 import { useStrategistConversation } from "./session"
+import { strategistMessages } from "./strategist-messages"
 import { useNow } from "./use-now"
 
 /** Scroll inside the log when it scrolls itself (panel, desktop page); otherwise move the page (mobile page). */
@@ -21,8 +23,9 @@ function reveal(list: HTMLElement, target: Element | null | undefined, block: "s
 }
 
 function ConversationSkeleton() {
+  const t = useT(strategistMessages)
   return (
-    <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading conversation">
+    <div className="flex flex-col gap-4" aria-busy="true" aria-label={t("loading")}>
       <Skeleton className="ml-auto h-9 w-3/5 rounded-2xl" />
       <div className="flex gap-2.5">
         <Skeleton className="size-6 rounded-md" />
@@ -63,6 +66,7 @@ export function Conversation({
   const busy = pending?.status === "sending"
   const page = variant === "page"
   const lastTurnId = turns[turns.length - 1]?.id ?? null
+  const t = useT(strategistMessages)
 
   // Start at the newest message; then follow a new question to the bottom and an answer to its start.
   useEffect(() => {
@@ -87,7 +91,7 @@ export function Conversation({
       <div
         ref={listRef}
         role="log"
-        aria-label="Conversation with the Content Strategist"
+        aria-label={t("log_label")}
         aria-busy={busy || undefined}
         // `relative` keeps absolutely positioned descendants (sr-only labels) inside the scroller, so they
         // can't stretch the page below it.

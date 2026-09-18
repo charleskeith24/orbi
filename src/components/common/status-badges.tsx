@@ -1,3 +1,5 @@
+"use client"
+
 import {
   Archive,
   BadgeCheck,
@@ -11,6 +13,13 @@ import {
   Trophy,
   type LucideIcon,
 } from "lucide-react"
+import {
+  funnelGoalMessages,
+  ideaStatusDescriptionMessages,
+  stageDescriptionMessages,
+  statusBadgeMessages,
+  tierDescriptionMessages,
+} from "@/components/common/messages"
 import { TONE_ICON, TONE_SOFT, TONE_TEXT } from "@/components/common/tone"
 import type { IconComponent, StatusTone } from "@/components/common/types"
 import {
@@ -22,6 +31,7 @@ import {
   PRIORITY_MAP,
   STAGE_GROUPS,
 } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import type { FunnelStage, IdeaStatus, PerformanceTier, PipelineStage, Priority } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -99,9 +109,10 @@ export function StageIcon({ stage, className }: { stage: PipelineStage; classNam
 /** Neutral stage label with a progress glyph. */
 export function StageBadge({ stage, className }: { stage: PipelineStage; className?: string }) {
   const meta = PIPELINE_STAGE_MAP[stage]
+  const describe = useT(stageDescriptionMessages)
   return (
     <span
-      title={meta?.description}
+      title={meta ? describe(stage) : undefined}
       className={cn(PILL, "border bg-card text-foreground/85 dark:bg-input/30", className)}
     >
       <StageIcon stage={stage} />
@@ -123,11 +134,12 @@ export const IDEA_STATUS_ICONS: Record<IdeaStatus, LucideIcon> = {
 
 export function IdeaStatusBadge({ status, className }: { status: IdeaStatus; className?: string }) {
   const meta = IDEA_STATUS_MAP[status]
+  const describe = useT(ideaStatusDescriptionMessages)
   return (
     <StatusPill
       tone={status === "converted" ? "good" : "neutral"}
       icon={IDEA_STATUS_ICONS[status]}
-      title={meta?.description}
+      title={meta ? describe(status) : undefined}
       className={cn(status === "archived" && "text-muted-foreground", className)}
     >
       {meta?.label ?? status}
@@ -170,15 +182,16 @@ export function PriorityBadge({
   showLabel?: boolean
   className?: string
 }) {
+  const t = useT(statusBadgeMessages)
   const label = PRIORITY_MAP[priority]?.label ?? priority
   const high = priority === "high"
   return (
     <span
-      title={`${label} priority`}
+      title={t("priority_title", { label })}
       className={cn(PILL, high ? cn(TONE_SOFT.serious, TONE_TEXT.serious) : "px-0 text-muted-foreground", className)}
     >
       <PriorityIcon priority={priority} />
-      {showLabel ? <span className="truncate">{label}</span> : <span className="sr-only">{label} priority</span>}
+      {showLabel ? <span className="truncate">{label}</span> : <span className="sr-only">{t("priority_title", { label })}</span>}
     </span>
   )
 }
@@ -222,11 +235,12 @@ export function FunnelBadge({
   showName?: boolean
   className?: string
 }) {
+  const goal = useT(funnelGoalMessages)
   if (!stage) return null
   const meta = FUNNEL_STAGES[stage]
   return (
     <span
-      title={`${meta.label} · ${meta.name} — ${meta.goal}`}
+      title={`${meta.label} · ${meta.name} — ${goal(stage)}`}
       className={cn(PILL, "border bg-card text-foreground/85 dark:bg-input/30", className)}
     >
       <FunnelGlyph stage={stage} />
@@ -262,13 +276,14 @@ export function TierBadge({
   showNormal?: boolean
   className?: string
 }) {
+  const describe = useT(tierDescriptionMessages)
   if (!tier || (tier === "normal" && !showNormal)) return null
   const meta = PERFORMANCE_TIERS[tier]
   return (
     <StatusPill
       tone={tier === "normal" ? "neutral" : "good"}
       icon={TIER_ICONS[tier]}
-      title={meta.description}
+      title={describe(tier)}
       className={cn(TIER_EMPHASIS[tier], className)}
     >
       {meta.label}
@@ -290,11 +305,12 @@ export function HealthBadge({
   label?: React.ReactNode
   className?: string
 }) {
+  const t = useT(statusBadgeMessages)
   const band =
     score === undefined || score === null ? undefined : (HEALTH_BANDS.find((b) => score >= b.min) ?? HEALTH_BANDS[HEALTH_BANDS.length - 1])
   return (
     <StatusPill tone={tone ?? band?.tone ?? "neutral"} className={className}>
-      {label ?? band?.label ?? "Not enough data"}
+      {label ?? band?.label ?? t("not_enough_data")}
     </StatusPill>
   )
 }

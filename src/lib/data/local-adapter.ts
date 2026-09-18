@@ -12,6 +12,8 @@ export const LOCAL_USER_ID = "00000000-0000-4000-8000-000000000001"
  * suite) or "fresh" (onboarding done, nothing else — for empty-state checks). Ignored in production.
  */
 export const DEV_SEED_KEY = "pbos:dev-seed"
+/** Dev-only: app language ("en" | "tl") for a newly seeded workspace (the QA scripts' `--lang` flag). */
+export const DEV_UI_LANG_KEY = "pbos:dev-ui-lang"
 
 interface PersistedWorkspace {
   version: 2
@@ -26,6 +28,15 @@ export interface LocalAdapterOptions {
 
 /** A brand-new workspace: the Starter Kit with onboarding still to do. */
 async function firstRunDatabase(now: Date): Promise<Database> {
+  const db = await firstRunSeed(now)
+  if (process.env.NODE_ENV !== "production") {
+    const lang = window.localStorage.getItem(DEV_UI_LANG_KEY)
+    if (lang === "en" || lang === "tl") db.app_settings = db.app_settings.map((s) => ({ ...s, ui_language: lang }))
+  }
+  return db
+}
+
+async function firstRunSeed(now: Date): Promise<Database> {
   if (process.env.NODE_ENV !== "production") {
     const seed = window.localStorage.getItem(DEV_SEED_KEY)
     if (seed === "demo") {

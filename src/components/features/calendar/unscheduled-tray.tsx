@@ -4,11 +4,13 @@ import { useDroppable } from "@dnd-kit/core"
 import { ChevronDown, Inbox } from "lucide-react"
 import { Fragment, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/i18n"
 import type { ContentItem, ContentPillar, ID } from "@/lib/types"
-import { cn, pluralize } from "@/lib/utils"
+import { cn, formatNumber } from "@/lib/utils"
 import { useCalendarActions } from "./calendar-actions"
 import { CalendarItem, type ItemKind } from "./calendar-item"
 import { TRAY_DROP_ID, type TrayGroupId } from "./calendar-model"
+import { calendarMessages } from "./messages"
 
 export interface TrayGroup {
   id: TrayGroupId
@@ -43,6 +45,7 @@ export function UnscheduledTray({
   highlightId: ID | null
   layout: "dock" | "list"
 }) {
+  const t = useT(calendarMessages)
   const actions = useCalendarActions()
   const { setNodeRef, isOver } = useDroppable({ id: TRAY_DROP_ID, disabled: !dnd })
   const [expanded, setExpanded] = useState<TrayGroupId[]>([])
@@ -51,8 +54,12 @@ export function UnscheduledTray({
   const accepting = dragKind === "scheduled"
   const dock = layout === "dock"
   const summary = accepting
-    ? "Drop here to unschedule"
-    : [ready ? `${ready} ready to post` : "Nothing ready to post", `${pluralize(total, "item")} without a date`, dock && total ? "drag onto a day to schedule" : ""]
+    ? t("tray_drop")
+    : [
+        ready ? t("tray_ready", { count: ready }) : t("tray_nothing_ready"),
+        t.plural("tray_without_date", total, { count: formatNumber(total) }),
+        dock && total ? t("tray_drag_hint") : "",
+      ]
         .filter(Boolean)
         .join(" · ")
 
@@ -80,7 +87,7 @@ export function UnscheduledTray({
               action={
                 dock ? undefined : (
                   <Button type="button" size="xs" variant="outline" onClick={() => actions.schedule(item)}>
-                    Schedule
+                    {t("tray_schedule")}
                   </Button>
                 )
               }
@@ -95,7 +102,7 @@ export function UnscheduledTray({
             className="self-start text-muted-foreground"
             onClick={() => setExpanded((list) => (all ? list.filter((id) => id !== group.id) : [...list, group.id]))}
           >
-            {all ? "Show fewer" : `Show all ${group.items.length}`}
+            {all ? t("show_fewer") : t("show_all", { count: group.items.length })}
           </Button>
         ) : null}
       </>
@@ -130,7 +137,7 @@ export function UnscheduledTray({
       >
         <Inbox className="size-4 shrink-0 text-muted-foreground" aria-hidden />
         <span id="calendar-tray-title" className="shrink-0 text-sm font-medium">
-          Unscheduled
+          {t("tray_title")}
         </span>
         <span className="min-w-0 truncate text-xs text-muted-foreground">{summary}</span>
         <ChevronDown className={cn("ml-auto size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} aria-hidden />
@@ -140,7 +147,7 @@ export function UnscheduledTray({
         <div id="calendar-tray-body" className="min-w-0 border-t px-3 pt-2.5 pb-3">
           {total === 0 ? (
             <p className="text-xs text-pretty text-muted-foreground">
-              Everything in production has a date. Approved content lands here until it gets a publish time.
+              {t("tray_empty")}
             </p>
           ) : dock ? (
             <div className="grid min-w-0 items-start gap-x-4 gap-y-2.5 sm:grid-cols-[8.5rem_minmax(0,1fr)]">

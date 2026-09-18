@@ -7,9 +7,11 @@ import { toast } from "sonner"
 import { EmptyState, PageContainer, PageHeader } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { uiActions, useLookup, useTable } from "@/lib/store"
 import type { ContentIdea, ID, IdeaStatus } from "@/lib/types"
-import { formatNumber, pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
 import { IdeaActionsProvider } from "./idea-actions"
 import { IdeaBulkBar } from "./idea-bulk-bar"
 import { IdeaCardsView } from "./idea-cards-view"
@@ -30,6 +32,7 @@ import {
   type IdeaView,
 } from "./idea-model"
 import { IdeaTable, type IdeaLookups } from "./idea-table"
+import { ideaBankMessages } from "./messages"
 import { useIdeaBankState } from "./use-idea-bank-state"
 
 /**
@@ -39,6 +42,8 @@ import { useIdeaBankState } from "./use-idea-bank-state"
  */
 export function IdeaBankView() {
   const { state, update } = useIdeaBankState()
+  const t = useT(ideaBankMessages)
+  const c = useT(commonMessages)
   const isMobile = useIsMobile()
   const view: IdeaView = state.view ?? (isMobile ? "cards" : "table")
 
@@ -100,9 +105,9 @@ export function IdeaBankView() {
 
   function onCaptured(idea: ContentIdea) {
     const hidden = !state.status.includes("inbox")
-    toast.success("Saved to your Inbox", {
-      description: hidden ? `${idea.title} · hidden by the current status filter` : idea.title,
-      action: { label: "Open", onClick: () => setOpen(idea.id) },
+    toast.success(t("captured"), {
+      description: hidden ? t("captured_hidden", { title: idea.title }) : idea.title,
+      action: { label: c("open"), onClick: () => setOpen(idea.id) },
     })
   }
 
@@ -110,20 +115,20 @@ export function IdeaBankView() {
     <EmptyState
       compact
       icon={SearchX}
-      title="No ideas match"
+      title={t("nomatch_title")}
       description={
         hiddenByStatus
-          ? `${pluralize(hiddenByStatus, "idea")} with another status ${hiddenByStatus === 1 ? "matches" : "match"} — widen the status filter to see ${hiddenByStatus === 1 ? "it" : "them"}.`
-          : "Try a different search or fewer filters."
+          ? t.plural("nomatch_hidden", hiddenByStatus, { count: formatNumber(hiddenByStatus) })
+          : t("nomatch_description")
       }
       action={
         hiddenByStatus ? (
           <Button type="button" size="sm" variant="outline" onClick={showAllStatuses}>
-            Show all statuses
+            {t("show_all_statuses")}
           </Button>
         ) : (
           <Button type="button" size="sm" variant="outline" onClick={resetFilters}>
-            Reset filters
+            {t("reset_filters")}
           </Button>
         )
       }
@@ -167,7 +172,7 @@ export function IdeaBankView() {
       <PageContainer>
         <PageHeader
           title="Idea Bank"
-          description="Capture every idea the moment it appears, score it against your strategy, then turn the best into content."
+          description={t("description")}
           actions={
             <Button type="button" variant="outline" size="sm" asChild>
               <Link href="/ideas/generator">
@@ -185,15 +190,15 @@ export function IdeaBankView() {
 
         {state.open && !openIdea ? (
           <div role="status" className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">
-            <span className="min-w-0 flex-1">The idea in this link no longer exists — it may have been deleted.</span>
-            <Button type="button" variant="ghost" size="icon-xs" aria-label="Dismiss" onClick={() => setOpen(null)}>
+            <span className="min-w-0 flex-1">{t("missing_link")}</span>
+            <Button type="button" variant="ghost" size="icon-xs" aria-label={t("dismiss")} onClick={() => setOpen(null)}>
               <X aria-hidden />
             </Button>
           </div>
         ) : null}
 
         {ideas.length ? (
-          <section aria-label="Ideas" className="flex min-w-0 flex-col gap-3">
+          <section aria-label={t("ideas")} className="flex min-w-0 flex-col gap-3">
             <IdeaFilterBar
               ideas={ideas}
               tagIndex={tagIndex}
@@ -210,26 +215,26 @@ export function IdeaBankView() {
               <p className="flex min-h-7 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground" aria-live="polite">
                 <span className="num">
                   {view === "kanban"
-                    ? `${pluralize(visible.length, "idea")} on the board${hiddenByStatus ? ` · ${formatNumber(hiddenByStatus)} in collapsed columns` : ""}`
+                    ? `${t.plural("board_count", visible.length, { count: formatNumber(visible.length) })}${hiddenByStatus ? ` · ${t("board_collapsed", { count: formatNumber(hiddenByStatus) })}` : ""}`
                     : visible.length === ideas.length
-                      ? pluralize(ideas.length, "idea")
-                      : `${formatNumber(visible.length)} of ${pluralize(ideas.length, "idea")}`}
+                      ? t.plural("count", ideas.length, { count: formatNumber(ideas.length) })
+                      : t.plural("count_of", ideas.length, { shown: formatNumber(visible.length), count: formatNumber(ideas.length) })}
                 </span>
                 {view === "kanban" ? (
                   <>
                     <span aria-hidden>·</span>
-                    <span>Drag a card to change its status — drop on Converted to Content to create content.</span>
+                    <span>{t("kanban_hint")}</span>
                   </>
                 ) : hiddenByStatus ? (
                   <>
                     <span aria-hidden>·</span>
                     <span className="num">
                       {isActiveStatusFilter(state.status)
-                        ? `${formatNumber(hiddenByStatus)} converted or archived hidden`
-                        : `${formatNumber(hiddenByStatus)} hidden by the status filter`}
+                        ? t("hidden_inactive", { count: formatNumber(hiddenByStatus) })
+                        : t("hidden_by_status", { count: formatNumber(hiddenByStatus) })}
                     </span>
                     <Button type="button" variant="link" size="xs" className="h-auto px-0 text-xs" onClick={showAllStatuses}>
-                      Show all
+                      {t("show_all")}
                     </Button>
                   </>
                 ) : null}
@@ -241,20 +246,20 @@ export function IdeaBankView() {
         ) : (
           <EmptyState
             icon={Lightbulb}
-            title="Your Idea Bank is empty"
-            description="Every piece of content starts here. Capture ideas as they come — then score them against your strategy and convert the best into content."
+            title={t("empty_title")}
+            description={t("empty_description")}
             action={
               <Button type="button" size="sm" asChild>
                 <Link href="/ideas/generator">
                   <Sparkles aria-hidden />
-                  Generate ideas
+                  {t("generate_ideas")}
                 </Link>
               </Button>
             }
             secondaryAction={
               <Button type="button" size="sm" variant="outline" onClick={() => uiActions.openDialog({ type: "quick-capture" })}>
                 <Lightbulb aria-hidden />
-                Capture an idea
+                {t("capture_idea")}
               </Button>
             }
           />

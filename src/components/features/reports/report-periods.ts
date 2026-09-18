@@ -4,7 +4,9 @@
  */
 import { addMonths, addWeeks, endOfMonth, format, startOfMonth, subMonths, subWeeks } from "date-fns"
 import { parseDate, startOfWeek, toISODate, weekRange } from "@/lib/dates"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type { ISODate } from "@/lib/types"
+import { reportMessages } from "./messages"
 
 export interface ReportPeriod {
   /** URL value — week: its first day 'YYYY-MM-DD'; month: 'YYYY-MM'. */
@@ -83,15 +85,17 @@ export function adjacentWeeks(period: ReportPeriod): { prev: string; next: strin
 
 /**
  * The last `count` weeks (this week first), plus weeks carrying a hint (saved reviews) and the selected week.
- * `hints` is keyed by normalised week start.
+ * `hints` is keyed by normalised week start; "This week" / "Last week" are in `lang`.
  */
 export function weekOptions(
   now: Date,
   weekStartsOn: 0 | 1,
   selected: ReportPeriod,
   hints: Map<string, string> = new Map(),
-  count = 12
+  count = 12,
+  lang: UiLang = "en"
 ): PeriodOption[] {
+  const t = translator(reportMessages, lang)
   const current = startOfWeek(now, weekStartsOn)
   const currentKey = toISODate(current)
   const lastKey = toISODate(subWeeks(current, 1))
@@ -104,7 +108,7 @@ export function weekOptions(
       const start = parseDate(key)
       if (!start) return []
       const { end } = weekRange(start, weekStartsOn)
-      const hint = key === currentKey ? "This week" : key === lastKey ? "Last week" : hints.get(key)
+      const hint = key === currentKey ? t("this_week") : key === lastKey ? t("last_week") : hints.get(key)
       return [{ value: key, label: formatDayRange(start, end), hint }]
     })
 }
@@ -146,7 +150,14 @@ export function adjacentMonths(period: ReportPeriod): { prev: string; next: stri
 }
 
 /** The last `count` months (this month first), plus months carrying a hint and the selected month. */
-export function monthOptions(now: Date, selected: ReportPeriod, hints: Map<string, string> = new Map(), count = 12): PeriodOption[] {
+export function monthOptions(
+  now: Date,
+  selected: ReportPeriod,
+  hints: Map<string, string> = new Map(),
+  count = 12,
+  lang: UiLang = "en"
+): PeriodOption[] {
+  const t = translator(reportMessages, lang)
   const current = startOfMonth(now)
   const currentKey = format(current, "yyyy-MM")
   const lastKey = format(subMonths(current, 1), "yyyy-MM")
@@ -157,7 +168,7 @@ export function monthOptions(now: Date, selected: ReportPeriod, hints: Map<strin
     .sort((a, b) => (a < b ? 1 : a > b ? -1 : 0))
     .map((key) => {
       const [y, m] = key.split("-").map(Number)
-      const hint = key === currentKey ? "This month" : key === lastKey ? "Last month" : hints.get(key)
+      const hint = key === currentKey ? t("this_month") : key === lastKey ? t("last_month") : hints.get(key)
       return { value: key, label: format(new Date(y, m - 1, 1), "MMMM yyyy"), hint }
     })
 }

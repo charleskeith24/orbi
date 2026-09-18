@@ -2,13 +2,15 @@
 
 import { CircleAlert, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
+import { experienceMessages } from "./experience-messages"
 
 /** Inline AI failure with a retry button (AiError messages are always safe to show). */
 export function AiErrorNotice({
   message,
   onRetry,
-  retryLabel = "Retry",
+  retryLabel,
   className,
 }: {
   message: string
@@ -16,6 +18,7 @@ export function AiErrorNotice({
   retryLabel?: string
   className?: string
 }) {
+  const t = useT(experienceMessages)
   return (
     <div
       role="alert"
@@ -28,7 +31,7 @@ export function AiErrorNotice({
       <span className="min-w-0 flex-1 text-pretty">{message}</span>
       <Button type="button" size="xs" variant="outline" onClick={onRetry}>
         <RotateCcw aria-hidden />
-        {retryLabel}
+        {retryLabel ?? t("retry")}
       </Button>
     </div>
   )

@@ -1,10 +1,12 @@
 "use client"
 
 import { Meter, Token } from "@/components/common"
+import { useT } from "@/lib/i18n"
 import { formatCompact, formatNumber, formatPercent } from "@/lib/utils"
 import { MixStatusPill } from "./mix-status"
 import { PillarActionsMenu } from "./pillar-actions-menu"
 import { PillarIconTile } from "./pillar-icons"
+import { pillarMessages } from "./pillar-messages"
 import type { PillarStats } from "./use-pillar-overview"
 
 const MAX_EXAMPLES = 4
@@ -36,8 +38,9 @@ export function PillarCard({
   onToggleActive: () => void
   onDelete: () => void
 }) {
+  const t = useT(pillarMessages)
   const { pillar, mix, perf } = stats
-  const name = pillar.name || "Untitled pillar"
+  const name = pillar.name || t("untitled_pillar")
   const actual = mix?.actualPct ?? 0
   const examples = pillar.examples.slice(0, MAX_EXAMPLES)
   const hidden = pillar.examples.length - examples.length
@@ -57,7 +60,7 @@ export function PillarCard({
               {name}
             </button>
           </h3>
-          <p className="mt-0.5 line-clamp-2 text-xs text-pretty text-muted-foreground">{pillar.description || "No description yet."}</p>
+          <p className="mt-0.5 line-clamp-2 text-xs text-pretty text-muted-foreground">{pillar.description || t("no_description")}</p>
         </div>
         <PillarActionsMenu
           pillar={pillar}
@@ -74,9 +77,9 @@ export function PillarCard({
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
           <p className="text-xs text-muted-foreground">
-            <span className="num text-base leading-none font-semibold text-foreground">{Math.round(actual)}%</span> actual
+            <span className="num text-base leading-none font-semibold text-foreground">{Math.round(actual)}%</span> {t("actual_word")}
             <span aria-hidden> · </span>
-            target <span className="num font-medium text-foreground">{pillar.target_percentage}%</span>
+            {t("target_word")} <span className="num font-medium text-foreground">{pillar.target_percentage}%</span>
           </p>
           <MixStatusPill status={mix?.status} deviation={mix?.deviation ?? 0} enoughData={enoughData} />
         </div>
@@ -85,16 +88,16 @@ export function PillarCard({
           max={scaleMax}
           target={pillar.target_percentage}
           color={pillar.color}
-          aria-label={`${name} share of content`}
-          valueText={`${Math.round(actual)}% actual, target ${pillar.target_percentage}%`}
+          aria-label={t("share_aria", { name })}
+          valueText={t("actual_value", { actual: Math.round(actual), target: pillar.target_percentage })}
         />
       </div>
 
-      <dl className="grid grid-cols-4 gap-3 border-t pt-3" aria-label={`Published performance, ${windowLabel}`}>
-        <MiniStat label="Posts" value={formatNumber(perf?.posts ?? 0)} />
-        <MiniStat label="Avg views" value={formatCompact(perf?.avgViews ?? null)} />
-        <MiniStat label="Engagement" value={formatPercent(perf?.engagementRate ?? null)} />
-        <MiniStat label="Leads" value={formatNumber(perf?.leads ?? 0)} />
+      <dl className="grid grid-cols-4 gap-3 border-t pt-3" aria-label={t("performance_aria", { window: windowLabel })}>
+        <MiniStat label={t("posts")} value={formatNumber(perf?.posts ?? 0)} />
+        <MiniStat label={t("avg_views")} value={formatCompact(perf?.avgViews ?? null)} />
+        <MiniStat label={t("engagement")} value={formatPercent(perf?.engagementRate ?? null)} />
+        <MiniStat label={t("leads")} value={formatNumber(perf?.leads ?? 0)} />
       </dl>
 
       {examples.length ? (

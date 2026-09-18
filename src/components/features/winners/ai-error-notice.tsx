@@ -3,7 +3,9 @@
 import { CircleAlert, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { AiError } from "@/lib/ai"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
+import { winnersMessages } from "./messages"
 
 /** Inline AI failure with a retry — never a dead end. */
 export function AiErrorNotice({
@@ -17,6 +19,7 @@ export function AiErrorNotice({
   pending?: boolean
   className?: string
 }) {
+  const t = useT(winnersMessages)
   if (!error) return null
   return (
     <div
@@ -28,12 +31,12 @@ export function AiErrorNotice({
     >
       <CircleAlert className="mt-0.5 size-4 shrink-0 text-critical-fg" aria-hidden />
       <p className="min-w-0 flex-1 text-pretty">
-        <span className="font-medium text-critical-fg">Generation failed.</span>{" "}
+        <span className="font-medium text-critical-fg">{t("generation_failed")}</span>{" "}
         <span className="text-muted-foreground">{error.message}</span>
       </p>
       <Button type="button" variant="outline" size="xs" onClick={onRetry} disabled={pending}>
         <RotateCcw aria-hidden />
-        Retry
+        {t("retry")}
       </Button>
     </div>
   )

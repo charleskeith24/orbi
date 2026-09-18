@@ -10,6 +10,8 @@ import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { hasPublishedContent } from "@/components/features/dashboard/first-run"
+import { useT, useUiLang } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions, useTable } from "@/lib/store"
 import type { PlatformStrategy } from "@/lib/types"
 import { cn, formatCompact, formatNumber, formatPercent } from "@/lib/utils"
@@ -23,6 +25,7 @@ import {
   type PlatformFormValues,
   type PlatformPlanRow,
 } from "./platforms-model"
+import { platformsMessages } from "./platforms-messages"
 
 export interface PlatformOptions {
   formats: MultiSelectOption[]
@@ -31,14 +34,15 @@ export interface PlatformOptions {
 
 function ActiveSwitch({ strategy }: { strategy: PlatformStrategy }) {
   const label = platformLabel(strategy.platform)
+  const t = useT(platformsMessages)
   return (
     <Switch
       checked={strategy.is_active}
-      aria-label={`${label} active`}
+      aria-label={t("active_label", { platform: label })}
       onCheckedChange={(checked) => {
         dataActions.update("content_platforms", strategy.id, { is_active: checked })
-        toast.success(checked ? `${label} is active` : `${label} paused`, {
-          description: checked ? "It now counts toward your weekly plan." : "It no longer counts toward your weekly plan.",
+        toast.success(checked ? t("now_active", { platform: label }) : t("now_paused", { platform: label }), {
+          description: checked ? t("now_active_description") : t("now_paused_description"),
         })
       }}
     />
@@ -46,6 +50,7 @@ function ActiveSwitch({ strategy }: { strategy: PlatformStrategy }) {
 }
 
 function CardHeader({ strategy, className }: { strategy: PlatformStrategy; className?: string }) {
+  const t = useT(platformsMessages)
   return (
     <div className={cn("flex items-center justify-between gap-3", className)}>
       <div className="flex min-w-0 items-center gap-2.5">
@@ -55,8 +60,8 @@ function CardHeader({ strategy, className }: { strategy: PlatformStrategy; class
         <div className="min-w-0">
           <h3 className="text-sm leading-5 font-medium">{platformLabel(strategy.platform)}</h3>
           <p className="truncate text-xs text-muted-foreground">
-            {strategy.handle ? `@${strategy.handle}` : "No handle yet"}
-            {strategy.current_followers !== null ? ` · ${formatCompact(strategy.current_followers)} followers` : ""}
+            {strategy.handle ? `@${strategy.handle}` : t("no_handle")}
+            {strategy.current_followers !== null ? t("followers_suffix", { count: formatCompact(strategy.current_followers) }) : ""}
           </p>
         </div>
       </div>
@@ -84,15 +89,18 @@ function Stat({ label, value, sub, warn }: { label: string; value: string; sub?:
 
 /** Paused platform: header, the note on why, and its switch. */
 export function PausedPlatformCard({ row }: { row: PlatformPlanRow & { strategy: PlatformStrategy } }) {
+  const t = useT(platformsMessages)
   return (
     <div id={`platform-${row.platform}`} className="flex min-w-0 scroll-mt-20 flex-col gap-2 rounded-lg border bg-card p-4">
       <CardHeader strategy={row.strategy} />
       <p className="line-clamp-2 text-xs text-pretty text-muted-foreground">
-        {row.strategy.notes || "Paused — not part of your weekly plan. Switch it on to plan posts for it."}
+        {row.strategy.notes || t("paused_note")}
       </p>
       {row.perf ? (
         <p className="text-xs text-muted-foreground">
-          Still published <span className="font-medium text-foreground num">{row.perf.posts}</span> in the last 30 days.
+          {t("still_published_before")}
+          <span className="font-medium text-foreground num">{row.perf.posts}</span>
+          {t("still_published_after")}
         </p>
       ) : null}
     </div>
@@ -115,7 +123,10 @@ export function PlatformCard({
   const [edits, setEdits] = useState<Partial<PlatformFormValues>>({})
   const values = useMemo(() => ({ ...saved, ...edits }), [saved, edits])
   const dirty = !samePlatformValues(values, saved)
-  const errors = validatePlatform(values)
+  const lang = useUiLang()
+  const t = useT(platformsMessages)
+  const c = useT(commonMessages)
+  const errors = validatePlatform(values, lang)
   const invalid = Object.keys(errors).length > 0
   const id = (field: string) => `platform-${strategy.platform}-${field}`
   const items = useTable("content_items")
@@ -132,7 +143,7 @@ export function PlatformCard({
     if (!dirty || invalid) return
     dataActions.update("content_platforms", strategy.id, platformPatch(values))
     setEdits({})
-    toast.success(`${label} strategy saved`)
+    toast.success(t("saved", { platform: label }))
   }
 
   return (
@@ -140,7 +151,7 @@ export function PlatformCard({
       id={`platform-${strategy.platform}`}
       onSubmit={save}
       noValidate
-      aria-label={`${label} strategy`}
+      aria-label={t("form_label", { platform: label })}
       className={cn(
         "flex min-w-0 scroll-mt-20 flex-col overflow-hidden rounded-lg border bg-card transition-shadow",
         highlighted && "ring-3 ring-brand/40",
@@ -152,18 +163,26 @@ export function PlatformCard({
       <div className="flex flex-col gap-4 p-4">
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border bg-muted/30 p-3 sm:grid-cols-4 dark:bg-input/10">
           <Stat
-            label="Posts · 30 days"
+            label={t("stat_posts")}
             value={formatNumber(perf?.posts ?? 0)}
-            sub={row.planned30 ? `plan ≈ ${Math.round(row.planned30)}` : "no plan"}
-            warn={behind ? `behind plan ≈ ${Math.round(row.planned30)}` : undefined}
+            sub={row.planned30 ? t("stat_plan", { count: Math.round(row.planned30) }) : t("stat_no_plan")}
+            warn={behind ? t("stat_behind", { count: Math.round(row.planned30) }) : undefined}
           />
-          <Stat label="Views" value={formatCompact(perf?.views ?? 0)} sub={perf?.avgViews ? `${formatCompact(perf.avgViews)} avg / post` : "no analytics"} />
-          <Stat label="Engagement" value={formatPercent(perf?.engagementRate)} sub={perf ? `${formatNumber(perf.leads)} leads` : undefined} />
-          <Stat label="Followers" value={perf ? `+${formatNumber(perf.followersGained)}` : "—"} sub="gained" />
+          <Stat
+            label={t("stat_views")}
+            value={formatCompact(perf?.views ?? 0)}
+            sub={perf?.avgViews ? t("stat_avg", { count: formatCompact(perf.avgViews) }) : t("stat_no_analytics")}
+          />
+          <Stat
+            label={t("stat_engagement")}
+            value={formatPercent(perf?.engagementRate)}
+            sub={perf ? t("stat_leads", { count: formatNumber(perf.leads) }) : undefined}
+          />
+          <Stat label={t("stat_followers")} value={perf ? `+${formatNumber(perf.followersGained)}` : "—"} sub={t("stat_gained")} />
         </dl>
 
         <FormRow>
-          <FormField label="Handle" htmlFor={id("handle")}>
+          <FormField label={t("handle")} htmlFor={id("handle")}>
             <InputGroup>
               <InputGroupAddon>
                 <InputGroupText>@</InputGroupText>
@@ -171,92 +190,92 @@ export function PlatformCard({
               <InputGroupInput
                 id={id("handle")}
                 value={values.handle}
-                placeholder="yourhandle"
+                placeholder={t("handle_placeholder")}
                 autoComplete="off"
                 onChange={(event) => set("handle", event.target.value)}
               />
             </InputGroup>
           </FormField>
-          <FormField label="Current followers" htmlFor={id("followers")} error={errors.current_followers}>
+          <FormField label={t("current_followers")} htmlFor={id("followers")} error={errors.current_followers}>
             <NumberField
               id={id("followers")}
               integer
               min={0}
               value={values.current_followers}
-              placeholder="e.g. 48,200"
-              suffix="followers"
+              placeholder={t("followers_placeholder")}
+              suffix={t("followers_unit")}
               aria-invalid={Boolean(errors.current_followers) || undefined}
               onChange={(next) => set("current_followers", next)}
             />
           </FormField>
         </FormRow>
         <FormRow>
-          <FormField label="Posting frequency" htmlFor={id("frequency")} error={errors.posting_frequency}>
+          <FormField label={t("frequency")} htmlFor={id("frequency")} error={errors.posting_frequency}>
             <NumberField
               id={id("frequency")}
               min={0}
               max={50}
               value={values.posting_frequency}
-              suffix="/ week"
+              suffix={t("per_week")}
               aria-invalid={Boolean(errors.posting_frequency) || undefined}
               onChange={(next) => set("posting_frequency", next)}
             />
           </FormField>
-          <FormField label="Primary goal" htmlFor={id("goal")}>
+          <FormField label={t("primary_goal")} htmlFor={id("goal")}>
             <GoalSelect id={id("goal")} allowNone value={values.primary_goal_id} onChange={(next) => set("primary_goal_id", next)} />
           </FormField>
         </FormRow>
         <FormRow>
-          <FormField label="Preferred formats" htmlFor={id("formats")}>
+          <FormField label={t("formats")} htmlFor={id("formats")}>
             <MultiSelect
               id={id("formats")}
               options={options.formats}
               value={values.preferred_format_ids}
-              placeholder="Choose formats"
+              placeholder={t("formats_placeholder")}
               maxChips={2}
-              aria-label={`${label} preferred formats`}
+              aria-label={t("formats_label", { platform: label })}
               onChange={(next) => set("preferred_format_ids", next)}
             />
           </FormField>
-          <FormField label="Preferred pillars" htmlFor={id("pillars")}>
+          <FormField label={t("pillars")} htmlFor={id("pillars")}>
             <MultiSelect
               id={id("pillars")}
               options={options.pillars}
               value={values.preferred_pillar_ids}
-              placeholder="Choose pillars"
+              placeholder={t("pillars_placeholder")}
               maxChips={2}
-              aria-label={`${label} preferred pillars`}
+              aria-label={t("pillars_label", { platform: label })}
               onChange={(next) => set("preferred_pillar_ids", next)}
             />
           </FormField>
         </FormRow>
-        <FormField label="Audience" htmlFor={id("audience")} description="Who you reach here and what they expect.">
+        <FormField label={t("audience")} htmlFor={id("audience")} description={t("audience_description")}>
           <Textarea
             id={id("audience")}
             rows={2}
             className="min-h-14 leading-relaxed"
             value={values.audience}
-            placeholder="e.g. Cold audience discovering you for the first time."
+            placeholder={t("audience_placeholder")}
             onChange={(event) => set("audience", event.target.value)}
           />
         </FormField>
-        <FormField label="CTA style" htmlFor={id("cta")}>
+        <FormField label={t("cta")} htmlFor={id("cta")}>
           <Textarea
             id={id("cta")}
             rows={2}
             className="min-h-14 leading-relaxed"
             value={values.cta_style}
-            placeholder="e.g. Follow for part 2, or comment a keyword to get the resource."
+            placeholder={t("cta_placeholder")}
             onChange={(event) => set("cta_style", event.target.value)}
           />
         </FormField>
-        <FormField label="Notes" htmlFor={id("notes")}>
+        <FormField label={t("notes")} htmlFor={id("notes")}>
           <Textarea
             id={id("notes")}
             rows={2}
             className="min-h-14 leading-relaxed"
             value={values.notes}
-            placeholder="What works here, timing, formatting rules…"
+            placeholder={t("notes_placeholder")}
             onChange={(event) => set("notes", event.target.value)}
           />
         </FormField>
@@ -264,7 +283,7 @@ export function PlatformCard({
 
       <div className="mt-auto flex min-h-11 flex-wrap items-center justify-between gap-2 border-t bg-muted/30 px-4 py-2">
         <p className="text-xs text-muted-foreground">
-          Manual analytics · API connection in{" "}
+          {t("manual_analytics")}
           <Link href="/settings?tab=integrations" className="font-medium text-foreground underline-offset-2 hover:underline">
             Settings → Integrations
           </Link>
@@ -272,10 +291,10 @@ export function PlatformCard({
         {dirty ? (
           <div className="flex items-center gap-2">
             <Button type="button" variant="ghost" size="sm" onClick={() => setEdits({})}>
-              Discard
+              {c("discard")}
             </Button>
             <Button type="submit" size="sm" disabled={invalid}>
-              Save {label}
+              {t("save_platform", { platform: label })}
             </Button>
           </div>
         ) : null}

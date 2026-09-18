@@ -4,15 +4,20 @@ import { ChevronDown, ChevronRight, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { ColorDot, Meter, PlatformIcon, ScoreRing, SectionCard, StatusPill, type StatusTone } from "@/components/common"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { BUFFER_STATUS_LABELS, formatMultiple, type BufferStatus } from "@/lib/analytics"
+import { bufferStatusLabel, formatMultiple, type BufferStatus } from "@/lib/analytics"
+import { useT, useUiLang, type Translator } from "@/lib/i18n"
 import { cn, formatCompact } from "@/lib/utils"
 import type { StrategistKnowledge } from "./knowledge"
-import { SUGGESTED_PROMPTS, type StrategistPrompt } from "./prompts"
+import { suggestedPrompts, type StrategistPrompt } from "./prompts"
 import { strategistSession, useStrategistSession } from "./session"
+import { knowledgeMessages, strategistMessages } from "./strategist-messages"
 
 const BUFFER_TONE: Record<BufferStatus, StatusTone> = { healthy: "good", ok: "warning", low: "critical" }
 
-const plural = (n: number, word: string) => `${n.toLocaleString("en-US")} ${word}${n === 1 ? "" : "s"}`
+type KnowledgeT = Translator<(typeof knowledgeMessages)["en"]>
+type CountKey = "pillars" | "problems" | "questions" | "pieces" | "posts" | "days" | "measured_posts" | "winners"
+
+const plural = (t: KnowledgeT, key: CountKey, n: number) => t.plural(key, n, { count: n.toLocaleString("en-US") })
 
 function KnowledgeRow({
   href,
@@ -46,6 +51,8 @@ function KnowledgeRow({
 }
 
 function KnowledgeBody({ data }: { data: StrategistKnowledge }) {
+  const t = useT(knowledgeMessages)
+  const lang = useUiLang()
   const { health, buffer, week, topPillar, bestWinner } = data
   const weakest = [...health.components].sort((a, b) => a.score / Math.max(1, a.max) - b.score / Math.max(1, b.max))[0]
   const postsPerWeek = Math.round(buffer.dailyRate * 7)
@@ -54,13 +61,13 @@ function KnowledgeBody({ data }: { data: StrategistKnowledge }) {
   return (
     <div className="flex flex-col">
       <div className="flex flex-col gap-1 px-4 pb-3">
-        <p className="min-w-0 truncate text-sm font-medium">{data.owner || data.brandName || "Your brand"}</p>
+        <p className="min-w-0 truncate text-sm font-medium">{data.owner || data.brandName || t("your_brand")}</p>
         {subtitle ? <p className="truncate text-xs text-muted-foreground">{subtitle}</p> : null}
         <p className="mt-1 line-clamp-3 text-xs text-pretty">
-          {data.positioning || <span className="text-muted-foreground">No positioning yet — add it in Brand HQ so answers sound like you.</span>}
+          {data.positioning || <span className="text-muted-foreground">{t("no_positioning")}</span>}
         </p>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span>{plural(data.pillarCount, "pillar")}</span>
+          <span>{plural(t, "pillars", data.pillarCount)}</span>
           {data.platforms.length ? (
             <span className="flex items-center gap-1">
               {data.platforms.map((platform) => (
@@ -76,59 +83,62 @@ function KnowledgeBody({ data }: { data: StrategistKnowledge }) {
       <ul className="divide-y border-t">
         <KnowledgeRow
           href={data.persona ? `/audience?open=${data.persona.id}` : "/audience"}
-          label="Audience"
-          detail={`${plural(data.problemCount, "problem")} · ${plural(data.questionCount, "question")}`}
+          label={t("audience")}
+          detail={`${plural(t, "problems", data.problemCount)} · ${plural(t, "questions", data.questionCount)}`}
         >
-          <span className="block truncate">{data.persona?.name || "No persona yet"}</span>
+          <span className="block truncate">{data.persona?.name || t("no_persona")}</span>
         </KnowledgeRow>
-        <KnowledgeRow href="/strategy/goals" label="Primary goal">
-          <span className={cn("block truncate", !data.goal && "font-normal text-muted-foreground")}>{data.goal?.name || "Not set"}</span>
+        <KnowledgeRow href="/strategy/goals" label={t("primary_goal")}>
+          <span className={cn("block truncate", !data.goal && "font-normal text-muted-foreground")}>{data.goal?.name || t("not_set")}</span>
         </KnowledgeRow>
         {data.hasPublished ? (
           <KnowledgeRow
             href="/"
-            label="Content Health Score"
-            detail={weakest ? `Weakest: ${weakest.label} — ${weakest.detail}` : undefined}
-            aside={<ScoreRing value={health.score} size={32} strokeWidth={3} tone="auto" label="Content Health Score" />}
+            label={t("health")}
+            detail={weakest ? t("weakest", { label: weakest.label, detail: weakest.detail }) : undefined}
+            aside={<ScoreRing value={health.score} size={32} strokeWidth={3} tone="auto" label={t("health")} />}
           >
             <span className="num">{health.score}</span>
             <span className="font-normal text-muted-foreground"> / 100 · {health.band.label}</span>
           </KnowledgeRow>
         ) : (
-          <KnowledgeRow href="/" label="Content Health Score" detail="Scored from your first published post onward.">
-            <span className="font-normal text-muted-foreground">Not scored yet</span>
+          <KnowledgeRow href="/" label={t("health")} detail={t("health_not_started")}>
+            <span className="font-normal text-muted-foreground">{t("not_scored")}</span>
           </KnowledgeRow>
         )}
         <KnowledgeRow
           href="/pipeline"
-          label="Content Buffer"
+          label={t("buffer")}
           detail={
             data.hasContent
-              ? `${plural(buffer.readyCount, "piece")} ready to publish at ${plural(postsPerWeek, "post")} a week`
-              : "Nothing in production yet — the buffer fills as content moves toward ready to post."
+              ? t("buffer_detail", { pieces: plural(t, "pieces", buffer.readyCount), posts: plural(t, "posts", postsPerWeek) })
+              : t("buffer_empty")
           }
-          aside={data.hasContent ? <StatusPill tone={BUFFER_TONE[buffer.status]}>{BUFFER_STATUS_LABELS[buffer.status]}</StatusPill> : undefined}
+          aside={
+            data.hasContent ? <StatusPill tone={BUFFER_TONE[buffer.status]}>{bufferStatusLabel(buffer.status, lang)}</StatusPill> : undefined
+          }
         >
-          <span className="num">{buffer.days}</span> days
+          <span className="num">{buffer.days}</span>
+          {t("days_suffix")}
         </KnowledgeRow>
         <KnowledgeRow
           href="/calendar"
-          label="This week"
-          detail={`${week.scheduledRemaining} scheduled · ${plural(week.daysLeft, "day")} left`}
+          label={t("this_week")}
+          detail={t("week_detail", { scheduled: week.scheduledRemaining, days: plural(t, "days", week.daysLeft) })}
         >
           <span className="num">
             {week.published} / {week.target}
           </span>{" "}
-          published
-          <Meter value={week.published} max={Math.max(1, week.target)} size="sm" className="mt-1.5" aria-label="Posts published this week" />
+          {t("published_suffix")}
+          <Meter value={week.published} max={Math.max(1, week.target)} size="sm" className="mt-1.5" aria-label={t("week_meter")} />
         </KnowledgeRow>
         <KnowledgeRow
           href={topPillar ? `/pillars?open=${topPillar.pillar.id}` : "/pillars"}
-          label="Top pillar · 90 days"
+          label={t("top_pillar")}
           detail={
             topPillar
-              ? `${formatCompact(topPillar.avgViews)} avg views across ${plural(topPillar.posts, "measured post")}`
-              : "Shows once a pillar has 3+ measured posts"
+              ? t("top_pillar_detail", { views: formatCompact(topPillar.avgViews), posts: plural(t, "measured_posts", topPillar.posts) })
+              : t("top_pillar_empty")
           }
         >
           {topPillar ? (
@@ -136,23 +146,23 @@ function KnowledgeBody({ data }: { data: StrategistKnowledge }) {
               <ColorDot color={topPillar.pillar.color} />
               <span className="truncate">{topPillar.pillar.name}</span>
               {topPillar.ratio !== null ? (
-                <span className="shrink-0 font-normal text-muted-foreground">· {formatMultiple(topPillar.ratio)} baseline</span>
+                <span className="shrink-0 font-normal text-muted-foreground">{t("baseline", { ratio: formatMultiple(topPillar.ratio) })}</span>
               ) : null}
             </span>
           ) : (
-            <span className="font-normal text-muted-foreground">Not enough data</span>
+            <span className="font-normal text-muted-foreground">{t("not_enough")}</span>
           )}
         </KnowledgeRow>
         <KnowledgeRow
           href="/winners"
-          label="Winners · 90 days"
+          label={t("winners")}
           detail={
             bestWinner
-              ? `Best: ${bestWinner.title}${bestWinner.ratio !== null ? ` (${formatMultiple(bestWinner.ratio)})` : ""}`
-              : "Posts at 2× their platform baseline show up here"
+              ? t("best", { title: `${bestWinner.title}${bestWinner.ratio !== null ? ` (${formatMultiple(bestWinner.ratio)})` : ""}` })
+              : t("winners_empty")
           }
         >
-          <span className="num">{data.winnerCount}</span> {data.winnerCount === 1 ? "winner" : "winners"}
+          <span className="num">{data.winnerCount}</span> {t.plural("winner_word", data.winnerCount)}
         </KnowledgeRow>
       </ul>
     </div>
@@ -161,10 +171,11 @@ function KnowledgeBody({ data }: { data: StrategistKnowledge }) {
 
 /** Desktop left column: everything the strategist is told, each row linking to where it lives. */
 export function KnowledgeCard({ data }: { data: StrategistKnowledge }) {
+  const t = useT(knowledgeMessages)
   return (
     <SectionCard
-      title="What the strategist knows"
-      description="Sent with every question, along with your audience problems, stories and schedule"
+      title={t("title")}
+      description={t("description")}
       contentClassName="px-0 pt-3 pb-0"
     >
       <KnowledgeBody data={data} />
@@ -174,6 +185,7 @@ export function KnowledgeCard({ data }: { data: StrategistKnowledge }) {
 
 function PromptButton({ prompt, disabled }: { prompt: StrategistPrompt; disabled: boolean }) {
   const Icon = prompt.icon
+  const t = useT(strategistMessages)
   return (
     <button
       type="button"
@@ -182,21 +194,24 @@ function PromptButton({ prompt, disabled }: { prompt: StrategistPrompt; disabled
       className="group flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 dark:hover:bg-input/50"
     >
       <Icon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground group-hover:text-foreground" aria-hidden />
-      <span className="min-w-0 flex-1 text-pretty">{prompt.text}</span>
-      {prompt.prefill ? <span className="shrink-0 pt-px text-xs text-muted-foreground">Add details</span> : null}
+      <span className="min-w-0 flex-1 text-pretty">{prompt.label ?? prompt.text}</span>
+      {prompt.prefill ? <span className="shrink-0 pt-px text-xs text-muted-foreground">{t("add_details")}</span> : null}
     </button>
   )
 }
 
-function DataPrompts({ prompts, disabled }: { prompts: string[]; disabled: boolean }) {
+type DataPrompt = { text: string; label: string }
+
+function DataPrompts({ prompts, disabled }: { prompts: DataPrompt[]; disabled: boolean }) {
+  const t = useT(knowledgeMessages)
   if (!prompts.length) return null
   return (
     <div className="flex flex-col gap-1">
-      <p className="text-xs font-medium text-muted-foreground">From your numbers</p>
+      <p className="text-xs font-medium text-muted-foreground">{t("from_numbers")}</p>
       <ul className="-mx-2 flex flex-col">
-        {prompts.map((text) => (
-          <li key={text}>
-            <PromptButton prompt={{ text, icon: Sparkles }} disabled={disabled} />
+        {prompts.map((prompt) => (
+          <li key={prompt.text}>
+            <PromptButton prompt={{ ...prompt, icon: Sparkles }} disabled={disabled} />
           </li>
         ))}
       </ul>
@@ -205,12 +220,14 @@ function DataPrompts({ prompts, disabled }: { prompts: string[]; disabled: boole
 }
 
 /** The §56 prompts plus up to three raised by the current numbers. */
-export function QuickPromptsCard({ extra }: { extra: string[] }) {
+export function QuickPromptsCard({ extra }: { extra: DataPrompt[] }) {
   const busy = useStrategistSession((s) => s.pending?.status === "sending")
+  const t = useT(knowledgeMessages)
+  const prompts = suggestedPrompts(useUiLang())
   return (
-    <SectionCard title="Quick prompts" description="One click asks the strategist" contentClassName="flex flex-col gap-3">
+    <SectionCard title={t("quick_title")} description={t("quick_description")} contentClassName="flex flex-col gap-3">
       <ul className="-mx-2 flex flex-col">
-        {SUGGESTED_PROMPTS.map((prompt) => (
+        {prompts.map((prompt) => (
           <li key={prompt.text}>
             <PromptButton prompt={prompt} disabled={busy} />
           </li>
@@ -226,16 +243,17 @@ export function QuickPromptsCard({ extra }: { extra: string[] }) {
 }
 
 /** Small screens: the same knowledge, collapsed into one summary line above the conversation. */
-export function MobileKnowledge({ data, extra }: { data: StrategistKnowledge; extra: string[] }) {
+export function MobileKnowledge({ data, extra }: { data: StrategistKnowledge; extra: DataPrompt[] }) {
   const busy = useStrategistSession((s) => s.pending?.status === "sending")
+  const t = useT(knowledgeMessages)
   return (
     <Collapsible className="rounded-lg border bg-card lg:hidden">
       <CollapsibleTrigger className="group flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
-        <ScoreRing value={data.health.score} size={32} strokeWidth={3} tone="auto" label="Content Health Score" />
+        <ScoreRing value={data.health.score} size={32} strokeWidth={3} tone="auto" label={t("health")} />
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium">What the strategist knows</span>
+          <span className="block text-sm font-medium">{t("title")}</span>
           <span className="block truncate text-xs text-muted-foreground">
-            Health {data.health.score} · Buffer {data.buffer.days} days · {plural(data.winnerCount, "winner")}
+            {t("mobile_summary", { score: data.health.score, days: data.buffer.days, winners: plural(t, "winners", data.winnerCount) })}
           </span>
         </span>
         <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" aria-hidden />

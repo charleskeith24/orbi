@@ -7,9 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions, useTable } from "@/lib/store"
 import type { AudiencePersona, CategoricalColor } from "@/lib/types"
 import { nextPersonaColor } from "./audience-model"
+import { personaMessages } from "./persona-messages"
 
 /** Name + profession + colour; the profile sheet opens next for the rest of §5. */
 export function PersonaCreateDialog({
@@ -40,6 +43,8 @@ export function PersonaCreateDialog({
 
 function CreateForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (persona: AudiencePersona) => void }) {
   const id = useId()
+  const t = useT(personaMessages)
+  const c = useT(commonMessages)
   const personas = useTable("audience_personas")
   const first = personas.length === 0
   const [name, setName] = useState("")
@@ -48,7 +53,7 @@ function CreateForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: 
   const [primary, setPrimary] = useState(first)
   const [touched, setTouched] = useState(false)
   const clean = name.replace(/\s+/g, " ").trim()
-  const error = touched && !clean ? "Give this persona a name." : null
+  const error = touched && !clean ? t("name_required") : null
 
   function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -70,23 +75,23 @@ function CreateForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: 
       color,
       is_primary: makePrimary,
     })
-    toast.success("Persona created", { description: "Now add their goals, problems and the words they use." })
+    toast.success(t("created"), { description: t("created_description") })
     onCreated(row)
   }
 
   return (
     <form onSubmit={submit} noValidate className="flex min-w-0 flex-col gap-4">
       <DialogHeader>
-        <DialogTitle>New persona</DialogTitle>
-        <DialogDescription>Name a person you create for. Their goals, problems and language come next.</DialogDescription>
+        <DialogTitle>{t("create_title")}</DialogTitle>
+        <DialogDescription>{t("create_description")}</DialogDescription>
       </DialogHeader>
-      <FormField label="Name" htmlFor={`${id}-name`} required error={error}>
+      <FormField label={t("name")} htmlFor={`${id}-name`} required error={error}>
         <Input
           id={`${id}-name`}
           autoFocus
           value={name}
           maxLength={120}
-          placeholder="e.g. First-time online seller"
+          placeholder={t("name_placeholder")}
           aria-invalid={Boolean(error) || undefined}
           onChange={(event) => {
             setName(event.target.value)
@@ -94,28 +99,28 @@ function CreateForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: 
           }}
         />
       </FormField>
-      <FormField label="Profession" htmlFor={`${id}-profession`}>
+      <FormField label={t("profession")} htmlFor={`${id}-profession`}>
         <Input
           id={`${id}-profession`}
           value={profession}
           maxLength={200}
-          placeholder="e.g. Runs a Shopee store on the side"
+          placeholder={t("profession_create_placeholder")}
           onChange={(event) => setProfession(event.target.value)}
         />
       </FormField>
-      <FormField label="Colour">
-        <ColorSwatchPicker value={color} onChange={setColor} aria-label="Persona colour" />
+      <FormField label={t("colour")}>
+        <ColorSwatchPicker value={color} onChange={setColor} aria-label={t("colour_aria")} />
       </FormField>
       <label className="flex items-center gap-2 text-sm">
         <Checkbox checked={primary || first} disabled={first} onCheckedChange={(checked) => setPrimary(checked === true)} />
-        {first ? "Your first persona becomes your primary persona" : "Make this my primary persona"}
+        {first ? t("first_is_primary") : t("make_primary")}
       </label>
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={!clean}>
-          Create persona
+          {t("create_persona")}
         </Button>
       </DialogFooter>
     </form>

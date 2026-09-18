@@ -5,7 +5,9 @@
  */
 import { addDays } from "date-fns"
 import { FUNNEL_STAGE_IDS, FUNNEL_STAGES } from "@/lib/constants"
+import { translate, type UiLang } from "@/lib/i18n/core"
 import type { AppSettings, ContentItem, ContentPillar, Database, FunnelStage } from "@/lib/types"
+import { mixMessages } from "./messages"
 import {
   inRange,
   isPublishedItem,
@@ -26,6 +28,8 @@ export const MIN_MIX_SAMPLE = 5
 export interface MixOptions extends RangeOptions {
   /** Also count unpublished items scheduled up to this many days ahead (default 7; 0 when `start` is given). */
   upcomingDays?: number
+  /** Language of `warnings[].message` (default English). */
+  lang?: UiLang
 }
 
 export type MixStatus = "under" | "over" | "on_target"
@@ -105,7 +109,7 @@ interface MixInput {
  * Under-represented when deviation < −min(tolerance, target ÷ 2) — the target-relative bound keeps
  * small pillars (e.g. a 5% Business pillar) from never being flagged; over-represented when deviation > tolerance.
  */
-function evaluateMix(inputs: MixInput[], unassigned: number, tolerance: number, range: DateRange): MixResult<MixRow> {
+function evaluateMix(inputs: MixInput[], unassigned: number, tolerance: number, range: DateRange, lang: UiLang = "en"): MixResult<MixRow> {
   const total = inputs.reduce((acc, i) => acc + i.count, 0)
   const targetTotal = inputs.reduce((acc, i) => acc + Math.max(0, i.target), 0)
   const rows: MixRow[] = inputs.map((i) => {
@@ -128,7 +132,11 @@ function evaluateMix(inputs: MixInput[], unassigned: number, tolerance: number, 
             label: r.label,
             direction,
             deviation: r.deviation,
-            message: `${r.label} is at ${Math.round(r.actualPct)}% vs a ${Math.round(r.targetPct)}% target — ${direction}-represented`,
+            message: translate(mixMessages, lang, direction === "under" ? "warning_under" : "warning_over", {
+              label: r.label,
+              actual: Math.round(r.actualPct),
+              target: Math.round(r.targetPct),
+            }),
           }
         })
     : []
@@ -152,7 +160,8 @@ export function pillarMix(db: Database, now: Date, settings: AppSettings, option
     pillars.map((p) => ({ key: p.id, label: p.name, count: counts.get(p.id) ?? 0, target: p.target_percentage })),
     unassigned,
     settings.pillar_tolerance,
-    range
+    range,
+    options.lang
   )
   return { ...result, rows: result.rows.map((row, i) => ({ ...row, pillar: pillars[i] })) }
 }
@@ -175,7 +184,8 @@ export function funnelMix(db: Database, now: Date, settings: AppSettings, option
     })),
     unassigned,
     settings.pillar_tolerance,
-    range
+    range,
+    options.lang
   )
   return { ...result, rows: result.rows.map((row, i) => ({ ...row, stage: FUNNEL_STAGE_IDS[i] })) }
 }

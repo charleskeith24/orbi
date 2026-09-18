@@ -14,12 +14,15 @@ import {
 } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { FUNNEL_STAGE_IDS, FUNNEL_STAGES } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import type { FunnelStage, ID } from "@/lib/types"
 import { formatNumber, truncate } from "@/lib/utils"
 import { FUNNEL_COLORS } from "./funnel-utils"
 import { SeverityMark } from "./matrix-chips"
 import type { MatrixData, MatrixSelectionIds } from "./matrix-data"
 import { MATRIX_LIMIT } from "./matrix-engine"
+import { matrixMessages } from "./matrix-messages"
 
 const STAGE_OPTIONS: ChipOption<FunnelStage>[] = FUNNEL_STAGE_IDS.map((id) => ({
   value: id,
@@ -60,6 +63,8 @@ export function MatrixDimensions({
   stale: boolean
   isDefault: boolean
 }) {
+  const t = useT(matrixMessages)
+  const c = useT(commonMessages)
   const options = useMemo(() => {
     const problems = data.problems.filter((p) => !value.personaId || p.personaId === value.personaId)
     return {
@@ -87,22 +92,22 @@ export function MatrixDimensions({
 
   const set = <K extends keyof MatrixSelectionIds>(key: K, next: MatrixSelectionIds[K]) => onChange({ ...value, [key]: next })
   const missing = [
-    !counts.pillars && "a pillar",
-    !counts.formats && "a format",
-    !counts.problems && "an audience problem",
-    !counts.goals && "a goal",
-    !counts.stages && "a funnel stage",
+    !counts.pillars && t("missing_pillar"),
+    !counts.formats && t("missing_format"),
+    !counts.problems && t("missing_problem"),
+    !counts.goals && t("missing_goal"),
+    !counts.stages && t("missing_stage"),
   ].filter((m): m is string => Boolean(m))
 
   return (
     <SectionCard
-      title="Dimensions"
-      description="Every pillar × format × problem × goal × stage you pick becomes a candidate — the strongest are ranked below."
+      title={t("dimensions")}
+      description={t("dimensions_description")}
       action={
         isDefault ? null : (
           <Button type="button" variant="ghost" size="sm" onClick={onReset}>
             <RotateCcw aria-hidden />
-            Reset
+            {c("reset")}
           </Button>
         )
       }
@@ -110,26 +115,26 @@ export function MatrixDimensions({
         <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-2">
           <span className="num">
             {counts.pillars} × {counts.formats} × {counts.problems} × {counts.goals} × {counts.stages} ={" "}
-            <strong className="font-semibold text-foreground">{formatNumber(total)}</strong> combinations
-            {total > MATRIX_LIMIT ? ` · top ${MATRIX_LIMIT} ranked` : ""}
+            <strong className="font-semibold text-foreground">{formatNumber(total)}</strong> {t("combinations")}
+            {total > MATRIX_LIMIT ? ` · ${t("top_ranked", { count: MATRIX_LIMIT })}` : ""}
           </span>
           {missing.length ? (
             <span role="alert" className="text-warning-fg">
-              Pick at least {missing[0]}.
+              {t("pick_at_least", { what: missing[0] })}
             </span>
           ) : stale ? (
-            <span>Selection changed — generate again to update the list.</span>
+            <span>{t("selection_changed")}</span>
           ) : null}
           <Button type="button" size="sm" className="ml-auto" disabled={missing.length > 0} onClick={onGenerate}>
             <Grid3x3 aria-hidden />
-            Generate combinations
+            {t("generate")}
           </Button>
         </div>
       }
     >
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <FormField
-          label="Pillars"
+          label={t("pillars")}
           htmlFor="matrix-pillars"
           labelAction={<SelectAll selected={value.pillars.length} all={options.pillars} onSelect={(ids) => set("pillars", ids)} />}
         >
@@ -138,13 +143,13 @@ export function MatrixDimensions({
             options={options.pillars}
             value={value.pillars}
             onChange={(next) => set("pillars", next)}
-            placeholder="Pick pillars"
-            emptyText="No active pillars."
+            placeholder={t("pick_pillars")}
+            emptyText={t("no_active_pillars")}
           />
         </FormField>
 
         <FormField
-          label="Formats"
+          label={t("formats")}
           htmlFor="matrix-formats"
           labelAction={<SelectAll selected={value.formats.length} all={options.formats} onSelect={(ids) => set("formats", ids)} />}
         >
@@ -153,24 +158,24 @@ export function MatrixDimensions({
             options={options.formats}
             value={value.formats}
             onChange={(next) => set("formats", next)}
-            placeholder="Pick formats"
-            emptyText="No formats in the library."
+            placeholder={t("pick_formats")}
+            emptyText={t("no_formats")}
           />
         </FormField>
 
-        <FormField label="Audience" htmlFor="matrix-persona" description="Optional — limits problems to one persona.">
+        <FormField label={t("audience")} htmlFor="matrix-persona" description={t("audience_description")}>
           <PersonaSelect
             id="matrix-persona"
             allowNone
-            noneLabel="All personas"
-            placeholder="All personas"
+            noneLabel={t("all_personas")}
+            placeholder={t("all_personas")}
             value={value.personaId}
             onChange={onPersonaChange}
           />
         </FormField>
 
         <FormField
-          label="Audience problems"
+          label={t("audience_problems")}
           htmlFor="matrix-problems"
           labelAction={<SelectAll selected={counts.problems} all={options.problems} onSelect={(ids) => set("problems", ids)} />}
         >
@@ -179,14 +184,14 @@ export function MatrixDimensions({
             options={options.problems}
             value={value.problems}
             onChange={(next) => set("problems", next)}
-            placeholder="Pick problems"
+            placeholder={t("pick_problems")}
             maxChips={2}
-            emptyText={value.personaId ? "No problems for this persona yet." : "The Problem Bank is empty."}
+            emptyText={value.personaId ? t("no_persona_problems") : t("problem_bank_empty")}
           />
         </FormField>
 
         <FormField
-          label="Goals"
+          label={t("goals")}
           htmlFor="matrix-goals"
           labelAction={<SelectAll selected={value.goals.length} all={options.goals} onSelect={(ids) => set("goals", ids)} />}
         >
@@ -195,13 +200,19 @@ export function MatrixDimensions({
             options={options.goals}
             value={value.goals}
             onChange={(next) => set("goals", next)}
-            placeholder="Pick goals"
-            emptyText="No active goals."
+            placeholder={t("pick_goals")}
+            emptyText={t("no_active_goals")}
           />
         </FormField>
 
-        <FormField label="Funnel stages">
-          <ChipToggleGroup multiple options={STAGE_OPTIONS} value={value.stages} onChange={(next) => set("stages", next)} aria-label="Funnel stages" />
+        <FormField label={t("funnel_stages")}>
+          <ChipToggleGroup
+            multiple
+            options={STAGE_OPTIONS}
+            value={value.stages}
+            onChange={(next) => set("stages", next)}
+            aria-label={t("funnel_stages")}
+          />
         </FormField>
       </div>
     </SectionCard>
@@ -217,10 +228,11 @@ function SelectAll({
   all: MultiSelectOption[]
   onSelect: (ids: string[]) => void
 }) {
+  const c = useT(commonMessages)
   if (!all.length || selected >= all.length) return null
   return (
     <Button type="button" variant="ghost" size="xs" className="text-muted-foreground" onClick={() => onSelect(all.map((o) => o.value))}>
-      Select all
+      {c("select_all")}
     </Button>
   )
 }

@@ -18,10 +18,12 @@ import { Button } from "@/components/ui/button"
 import { engagementsOf, type TieredRow } from "@/lib/analytics"
 import { HOOK_CATEGORIES, PIPELINE_STAGE_MAP } from "@/lib/constants"
 import { formatDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import { dataActions, useTable } from "@/lib/store"
 import type { AppSettings, ContentItem, ContentMetric } from "@/lib/types"
 import { formatNumber, formatPercent } from "@/lib/utils"
 import { formatWatchTime } from "./format"
+import { postMessages } from "./post-messages"
 import { RateList } from "./rate-list"
 import { SnapshotDialog } from "./snapshot-dialog"
 import { newestFirst, SnapshotHistory } from "./snapshot-history"
@@ -47,6 +49,7 @@ export function PostDetailSheet({
   /** Open the Add snapshot dialog right away. */
   autoAdd?: boolean
 }) {
+  const t = useT(postMessages)
   const metrics = useTable("content_metrics")
   const snapshots = useMemo(() => metrics.filter((m) => m.content_item_id === item.id).sort(newestFirst), [metrics, item.id])
   const latest = snapshots[0] ?? null
@@ -65,15 +68,13 @@ export function PostDetailSheet({
   async function remove(snapshot: ContentMetric) {
     const last = snapshots.length === 1
     const ok = await confirm({
-      title: "Delete this snapshot?",
-      description: `The numbers recorded on ${formatDate(snapshot.recorded_at)} will be removed. ${
-        last ? "This post will have no analytics left." : "Analytics always use the latest remaining snapshot."
-      }`,
-      confirmLabel: "Delete snapshot",
+      title: t("delete_title"),
+      description: t(last ? "delete_description_last" : "delete_description", { date: formatDate(snapshot.recorded_at) }),
+      confirmLabel: t("delete_confirm"),
     })
     if (!ok) return
     dataActions.remove("content_metrics", snapshot.id)
-    toast.success("Snapshot deleted")
+    toast.success(t("deleted"))
   }
 
   const published = row?.publishedAt ?? null
@@ -83,15 +84,15 @@ export function PostDetailSheet({
     <DetailSheet
       open={open}
       onOpenChange={onOpenChange}
-      title={item.title || "Untitled post"}
+      title={item.title || t("untitled_post")}
       description={
         published
-          ? `Published ${formatDate(published, "EEE, MMM d, yyyy · h:mm a")}`
-          : `Not published yet · ${PIPELINE_STAGE_MAP[item.stage]?.label ?? item.stage}`
+          ? t("published_on", { date: formatDate(published, "EEE, MMM d, yyyy · h:mm a") })
+          : t("not_published", { stage: PIPELINE_STAGE_MAP[item.stage]?.label ?? item.stage })
       }
       actions={
         item.published_url ? (
-          <Button asChild variant="ghost" size="icon-sm" aria-label="View the live post">
+          <Button asChild variant="ghost" size="icon-sm" aria-label={t("view_live")}>
             <a href={item.published_url} target="_blank" rel="noreferrer noopener">
               <ExternalLink aria-hidden />
             </a>
@@ -103,12 +104,12 @@ export function PostDetailSheet({
           <Button asChild variant="outline" size="sm">
             <Link href={`/studio/${item.id}`}>
               <SquarePen aria-hidden />
-              Open in Studio
+              {t("open_studio")}
             </Link>
           </Button>
           <Button size="sm" onClick={openAdd}>
             <Plus aria-hidden />
-            Add snapshot
+            {t("add_snapshot")}
           </Button>
         </>
       }
@@ -120,7 +121,7 @@ export function PostDetailSheet({
           <PillarBadge pillarId={item.pillar_id} />
           <FormatLabel formatId={item.format_id} />
           <FunnelBadge stage={item.funnel_stage} />
-          {hookStyle ? <span className="text-xs text-muted-foreground">{HOOK_CATEGORIES[hookStyle]?.label} hook</span> : null}
+          {hookStyle ? <span className="text-xs text-muted-foreground">{t("hook_style", { style: HOOK_CATEGORIES[hookStyle]?.label ?? "" })}</span> : null}
           {row?.metric && row.ratio !== null ? <TierBadge tier={row.tier} /> : null}
         </div>
         {item.hook ? <p className="text-sm text-pretty text-muted-foreground">“{item.hook}”</p> : null}
@@ -129,40 +130,40 @@ export function PostDetailSheet({
       {!row ? (
         <p className="flex items-start gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
           <Info className="mt-px size-3.5 shrink-0" aria-hidden />
-          This item isn&apos;t published yet. Adding a snapshot marks it as published.
+          {t("not_published_note")}
         </p>
       ) : null}
 
       {latest ? (
-        <Section title="Latest snapshot" description={`Recorded ${formatDate(latest.recorded_at)}`}>
+        <Section title={t("latest_snapshot")} description={t("recorded_on_date", { date: formatDate(latest.recorded_at) })}>
           <MetricGrid metric={latest} />
         </Section>
       ) : null}
 
       {row?.metric ? (
         <>
-          <Section title="Rates" description="Derived from the latest snapshot">
+          <Section title={t("rates")} description={t("rates_description")}>
             <RateList row={row} />
           </Section>
-          <Section title="Tier">
+          <Section title={t("tier")}>
             <TierExplanation row={row} settings={settings} />
           </Section>
         </>
       ) : null}
 
-      <Section title="Snapshot history" description="Log a new snapshot each time you check the numbers, e.g. after 48 hours and 7 days.">
+      <Section title={t("history")} description={t("history_description")}>
         {snapshots.length ? (
           <SnapshotHistory snapshots={snapshots} onEdit={openEdit} onDelete={(s) => void remove(s)} />
         ) : (
           <EmptyState
             compact
             icon={ChartNoAxesColumn}
-            title="No analytics yet"
-            description="Copy the numbers from the platform's insights — winners, reports and recommendations learn from them."
+            title={t("no_analytics")}
+            description={t("no_analytics_description")}
             action={
               <Button size="sm" onClick={openAdd}>
                 <Plus aria-hidden />
-                Add snapshot
+                {t("add_snapshot")}
               </Button>
             }
             className="rounded-lg border border-dashed"
@@ -196,6 +197,7 @@ function Section({ title, description, children }: { title: string; description?
 }
 
 function MetricGrid({ metric }: { metric: ContentMetric }) {
+  const t = useT(postMessages)
   const watch = metric.watch_time_seconds
   const cells: { label: string; value: string; hint?: string }[] = [
     { label: "Views", value: formatNumber(metric.views) },
@@ -205,17 +207,17 @@ function MetricGrid({ metric }: { metric: ContentMetric }) {
     { label: "Comments", value: formatNumber(metric.comments) },
     { label: "Shares", value: formatNumber(metric.shares) },
     { label: "Saves", value: formatNumber(metric.saves) },
-    { label: "Followers gained", value: formatNumber(metric.followers_gained) },
-    { label: "Profile visits", value: formatNumber(metric.profile_visits) },
-    { label: "Link clicks", value: formatNumber(metric.link_clicks) },
+    { label: t("followers_gained"), value: formatNumber(metric.followers_gained) },
+    { label: t("profile_visits"), value: formatNumber(metric.profile_visits) },
+    { label: t("link_clicks"), value: formatNumber(metric.link_clicks) },
     { label: "Leads", value: formatNumber(metric.leads) },
     { label: "Sales", value: formatNumber(metric.sales) },
     {
-      label: "Watch time",
+      label: t("watch_time"),
       value: formatWatchTime(watch),
-      hint: watch !== null && metric.views > 0 ? `${formatWatchTime(watch / metric.views)} per view` : undefined,
+      hint: watch !== null && metric.views > 0 ? t("per_view", { time: formatWatchTime(watch / metric.views) }) : undefined,
     },
-    { label: "Avg. retention", value: formatPercent(metric.avg_retention) },
+    { label: t("avg_retention"), value: formatPercent(metric.avg_retention) },
   ]
   return (
     <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border p-3 sm:grid-cols-3">

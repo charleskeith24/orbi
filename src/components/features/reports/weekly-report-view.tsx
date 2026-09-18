@@ -9,28 +9,40 @@ import { hasPublishedContent } from "@/components/features/dashboard/first-run"
 import { Button } from "@/components/ui/button"
 import { rankRows, scopedRows, weeklyReport } from "@/lib/analytics"
 import { parseDate } from "@/lib/dates"
+import { useT, useUiLang } from "@/lib/i18n"
 import { uiActions, useDb, useSettings } from "@/lib/store"
+import { formatNumber } from "@/lib/utils"
 import { BestOfWeekCard } from "./best-of-week"
 import { ContentMixCard } from "./content-mix-card"
+import { reportMessages } from "./messages"
 import { PeriodNav } from "./period-nav"
 import { PostHighlightCard } from "./post-summary"
 import { ReportPostsTable } from "./posts-table"
 import { printReport } from "./print-report"
-import { countLabel, rankedByLabel } from "./report-format"
+import { rankedByLabel } from "./report-format"
 import { adjacentWeeks, resolveWeekParam, weekKeyOf, weekOptions, weekPeriod } from "./report-periods"
 import { ReviewHistory, type HistoryEntry } from "./review-history"
 import { findWeeklyReview, weeklyReviewState, type ReviewState } from "./review-model"
 import { useNow } from "./use-now"
 import { WeeklyKpis } from "./weekly-kpis"
+import { weeklyReportMessages } from "./weekly-messages"
 import { WeeklyReviewEditor } from "./weekly-review-editor"
 
-const STATE_HINT: Record<ReviewState, string | undefined> = { final: "Reviewed", draft: "Draft", plan: "Planned", unsaved: undefined }
+const STATE_HINT: Record<ReviewState, "hint_reviewed" | "hint_draft" | "hint_planned" | undefined> = {
+  final: "hint_reviewed",
+  draft: "hint_draft",
+  plan: "hint_planned",
+  unsaved: undefined,
+}
 
 /**
  * Weekly Content Report (spec §33) for `?week=<week start>` (default: the last completed week; this week
  * to date allowed): numbers, highlights, mix, posts, the AI-drafted review (saved per week) and history.
  */
 export function WeeklyReportView() {
+  const t = useT(weeklyReportMessages)
+  const r = useT(reportMessages)
+  const lang = useUiLang()
   const now = useNow()
   const db = useDb()
   const settings = useSettings()
@@ -40,7 +52,7 @@ export function WeeklyReportView() {
   const weekParam = searchParams.get("week")
 
   const period = useMemo(() => resolveWeekParam(weekParam, now, weekStartsOn), [weekParam, now, weekStartsOn])
-  const report = useMemo(() => weeklyReport(db, period.start, settings, now), [db, period, settings, now])
+  const report = useMemo(() => weeklyReport(db, period.start, settings, now, lang), [db, period, settings, now, lang])
   const posts = useMemo(() => {
     const asOf = now < period.end ? now : period.end
     const rows = scopedRows(db, asOf, { start: period.start, end: period.end, settings })
@@ -56,30 +68,30 @@ export function WeeklyReportView() {
   const saved = useMemo(() => findWeeklyReview(reviews, period), [reviews, period])
   const options = useMemo(() => {
     const hints = new Map<string, string>()
-    for (const r of reviews) {
-      const key = weekKeyOf(r.week_start, weekStartsOn)
-      const hint = STATE_HINT[weeklyReviewState(r)]
-      if (key && hint) hints.set(key, hint)
+    for (const review of reviews) {
+      const key = weekKeyOf(review.week_start, weekStartsOn)
+      const hint = STATE_HINT[weeklyReviewState(review)]
+      if (key && hint) hints.set(key, r(hint))
     }
-    return weekOptions(now, weekStartsOn, period, hints)
-  }, [reviews, now, weekStartsOn, period])
+    return weekOptions(now, weekStartsOn, period, hints, 12, lang)
+  }, [reviews, now, weekStartsOn, period, r, lang])
   const history = useMemo<HistoryEntry[]>(
     () =>
       [...reviews]
         .sort((a, b) => (a.week_start < b.week_start ? 1 : a.week_start > b.week_start ? -1 : 0))
-        .map((r) => {
-          const week = weekPeriod(parseDate(r.week_start) ?? now, now, weekStartsOn)
-          const focus = r.focus.trim()
+        .map((review) => {
+          const week = weekPeriod(parseDate(review.week_start) ?? now, now, weekStartsOn)
+          const focus = review.focus.trim()
           return {
-            id: r.id,
+            id: review.id,
             href: `/reports?week=${week.key}`,
             label: week.label,
-            state: weeklyReviewState(r),
-            snippet: r.what_worked.trim() || (focus ? `Focus: ${focus}` : ""),
+            state: weeklyReviewState(review),
+            snippet: review.what_worked.trim() || (focus ? t("focus", { focus }) : ""),
             active: week.key === period.key,
           }
         }),
-    [reviews, now, weekStartsOn, period]
+    [reviews, now, weekStartsOn, period, t]
   )
 
   const goToWeek = useCallback((key: string) => router.replace(`/reports?week=${key}`, { scroll: false }), [router])
@@ -90,20 +102,20 @@ export function WeeklyReportView() {
   if (!hasPublishedContent(db.content_items) && !reviews.length) {
     return (
       <PageContainer>
-        <PageHeader icon={FileText} title="Weekly Content Report" description="What went out each week, how it performed and what to do next." />
+        <PageHeader icon={FileText} title="Weekly Content Report" description={t("empty_page_description")} />
         <EmptyState
           icon={FileText}
-          title="No weekly report yet"
-          description="Your first weekly report appears after your first published week — posting consistency, your best and worst posts, the content mix and an AI-drafted review, all from the posts and analytics you log."
+          title={t("empty_title")}
+          description={t("empty_description")}
           action={
             <Button type="button" size="sm" onClick={() => uiActions.openDialog({ type: "log-post" })}>
               <Plus aria-hidden />
-              Log a published post
+              {r("log_post")}
             </Button>
           }
           secondaryAction={
             <Button asChild size="sm" variant="outline">
-              <Link href="/calendar/planner">Plan this week</Link>
+              <Link href="/calendar/planner">{t("plan_this_week")}</Link>
             </Button>
           }
         />
@@ -119,7 +131,8 @@ export function WeeklyReportView() {
         description={
           <>
             <span className="num">{period.label}</span>
-            {period.isCurrent ? " · week to date" : ""} · posts ranked by {rankedBy}
+            {period.isCurrent ? t("week_to_date") : ""}
+            {r("ranked_by", { metric: rankedBy })}
           </>
         }
         actions={
@@ -127,12 +140,12 @@ export function WeeklyReportView() {
             <PeriodNav unit="week" options={options} value={period.key} prev={prev} next={next} onChange={goToWeek} />
             <Button type="button" variant="outline" size="sm" onClick={printReport}>
               <Printer aria-hidden />
-              Print
+              {r("print")}
             </Button>
             <Button size="sm" asChild>
               <Link href="/calendar/planner">
                 <CalendarRange aria-hidden />
-                Plan next week
+                {t("plan_next_week")}
               </Link>
             </Button>
           </div>
@@ -142,7 +155,7 @@ export function WeeklyReportView() {
       {period.isCurrent ? (
         <p className="-mt-3 flex items-start gap-1.5 text-xs text-pretty text-muted-foreground">
           <Clock className="mt-px size-3.5 shrink-0" aria-hidden />
-          This week is still in progress — totals run through today and changes compare the same days of last week.
+          {t("in_progress_note")}
         </p>
       ) : null}
 
@@ -150,28 +163,24 @@ export function WeeklyReportView() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <PostHighlightCard
-          title="Best post"
-          description={`Highest by ${rankedBy}`}
+          title={t("best_post")}
+          description={r("highest_by", { metric: rankedBy })}
           icon={Trophy}
           row={report.bestPost}
           empty={
             <EmptyState
               compact
               icon={Trophy}
-              title={report.published ? "No analytics logged yet" : "Nothing published this week"}
-              description={
-                report.published
-                  ? "Log views and engagement for this week's posts to see what worked."
-                  : "Published posts and their numbers show up here."
-              }
+              title={report.published ? r("no_analytics_yet") : t("nothing_published")}
+              description={report.published ? t("log_this_week") : r("published_show_here")}
               action={
                 report.published ? (
                   <Button size="sm" variant="outline" onClick={() => uiActions.openDialog({ type: "add-metrics" })}>
-                    Add analytics
+                    {r("add_analytics")}
                   </Button>
                 ) : (
                   <Button size="sm" variant="outline" onClick={() => uiActions.openDialog({ type: "log-post" })}>
-                    Log a published post
+                    {r("log_post")}
                   </Button>
                 )
               }
@@ -179,16 +188,16 @@ export function WeeklyReportView() {
           }
         />
         <PostHighlightCard
-          title="Worst post"
-          description={`Lowest by ${rankedBy}`}
+          title={t("worst_post")}
+          description={t("lowest_by", { metric: rankedBy })}
           icon={TrendingDown}
           row={report.worstPost}
           empty={
             <EmptyState
               compact
               icon={TrendingDown}
-              title="Not enough measured posts"
-              description="The worst post needs at least two posts with analytics this week."
+              title={t("not_enough_measured")}
+              description={t("worst_needs_two")}
             />
           }
         />
@@ -199,16 +208,16 @@ export function WeeklyReportView() {
         <ContentMixCard
           pillars={report.contentMix.pillars}
           funnel={report.contentMix.funnel}
-          description="Published this week vs your pillar and funnel targets"
+          description={t("mix_description")}
           className="xl:col-span-2"
         />
         <ReportPostsTable
           rows={posts}
-          title="Posts this week"
-          description={`${countLabel(posts.length, "post")} · ranked by ${rankedBy}`}
+          title={t("posts_this_week")}
+          description={t.plural("posts_ranked", posts.length, { count: formatNumber(posts.length), metric: rankedBy })}
           icon={ListOrdered}
-          emptyTitle="Nothing published this week"
-          emptyDescription="Log what you published to build the report."
+          emptyTitle={t("nothing_published")}
+          emptyDescription={t("log_to_build")}
           className="xl:col-span-3"
         />
       </div>
@@ -216,11 +225,11 @@ export function WeeklyReportView() {
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <WeeklyReviewEditor key={period.key} db={db} report={report} period={period} saved={saved} now={now} />
         <ReviewHistory
-          title="Saved reviews"
-          description="Weekly reviews, newest first"
+          title={r("saved_reviews")}
+          description={t("history_description")}
           entries={history}
-          emptyTitle="No saved reviews yet"
-          emptyDescription="Save this week's review to start your history."
+          emptyTitle={r("no_saved_reviews")}
+          emptyDescription={t("history_empty")}
         />
       </div>
     </PageContainer>

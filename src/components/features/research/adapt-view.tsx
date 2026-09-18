@@ -9,9 +9,11 @@ import { PageContainer, PageHeader, StatusPill } from "@/components/common"
 import { replaceSearchParams } from "@/components/features/stories/use-url-state"
 import { Button } from "@/components/ui/button"
 import { useAiTask } from "@/lib/ai"
+import { useT, useUiLang } from "@/lib/i18n"
 import { dataActions, useBrand, useLookup, useTable } from "@/lib/store"
 import type { AudiencePersona, ID, ResearchItem } from "@/lib/types"
 import { AdaptAnalysisStep } from "./adapt-analysis-step"
+import { adaptMessages } from "./adapt-messages"
 import {
   buildAdaptInput,
   createContentFromOriginal,
@@ -49,6 +51,8 @@ function savedAnalysis(item: ResearchItem | undefined): AdaptAnalysis | null {
  * only ever used for analysis — it is never shown as the creator's draft.
  */
 export function AdaptView() {
+  const t = useT(adaptMessages)
+  const lang = useUiLang()
   const router = useRouter()
   const searchParams = useSearchParams()
   const from = searchParams.get("from") || null
@@ -102,7 +106,7 @@ export function AdaptView() {
   const missingFrom = Boolean(from) && !research.some((r) => r.id === from)
   const ref: ReferenceInfo = libraryItem
     ? referenceInfo(libraryItem)
-    : { id: null, title: pastedTitle(pasted), creator: pasted.creator, platform: pasted.platform, type: pasted.type, source: "", topic: "", why_attention: "" }
+    : { id: null, title: pastedTitle(pasted, lang), creator: pasted.creator, platform: pasted.platform, type: pasted.type, source: "", topic: "", why_attention: "" }
   const analyzableText = mode === "library" ? (libraryItem?.content ?? "") : pasted.content
   const canAnalyze = analyzableText.trim().length >= MIN_REFERENCE_CHARS
   const referenceReady = mode === "library" ? Boolean(libraryItem) : canAnalyze
@@ -115,8 +119,8 @@ export function AdaptView() {
   const analyzeHint = canAnalyze
     ? ""
     : mode === "library"
-      ? "This reference has no pasted text — add it in the Research Library to analyze it."
-      : `Paste at least ${MIN_REFERENCE_CHARS} characters of the reference in step 1.`
+      ? t("hint_library")
+      : t("hint_paste", { min: MIN_REFERENCE_CHARS })
 
   function resetResults() {
     setOriginal(null)
@@ -176,7 +180,7 @@ export function AdaptView() {
     if (!libraryItem || !analysis) return
     saveAnalysisToReference(libraryItem, analysis)
     setAnalysis({ ...analysis, unsaved: false })
-    toast.success("Analysis saved to the reference", { description: libraryItem.title })
+    toast.success(t("analysis_saved"), { description: libraryItem.title })
   }
 
   async function adapt() {
@@ -202,36 +206,36 @@ export function AdaptView() {
 
   function saveIdea() {
     if (!original || !analysis) return
-    const idea = saveOriginalAsIdea(original, ref, targets, analysis.fields)
+    const idea = saveOriginalAsIdea(original, ref, targets, analysis.fields, lang)
     setSavedIdeaId(idea.id)
     const adapted = markAdapted()
-    toast.success("Saved to your Idea Bank", {
-      description: adapted ? `${idea.title} · reference marked as adapted` : idea.title,
-      action: { label: "Open", onClick: () => router.push(`/ideas?open=${idea.id}`) },
+    toast.success(t("saved_idea"), {
+      description: adapted ? t("saved_idea_adapted", { title: idea.title }) : idea.title,
+      action: { label: t("open"), onClick: () => router.push(`/ideas?open=${idea.id}`) },
     })
   }
 
   function createContent() {
     if (!original || !analysis) return
     try {
-      const { idea, item } = createContentFromOriginal(original, ref, targets, analysis.fields, savedIdeaId)
+      const { idea, item } = createContentFromOriginal(original, ref, targets, analysis.fields, savedIdeaId, lang)
       setSavedIdeaId(idea.id)
       setItemId(item.id)
       markAdapted()
-      toast.success("Content created", { description: `${item.title} — opening the Content Studio` })
+      toast.success(t("content_created"), { description: t("opening_studio", { title: item.title }) })
       router.push(`/studio/${item.id}`)
     } catch (error) {
-      toast.error("Couldn't create the content", { description: error instanceof Error ? error.message : String(error) })
+      toast.error(t("content_failed"), { description: error instanceof Error ? error.message : String(error) })
     }
   }
 
   function saveReference() {
     if (libraryItem) {
       markAdapted()
-      toast.success("Reference marked as adapted", { description: libraryItem.title })
+      toast.success(t("marked_adapted"), { description: libraryItem.title })
       return
     }
-    const row = savePastedReference(pasted, analysis, Boolean(original), targets.pillarId)
+    const row = savePastedReference(pasted, analysis, Boolean(original), targets.pillarId, lang)
     // An idea already saved from this original now points at the saved reference.
     const idea = savedIdeaId ? dataActions.getDb().content_ideas.find((i) => i.id === savedIdeaId) : undefined
     if (idea && !idea.source_ref_id) dataActions.update("content_ideas", idea.id, { source_ref_id: row.id })
@@ -240,27 +244,27 @@ export function AdaptView() {
     setSeenFrom(row.id)
     if (analysis) setAnalysis({ ...analysis, unsaved: false })
     replaceSearchParams((params) => params.set("from", row.id))
-    toast.success("Reference saved to your library", {
+    toast.success(t("saved_to_library"), {
       description: row.title,
-      action: { label: "Open", onClick: () => router.push(`/research?open=${row.id}`) },
+      action: { label: t("open"), onClick: () => router.push(`/research?open=${row.id}`) },
     })
   }
 
   const referenceAction = libraryItem ? (
     libraryItem.status === "adapted" && !analysis?.unsaved ? (
       <StatusPill tone="good" icon={CheckCheck}>
-        Reference adapted
+        {t("reference_adapted")}
       </StatusPill>
     ) : (
       <Button type="button" size="sm" variant="ghost" onClick={saveReference}>
         <CheckCheck aria-hidden />
-        Mark reference as adapted
+        {t("mark_adapted")}
       </Button>
     )
   ) : (
     <Button type="button" size="sm" variant="ghost" onClick={saveReference}>
       <Library aria-hidden />
-      Save reference to library
+      {t("save_to_library")}
     </Button>
   )
 
@@ -268,7 +272,7 @@ export function AdaptView() {
     <PageContainer className="max-w-4xl">
       <PageHeader
         title="Inspiration → Original"
-        description="Borrow the structure and psychology of content that works — never the words. Create an original version for your audience, in your voice."
+        description={t("description")}
         actions={
           <Button type="button" variant="outline" size="sm" asChild>
             <Link href="/research">
@@ -282,12 +286,12 @@ export function AdaptView() {
 
       {missingFrom && mode === "paste" ? (
         <div role="status" className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">
-          <span className="min-w-0 flex-1">The reference in this link no longer exists — paste one or pick another from your library.</span>
+          <span className="min-w-0 flex-1">{t("missing_link")}</span>
           <Button
             type="button"
             variant="ghost"
             size="icon-xs"
-            aria-label="Dismiss"
+            aria-label={t("dismiss")}
             onClick={() => {
               setSeenFrom(null)
               replaceSearchParams((params) => params.delete("from"))

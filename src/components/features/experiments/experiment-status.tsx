@@ -1,9 +1,11 @@
 import { Ban, CalendarClock, CircleCheck, CircleHelp, FlaskConical, Trophy, type LucideIcon } from "lucide-react"
 import { StatusPill } from "@/components/common"
 import { EXPERIMENT_STATUS_MAP } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import type { ExperimentStatus, ExperimentWinner } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import type { Variant } from "./experiment-model"
+import { experimentsMessages } from "./messages"
 
 export const STATUS_ICONS: Record<ExperimentStatus, LucideIcon> = {
   planned: CalendarClock,
@@ -22,16 +24,17 @@ export function ExperimentStatusPill({ status, className }: { status: Experiment
 
 /** Declared (or suggested) outcome: a winning variant, or an honest "Inconclusive". */
 export function WinnerPill({ winner, className }: { winner: ExperimentWinner; className?: string }) {
+  const t = useT(experimentsMessages)
   if (winner === "inconclusive") {
     return (
       <StatusPill tone="warning" icon={CircleHelp} className={className}>
-        Inconclusive
+        {t("inconclusive")}
       </StatusPill>
     )
   }
   return (
     <StatusPill tone="good" icon={Trophy} className={className}>
-      Variant {winner.toUpperCase()} won
+      {t("variant_won", { letter: winner.toUpperCase() })}
     </StatusPill>
   )
 }

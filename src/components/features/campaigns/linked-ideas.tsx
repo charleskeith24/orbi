@@ -8,9 +8,12 @@ import { toast } from "sonner"
 import { EmptyState, IdeaStatusBadge, PillarBadge, SectionCard } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { convertIdeaToContent, useTable } from "@/lib/store"
 import type { ContentCampaign, ContentIdea } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { campaignDetailMessages } from "./messages"
 
 const LIMIT = 8
 const isOpen = (idea: ContentIdea) => idea.status !== "converted" && idea.status !== "archived"
@@ -18,6 +21,8 @@ const isOpen = (idea: ContentIdea) => idea.status !== "converted" && idea.status
 /** Ideas whose `campaign_id` is this campaign; open ones can be turned into campaign content in one click. */
 export function LinkedIdeas({ campaign, className }: { campaign: ContentCampaign; className?: string }) {
   const router = useRouter()
+  const t = useT(campaignDetailMessages)
+  const c = useT(commonMessages)
   const ideas = useTable("content_ideas")
   const [expanded, setExpanded] = useState(false)
 
@@ -34,17 +39,17 @@ export function LinkedIdeas({ campaign, className }: { campaign: ContentCampaign
   function convert(idea: ContentIdea) {
     const created = convertIdeaToContent(idea.id, { campaign_id: campaign.id })
     const first = created[0]
-    toast.success(`Created ${pluralize(created.length, "content piece")}`, {
+    toast.success(t.plural("created_pieces", created.length, { count: formatNumber(created.length) }), {
       description: idea.title,
-      action: first ? { label: "Open", onClick: () => router.push(`/studio/${first.id}`) } : undefined,
+      action: first ? { label: c("open"), onClick: () => router.push(`/studio/${first.id}`) } : undefined,
     })
   }
 
   return (
     <SectionCard
       className={className}
-      title="Linked ideas"
-      description={linked.length ? `${open} open · ${linked.length - open} converted or archived` : "Backlog for this push"}
+      title={t("linked_ideas")}
+      description={linked.length ? t("linked_description", { open, closed: linked.length - open }) : t("linked_backlog")}
       action={
         <Button type="button" variant="ghost" size="sm" asChild>
           <Link href="/ideas">
@@ -65,7 +70,7 @@ export function LinkedIdeas({ campaign, className }: { campaign: ContentCampaign
                     href={`/ideas?open=${idea.id}`}
                     className="line-clamp-2 text-sm leading-snug outline-none hover:underline focus-visible:underline"
                   >
-                    {idea.title || "Untitled idea"}
+                    {idea.title || t("untitled_idea")}
                   </Link>
                   <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
                     <IdeaStatusBadge status={idea.status} />
@@ -85,24 +90,24 @@ export function LinkedIdeas({ campaign, className }: { campaign: ContentCampaign
                         variant="ghost"
                         size="icon-sm"
                         className="-mr-1 text-muted-foreground"
-                        aria-label={`Create campaign content from “${idea.title || "idea"}”`}
+                        aria-label={t("create_from_aria", { title: idea.title || t("idea_lower") })}
                         onClick={() => convert(idea)}
                       >
                         <FilePlus2 aria-hidden />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Create campaign content</TooltipContent>
+                    <TooltipContent>{t("create_content")}</TooltipContent>
                   </Tooltip>
                 ) : idea.converted_item_id ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button type="button" variant="ghost" size="icon-sm" className="-mr-1 text-muted-foreground" asChild>
-                        <Link href={`/studio/${idea.converted_item_id}`} aria-label={`Open content made from “${idea.title}”`}>
+                        <Link href={`/studio/${idea.converted_item_id}`} aria-label={t("open_made_from", { title: idea.title })}>
                           <ArrowUpRight aria-hidden />
                         </Link>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Open content</TooltipContent>
+                    <TooltipContent>{t("open_content")}</TooltipContent>
                   </Tooltip>
                 ) : null}
               </li>
@@ -111,7 +116,7 @@ export function LinkedIdeas({ campaign, className }: { campaign: ContentCampaign
           {linked.length > LIMIT ? (
             <div className="border-t px-2 py-1.5">
               <Button type="button" variant="ghost" size="xs" className="text-muted-foreground" onClick={() => setExpanded((v) => !v)}>
-                {expanded ? "Show less" : `Show all ${linked.length}`}
+                {expanded ? c("show_less") : t("show_all", { count: linked.length })}
               </Button>
             </div>
           ) : null}
@@ -120,8 +125,8 @@ export function LinkedIdeas({ campaign, className }: { campaign: ContentCampaign
         <EmptyState
           compact
           icon={Lightbulb}
-          title="No linked ideas"
-          description="Set this campaign on ideas in the Idea Bank to keep the backlog for this push in one place."
+          title={t("no_linked_ideas")}
+          description={t("no_linked_description")}
         />
       )}
     </SectionCard>

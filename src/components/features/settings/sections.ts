@@ -4,8 +4,9 @@
  * pillar tolerance may be decimals.
  */
 import { TABLE_DEFAULTS } from "@/lib/data/defaults"
-import { uiLangOf, type UiLang } from "@/lib/i18n/core"
+import { translator, uiLangOf, type UiLang } from "@/lib/i18n/core"
 import type { AppSettings, EngagementTaskConfig, FunnelTargets, MetaField, UpdateRow, WinnerMetric } from "@/lib/types"
+import { settingsMessages } from "./settings-messages"
 
 type SettingsFields = Omit<AppSettings, MetaField>
 export type FieldErrors<K extends string> = Partial<Record<K, string>>
@@ -82,17 +83,18 @@ export function generalResetValues(current: GeneralValues): GeneralValues {
   }
 }
 
-export function validateGeneral(v: GeneralValues): FieldErrors<keyof GeneralValues> {
+export function validateGeneral(v: GeneralValues, lang: UiLang = "en"): FieldErrors<keyof GeneralValues> {
+  const t = translator(settingsMessages, lang)
   const errors: FieldErrors<keyof GeneralValues> = {}
-  if (!isCurrencyCode(v.currency)) errors.currency = "Choose a currency from the list."
+  if (!isCurrencyCode(v.currency)) errors.currency = t("error_currency")
   const { min, max } = LIMITS.weeklyTarget
   if (!isInt(v.weekly_post_target) || v.weekly_post_target < min || v.weekly_post_target > max) {
-    errors.weekly_post_target = `Enter a whole number of posts from ${min} to ${max}.`
+    errors.weekly_post_target = t("error_posts_range", { min, max })
   }
-  if (!isValidTimeZone(v.timezone)) errors.timezone = "Choose a timezone from the list."
-  if (v.default_owner.trim().length > LIMITS.ownerLength) errors.default_owner = `Keep it under ${LIMITS.ownerLength} characters.`
+  if (!isValidTimeZone(v.timezone)) errors.timezone = t("error_timezone")
+  if (v.default_owner.trim().length > LIMITS.ownerLength) errors.default_owner = t("error_too_long", { max: LIMITS.ownerLength })
   if (v.pillar_tolerance === null || v.pillar_tolerance < LIMITS.tolerance.min || v.pillar_tolerance > LIMITS.tolerance.max) {
-    errors.pillar_tolerance = `Enter ${LIMITS.tolerance.min} to ${LIMITS.tolerance.max} percentage points.`
+    errors.pillar_tolerance = t("error_tolerance", { min: LIMITS.tolerance.min, max: LIMITS.tolerance.max })
   }
   return errors
 }
@@ -138,33 +140,35 @@ export function performanceFromSettings(s: SettingsFields): PerformanceValues {
 
 export const PERFORMANCE_DEFAULTS = performanceFromSettings(DEFAULTS)
 
-export function validatePerformance(v: PerformanceValues): FieldErrors<keyof PerformanceValues> {
+export function validatePerformance(v: PerformanceValues, lang: UiLang = "en"): FieldErrors<keyof PerformanceValues> {
+  const t = translator(settingsMessages, lang)
   const errors: FieldErrors<keyof PerformanceValues> = {}
   const { min, max } = LIMITS.window
   if (!isInt(v.winner_window) || v.winner_window < min || v.winner_window > max) {
-    errors.winner_window = `Enter a whole number of posts from ${min} to ${max}.`
+    errors.winner_window = t("error_posts_range", { min, max })
   }
-  if (!isInt(v.winner_min_sample) || v.winner_min_sample < 1) errors.winner_min_sample = "Enter a whole number of at least 1."
+  if (!isInt(v.winner_min_sample) || v.winner_min_sample < 1) errors.winner_min_sample = t("error_min_sample")
   else if (isInt(v.winner_window) && v.winner_min_sample > v.winner_window) {
-    errors.winner_min_sample = "Can't be larger than the comparison window."
+    errors.winner_min_sample = t("error_min_sample_window")
   }
 
-  if (v.tier_good === null || v.tier_good <= 1) errors.tier_good = "Good must be above 1× — the platform average."
-  else if (v.tier_good > LIMITS.threshold.max) errors.tier_good = `Keep thresholds at or below ${LIMITS.threshold.max}×.`
-  if (v.tier_winner === null) errors.tier_winner = "Enter a multiple, e.g. 2."
-  else if (v.tier_good !== null && v.tier_winner <= v.tier_good) errors.tier_winner = "Winner must be higher than Good."
-  if (v.tier_breakout === null) errors.tier_breakout = "Enter a multiple, e.g. 3."
-  else if (v.tier_winner !== null && v.tier_breakout <= v.tier_winner) errors.tier_breakout = "Breakout must be higher than Winner."
-  else if (v.tier_breakout > LIMITS.threshold.max) errors.tier_breakout = `Keep thresholds at or below ${LIMITS.threshold.max}×.`
+  const thresholdMax = t("error_threshold_max", { max: LIMITS.threshold.max })
+  if (v.tier_good === null || v.tier_good <= 1) errors.tier_good = t("error_good_min")
+  else if (v.tier_good > LIMITS.threshold.max) errors.tier_good = thresholdMax
+  if (v.tier_winner === null) errors.tier_winner = t("error_winner_missing")
+  else if (v.tier_good !== null && v.tier_winner <= v.tier_good) errors.tier_winner = t("error_winner_order")
+  if (v.tier_breakout === null) errors.tier_breakout = t("error_breakout_missing")
+  else if (v.tier_winner !== null && v.tier_breakout <= v.tier_winner) errors.tier_breakout = t("error_breakout_order")
+  else if (v.tier_breakout > LIMITS.threshold.max) errors.tier_breakout = thresholdMax
 
   const days = LIMITS.bufferDays.max
   if (!isInt(v.buffer_healthy_days) || v.buffer_healthy_days < 1 || v.buffer_healthy_days > days) {
-    errors.buffer_healthy_days = `Enter 1 to ${days} days.`
+    errors.buffer_healthy_days = t("error_days_range", { min: 1, max: days })
   }
   if (!isInt(v.buffer_warning_days) || v.buffer_warning_days < 0 || v.buffer_warning_days > days) {
-    errors.buffer_warning_days = `Enter 0 to ${days} days.`
+    errors.buffer_warning_days = t("error_days_range", { min: 0, max: days })
   } else if (isInt(v.buffer_healthy_days) && v.buffer_warning_days >= v.buffer_healthy_days) {
-    errors.buffer_warning_days = "Must be lower than the healthy threshold."
+    errors.buffer_warning_days = t("error_warning_days")
   }
   return errors
 }
@@ -203,15 +207,16 @@ export function funnelTotal(v: FunnelValues): number {
   return FUNNEL_KEYS.reduce((acc, key) => acc + (v[key] ?? 0), 0)
 }
 
-export function validateFunnel(v: FunnelValues): FieldErrors<keyof FunnelValues | "total"> {
+export function validateFunnel(v: FunnelValues, lang: UiLang = "en"): FieldErrors<keyof FunnelValues | "total"> {
+  const t = translator(settingsMessages, lang)
   const errors: FieldErrors<keyof FunnelValues | "total"> = {}
   for (const key of FUNNEL_KEYS) {
     const value = v[key]
-    if (!isInt(value) || value < 0 || value > 100) errors[key] = "Enter a whole percentage from 0 to 100."
+    if (!isInt(value) || value < 0 || value > 100) errors[key] = t("error_funnel_percent")
   }
   const total = funnelTotal(v)
   if (!errors.tofu && !errors.mofu && !errors.bofu && total !== 100) {
-    errors.total = `Targets add up to ${total}% — they must total 100%.`
+    errors.total = t("error_funnel_total", { total })
   }
   return errors
 }
@@ -272,22 +277,23 @@ export interface EngagementErrors {
   list?: string
 }
 
-export function validateEngagement(v: EngagementValues): EngagementErrors {
+export function validateEngagement(v: EngagementValues, lang: UiLang = "en"): EngagementErrors {
+  const t = translator(settingsMessages, lang)
   const rows: EngagementErrors["rows"] = {}
   const seen = new Set<string>()
   for (const task of v.tasks) {
     const row: { label?: string; target?: string } = {}
     const label = task.label.trim()
-    if (!label) row.label = "Name the task."
-    else if (label.length > LIMITS.taskLabelLength) row.label = `Keep it under ${LIMITS.taskLabelLength} characters.`
-    else if (seen.has(label.toLowerCase())) row.label = "Another task already has this name."
+    if (!label) row.label = t("error_task_name")
+    else if (label.length > LIMITS.taskLabelLength) row.label = t("error_too_long", { max: LIMITS.taskLabelLength })
+    else if (seen.has(label.toLowerCase())) row.label = t("error_task_duplicate")
     seen.add(label.toLowerCase())
     if (!isInt(task.target) || task.target < 0 || task.target > LIMITS.taskTarget.max) {
-      row.target = `Whole number, 0–${LIMITS.taskTarget.max}.`
+      row.target = t("error_task_target", { max: LIMITS.taskTarget.max })
     }
     if (row.label || row.target) rows[task.rid] = row
   }
-  const list = v.tasks.length > LIMITS.maxTasks ? `Keep it to ${LIMITS.maxTasks} tasks or fewer — a daily list should fit on one screen.` : undefined
+  const list = v.tasks.length > LIMITS.maxTasks ? t("error_task_count", { max: LIMITS.maxTasks }) : undefined
   return { rows, list }
 }
 

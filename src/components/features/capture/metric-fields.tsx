@@ -2,8 +2,10 @@
 
 import { NumberField } from "@/components/common"
 import { METRIC_FIELDS, RATE_FIELDS } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import type { MetricKey, RateKey } from "@/lib/types"
 import { cn, formatPercent } from "@/lib/utils"
+import { captureMessages } from "./capture-messages"
 import { draftRates, isCountKey, METRIC_GROUPS, type MetricDraft } from "./capture-utils"
 
 /** Constants carry the unit in the label ("Watch time (sec)"); here the unit is the field suffix. */
@@ -74,12 +76,13 @@ export function MetricFields({
 
 /** Engagement, share, save, lead and follower conversion — recomputed on every keystroke. */
 export function RatesPreview({ values, className }: { values: MetricDraft; className?: string }) {
+  const t = useT(captureMessages)
   const rates = draftRates(values)
   return (
     <div className={cn("rounded-lg border bg-muted/30 px-3 py-2.5 dark:bg-muted/15", className)}>
       <div className="mb-2 flex items-baseline justify-between gap-2">
-        <span className="text-xs font-medium">Rates</span>
-        <span className="text-[11px] text-muted-foreground">Update as you type</span>
+        <span className="text-xs font-medium">{t("rates")}</span>
+        <span className="text-[11px] text-muted-foreground">{t("rates_live")}</span>
       </div>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 min-[480px]:grid-cols-3 sm:grid-cols-5">
         {RATE_FIELDS.map((rate) => (

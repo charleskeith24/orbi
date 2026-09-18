@@ -11,10 +11,12 @@ import {
   type DataTableColumn,
   type DataTableSort,
 } from "@/components/common"
+import { useT, type Translator } from "@/lib/i18n"
 import type { AudiencePersona, ContentFormat, ContentGoal, ContentIdea, ContentPillar, ID } from "@/lib/types"
 import { IdeaActionsMenu } from "./idea-actions-menu"
 import { CapturedDate, IdeaScoreBadge, IdeaStatusChip, PlatformIcons } from "./idea-badges"
 import { FUNNEL_RANK, PRIORITY_RANK, STATUS_RANK, type IdeaSort } from "./idea-model"
+import { ideaBankMessages } from "./messages"
 
 export interface IdeaLookups {
   pillars: Map<ID, ContentPillar>
@@ -47,7 +49,9 @@ const DEFAULT_SORTS: Record<IdeaSort, DataTableSort> = {
 
 const Dash = () => <span className="text-xs text-muted-foreground">—</span>
 
-function buildColumns(lookups: IdeaLookups, now: Date): DataTableColumn<ContentIdea>[] {
+type IdeaBankT = Translator<(typeof ideaBankMessages)["en"]>
+
+function buildColumns(lookups: IdeaLookups, now: Date, t: IdeaBankT): DataTableColumn<ContentIdea>[] {
   const { pillars, personas, formats, goals } = lookups
   return [
     {
@@ -59,7 +63,7 @@ function buildColumns(lookups: IdeaLookups, now: Date): DataTableColumn<ContentI
       cell: (idea) => (
         <div className="flex min-w-0 flex-col gap-0.5">
           <span className="truncate font-medium" title={idea.title.length > 60 ? idea.title : undefined}>
-            {idea.title || "Untitled idea"}
+            {idea.title || t("untitled_idea")}
           </span>
           {idea.hook ? (
             <span className="truncate text-xs text-muted-foreground" title={idea.hook.length > 70 ? idea.hook : undefined}>
@@ -158,14 +162,14 @@ function buildColumns(lookups: IdeaLookups, now: Date): DataTableColumn<ContentI
     },
     {
       id: "created",
-      header: "Captured",
+      header: t("col_captured"),
       ...tier("6xl"),
       sortValue: (idea) => idea.created_at,
       cell: (idea) => <CapturedDate value={idea.created_at} now={now} />,
     },
     {
       id: "actions",
-      header: <span className="sr-only">Actions</span>,
+      header: <span className="sr-only">{t("col_actions")}</span>,
       className: "w-10",
       cell: (idea) => <IdeaActionsMenu idea={idea} />,
     },
@@ -192,17 +196,18 @@ export function IdeaTable({
   onOpen: (id: ID) => void
   empty: React.ReactNode
 }) {
-  const columns = useMemo(() => buildColumns(lookups, now), [lookups, now])
+  const t = useT(ideaBankMessages)
+  const columns = useMemo(() => buildColumns(lookups, now, t), [lookups, now, t])
   return (
     <DataTable
       // Re-mount when the sort control changes so the header arrow follows it.
       key={sort}
-      aria-label="Ideas"
+      aria-label={t("ideas")}
       className="@container"
       rows={ideas}
       columns={columns}
       getRowId={(idea) => idea.id}
-      rowLabel={(idea) => idea.title || "Untitled idea"}
+      rowLabel={(idea) => idea.title || t("untitled_idea")}
       onRowClick={(idea) => onOpen(idea.id)}
       defaultSort={DEFAULT_SORTS[sort]}
       rowClassName={(idea) => (idea.status === "archived" ? "text-muted-foreground" : undefined)}

@@ -17,10 +17,13 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { useT, type Translator } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions, useBrand, useTable } from "@/lib/store"
 import type { CampaignStatus, CategoricalColor, ContentCampaign, ID, ISODate, PlatformId, UpdateRow } from "@/lib/types"
 import { CampaignStatusSelect } from "./campaign-status"
 import { defaultCampaignDates, nextCampaignColor } from "./campaign-utils"
+import { campaignDetailMessages } from "./messages"
 
 interface FormValues {
   name: string
@@ -40,13 +43,13 @@ interface FormValues {
 
 type FieldKey = "name" | "start" | "end" | "target"
 
-function validate(values: FormValues): Partial<Record<FieldKey, string>> {
+function validate(values: FormValues, t: Translator<typeof campaignDetailMessages.en>): Partial<Record<FieldKey, string>> {
   const errors: Partial<Record<FieldKey, string>> = {}
-  if (!values.name.trim()) errors.name = "Give the campaign a name."
-  if (!values.start) errors.start = "Pick a start date."
-  if (!values.end) errors.end = "Pick an end date."
-  else if (values.start && values.end < values.start) errors.end = "End date must be on or after the start date."
-  if (values.target !== null && values.target < 1) errors.target = "Target must be at least 1 post."
+  if (!values.name.trim()) errors.name = t("error_name")
+  if (!values.start) errors.start = t("error_start")
+  if (!values.end) errors.end = t("error_end")
+  else if (values.start && values.end < values.start) errors.end = t("error_end_before")
+  if (values.target !== null && values.target < 1) errors.target = t("error_target")
   return errors
 }
 
@@ -88,6 +91,8 @@ function CampaignForm({
   onCancel: () => void
   onSaved: (campaign: ContentCampaign, created: boolean) => void
 }) {
+  const t = useT(campaignDetailMessages)
+  const c = useT(commonMessages)
   const campaigns = useTable("content_campaigns")
   const brand = useBrand()
   const [values, setValues] = useState<FormValues>(() => {
@@ -126,7 +131,7 @@ function CampaignForm({
     }
   })
   const [touched, setTouched] = useState<Partial<Record<FieldKey, boolean>>>({})
-  const errors = validate(values)
+  const errors = validate(values, t)
   const valid = Object.keys(errors).length === 0
   const shown = (key: FieldKey) => (touched[key] ? errors[key] : undefined)
 
@@ -156,11 +161,11 @@ function CampaignForm({
     } satisfies UpdateRow<"content_campaigns">
     if (campaign) {
       dataActions.update("content_campaigns", campaign.id, payload)
-      toast.success("Campaign updated", { description: payload.name })
+      toast.success(t("updated"), { description: payload.name })
       onSaved({ ...campaign, ...payload }, false)
     } else {
       const row = dataActions.insert("content_campaigns", payload)
-      toast.success("Campaign created", { description: row.name })
+      toast.success(t("created"), { description: row.name })
       onSaved(row, true)
     }
   }
@@ -168,21 +173,19 @@ function CampaignForm({
   return (
     <form onSubmit={submit} noValidate className="flex min-h-0 flex-1 flex-col">
       <DialogHeader className="gap-1 border-b py-3.5 pr-12 pl-4">
-        <DialogTitle>{campaign ? "Edit campaign" : "New campaign"}</DialogTitle>
-        <DialogDescription className="text-xs">
-          A focused push with one message, a date window and a target number of posts.
-        </DialogDescription>
+        <DialogTitle>{campaign ? t("edit_title") : t("new_title")}</DialogTitle>
+        <DialogDescription className="text-xs">{t("form_description")}</DialogDescription>
       </DialogHeader>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 scrollbar-thin">
         <div className="flex flex-col gap-4">
-          <FormField label="Name" htmlFor="campaign-name" required error={shown("name")}>
+          <FormField label={t("name")} htmlFor="campaign-name" required error={shown("name")}>
             <Input
               id="campaign-name"
               value={values.name}
               autoFocus
               maxLength={120}
-              placeholder="e.g. Q4 Holiday Scale Sprint"
+              placeholder={t("name_placeholder")}
               aria-invalid={Boolean(shown("name")) || undefined}
               onChange={(event) => set("name", event.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, name: true }))}
@@ -190,43 +193,43 @@ function CampaignForm({
           </FormField>
 
           <FormField
-            label="Objective"
+            label={t("objective")}
             htmlFor="campaign-objective"
-            description="What should this campaign achieve, and how will you know it worked?"
+            description={t("objective_hint")}
           >
             <Textarea
               id="campaign-objective"
               rows={2}
               className="min-h-14"
               value={values.objective}
-              placeholder="e.g. Book 20 discovery calls from founders running their own ads."
+              placeholder={t("objective_placeholder")}
               onChange={(event) => set("objective", event.target.value)}
             />
           </FormField>
 
-          <FormField label="Campaign message" htmlFor="campaign-message" description="The one idea every piece reinforces.">
+          <FormField label={t("message")} htmlFor="campaign-message" description={t("message_hint")}>
             <Textarea
               id="campaign-message"
               rows={2}
               className="min-h-14"
               value={values.message}
-              placeholder="e.g. Scaling isn’t raising budgets. It’s removing bottlenecks."
+              placeholder={t("message_placeholder")}
               onChange={(event) => set("message", event.target.value)}
             />
           </FormField>
 
-          <FormField label="Description" htmlFor="campaign-description">
+          <FormField label={t("description")} htmlFor="campaign-description">
             <Textarea
               id="campaign-description"
               rows={3}
               value={values.description}
-              placeholder="How the campaign unfolds — themes, beats, the offer at the end."
+              placeholder={t("description_placeholder")}
               onChange={(event) => set("description", event.target.value)}
             />
           </FormField>
 
           <FormRow>
-            <FormField label="Start date" htmlFor="campaign-start" required error={shown("start")}>
+            <FormField label={t("start_date")} htmlFor="campaign-start" required error={shown("start")}>
               <DatePicker
                 id="campaign-start"
                 value={values.start}
@@ -235,7 +238,7 @@ function CampaignForm({
                 onChange={(next) => set("start", next)}
               />
             </FormField>
-            <FormField label="End date" htmlFor="campaign-end" required error={shown("end")}>
+            <FormField label={t("end_date")} htmlFor="campaign-end" required error={shown("end")}>
               <DatePicker
                 id="campaign-end"
                 value={values.end}
@@ -248,7 +251,7 @@ function CampaignForm({
           </FormRow>
 
           <FormRow>
-            <FormField label="Status" htmlFor="campaign-status">
+            <FormField label={t("status")} htmlFor="campaign-status">
               <CampaignStatusSelect
                 id="campaign-status"
                 size="default"
@@ -257,9 +260,9 @@ function CampaignForm({
               />
             </FormField>
             <FormField
-              label="Target posts"
+              label={t("target_posts")}
               htmlFor="campaign-target"
-              description="Pieces you plan to publish in the window."
+              description={t("target_hint")}
               error={shown("target")}
             >
               <NumberField
@@ -268,8 +271,8 @@ function CampaignForm({
                 min={1}
                 max={999}
                 value={values.target}
-                placeholder="e.g. 12"
-                suffix="posts"
+                placeholder={t("target_placeholder")}
+                suffix={t("posts_suffix")}
                 aria-invalid={Boolean(shown("target")) || undefined}
                 onChange={(next) => set("target", next)}
               />
@@ -277,54 +280,54 @@ function CampaignForm({
           </FormRow>
 
           <FormRow columns={3}>
-            <FormField label="Audience" htmlFor="campaign-persona">
+            <FormField label={t("audience")} htmlFor="campaign-persona">
               <PersonaSelect
                 id="campaign-persona"
                 allowNone
-                noneLabel="No persona"
-                placeholder="Choose a persona"
+                noneLabel={t("no_persona")}
+                placeholder={t("choose_persona")}
                 value={values.personaId}
                 onChange={(next) => set("personaId", next)}
               />
             </FormField>
-            <FormField label="Primary pillar" htmlFor="campaign-pillar">
+            <FormField label={t("primary_pillar")} htmlFor="campaign-pillar">
               <PillarSelect
                 id="campaign-pillar"
                 allowNone
-                noneLabel="No pillar"
-                placeholder="Choose a pillar"
+                noneLabel={t("no_pillar")}
+                placeholder={t("choose_pillar")}
                 value={values.pillarId}
                 onChange={(next) => set("pillarId", next)}
               />
             </FormField>
-            <FormField label="Goal" htmlFor="campaign-goal">
+            <FormField label={t("goal")} htmlFor="campaign-goal">
               <GoalSelect
                 id="campaign-goal"
                 allowNone
-                noneLabel="No goal"
-                placeholder="Choose a goal"
+                noneLabel={t("no_goal")}
+                placeholder={t("choose_goal")}
                 value={values.goalId}
                 onChange={(next) => set("goalId", next)}
               />
             </FormField>
           </FormRow>
 
-          <FormField label="Platforms">
-            <PlatformToggleGroup value={values.platforms} onChange={(next) => set("platforms", next)} aria-label="Campaign platforms" />
+          <FormField label={t("platforms")}>
+            <PlatformToggleGroup value={values.platforms} onChange={(next) => set("platforms", next)} aria-label={t("platforms_aria")} />
           </FormField>
 
-          <FormField label="Colour" description="Identifies the campaign on calendars, timelines and charts.">
-            <ColorSwatchPicker value={values.color} onChange={(next) => set("color", next)} aria-label="Campaign colour" />
+          <FormField label={t("colour")} description={t("colour_hint")}>
+            <ColorSwatchPicker value={values.color} onChange={(next) => set("color", next)} aria-label={t("colour_aria")} />
           </FormField>
         </div>
       </div>
 
       <DialogFooter className="m-0 rounded-b-xl px-4 py-3">
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={!valid}>
-          {campaign ? "Save changes" : "Create campaign"}
+          {campaign ? c("save_changes") : t("create_campaign")}
         </Button>
       </DialogFooter>
     </form>

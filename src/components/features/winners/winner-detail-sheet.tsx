@@ -20,9 +20,11 @@ import { Button } from "@/components/ui/button"
 import { isWinnerTier, type TieredRow } from "@/lib/analytics"
 import { PLATFORMS } from "@/lib/constants"
 import { formatDate } from "@/lib/dates"
+import { useT, useUiLang } from "@/lib/i18n"
 import { dataActions, useRow, useSettings, useTable } from "@/lib/store"
 import type { ContentItem } from "@/lib/types"
 import { cn, formatCompact, formatNumber, formatPercent } from "@/lib/utils"
+import { winnersMessages } from "./messages"
 import { togglePinnedWinner } from "./winner-actions"
 import { WinnerReplication } from "./winner-replication"
 import { WinnerRepurpose } from "./winner-repurpose"
@@ -30,33 +32,35 @@ import { WinnerWhy } from "./winner-why"
 import { formatRatio, tierExplanation } from "./winners-model"
 
 function PerformanceSummary({ row, pinned }: { row: TieredRow; pinned: boolean }) {
+  const t = useT(winnersMessages)
+  const lang = useUiLang()
   const settings = useSettings()
   const stats = [
     { label: "Views", value: formatCompact(row.views) },
     { label: "Reach", value: formatCompact(row.reach) },
-    { label: "Engagement rate", value: formatPercent(row.rates.engagement_rate) },
+    { label: t("engagement_rate"), value: formatPercent(row.rates.engagement_rate) },
     { label: "Saves", value: formatNumber(row.saves) },
     { label: "Shares", value: formatNumber(row.shares) },
     { label: "Comments", value: formatNumber(row.comments) },
     { label: "Leads", value: formatNumber(row.leads) },
-    { label: "Followers gained", value: formatNumber(row.followersGained) },
+    { label: t("followers_gained"), value: formatNumber(row.followersGained) },
   ]
 
   return (
-    <section aria-label="Performance" className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3 dark:bg-muted/15">
+    <section aria-label={t("performance")} className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3 dark:bg-muted/15">
       <div className="flex flex-wrap items-center gap-2">
         <TierBadge tier={row.tier} showNormal />
-        {pinned ? <StatusPill icon={Pin}>Pinned</StatusPill> : null}
+        {pinned ? <StatusPill icon={Pin}>{t("pinned")}</StatusPill> : null}
         {row.ratio !== null ? (
           <span className="text-sm">
             <span className="font-semibold num">{formatRatio(row.ratio)}</span>{" "}
-            <span className="text-muted-foreground">your {PLATFORMS[row.platform].label} baseline</span>
+            <span className="text-muted-foreground">{t("your_baseline", { platform: PLATFORMS[row.platform].label })}</span>
           </span>
         ) : null}
       </div>
       <p className="text-xs text-pretty text-muted-foreground">
-        {tierExplanation(row, settings)}
-        {pinned && !isWinnerTier(row.tier) ? " Pinned manually, so it stays in the library whatever its tier." : ""}
+        {tierExplanation(row, settings, lang)}
+        {pinned && !isWinnerTier(row.tier) ? t("pinned_manually") : ""}
       </p>
       {row.metric ? (
         <>
@@ -68,7 +72,7 @@ function PerformanceSummary({ row, pinned }: { row: TieredRow; pinned: boolean }
               </div>
             ))}
           </dl>
-          <p className="text-xs text-muted-foreground">Latest analytics snapshot · {formatDate(row.metric.recorded_at)}</p>
+          <p className="text-xs text-muted-foreground">{t("latest_snapshot", { date: formatDate(row.metric.recorded_at) })}</p>
         </>
       ) : null}
     </section>
@@ -76,6 +80,7 @@ function PerformanceSummary({ row, pinned }: { row: TieredRow; pinned: boolean }
 }
 
 function Properties({ item, row }: { item: ContentItem; row: TieredRow }) {
+  const t = useT(winnersMessages)
   const idea = useRow("content_ideas", item.idea_id)
   const angle = useRow("angles", item.angle_id)
   const briefs = useTable("content_briefs")
@@ -83,21 +88,21 @@ function Properties({ item, row }: { item: ContentItem; row: TieredRow }) {
 
   return (
     <DefinitionList>
-      <KeyValue label="Winning topic">{idea?.core_topic.trim() || item.title}</KeyValue>
-      <KeyValue label="Hook">{item.hook ? <span className="text-pretty">“{item.hook}”</span> : null}</KeyValue>
-      <KeyValue label="Angle">{angle?.name}</KeyValue>
-      <KeyValue label="Format">
+      <KeyValue label={t("winning_topic")}>{idea?.core_topic.trim() || item.title}</KeyValue>
+      <KeyValue label={t("hook")}>{item.hook ? <span className="text-pretty">“{item.hook}”</span> : null}</KeyValue>
+      <KeyValue label={t("angle")}>{angle?.name}</KeyValue>
+      <KeyValue label={t("format")}>
         <FormatLabel formatId={item.format_id} className="text-sm text-foreground" />
       </KeyValue>
-      <KeyValue label="Platform">
+      <KeyValue label={t("platform")}>
         <PlatformLabel platform={item.platform} />
       </KeyValue>
-      <KeyValue label="Content pillar">
+      <KeyValue label={t("content_pillar")}>
         <PillarBadge pillarId={item.pillar_id} />
       </KeyValue>
-      <KeyValue label="CTA">{cta ? <span className="text-pretty">{cta}</span> : null}</KeyValue>
-      <KeyValue label="Funnel stage">{item.funnel_stage ? <FunnelBadge stage={item.funnel_stage} showName /> : null}</KeyValue>
-      <KeyValue label="Published">{formatDate(row.publishedAt)}</KeyValue>
+      <KeyValue label={t("cta")}>{cta ? <span className="text-pretty">{cta}</span> : null}</KeyValue>
+      <KeyValue label={t("funnel_stage")}>{item.funnel_stage ? <FunnelBadge stage={item.funnel_stage} showName /> : null}</KeyValue>
+      <KeyValue label={t("published")}>{formatDate(row.publishedAt)}</KeyValue>
     </DefinitionList>
   )
 }
@@ -114,6 +119,7 @@ export function WinnerDetailSheet({
   now: Date
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useT(winnersMessages)
   const live = useRow("content_items", row?.id)
   if (!row) return null
   const item = live ?? row.item
@@ -124,8 +130,8 @@ export function WinnerDetailSheet({
       open={open}
       onOpenChange={onOpenChange}
       width="xl"
-      title={item.title || "Untitled content"}
-      description={`${PLATFORMS[item.platform].label} · published ${formatDate(row.publishedAt)}`}
+      title={item.title || t("untitled_content")}
+      description={t("sheet_description", { platform: PLATFORMS[item.platform].label, date: formatDate(row.publishedAt) })}
       onOpenAutoFocus={(event) => event.preventDefault()}
       actions={
         <>
@@ -134,14 +140,14 @@ export function WinnerDetailSheet({
             variant="ghost"
             size="icon-sm"
             aria-pressed={pinned}
-            aria-label={pinned ? "Unpin from the library" : "Pin to the library"}
-            title={pinned ? "Pinned — click to unpin" : "Pin to keep it in the library"}
+            aria-label={pinned ? t("unpin_aria") : t("pin_aria")}
+            title={pinned ? t("unpin_title") : t("pin_title")}
             onClick={() => togglePinnedWinner(item, row.tier)}
           >
             <Pin className={cn(pinned && "fill-current")} aria-hidden />
           </Button>
           <Button asChild variant="ghost" size="icon-sm">
-            <Link href={`/studio/${item.id}`} aria-label="Open in Content Studio" title="Open in Content Studio">
+            <Link href={`/studio/${item.id}`} aria-label={t("open_studio")} title={t("open_studio")}>
               <ArrowUpRight aria-hidden />
             </Link>
           </Button>
@@ -154,15 +160,15 @@ export function WinnerDetailSheet({
         <WinnerWhy key={`why-${item.id}`} item={item} />
         <PageSection
           id="winner-replication-ideas"
-          title="Replication Ideas"
-          description="How you'd repeat this without repeating yourself — saved on the post."
+          title={t("replication_ideas_title")}
+          description={t("replication_ideas_description")}
         >
           <ListEditor
             variant="lines"
             value={item.replication_ideas}
             onChange={(next) => dataActions.update("content_items", item.id, { replication_ideas: next })}
-            placeholder="Add a way to replicate this…"
-            addLabel="Add replication idea"
+            placeholder={t("replication_placeholder")}
+            addLabel={t("add_replication")}
           />
         </PageSection>
         <WinnerReplication key={`replicate-${item.id}`} item={item} ratio={row.ratio} />
@@ -170,7 +176,7 @@ export function WinnerDetailSheet({
         <PageSection
           id="winner-tree"
           title="Content Tree"
-          description="The idea behind this post and everything it has become."
+          description={t("tree_description")}
         >
           <ContentTree itemId={item.id} />
         </PageSection>

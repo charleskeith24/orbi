@@ -3,7 +3,9 @@
 import { useIsMac } from "@/components/app-shell/keyboard-shortcuts"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
+import { captureMessages } from "./capture-messages"
 
 /**
  * Centred modal from 640px; below that a full-screen sheet (Quick Capture and Add Metrics are the
@@ -83,15 +85,16 @@ export function CaptureFooter({
 }
 
 /** "⌘ ↵ to save" — hidden on phone-sized screens, where there is no shortcut to teach. */
-export function ShortcutHint({ label = "to save" }: { label?: string }) {
+export function ShortcutHint({ label }: { label?: string }) {
   const isMac = useIsMac()
+  const t = useT(captureMessages)
   return (
     <span className="hidden min-w-0 items-center gap-1.5 sm:inline-flex">
       <KbdGroup>
         <Kbd>{isMac ? "⌘" : "Ctrl"}</Kbd>
         <Kbd>↵</Kbd>
       </KbdGroup>
-      <span className="truncate">{label}</span>
+      <span className="truncate">{label ?? t("to_save")}</span>
     </span>
   )
 }

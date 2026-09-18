@@ -8,8 +8,11 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { createIdea, useBrand } from "@/lib/store"
 import type { FunnelStage, ID, PlatformId, Story } from "@/lib/types"
+import { storyFormMessages, storyVaultMessages } from "./messages"
 import { storyTalkingPoints, upperFirst } from "./story-model"
 
 /** "Create idea" by hand from a story — the idea keeps a link to it (source `story`). */
@@ -56,9 +59,12 @@ function IdeaForm({ story, onClose }: { story: Story; onClose: () => void }) {
     funnel: null,
   }))
   const [touched, setTouched] = useState<{ title?: boolean; platforms?: boolean }>({})
+  const t = useT(storyFormMessages)
+  const tv = useT(storyVaultMessages)
+  const c = useT(commonMessages)
   const errors = {
-    title: values.title.trim() ? undefined : "Give the idea a title.",
-    platforms: values.platforms.length ? undefined : "Pick at least one platform.",
+    title: values.title.trim() ? undefined : t("idea_title_required"),
+    platforms: values.platforms.length ? undefined : t("idea_platform_required"),
   }
   const valid = !errors.title && !errors.platforms
   const set = (patch: Partial<FormValues>) => setValues((current) => ({ ...current, ...patch }))
@@ -81,9 +87,9 @@ function IdeaForm({ story, onClose }: { story: Story; onClose: () => void }) {
       source: "story",
       source_ref_id: story.id,
     })
-    toast.success("Idea saved to your Idea Bank", {
+    toast.success(t("idea_saved"), {
       description: idea.title,
-      action: { label: "Open", onClick: () => router.push(`/ideas?open=${idea.id}`) },
+      action: { label: c("open"), onClick: () => router.push(`/ideas?open=${idea.id}`) },
     })
     onClose()
   }
@@ -91,15 +97,13 @@ function IdeaForm({ story, onClose }: { story: Story; onClose: () => void }) {
   return (
     <form onSubmit={submit} noValidate className="flex min-h-0 flex-1 flex-col">
       <DialogHeader className="gap-1 border-b py-3.5 pr-12 pl-4">
-        <DialogTitle>Create an idea from this story</DialogTitle>
-        <DialogDescription className="text-xs">
-          Linked to “{story.title.trim() || "Untitled story"}”, so you can always see where it came from.
-        </DialogDescription>
+        <DialogTitle>{t("idea_dialog_title")}</DialogTitle>
+        <DialogDescription className="text-xs">{t("idea_dialog_description", { title: story.title.trim() || tv("untitled") })}</DialogDescription>
       </DialogHeader>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 scrollbar-thin">
         <div className="flex flex-col gap-4">
-          <FormField label="Idea title" htmlFor={field("title")} required error={touched.title ? errors.title : undefined}>
+          <FormField label={t("idea_title")} htmlFor={field("title")} required error={touched.title ? errors.title : undefined}>
             <Input
               id={field("title")}
               value={values.title}
@@ -110,37 +114,37 @@ function IdeaForm({ story, onClose }: { story: Story; onClose: () => void }) {
               onBlur={() => setTouched((t) => ({ ...t, title: true }))}
             />
           </FormField>
-          <FormField label="Hook" htmlFor={field("hook")}>
+          <FormField label={t("hook")} htmlFor={field("hook")}>
             <Textarea
               id={field("hook")}
               rows={2}
               className="min-h-14"
               value={values.hook}
-              placeholder="The first line that makes your audience stop scrolling"
+              placeholder={t("hook_placeholder")}
               onChange={(event) => set({ hook: event.target.value })}
             />
           </FormField>
-          <FormField label="Main message" htmlFor={field("message")} description="What should people take away?">
+          <FormField label={t("main_message")} htmlFor={field("message")} description={t("main_message_description")}>
             <Textarea id={field("message")} rows={2} className="min-h-14" value={values.message} onChange={(event) => set({ message: event.target.value })} />
           </FormField>
-          <FormField label="Platforms" required error={touched.platforms ? errors.platforms : undefined}>
+          <FormField label={t("platforms")} required error={touched.platforms ? errors.platforms : undefined}>
             <PlatformToggleGroup
               value={values.platforms}
               onChange={(platforms) => {
                 set({ platforms })
                 setTouched((t) => ({ ...t, platforms: true }))
               }}
-              aria-label="Idea platforms"
+              aria-label={t("platforms_label")}
             />
           </FormField>
           <FormRow columns={3}>
-            <FormField label="Content Pillar" htmlFor={field("pillar")}>
+            <FormField label={t("content_pillar")} htmlFor={field("pillar")}>
               <PillarSelect id={field("pillar")} allowNone value={values.pillarId} onChange={(pillarId) => set({ pillarId })} />
             </FormField>
-            <FormField label="Format" htmlFor={field("format")}>
+            <FormField label={t("format")} htmlFor={field("format")}>
               <FormatSelect id={field("format")} allowNone value={values.formatId} onChange={(formatId) => set({ formatId })} />
             </FormField>
-            <FormField label="Funnel stage" htmlFor={field("funnel")}>
+            <FormField label={t("funnel_stage")} htmlFor={field("funnel")}>
               <FunnelSelect id={field("funnel")} allowNone value={values.funnel} onChange={(funnel) => set({ funnel })} />
             </FormField>
           </FormRow>
@@ -149,10 +153,10 @@ function IdeaForm({ story, onClose }: { story: Story; onClose: () => void }) {
 
       <DialogFooter className="m-0 rounded-b-xl px-4 py-3">
         <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={!valid}>
-          Save idea
+          {t("save_idea")}
         </Button>
       </DialogFooter>
     </form>

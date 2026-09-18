@@ -6,8 +6,9 @@ import { useMemo } from "react"
 import { EmptyState, PageContainer, PageHeader } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { groupByFormat, groupByFunnel, groupByHookCategory, groupByPillar, groupByPlatform, strategicInsights, tieredRows } from "@/lib/analytics"
+import { useT, useUiLang } from "@/lib/i18n"
 import { uiActions, useDb, useSettings } from "@/lib/store"
-import { pluralize, sum } from "@/lib/utils"
+import { formatNumber, sum } from "@/lib/utils"
 import { AnalyticsFilterBar } from "./analytics-filter-bar"
 import { FormatBreakdown, FunnelBreakdown, PillarBreakdown, PlatformBreakdown } from "./breakdown-charts"
 import {
@@ -25,6 +26,7 @@ import { HookStyleChart } from "./hook-style-chart"
 import { useAnalyticsFilters, useNow } from "./hooks"
 import { InsightsCard } from "./insights-card"
 import { KpiGrid } from "./kpi-grid"
+import { analyticsMessages } from "./messages"
 import { MissingAnalytics } from "./missing-analytics"
 import { PostingHeatmap } from "./posting-heatmap"
 import { bucketFor, bucketSeries, kpiTotals, postingHeatmap, scopeRows, tierSummary } from "./scope"
@@ -35,6 +37,8 @@ const NO_SCOPE = { platforms: [], pillars: [] }
 
 /** Analytics overview (spec §25): one filter row scopes every tile, chart and table below it. */
 export function AnalyticsView() {
+  const t = useT(analyticsMessages)
+  const lang = useUiLang()
   const db = useDb()
   const settings = useSettings()
   const now = useNow()
@@ -56,15 +60,15 @@ export function AnalyticsView() {
     const selectedPillars = new Set(filters.pillars)
     return {
       platform: groupByPlatform(rows),
-      pillar: groupByPillar(db, rows).filter((g) => !selectedPillars.size || selectedPillars.has(g.pillar?.id ?? NO_PILLAR)),
-      format: groupByFormat(db, rows),
-      hook: groupByHookCategory(rows),
-      funnel: groupByFunnel(rows),
+      pillar: groupByPillar(db, rows, lang).filter((g) => !selectedPillars.size || selectedPillars.has(g.pillar?.id ?? NO_PILLAR)),
+      format: groupByFormat(db, rows, lang),
+      hook: groupByHookCategory(rows, lang),
+      funnel: groupByFunnel(rows, lang),
     }
-  }, [db, rows, filters.pillars])
+  }, [db, rows, filters.pillars, lang])
   const heatmap = useMemo(() => postingHeatmap(rows, settings.week_starts_on), [rows, settings.week_starts_on])
   const tiers = useMemo(() => tierSummary(rows), [rows])
-  const insights = useMemo(() => strategicInsights(db, now, settings), [db, now, settings])
+  const insights = useMemo(() => strategicInsights(db, now, settings, lang), [db, now, settings, lang])
   const missing = useMemo(() => rows.filter((r) => !r.metric), [rows])
   const audience = useMemo<AudienceSummary | null>(() => {
     const platforms = db.content_platforms.filter(
@@ -79,7 +83,7 @@ export function AnalyticsView() {
   const header = (
     <PageHeader
       title="Analytics"
-      description="How your content performs — every number comes from the analytics you log."
+      description={t("description")}
       actions={
         <>
           <Button asChild variant="outline" size="sm">
@@ -90,7 +94,7 @@ export function AnalyticsView() {
           </Button>
           <Button size="sm" onClick={() => uiActions.openDialog({ type: "add-metrics" })}>
             <Plus aria-hidden />
-            Add analytics
+            {t("add_analytics")}
           </Button>
         </>
       }
@@ -107,8 +111,8 @@ export function AnalyticsView() {
             now={now}
           />
           <p className="text-xs text-muted-foreground">
-            {describeRange(range)} · {pluralize(rows.length, "post")} published
-            {previousRange ? ` · changes compare with ${describeRange(previousRange)}` : null}
+            {t.plural("scope", rows.length, { count: formatNumber(rows.length), range: describeRange(range, lang) })}
+            {previousRange ? t("scope_compare", { range: describeRange(previousRange, lang) }) : null}
           </p>
         </div>
       ) : null}
@@ -121,12 +125,12 @@ export function AnalyticsView() {
         {header}
         <EmptyState
           icon={ChartColumn}
-          title="No published posts yet"
-          description="Analytics show up once content is live and you log its numbers — then winners, reports and recommendations start learning from it."
+          title={t("empty_title")}
+          description={t("empty_description")}
           action={
             <Button size="sm" onClick={() => uiActions.openDialog({ type: "log-post" })}>
               <Plus aria-hidden />
-              Log a published post
+              {t("log_published")}
             </Button>
           }
         />
@@ -158,11 +162,11 @@ export function AnalyticsView() {
       ) : (
         <EmptyState
           icon={SearchX}
-          title="No posts match these filters"
-          description={`Nothing was published between ${describeRange(range)} for this platform and pillar selection.`}
+          title={t("no_match_title")}
+          description={t("no_match_description", { range: describeRange(range, lang) })}
           action={
             <Button size="sm" variant="outline" onClick={() => resetFilters()}>
-              Reset filters
+              {t("reset_filters")}
             </Button>
           }
         />

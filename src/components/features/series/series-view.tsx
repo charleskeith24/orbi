@@ -16,9 +16,11 @@ import {
 } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { SERIES_FREQUENCIES } from "@/lib/constants"
+import { useT, useUiLang } from "@/lib/i18n"
 import { useDb, useSettings } from "@/lib/store"
 import type { ContentSeries } from "@/lib/types"
 import { formatCompact, formatNumber, matchesQuery } from "@/lib/utils"
+import { seriesMessages } from "./messages"
 import { SeriesDetailSheet } from "./series-detail-sheet"
 import { SeriesFormDialog } from "./series-form-dialog"
 import { relativeDayLabel } from "./series-schedule"
@@ -28,13 +30,15 @@ import { nextEpisodeInfo, recentEpisodes, summarizeAllSeries } from "./series-su
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
 
 const STATUS_OPTIONS = [
-  { value: "active", label: "Active" },
-  { value: "paused", label: "Paused" },
-]
+  { value: "active", label: "status_active" },
+  { value: "paused", label: "status_paused" },
+] as const
 
 export function SeriesView() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const t = useT(seriesMessages)
+  const lang = useUiLang()
   const db = useDb()
   const settings = useSettings()
   const [now] = useState(() => new Date())
@@ -90,7 +94,8 @@ export function SeriesView() {
   )
 
   const statusOptions = STATUS_OPTIONS.map((o) => ({
-    ...o,
+    value: o.value,
+    label: t(o.label),
     count: summaries.filter((s) => (s.series.is_active ? "active" : "paused") === o.value).length,
   }))
   const frequencyOptions = SERIES_FREQUENCIES.map((f) => ({
@@ -112,11 +117,11 @@ export function SeriesView() {
     <PageContainer>
       <PageHeader
         title="Series"
-        description="Recurring formats your audience can look forward to — each episode starts from the series defaults."
+        description={t("description")}
         actions={
           <Button size="sm" onClick={openCreate}>
             <Plus aria-hidden />
-            New series
+            {t("new_series")}
           </Button>
         }
       />
@@ -125,29 +130,29 @@ export function SeriesView() {
         <>
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatTile
-              label="Active series"
+              label={t("stat_active")}
               value={formatNumber(stats.active)}
-              sublabel={stats.paused ? `${stats.paused} paused` : "None paused"}
+              sublabel={stats.paused ? t("stat_paused", { count: stats.paused }) : t("stat_none_paused")}
             />
             <StatTile
-              label="Episodes published"
+              label={t("stat_published")}
               value={formatNumber(stats.published)}
-              sublabel={`${formatNumber(stats.recent)} in the last 30 days`}
+              sublabel={t("stat_recent", { count: formatNumber(stats.recent) })}
             />
             <StatTile
-              label="Next episode"
-              value={stats.next ? capitalize(relativeDayLabel(stats.next.info.date, now)) : "—"}
+              label={t("stat_next")}
+              value={stats.next ? capitalize(relativeDayLabel(stats.next.info.date, now, lang)) : "—"}
               sublabel={
                 stats.next
-                  ? `${stats.next.summary.series.name} · ${format(stats.next.info.date, "EEE, MMM d")}`
-                  : "No active series"
+                  ? t("stat_next_sub", { name: stats.next.summary.series.name, date: format(stats.next.info.date, "EEE, MMM d") })
+                  : t("stat_no_active")
               }
               href={stats.next ? `/series?open=${stats.next.summary.series.id}` : undefined}
             />
             <StatTile
-              label="Avg. views per episode"
+              label={t("stat_avg_views")}
               value={stats.measured ? formatCompact(stats.views / stats.measured) : "—"}
-              sublabel={stats.measured ? `${formatNumber(stats.measured)} episodes with analytics` : "No analytics logged yet"}
+              sublabel={stats.measured ? t("stat_measured", { count: formatNumber(stats.measured) }) : t("stat_no_analytics")}
             />
           </div>
 
@@ -155,13 +160,15 @@ export function SeriesView() {
             <FilterBar
               actions={
                 <span className="text-xs text-muted-foreground num">
-                  {filtered.length === summaries.length ? `${summaries.length} series` : `${filtered.length} of ${summaries.length}`}
+                  {filtered.length === summaries.length
+                    ? t("count_series", { count: summaries.length })
+                    : t("count_of", { shown: filtered.length, total: summaries.length })}
                 </span>
               }
             >
-              <SearchInput value={query} onChange={setQuery} placeholder="Search series…" />
-              <FacetFilter title="Status" options={statusOptions} value={statuses} onChange={setStatuses} />
-              <FacetFilter title="Frequency" options={frequencyOptions} value={frequencies} onChange={setFrequencies} />
+              <SearchInput value={query} onChange={setQuery} placeholder={t("search_placeholder")} />
+              <FacetFilter title={t("facet_status")} options={statusOptions} value={statuses} onChange={setStatuses} />
+              <FacetFilter title={t("facet_frequency")} options={frequencyOptions} value={frequencies} onChange={setFrequencies} />
               <ResetFiltersButton show={filtering} onClick={resetFilters} />
             </FilterBar>
             <SeriesTable
@@ -173,11 +180,11 @@ export function SeriesView() {
                 <EmptyState
                   compact
                   icon={Repeat}
-                  title="No series match"
-                  description="Try a different search, status or frequency."
+                  title={t("no_matches_title")}
+                  description={t("no_matches_description")}
                   action={
                     <Button size="sm" variant="outline" onClick={resetFilters}>
-                      Reset filters
+                      {t("reset_filters")}
                     </Button>
                   }
                 />
@@ -188,12 +195,12 @@ export function SeriesView() {
       ) : (
         <EmptyState
           icon={Repeat}
-          title="No series yet"
-          description="A series is a recurring format — a weekly lesson, a Friday diary — that builds habit in your audience and makes planning automatic."
+          title={t("empty_title")}
+          description={t("empty_description")}
           action={
             <Button size="sm" onClick={openCreate}>
               <Plus aria-hidden />
-              New series
+              {t("new_series")}
             </Button>
           }
         />

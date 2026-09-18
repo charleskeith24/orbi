@@ -12,6 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useT } from "@/lib/i18n"
+import { analyticsMessages } from "./messages"
+import { postMessages } from "./post-messages"
 import { DEFAULT_POST_COLUMNS, POST_DETAIL_COLUMNS, POST_METRIC_FIELDS, sanitizeColumns, type PostColumnId } from "./post-fields"
 
 const STORAGE_KEY = "pbos:analytics:post-columns:v1"
@@ -51,10 +54,10 @@ export function useColumnVisibility() {
   return { visible, toggle, reset }
 }
 
-const GROUPS: { label: string; columns: { id: PostColumnId; label: string }[] }[] = [
-  { label: "Details", columns: POST_DETAIL_COLUMNS },
-  { label: "Counts", columns: POST_METRIC_FIELDS.filter((f) => f.group === "counts") },
-  { label: "Rates", columns: POST_METRIC_FIELDS.filter((f) => f.group === "rates") },
+const GROUPS: { label: "group_details" | "group_counts" | "group_rates"; columns: { id: PostColumnId; label: string }[] }[] = [
+  { label: "group_details", columns: POST_DETAIL_COLUMNS },
+  { label: "group_counts", columns: POST_METRIC_FIELDS.filter((f) => f.group === "counts") },
+  { label: "group_rates", columns: POST_METRIC_FIELDS.filter((f) => f.group === "rates") },
 ]
 
 export function ColumnMenu({
@@ -66,12 +69,27 @@ export function ColumnMenu({
   onToggle: (id: PostColumnId, show: boolean) => void
   onReset: () => void
 }) {
+  const t = useT(analyticsMessages)
+  const p = useT(postMessages)
+  /** Column names that aren't plain metric nouns. */
+  const columnLabel = (id: PostColumnId, label: string) =>
+    id === "date"
+      ? t("col_published")
+      : id === "ratio"
+        ? t("col_ratio")
+        : id === "followers"
+          ? p("followers_gained")
+          : id === "platform"
+            ? t("platform")
+            : id === "pillar"
+              ? t("pillar")
+              : label
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" aria-label={`Columns: ${visible.size} shown`}>
+        <Button variant="outline" size="sm" aria-label={t("columns_aria", { count: visible.size })}>
           <Columns3 aria-hidden />
-          Columns
+          {t("columns")}
           <span className="num text-xs text-muted-foreground">{visible.size}</span>
         </Button>
       </DropdownMenuTrigger>
@@ -79,7 +97,7 @@ export function ColumnMenu({
         {GROUPS.map((group, i) => (
           <Fragment key={group.label}>
             {i > 0 ? <DropdownMenuSeparator /> : null}
-            <DropdownMenuLabel className="text-xs text-muted-foreground">{group.label}</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs text-muted-foreground">{t(group.label)}</DropdownMenuLabel>
             {group.columns.map((column) => (
               <DropdownMenuCheckboxItem
                 key={column.id}
@@ -87,7 +105,7 @@ export function ColumnMenu({
                 onCheckedChange={(checked) => onToggle(column.id, checked === true)}
                 onSelect={(event) => event.preventDefault()}
               >
-                {column.label}
+                {columnLabel(column.id, column.label)}
               </DropdownMenuCheckboxItem>
             ))}
           </Fragment>
@@ -95,7 +113,7 @@ export function ColumnMenu({
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={onReset}>
           <RotateCcw aria-hidden />
-          Reset to default
+          {t("reset_default")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

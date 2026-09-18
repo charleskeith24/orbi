@@ -1,7 +1,9 @@
 import { STORY_TYPE_MAP, STORY_TYPES } from "@/lib/constants"
 import { parseDate, toISODate } from "@/lib/dates"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type { ContentIdea, ContentItem, ID, InsertRow, Story, StoryType } from "@/lib/types"
 import { matchesQuery, truncate } from "@/lib/utils"
+import { storyVaultMessages } from "./messages"
 import { parseList, type UrlState } from "./use-url-state"
 
 export const STORY_URL_KEYS = ["q", "type", "pillar", "fav", "usage", "view", "sort", "open"] as const
@@ -210,10 +212,11 @@ export function storyTalkingPoints(story: Pick<Story, "situation" | "action" | "
   ].filter(Boolean)
 }
 
-export function storyCopyValues(story: Story): InsertRow<"stories"> {
+export function storyCopyValues(story: Story, lang: UiLang = "en"): InsertRow<"stories"> {
+  const t = translator(storyVaultMessages, lang)
   return {
     type: story.type,
-    title: `${story.title.trim() || "Untitled story"} (copy)`,
+    title: t("copy_title", { title: story.title.trim() || t("untitled") }),
     situation: story.situation,
     problem: story.problem,
     action: story.action,

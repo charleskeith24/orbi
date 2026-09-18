@@ -6,8 +6,11 @@ import { addDays, differenceInCalendarDays, format } from "date-fns"
 import { isPublishedItem, percentChange } from "@/lib/analytics"
 import type { MixWarning, PillarAggregate, PlatformAggregate, TieredRow, WeeklyProgress } from "@/lib/analytics"
 import { parseDate, toISODate, weekRange } from "@/lib/dates"
+import { translate, translator, type UiLang } from "@/lib/i18n/core"
 import type { ContentItem, ContentPillar, Database, ISODate, PlatformId, PostingSlot } from "@/lib/types"
-import { pluralize, truncate } from "@/lib/utils"
+import { formatNumber, truncate } from "@/lib/utils"
+import { overdueMessages } from "../today/messages"
+import { dashboardMessages, promptMessages } from "./messages"
 
 /* --------------------------------- Header --------------------------------- */
 
@@ -18,11 +21,9 @@ export function firstName(fullName: string): string {
   return fullName.replace(/\([^)]*\)/g, " ").trim().split(/\s+/)[0] ?? ""
 }
 
-export function greetingFor(now: Date): string {
+export function greetingFor(now: Date, lang: UiLang = "en"): string {
   const hour = now.getHours()
-  if (hour < 12) return "Good morning"
-  if (hour < 18) return "Good afternoon"
-  return "Good evening"
+  return translate(dashboardMessages, lang, hour < 12 ? "greeting_morning" : hour < 18 ? "greeting_afternoon" : "greeting_evening")
 }
 
 /** "Sep 7 – Sep 13". */
@@ -42,15 +43,16 @@ export function formatSlotTime(time: string | null | undefined): string | null {
 /* ---------------------------------- Today ---------------------------------- */
 
 /** Why an overdue item is late: "Missed 9:00 AM" (earlier today), "2 days late" (publish time), "Due 3 days ago" (deadline). */
-export function overdueLabel(item: Pick<ContentItem, "scheduled_at" | "due_date">, now: Date): string {
+export function overdueLabel(item: Pick<ContentItem, "scheduled_at" | "due_date">, now: Date, lang: UiLang = "en"): string {
+  const t = translator(overdueMessages, lang)
   const scheduled = parseDate(item.scheduled_at)
   if (scheduled && scheduled < now) {
     const days = differenceInCalendarDays(now, scheduled)
-    return days === 0 ? `Missed ${format(scheduled, "h:mm a")}` : `${pluralize(days, "day")} late`
+    return days === 0 ? t("missed_at", { time: format(scheduled, "h:mm a") }) : t.plural("days_late", days, { count: formatNumber(days) })
   }
   const due = parseDate(item.due_date)
   const days = due ? differenceInCalendarDays(now, due) : 0
-  return days > 0 ? `Due ${pluralize(days, "day")} ago` : "Overdue"
+  return days > 0 ? t.plural("due_ago", days, { count: formatNumber(days) }) : t("overdue")
 }
 
 /* ------------------------------ Quick capture ------------------------------ */
@@ -192,34 +194,32 @@ export function platformGrowthRows(current: PlatformAggregate[], previous: Platf
 
 /* --------------------------- Strategist prompts ---------------------------- */
 
-const FALLBACK_PROMPTS = ["What should I focus on this week?", "Which content should I create more of?"]
-
-/** 2–3 "Ask the strategist" prompts grounded in what the dashboard shows. */
-export function strategistPrompts(input: {
-  mixWarning?: MixWarning
-  pillars: PillarAggregate[]
-  top?: TieredRow
-  weekly: WeeklyProgress
-}): string[] {
+/** 2–3 "Ask the strategist" prompts grounded in what the dashboard shows, in `lang` (default English). */
+export function strategistPrompts(
+  input: {
+    mixWarning?: MixWarning
+    pillars: PillarAggregate[]
+    top?: TieredRow
+    weekly: WeeklyProgress
+  },
+  lang: UiLang = "en"
+): string[] {
+  const t = translator(promptMessages, lang)
   const out: string[] = []
   const { mixWarning, pillars, top, weekly } = input
   if (mixWarning) {
-    out.push(
-      mixWarning.direction === "under"
-        ? `How do I bring ${mixWarning.label} back to its target share?`
-        : `${mixWarning.label} is over-represented — what should I post instead?`
-    )
+    out.push(mixWarning.direction === "under" ? t("mix_under", { pillar: mixWarning.label }) : t("mix_over", { pillar: mixWarning.label }))
   }
   const measured = pillars.filter((p) => p.pillar && p.measured >= 2 && p.avgViews !== null)
   if (measured.length >= 2) {
     const weakest = [...measured].sort((a, b) => (a.avgViews ?? 0) - (b.avgViews ?? 0))[0]
-    out.push(`Why are my ${weakest.label} posts underperforming?`)
+    out.push(t("weakest", { pillar: weakest.label }))
   }
   if (weekly.target - weekly.published - weekly.scheduledRemaining > 0) {
-    out.push(`What can I still post to hit ${weekly.target} this week?`)
+    out.push(t("hit_target", { target: weekly.target }))
   } else if (top) {
-    out.push(`Why did “${truncate(top.item.title, 26)}” work so well?`)
+    out.push(t("why_worked", { title: truncate(top.item.title, 26) }))
   }
-  for (const prompt of FALLBACK_PROMPTS) if (out.length < 3 && !out.includes(prompt)) out.push(prompt)
+  for (const prompt of [t("focus"), t("more_of")]) if (out.length < 3 && !out.includes(prompt)) out.push(prompt)
   return out.slice(0, 3)
 }

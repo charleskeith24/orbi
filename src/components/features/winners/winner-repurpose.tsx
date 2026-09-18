@@ -8,12 +8,15 @@ import { RepurposePanel } from "@/components/features/repurpose/repurpose-panel"
 import { Button } from "@/components/ui/button"
 import { computeTiers, isPublishedItem } from "@/lib/analytics"
 import { PLATFORMS, REPURPOSE_TYPES } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import { useDb, useSettings } from "@/lib/store"
 import type { ContentItem } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { winnersMessages } from "./messages"
 
 /** Repurposed versions that already exist (and open suggestions), plus the Repurposing Engine in a sheet. */
 export function WinnerRepurpose({ item, now }: { item: ContentItem; now: Date }) {
+  const t = useT(winnersMessages)
   const db = useDb()
   const settings = useSettings()
   const [open, setOpen] = useState(false)
@@ -30,25 +33,25 @@ export function WinnerRepurpose({ item, now }: { item: ContentItem; now: Date })
   }, [db, settings, now, item.id])
 
   const summary = children.length
-    ? `${pluralize(children.length, "version")} created${suggestions.length ? ` · ${suggestions.length} suggested` : ""}`
+    ? `${t.plural("versions_created", children.length, { count: formatNumber(children.length) })}${suggestions.length ? t("suggested_suffix", { count: suggestions.length }) : ""}`
     : suggestions.length
-      ? `${pluralize(suggestions.length, "suggestion")} waiting — nothing created yet.`
-      : "Not repurposed yet — winners are the safest pieces to turn into carousels, threads and follow-ups."
+      ? t.plural("suggestions_waiting", suggestions.length, { count: formatNumber(suggestions.length) })
+      : t("not_repurposed_description")
 
   return (
     <PageSection
       id="winner-repurpose"
-      title="Repurposed versions"
+      title={t("repurposed_title")}
       description={summary}
       action={
         <Button type="button" size="sm" onClick={() => setOpen(true)}>
           <Repeat2 aria-hidden />
-          Repurpose
+          {t("repurpose")}
         </Button>
       }
     >
       {children.length || suggestions.length ? (
-        <ul className="divide-y rounded-lg border" aria-label="Repurposed versions">
+        <ul className="divide-y rounded-lg border" aria-label={t("repurposed_title")}>
           {children.map((child) => (
             <li key={child.id} className="flex min-w-0 items-center gap-3 px-3 py-2">
               <PlatformIcon platform={child.platform} label className="size-3.5 shrink-0 text-muted-foreground" />
@@ -58,10 +61,10 @@ export function WinnerRepurpose({ item, now }: { item: ContentItem; now: Date })
                   className="block truncate text-sm outline-none hover:underline focus-visible:underline"
                   title={child.title}
                 >
-                  {child.title || "Untitled content"}
+                  {child.title || t("untitled_content")}
                 </Link>
                 <p className="truncate text-xs text-muted-foreground">
-                  {child.repurpose_type ? REPURPOSE_TYPES[child.repurpose_type].label : "Repurposed version"} ·{" "}
+                  {child.repurpose_type ? REPURPOSE_TYPES[child.repurpose_type].label : t("repurposed_version")} ·{" "}
                   {PLATFORMS[child.platform].label}
                 </p>
               </div>
@@ -81,7 +84,7 @@ export function WinnerRepurpose({ item, now }: { item: ContentItem; now: Date })
                   {suggestion.platform ? ` · ${PLATFORMS[suggestion.platform].label}` : ""}
                 </p>
               </div>
-              <StatusPill icon={Lightbulb}>{suggestion.status === "drafted" ? "Drafted" : "Suggested"}</StatusPill>
+              <StatusPill icon={Lightbulb}>{suggestion.status === "drafted" ? t("drafted") : t("suggested")}</StatusPill>
             </li>
           ))}
         </ul>
@@ -90,8 +93,8 @@ export function WinnerRepurpose({ item, now }: { item: ContentItem; now: Date })
       <DetailSheet
         open={open}
         onOpenChange={setOpen}
-        title="Repurpose this winner"
-        description={item.title || "Untitled content"}
+        title={t("repurpose_sheet_title")}
+        description={item.title || t("untitled_content")}
         width="xl"
       >
         <RepurposePanel itemId={item.id} />

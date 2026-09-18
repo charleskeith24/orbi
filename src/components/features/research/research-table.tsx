@@ -5,8 +5,10 @@ import { DataTable, PillarBadge, PlatformIcon, type DataTableColumn } from "@/co
 import { usageCount, type SourceUsage } from "@/components/features/stories/story-model"
 import { PLATFORMS } from "@/lib/constants"
 import { formatDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import type { ContentPillar, ID, ResearchItem, ResearchStatus } from "@/lib/types"
 import { formatNumber } from "@/lib/utils"
+import { researchMessages } from "./messages"
 import { useResearchActions } from "./research-actions"
 import { ResearchActionsMenu } from "./research-actions-menu"
 import { ResearchStatusBadge, ResearchTypeBadge } from "./research-badges"
@@ -26,16 +28,17 @@ export function ResearchTable({
   pillars: ReadonlyMap<ID, ContentPillar>
   empty?: React.ReactNode
 }) {
+  const t = useT(researchMessages)
   const actions = useResearchActions()
   const columns = useMemo<DataTableColumn<ResearchItem>[]>(
     () => [
       {
         id: "title",
-        header: "Reference",
+        header: t("col_reference"),
         sortValue: (r) => r.title.toLowerCase(),
         cell: (r) => (
           <div className="flex max-w-[20rem] min-w-48 flex-col">
-            <span className="truncate font-medium">{r.title || "Untitled reference"}</span>
+            <span className="truncate font-medium">{r.title || t("untitled")}</span>
             <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
               {r.platform ? <PlatformIcon platform={r.platform} label={PLATFORMS[r.platform].label} className="size-3 shrink-0" /> : null}
               <span className="truncate">{[r.creator, r.source].filter(Boolean).join(" · ") || "—"}</span>
@@ -45,41 +48,41 @@ export function ResearchTable({
       },
       {
         id: "type",
-        header: "Type",
+        header: t("type"),
         sortValue: (r) => researchTypeLabel(r.type),
         cell: (r) => <ResearchTypeBadge type={r.type} />,
         hideBelow: "md",
       },
       {
         id: "topic",
-        header: "Topic",
+        header: t("col_topic"),
         sortValue: (r) => r.topic.toLowerCase() || null,
         cell: (r) => <span className="block max-w-40 truncate text-muted-foreground">{r.topic || "—"}</span>,
         hideBelow: "lg",
       },
       {
         id: "status",
-        header: "Status",
+        header: t("status"),
         sortValue: (r) => STATUS_RANK[r.status],
         cell: (r) => <ResearchStatusBadge status={r.status} />,
       },
       {
         id: "pillar",
-        header: "Pillar",
+        header: t("pillar"),
         sortValue: (r) => (r.pillar_id ? (pillars.get(r.pillar_id)?.name ?? null) : null),
         cell: (r) => <PillarBadge pillar={r.pillar_id ? (pillars.get(r.pillar_id) ?? null) : null} variant="plain" />,
         hideBelow: "lg",
       },
       {
         id: "saved",
-        header: "Saved",
+        header: t("col_saved"),
         sortValue: (r) => r.created_at,
         cell: (r) => <span className="whitespace-nowrap text-muted-foreground num">{formatDate(r.created_at, "MMM d")}</span>,
         hideBelow: "sm",
       },
       {
         id: "ideas",
-        header: "Ideas",
+        header: t("col_ideas"),
         align: "right",
         sortValue: (r) => usageCount(usage, r.id),
         cell: (r) => {
@@ -89,7 +92,7 @@ export function ResearchTable({
       },
       {
         id: "actions",
-        header: <span className="sr-only">Actions</span>,
+        header: <span className="sr-only">{t("col_actions")}</span>,
         className: "w-10",
         cell: (r) => (
           <div className="flex justify-end">
@@ -98,7 +101,7 @@ export function ResearchTable({
         ),
       },
     ],
-    [pillars, usage]
+    [pillars, usage, t]
   )
 
   return (
@@ -107,9 +110,9 @@ export function ResearchTable({
       columns={columns}
       getRowId={(r) => r.id}
       onRowClick={(r) => actions.open(r.id)}
-      rowLabel={(r) => `Open ${r.title || "reference"}`}
+      rowLabel={(r) => t("open_row", { title: r.title || t("reference_lower") })}
       empty={empty}
-      aria-label="Research references"
+      aria-label={t("table_aria")}
     />
   )
 }

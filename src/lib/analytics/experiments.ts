@@ -2,8 +2,10 @@
  * A/B experiment evaluation (spec §35).
  */
 import { EXPERIMENT_METRIC_MAP } from "@/lib/constants"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type { ContentExperiment, ContentItem, Database, ExperimentMetric, ExperimentWinner, ID } from "@/lib/types"
 import { average, uniq } from "@/lib/utils"
+import { experimentMessages } from "./messages"
 import { metricValue, sharedLatestMetrics } from "./metrics"
 import { roundTo } from "./shared"
 
@@ -32,9 +34,10 @@ export interface ExperimentResults {
 
 /**
  * Per variant: n and mean of the experiment metric (latest snapshots); lift = B vs A in %;
- * winner = sign of lift, "inconclusive" when either n < 2 or |lift| < 10%.
+ * winner = sign of lift, "inconclusive" when either n < 2 or |lift| < 10%. `reason` is in `lang` (default English).
  */
-export function experimentResults(db: Database, experiment: ContentExperiment): ExperimentResults {
+export function experimentResults(db: Database, experiment: ContentExperiment, lang: UiLang = "en"): ExperimentResults {
+  const t = translator(experimentMessages, lang)
   const latest = sharedLatestMetrics(db)
   const items = new Map(db.content_items.map((i) => [i.id, i]))
   const variant = (ids: ID[]): VariantResult => {
@@ -53,17 +56,17 @@ export function experimentResults(db: Database, experiment: ContentExperiment): 
   let suggestedWinner: ExperimentWinner = "inconclusive"
   let reason: string
   if (a.n < EXPERIMENT_MIN_N || b.n < EXPERIMENT_MIN_N) {
-    reason = `Needs at least ${EXPERIMENT_MIN_N} measured posts per variant (A has ${a.n}, B has ${b.n})`
+    reason = t("needs_posts", { min: EXPERIMENT_MIN_N, a: a.n, b: b.n })
   } else if (lift === null) {
-    reason = `Variant A averages 0 ${label}, so lift can't be computed`
+    reason = t("zero_baseline", { metric: label })
   } else if (Math.abs(lift) < EXPERIMENT_MIN_LIFT) {
-    reason = `B is within ${EXPERIMENT_MIN_LIFT}% of A (${lift > 0 ? "+" : ""}${lift}%) — too close to call`
+    reason = t("too_close", { min: EXPERIMENT_MIN_LIFT, lift: `${lift > 0 ? "+" : ""}${lift}` })
   } else if (lift > 0) {
     suggestedWinner = "b"
-    reason = `B beat A by ${lift}% on ${label}`
+    reason = t("b_wins", { lift, metric: label })
   } else {
     suggestedWinner = "a"
-    reason = `A beat B — B averaged ${Math.abs(lift)}% lower ${label}`
+    reason = t("a_wins", { lift: Math.abs(lift), metric: label })
   }
   return { metric: experiment.metric, a, b, lift, suggestedWinner, reason }
 }

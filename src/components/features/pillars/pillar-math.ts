@@ -3,8 +3,10 @@
  * recommended presets and usage counts for delete confirmations.
  */
 import { CATEGORICAL_COLORS, PILLAR_PRESETS } from "@/lib/constants"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type { CategoricalColor, ContentPillar, Database, ID } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { pillarMessages } from "./pillar-messages"
 
 export const TARGET_TOTAL = 100
 
@@ -48,18 +50,20 @@ export function normalizeTo100(values: (number | null | undefined)[]): number[] 
 }
 
 /** Inline validation copy for a running total; null when it is exactly 100. */
-export function targetTotalError(total: number): string | null {
+export function targetTotalError(total: number, lang: UiLang = "en"): string | null {
   if (total === TARGET_TOTAL) return null
+  const t = translator(pillarMessages, lang)
   return total > TARGET_TOTAL
-    ? `Targets add up to ${total}% — remove ${total - TARGET_TOTAL} pts.`
-    : `Targets add up to ${total}% — ${TARGET_TOTAL - total} pts left to assign.`
+    ? t("total_over", { total, pts: total - TARGET_TOTAL })
+    : t("total_under", { total, pts: TARGET_TOTAL - total })
 }
 
 /** "+4 pts", "−3 pts" or "on target". */
-export function formatPoints(deviation: number): string {
+export function formatPoints(deviation: number, lang: UiLang = "en"): string {
+  const t = translator(pillarMessages, lang)
   const rounded = Math.round(deviation)
-  if (rounded === 0) return "on target"
-  return `${rounded > 0 ? "+" : "−"}${Math.abs(rounded)} pts`
+  if (rounded === 0) return t("on_target_points")
+  return t("points", { sign: rounded > 0 ? "+" : "−", pts: Math.abs(rounded) })
 }
 
 /** Recommended pillars (spec §6) whose name isn't used yet. */
@@ -124,11 +128,12 @@ export function pillarUsage(db: Database, pillarId: ID): PillarUsage {
 }
 
 /** "12 content items, 8 ideas and 3 other records". */
-export function describeUsage(usage: PillarUsage): string {
+export function describeUsage(usage: PillarUsage, lang: UiLang = "en"): string {
+  const t = translator(pillarMessages, lang)
   const parts: string[] = []
-  if (usage.items) parts.push(pluralize(usage.items, "content item"))
-  if (usage.ideas) parts.push(pluralize(usage.ideas, "idea"))
-  if (usage.other) parts.push(pluralize(usage.other, "other record"))
+  if (usage.items) parts.push(t.plural("content_items", usage.items, { count: formatNumber(usage.items) }))
+  if (usage.ideas) parts.push(t.plural("ideas", usage.ideas, { count: formatNumber(usage.ideas) }))
+  if (usage.other) parts.push(t.plural("other_records", usage.other, { count: formatNumber(usage.other) }))
   if (parts.length <= 1) return parts[0] ?? ""
-  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`
+  return t("list_and", { list: parts.slice(0, -1).join(", "), last: parts[parts.length - 1] })
 }

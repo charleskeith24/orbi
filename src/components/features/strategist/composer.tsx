@@ -13,20 +13,24 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Kbd } from "@/components/ui/kbd"
 import { Textarea } from "@/components/ui/textarea"
+import { useT, useUiLang } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
-import { SUGGESTED_PROMPTS } from "./prompts"
+import { suggestedPrompts } from "./prompts"
 import { strategistSession, useStrategistSession } from "./session"
+import { strategistMessages } from "./strategist-messages"
 import { MAX_QUESTION_CHARS } from "./turns"
 
 function PromptMenu({ disabled, inputRef }: { disabled: boolean; inputRef: React.RefObject<HTMLTextAreaElement | null> }) {
   // Prompts that need details land in the composer — keep focus there instead of on the trigger.
   const focusComposer = useRef(false)
+  const t = useT(strategistMessages)
+  const prompts = suggestedPrompts(useUiLang())
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button type="button" variant="ghost" size="xs" disabled={disabled} className="text-muted-foreground">
           <MessageSquareText aria-hidden />
-          Prompts
+          {t("prompts")}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -40,8 +44,8 @@ function PromptMenu({ disabled, inputRef }: { disabled: boolean; inputRef: React
           inputRef.current?.focus()
         }}
       >
-        <DropdownMenuLabel className="text-xs text-muted-foreground">Suggested prompts</DropdownMenuLabel>
-        {SUGGESTED_PROMPTS.map((prompt) => {
+        <DropdownMenuLabel className="text-xs text-muted-foreground">{t("suggested_prompts")}</DropdownMenuLabel>
+        {prompts.map((prompt) => {
           const Icon = prompt.icon
           return (
             <DropdownMenuItem
@@ -52,7 +56,7 @@ function PromptMenu({ disabled, inputRef }: { disabled: boolean; inputRef: React
               }}
             >
               <Icon aria-hidden />
-              <span className="min-w-0 flex-1">{prompt.text}</span>
+              <span className="min-w-0 flex-1">{prompt.label ?? prompt.text}</span>
             </DropdownMenuItem>
           )
         })}
@@ -80,6 +84,7 @@ export function Composer({
   const fieldRef = inputRef ?? localRef
   const handledFocus = useRef(focusRequest)
   const isMac = useIsMac()
+  const t = useT(strategistMessages)
 
   useEffect(() => {
     if (focusRequest === handledFocus.current) return
@@ -132,26 +137,26 @@ export function Composer({
           rows={1}
           maxLength={MAX_QUESTION_CHARS}
           disabled={disabled}
-          placeholder="Ask about your strategy, performance or what to post…"
-          aria-label="Message the Content Strategist"
+          placeholder={t("placeholder")}
+          aria-label={t("composer_label")}
           className="max-h-40 min-h-11 resize-none border-0 bg-transparent px-3 pt-2.5 pb-1 shadow-none focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent"
         />
         <div className="flex items-center gap-2 px-2 pb-2">
           <PromptMenu disabled={disabled} inputRef={fieldRef} />
           <div className="ml-auto flex items-center gap-2">
             {remaining < 400 ? (
-              <span className="text-xs text-muted-foreground tabular-nums">{remaining} left</span>
+              <span className="text-xs text-muted-foreground tabular-nums">{t("chars_left", { count: remaining })}</span>
             ) : null}
             <span className="hidden items-center gap-0.5 sm:inline-flex" aria-hidden>
               <Kbd>{isMac ? "⌘" : "Ctrl"}</Kbd>
               <Kbd>↵</Kbd>
             </span>
             {sending ? (
-              <Button type="button" variant="outline" size="icon-sm" onClick={() => strategistSession.stop()} aria-label="Stop generating">
+              <Button type="button" variant="outline" size="icon-sm" onClick={() => strategistSession.stop()} aria-label={t("stop")}>
                 <Square className="size-3 fill-current" aria-hidden />
               </Button>
             ) : (
-              <Button type="submit" size="icon-sm" disabled={!canSend} aria-label="Send question">
+              <Button type="submit" size="icon-sm" disabled={!canSend} aria-label={t("send")}>
                 <ArrowUp aria-hidden />
               </Button>
             )}

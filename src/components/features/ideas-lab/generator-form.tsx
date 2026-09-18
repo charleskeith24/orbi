@@ -18,8 +18,11 @@ import {
 } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { useTable } from "@/lib/store"
 import type { ID } from "@/lib/types"
+import { generatorMessages } from "./generator-messages"
 import { EMPTY_BRIEF, isValidCount, MAX_COUNT, MIN_COUNT, TOPIC_MAX, type GeneratorBrief } from "./generator-model"
 
 const PAIR = "grid min-w-0 grid-cols-2 gap-3"
@@ -44,6 +47,8 @@ export function GeneratorBriefForm({
   footer?: React.ReactNode
 }) {
   const id = useId()
+  const t = useT(generatorMessages)
+  const c = useT(commonMessages)
   const field = (name: string) => `${id}-${name}`
   const problems = useTable("audience_problems")
   const [brief, setBrief] = useState<GeneratorBrief>(initialBrief)
@@ -96,8 +101,8 @@ export function GeneratorBriefForm({
 
   return (
     <SectionCard
-      title="Brief"
-      description="Every filter is optional — leave one on “Any” and the generator balances it using your strategy."
+      title={t("brief")}
+      description={t("brief_description")}
       action={
         <Button
           type="button"
@@ -105,103 +110,117 @@ export function GeneratorBriefForm({
           size="xs"
           className="text-muted-foreground"
           disabled={pristine}
-          title={pristine ? "The brief is already empty" : "Clear every filter"}
+          title={pristine ? t("reset_pristine") : t("reset_title")}
           onClick={reset}
         >
           <RotateCcw aria-hidden />
-          Reset
+          {c("reset")}
         </Button>
       }
     >
-      <form noValidate aria-label="Idea brief" onSubmit={submit} className="flex min-w-0 flex-col gap-4">
-        <FormField label="Content Pillar" htmlFor={field("pillar")}>
+      <form noValidate aria-label={t("brief_label")} onSubmit={submit} className="flex min-w-0 flex-col gap-4">
+        <FormField label={t("content_pillar")} htmlFor={field("pillar")}>
           <PillarSelect
             id={field("pillar")}
             allowNone
-            noneLabel="Any pillar"
-            placeholder="Any pillar"
+            noneLabel={t("any_pillar")}
+            placeholder={t("any_pillar")}
             value={brief.pillarId}
             onChange={(pillarId) => set({ pillarId })}
           />
         </FormField>
-        <FormField label="Audience" htmlFor={field("persona")}>
+        <FormField label={t("audience")} htmlFor={field("persona")}>
           <PersonaSelect
             id={field("persona")}
             allowNone
-            noneLabel="Any persona"
-            placeholder="Any persona"
+            noneLabel={t("any_persona")}
+            placeholder={t("any_persona")}
             value={brief.personaId}
             onChange={setPersona}
           />
         </FormField>
         <div className={PAIR}>
-          <FormField label="Platform" htmlFor={field("platform")}>
+          <FormField label={t("platform")} htmlFor={field("platform")}>
             <PlatformSelect
               id={field("platform")}
               allowNone
-              noneLabel="Any platform"
-              placeholder="Any platform"
+              noneLabel={t("any_platform")}
+              placeholder={t("any_platform")}
               value={brief.platform}
               onChange={(platform) => set({ platform })}
             />
           </FormField>
-          <FormField label="Content goal" htmlFor={field("goal")}>
-            <GoalSelect id={field("goal")} allowNone noneLabel="Any goal" placeholder="Any goal" value={brief.goalId} onChange={(goalId) => set({ goalId })} />
+          <FormField label={t("content_goal")} htmlFor={field("goal")}>
+            <GoalSelect
+              id={field("goal")}
+              allowNone
+              noneLabel={t("any_goal")}
+              placeholder={t("any_goal")}
+              value={brief.goalId}
+              onChange={(goalId) => set({ goalId })}
+            />
           </FormField>
         </div>
-        <FormField label="Topic" htmlFor={field("topic")} description="Optional — a subject, a question someone asked or a story to build on.">
+        <FormField label={t("topic")} htmlFor={field("topic")} description={t("topic_help")}>
           <Input
             id={field("topic")}
             value={brief.topic}
             maxLength={TOPIC_MAX}
             autoComplete="off"
             enterKeyHint="go"
-            placeholder="e.g. pricing your first offer"
+            placeholder={t("topic_placeholder")}
             onChange={(event) => set({ topic: event.target.value })}
           />
         </FormField>
         <div className={PAIR}>
-          <FormField label="Funnel stage" htmlFor={field("funnel")}>
+          <FormField label={t("funnel_stage")} htmlFor={field("funnel")}>
             <FunnelSelect
               id={field("funnel")}
               allowNone
-              noneLabel="Any stage"
-              placeholder="Any stage"
+              noneLabel={t("any_stage")}
+              placeholder={t("any_stage")}
               value={brief.funnel}
               onChange={(funnel) => set({ funnel })}
             />
           </FormField>
-          <FormField label="Angle" htmlFor={field("angle")}>
-            <AngleSelect id={field("angle")} allowNone noneLabel="Any angle" placeholder="Any angle" value={brief.angleId} onChange={(angleId) => set({ angleId })} />
+          <FormField label={t("angle")} htmlFor={field("angle")}>
+            <AngleSelect
+              id={field("angle")}
+              allowNone
+              noneLabel={t("any_angle")}
+              placeholder={t("any_angle")}
+              value={brief.angleId}
+              onChange={(angleId) => set({ angleId })}
+            />
           </FormField>
         </div>
         <FormField
-          label="Audience problem"
+          label={t("audience_problem")}
           htmlFor={field("problem")}
-          description={brief.personaId ? "Problems of the selected persona." : "Optional — pick an audience first to narrow the list."}
+          description={brief.personaId ? t("problem_help_persona") : t("problem_help_none")}
         >
           <ProblemSelect
             id={field("problem")}
             personaId={brief.personaId}
             allowNone
-            noneLabel="Any problem"
-            placeholder="Any problem"
+            noneLabel={t("any_problem")}
+            placeholder={t("any_problem")}
             value={brief.problemId}
             onChange={setProblem}
           />
         </FormField>
         <div className={PAIR}>
-          <FormField label="Format" htmlFor={field("format")}>
+          <FormField label={t("format")} htmlFor={field("format")}>
             <FormatSelect
               id={field("format")}
               allowNone
-              noneLabel="Any format"
-              placeholder="Any format"
+              noneLabel={t("any_format")}
+              placeholder={t("any_format")}
               value={brief.formatId}
               onChange={(formatId) => set({ formatId })}
             />
           </FormField>
-          <FormField label="Number of ideas" htmlFor={field("count")} error={countOk ? undefined : `Choose ${MIN_COUNT}–${MAX_COUNT}.`}>
+          <FormField label={t("count_label")} htmlFor={field("count")} error={countOk ? undefined : t("count_error", { min: MIN_COUNT, max: MAX_COUNT })}>
             <NumberField
               id={field("count")}
               integer
@@ -214,7 +233,7 @@ export function GeneratorBriefForm({
           </FormField>
         </div>
         <AiButton type="submit" variant="default" pending={pending} disabled={disabled || !countOk} className="w-full">
-          {countOk ? `Generate ${count} ${count === 1 ? "idea" : "ideas"}` : "Generate ideas"}
+          {countOk ? t.plural("generate", count) : t("generate_ideas")}
         </AiButton>
         {footer}
       </form>

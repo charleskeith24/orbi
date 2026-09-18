@@ -4,11 +4,13 @@ import { Sparkles } from "lucide-react"
 import { useMemo } from "react"
 import { toast } from "sonner"
 import { AiButton, EmptyState } from "@/components/common"
+import { useT } from "@/lib/i18n"
 import type { Story } from "@/lib/types"
 import { AiErrorNotice } from "./ai-error"
 import type { AngleOrigin } from "./angle-model"
 import { AngleResults } from "./angle-results"
 import { storySessionKey, useAngleSession } from "./angle-store"
+import { experienceMessages } from "./experience-messages"
 import { runStoryAngles } from "./story-actions"
 import { storyReadyForAi } from "./story-model"
 
@@ -17,6 +19,7 @@ export function StoryAnglesPanel({ story }: { story: Story }) {
   const key = storySessionKey(story.id)
   const session = useAngleSession(key)
   const ready = storyReadyForAi(story)
+  const t = useT(experienceMessages)
   const origin = useMemo<AngleOrigin>(
     () => ({ source: "story", storyId: story.id, storyTitle: story.title, lesson: story.lesson, keywords: story.keywords, pillarId: story.pillar_id }),
     [story]
@@ -24,7 +27,7 @@ export function StoryAnglesPanel({ story }: { story: Story }) {
 
   function generate() {
     if (!runStoryAngles(story)) {
-      toast.info("Add a little more to this story first", { description: "The AI needs the situation, what you did or the lesson." })
+      toast.info(t("story_too_thin_toast"), { description: t("story_too_thin_toast_description") })
     }
   }
 
@@ -35,19 +38,17 @@ export function StoryAnglesPanel({ story }: { story: Story }) {
         <EmptyState
           compact
           icon={Sparkles}
-          title="Turn this story into content ideas"
-          description="Eight angles from one real story — leadership lesson, management framework, personal reflection, storytelling post, educational video, contrarian opinion, LinkedIn and Facebook posts — each with a hook, outline and draft."
+          title={t("story_empty_title")}
+          description={t("story_empty_description")}
           action={
             <AiButton type="button" size="sm" variant="default" disabled={!ready} onClick={generate}>
-              Generate angles
+              {t("generate_angles")}
             </AiButton>
           }
           className="rounded-lg border border-dashed"
         />
         {ready ? null : (
-          <p className="text-center text-xs text-pretty text-muted-foreground">
-            Add the situation, what you did or the lesson first — the AI needs a few sentences to work with.
-          </p>
+          <p className="text-center text-xs text-pretty text-muted-foreground">{t("story_too_thin")}</p>
         )}
       </div>
     )
@@ -59,7 +60,7 @@ export function StoryAnglesPanel({ story }: { story: Story }) {
       origin={origin}
       canRegenerate={ready}
       onRegenerate={generate}
-      notice="Built only from this story. Edit each draft until it sounds like you, then save the angles you would actually post."
+      notice={t("story_notice")}
     />
   )
 }

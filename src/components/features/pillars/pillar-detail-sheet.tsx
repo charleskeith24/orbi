@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button"
 import { scopedRows } from "@/lib/analytics"
 import { PUBLISHED_STAGES } from "@/lib/constants"
 import { contentItemDate, formatShortDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import { uiActions, useDb, useSettings } from "@/lib/store"
 import type { ContentPillar } from "@/lib/types"
-import { formatCompact, formatNumber, formatPercent, pluralize } from "@/lib/utils"
+import { formatCompact, formatNumber, formatPercent } from "@/lib/utils"
 import { MixStatusPill } from "./mix-status"
 import { PillarActionsMenu } from "./pillar-actions-menu"
 import { PillarIconTile } from "./pillar-icons"
+import { pillarMessages } from "./pillar-messages"
 import type { PillarStats } from "./use-pillar-overview"
 
 /** `?open=<pillarId>` detail: mix vs target, performance, best posts, work in progress and next steps. */
@@ -41,6 +43,7 @@ export function PillarDetailSheet({
   onToggleActive: (pillar: ContentPillar) => void
   onDelete: (pillar: ContentPillar) => void
 }) {
+  const t = useT(pillarMessages)
   const pillar = stats?.pillar ?? null
   const actual = stats?.mix?.actualPct ?? 0
   return (
@@ -53,17 +56,17 @@ export function PillarDetailSheet({
         pillar ? (
           <span className="flex min-w-0 items-center gap-2.5">
             <PillarIconTile name={pillar.icon} color={pillar.color} size="sm" />
-            <span className="min-w-0 truncate">{pillar.name || "Untitled pillar"}</span>
+            <span className="min-w-0 truncate">{pillar.name || t("untitled_pillar")}</span>
           </span>
         ) : (
-          "Pillar"
+          t("pillar")
         )
       }
       description={pillar?.description || undefined}
       actions={
         pillar ? (
           <>
-            <Button type="button" variant="ghost" size="icon-sm" aria-label="Edit pillar" onClick={() => onEdit(pillar)}>
+            <Button type="button" variant="ghost" size="icon-sm" aria-label={t("edit_pillar")} onClick={() => onEdit(pillar)}>
               <Pencil aria-hidden />
             </Button>
             <PillarActionsMenu pillar={pillar} onToggleActive={() => onToggleActive(pillar)} onDelete={() => onDelete(pillar)} />
@@ -79,23 +82,23 @@ export function PillarDetailSheet({
               size="sm"
               onClick={() =>
                 uiActions.askStrategist(
-                  `How should I grow my ${pillar.name} pillar? It's ${Math.round(actual)}% of my recent content vs a ${pillar.target_percentage}% target.`
+                  t("strategist_prompt", { name: pillar.name, actual: Math.round(actual), target: pillar.target_percentage })
                 )
               }
             >
               <Sparkles className="text-brand" aria-hidden />
-              Ask Strategist
+              {t("ask_strategist")}
             </Button>
             <Button asChild variant="outline" size="sm">
               <Link href={`/pillars/matrix?pillar=${pillar.id}`}>
                 <Grid3x3 aria-hidden />
-                Plan in matrix
+                {t("plan_in_matrix")}
               </Link>
             </Button>
             <Button asChild size="sm">
               <Link href={`/ideas/generator?pillar=${pillar.id}`}>
                 <Lightbulb aria-hidden />
-                Generate ideas
+                {t("generate_ideas")}
               </Link>
             </Button>
           </>
@@ -120,6 +123,7 @@ function PillarDetailBody({
   mixTotal: number
   now: Date
 }) {
+  const t = useT(pillarMessages)
   const db = useDb()
   const settings = useSettings()
   const { pillar, mix, perf } = stats
@@ -147,47 +151,47 @@ function PillarDetailBody({
           <MixStatusPill status={mix?.status} deviation={mix?.deviation ?? 0} enoughData={enoughData} />
         ) : (
           <StatusPill tone="neutral" icon={Pause}>
-            Paused
+            {t("paused")}
           </StatusPill>
         )}
-        <span className="text-xs text-muted-foreground">Target: {pillar.target_percentage}% of your content</span>
+        <span className="text-xs text-muted-foreground">{t("target_of_content", { target: pillar.target_percentage })}</span>
       </div>
 
       {pillar.is_active ? (
-        <Section title={`Mix · ${windowLabel}`}>
+        <Section title={t("mix_section", { window: windowLabel })}>
           <p className="flex items-baseline gap-2">
             <span className="num text-2xl leading-8 font-semibold tracking-tight">{Math.round(actual)}%</span>
-            <span className="text-sm text-muted-foreground">of content vs a {pillar.target_percentage}% target</span>
+            <span className="text-sm text-muted-foreground">{t("of_content_vs", { target: pillar.target_percentage })}</span>
           </p>
           <Meter
             value={actual}
             target={pillar.target_percentage}
             color={pillar.color}
-            aria-label={`${pillar.name} share of content`}
-            valueText={`${Math.round(actual)}% actual, target ${pillar.target_percentage}%`}
+            aria-label={t("share_aria", { name: pillar.name })}
+            valueText={t("actual_value", { actual: Math.round(actual), target: pillar.target_percentage })}
           />
           <p className="text-xs text-muted-foreground">
             {mix?.count
-              ? `${pluralize(mix.count, "item")} of ${formatNumber(mixTotal)} published or scheduled`
-              : "Nothing published or scheduled for this pillar in the window."}
+              ? t.plural("items_of", mix.count, { count: formatNumber(mix.count), total: formatNumber(mixTotal) })
+              : t("nothing_in_window")}
           </p>
         </Section>
       ) : null}
 
-      <Section title={`Performance · ${windowLabel}`}>
+      <Section title={t("performance_section", { window: windowLabel })}>
         <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Stat label="Posts" value={formatNumber(perf?.posts ?? 0)} />
-          <Stat label="Avg views" value={formatCompact(perf?.avgViews ?? null)} />
-          <Stat label="Engagement" value={formatPercent(perf?.engagementRate ?? null)} />
-          <Stat label="Leads" value={formatNumber(perf?.leads ?? 0)} />
+          <Stat label={t("posts")} value={formatNumber(perf?.posts ?? 0)} />
+          <Stat label={t("avg_views")} value={formatCompact(perf?.avgViews ?? null)} />
+          <Stat label={t("engagement")} value={formatPercent(perf?.engagementRate ?? null)} />
+          <Stat label={t("leads")} value={formatNumber(perf?.leads ?? 0)} />
         </dl>
         {perf?.winners ? (
-          <p className="text-xs text-muted-foreground">{pluralize(perf.winners, "Winner or Breakout post", "Winner or Breakout posts")} in this window</p>
+          <p className="text-xs text-muted-foreground">{t.plural("winners", perf.winners, { count: formatNumber(perf.winners) })}</p>
         ) : null}
       </Section>
 
       {pillar.examples.length ? (
-        <Section title="Examples">
+        <Section title={t("examples")}>
           <div className="flex flex-wrap gap-1">
             {pillar.examples.map((example, i) => (
               <Token key={`${example}-${i}`} className="font-normal text-foreground/85">
@@ -198,7 +202,7 @@ function PillarDetailBody({
         </Section>
       ) : null}
 
-      <Section title="Best posts · all time">
+      <Section title={t("best_posts")}>
         {detail.best.length ? (
           <ul className="-mx-2 flex flex-col">
             {detail.best.map((row) => (
@@ -208,21 +212,22 @@ function PillarDetailBody({
                   className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50"
                 >
                   <PlatformIcon platform={row.platform} label className="size-3.5 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate text-sm">{row.item.title || "Untitled content"}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm">{row.item.title || t("untitled_content")}</span>
                   <TierBadge tier={row.tier} />
-                  <span className="num shrink-0 text-xs text-muted-foreground">{formatCompact(row.views)} views</span>
+                  <span className="num shrink-0 text-xs text-muted-foreground">{t("views", { views: formatCompact(row.views) })}</span>
                 </Link>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-xs text-muted-foreground">No published posts with analytics for this pillar yet.</p>
+          <p className="text-xs text-muted-foreground">{t("no_best_posts")}</p>
         )}
       </Section>
 
-      <Section title="In the works">
+      <Section title={t("in_the_works")}>
         <p className="text-xs text-muted-foreground">
-          {pluralize(detail.inProduction, "piece")} in production · {pluralize(detail.ideas, "active idea")}
+          {t.plural("pieces_in_production", detail.inProduction, { count: formatNumber(detail.inProduction) })} ·{" "}
+          {t.plural("active_ideas", detail.ideas, { count: formatNumber(detail.ideas) })}
         </p>
         {detail.upcoming.length ? (
           <ul className="-mx-2 flex flex-col">
@@ -233,7 +238,7 @@ function PillarDetailBody({
                   className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50"
                 >
                   <PlatformIcon platform={item.platform} label className="size-3.5 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate text-sm">{item.title || "Untitled content"}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm">{item.title || t("untitled_content")}</span>
                   <StageBadge stage={item.stage} />
                   <span className="num w-12 shrink-0 text-right text-xs text-muted-foreground">{date ? formatShortDate(date) : "—"}</span>
                 </Link>

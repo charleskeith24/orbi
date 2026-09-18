@@ -6,8 +6,10 @@ import { useState } from "react"
 import { contentDateInfo, PlatformIcon, SectionCard, type IconComponent } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { BUFFER_STAGES } from "@/lib/constants"
+import { useT, useUiLang } from "@/lib/i18n"
 import type { ContentItem } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { todayMessages } from "./messages"
 
 /** Rows shown before "Show all". */
 const INITIAL = 5
@@ -46,6 +48,7 @@ export function WorkSection<T>({
   urgent?: boolean
   className?: string
 }) {
+  const t = useT(todayMessages)
   const [expanded, setExpanded] = useState(false)
   const shown = expanded ? items : items.slice(0, INITIAL)
   return (
@@ -67,7 +70,7 @@ export function WorkSection<T>({
         footer={
           items.length > INITIAL ? (
             <Button variant="ghost" size="xs" className="-my-1 -ml-2 text-muted-foreground" onClick={() => setExpanded((value) => !value)}>
-              {expanded ? "Show fewer" : `Show all ${items.length}`}
+              {expanded ? t("show_fewer") : t("show_all", { count: items.length })}
             </Button>
           ) : undefined
         }
@@ -88,7 +91,8 @@ export function WorkSection<T>({
 
 /** Title (→ Studio) with platform glyph and a meta line; actions sit right, or below on narrow cards. */
 export function WorkRow({ item, meta, actions }: { item: ContentItem; meta?: React.ReactNode; actions?: React.ReactNode }) {
-  const title = item.title.trim() || "Untitled content"
+  const t = useT(todayMessages)
+  const title = item.title.trim() || t("untitled_content")
   return (
     <div className="flex min-w-0 flex-col gap-2 px-4 py-2.5 @lg/work:flex-row @lg/work:items-center @lg/work:gap-4">
       <div className="flex min-w-0 flex-1 items-start gap-2.5">
@@ -109,7 +113,9 @@ export function WorkRow({ item, meta, actions }: { item: ContentItem; meta?: Rea
   )
 }
 
-export function OpenButton({ href, label = "Open in Studio" }: { href: string; label?: string }) {
+export function OpenButton({ href, label: labelProp }: { href: string; label?: string }) {
+  const t = useT(todayMessages)
+  const label = labelProp ?? t("open_in_studio")
   return (
     <Button asChild variant="ghost" size="icon-sm" className="text-muted-foreground" title={label}>
       <Link href={href} aria-label={label}>
@@ -124,7 +130,8 @@ export function OpenButton({ href, label = "Open in Studio" }: { href: string; l
  * its production deadline, so a past due date isn't flagged there — same rule as the Overdue list.
  */
 export function DateMeta({ item, now }: { item: ContentItem; now: Date }) {
-  const info = contentDateInfo(item, now)
+  const lang = useUiLang()
+  const info = contentDateInfo(item, now, lang)
   if (!info) return null
   if (info.overdue && !item.scheduled_at && BUFFER_STAGES.includes(item.stage)) return null
   const Icon = info.icon

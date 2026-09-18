@@ -5,7 +5,9 @@
  */
 import { getWinners, isPublishedItem, publishedAtOf } from "@/lib/analytics"
 import { parseDate } from "@/lib/dates"
+import { translate, type UiLang } from "@/lib/i18n/core"
 import type { AppSettings, ContentIdea, ContentItem, ContentPillar, Database, ID, PlatformId } from "@/lib/types"
+import { nicheAlignmentMessages } from "./brand-messages"
 
 /** Trailing window for "recent" content (scheduled posts up to the same distance ahead count too). */
 export const ALIGNMENT_DAYS = 30
@@ -129,13 +131,13 @@ function itemKeywords(item: ContentItem, lookups: Lookups): string[] {
   return keywordsOf([item.title, item.hook, idea?.core_topic ?? "", pillar?.name ?? ""].join("\n"))
 }
 
-function scoreGroup(items: readonly ContentItem[], keywords: readonly NicheKeyword[], lookups: Lookups): AlignmentGroup {
+function scoreGroup(items: readonly ContentItem[], keywords: readonly NicheKeyword[], lookups: Lookups, lang: UiLang): AlignmentGroup {
   const onNiche: AlignedItem[] = []
   const offNiche: AlignedItem[] = []
   for (const item of items) {
     const own = itemKeywords(item, lookups)
     const matches = keywords.filter((k) => own.some((w) => keywordsMatch(k.stem, w))).map((k) => k.label)
-    const row: AlignedItem = { id: item.id, title: item.title.trim() || "Untitled", platform: item.platform, matches }
+    const row: AlignedItem = { id: item.id, title: item.title.trim() || translate(nicheAlignmentMessages, lang, "untitled"), platform: item.platform, matches }
     if (matches.length) onNiche.push(row)
     else offNiche.push(row)
   }
@@ -170,18 +172,20 @@ export function nicheAlignment(
   settings: AppSettings,
   now: Date,
   niche: string,
-  interests: readonly string[]
+  interests: readonly string[],
+  lang: UiLang = "en"
 ): NicheAlignment {
   const keywords = nicheKeywords(niche, interests)
   const lookups: Lookups = {
     ideas: new Map(db.content_ideas.map((i) => [i.id, i])),
     pillars: new Map(db.content_pillars.map((p) => [p.id, p])),
   }
-  const recent = scoreGroup(recentAlignmentItems(db, now), keywords, lookups)
+  const recent = scoreGroup(recentAlignmentItems(db, now), keywords, lookups, lang)
   const winners = scoreGroup(
     getWinners(db, settings, now).map((r) => r.item),
     keywords,
-    lookups
+    lookups,
+    lang
   )
 
   const counts = new Map<string, number>()

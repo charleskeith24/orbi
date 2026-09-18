@@ -4,9 +4,11 @@ import { useMemo } from "react"
 import { ColorDot, PlatformIcon, StageIcon, type FacetOption } from "@/components/common"
 import { PLATFORM_IDS, PLATFORMS, STAGE_GROUPS } from "@/lib/constants"
 import { toISODate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import { useLookup, useTable } from "@/lib/store"
 import type { ContentItem, ISODate, PipelineStage, StageGroup } from "@/lib/types"
 import { filterValue, NONE_KEY, trayGroupOf, type FilterKey, type Placement } from "./calendar-model"
+import { calendarMessages } from "./messages"
 
 /** A representative stage per roll-up group, for the Status filter glyphs. */
 const GROUP_STAGE: Record<StageGroup, PipelineStage> = {
@@ -25,6 +27,7 @@ export function useCalendarFacets(dayDates: Date[], byDay: Map<ISODate, Placemen
   const goals = useTable("content_goals")
   const formats = useTable("content_formats")
   const pillars = useLookup("content_pillars")
+  const t = useT(calendarMessages)
   return useMemo(() => {
     const pool: ContentItem[] = []
     for (const date of dayDates) for (const p of byDay.get(toISODate(date)) ?? []) pool.push(p.item)
@@ -55,21 +58,21 @@ export function useCalendarFacets(dayDates: Date[], byDay: Map<ISODate, Placemen
         ...[...pillars.values()]
           .filter((p) => p.is_active || pillar.has(p.id))
           .sort((a, b) => a.sort_order - b.sort_order)
-          .map((p) => ({ value: p.id, label: p.name || "Untitled pillar", count: pillar.get(p.id) ?? 0, icon: <ColorDot color={p.color} /> })),
-        ...none(pillar, "No pillar"),
+          .map((p) => ({ value: p.id, label: p.name || t("untitled_pillar"), count: pillar.get(p.id) ?? 0, icon: <ColorDot color={p.color} /> })),
+        ...none(pillar, t("no_pillar")),
       ],
       goal: [
-        ...goals.filter((g) => g.is_active || goal.has(g.id)).map((g) => ({ value: g.id, label: g.name || "Untitled goal", count: goal.get(g.id) ?? 0 })),
-        ...none(goal, "No goal"),
+        ...goals.filter((g) => g.is_active || goal.has(g.id)).map((g) => ({ value: g.id, label: g.name || t("untitled_goal"), count: goal.get(g.id) ?? 0 })),
+        ...none(goal, t("no_goal")),
       ],
       format: [
         ...formats
           .filter((f) => format.has(f.id))
           .sort((a, b) => a.name.localeCompare(b.name))
-          .map((f) => ({ value: f.id, label: f.name || "Untitled format", count: format.get(f.id) })),
-        ...none(format, "No format"),
+          .map((f) => ({ value: f.id, label: f.name || t("untitled_format"), count: format.get(f.id) })),
+        ...none(format, t("no_format")),
       ],
       status: STAGE_GROUPS.map((g) => ({ value: g.id, label: g.label, count: status.get(g.id) ?? 0, icon: <StageIcon stage={GROUP_STAGE[g.id]} /> })),
     }
-  }, [dayDates, byDay, items, pillars, goals, formats])
+  }, [dayDates, byDay, items, pillars, goals, formats, t])
 }

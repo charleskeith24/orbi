@@ -9,14 +9,17 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useAiTask } from "@/lib/ai"
+import { useT } from "@/lib/i18n"
 import { HOOK_CATEGORIES, HOOK_CATEGORY_IDS } from "@/lib/constants"
 import { dataActions, useTable } from "@/lib/store"
 import type { ContentItem, HookCategory } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { briefMessages } from "./brief-messages"
 import { AiErrorNotice } from "./studio-ai"
 
 /** Hook text + style, a Hook Library picker and AI hook generation. */
 export function HookField({ item, mainMessage, onSaved }: { item: ContentItem; mainMessage: string; onSaved: () => void }) {
+  const t = useT(briefMessages)
   const inputId = useId()
   const [draft, setDraft] = useState(item.hook)
   const [source, setSource] = useState(item.hook)
@@ -38,12 +41,12 @@ export function HookField({ item, mainMessage, onSaved }: { item: ContentItem; m
   function applyHook(text: string, category: HookCategory, hookId: string | null, from: string) {
     dataActions.update("content_items", item.id, { hook: text, hook_category: category, hook_id: hookId })
     onSaved()
-    toast.success("Hook applied", { description: text.includes("___") ? `From the ${from} — fill in the ___ blanks.` : `From the ${from}.` })
+    toast.success(t("hook_applied"), { description: text.includes("___") ? t("hook_from_blanks", { from }) : t("hook_from", { from }) })
   }
 
   function saveToLibrary(text: string, category: HookCategory) {
     dataActions.insert("hooks", { text, category, source: "ai", pillar_id: item.pillar_id })
-    toast.success("Saved to the Hook Library")
+    toast.success(t("saved_to_library"))
   }
 
   async function generate() {
@@ -54,14 +57,14 @@ export function HookField({ item, mainMessage, onSaved }: { item: ContentItem; m
 
   return (
     <FormField
-      label="Hook"
+      label={t("hook")}
       htmlFor={inputId}
-      description="The first line or first two seconds — it decides whether anyone stays."
+      description={t("hook_description")}
       labelAction={
         <div className="flex items-center gap-1">
-          <HookLibraryPicker onPick={(hook) => applyHook(hook.text, hook.category, hook.id, "Hook Library")} />
-          <AiButton type="button" variant="ghost" size="xs" pending={ai.isPending} pendingLabel="Writing…" onClick={() => void generate()}>
-            Generate hooks
+          <HookLibraryPicker onPick={(hook) => applyHook(hook.text, hook.category, hook.id, t("hook_library"))} />
+          <AiButton type="button" variant="ghost" size="xs" pending={ai.isPending} pendingLabel={t("writing")} onClick={() => void generate()}>
+            {t("generate_hooks")}
           </AiButton>
         </div>
       }
@@ -70,7 +73,7 @@ export function HookField({ item, mainMessage, onSaved }: { item: ContentItem; m
         <Input
           id={inputId}
           value={draft}
-          placeholder="e.g. I spent ₱100k on ads before I learned this."
+          placeholder={t("hook_placeholder")}
           onChange={(event) => setDraft(event.target.value)}
           onBlur={commit}
           onKeyDown={(event) => {
@@ -88,34 +91,34 @@ export function HookField({ item, mainMessage, onSaved }: { item: ContentItem; m
             onSaved()
           }}
           allowNone
-          aria-label="Hook style"
+          aria-label={t("hook_style")}
           className="sm:w-40"
         />
       </div>
       {draft.includes("___") ? (
         <p className="flex items-center gap-1 text-xs text-warning-fg">
           <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
-          Fill in the ___ blanks before this goes out.
+          {t("fill_blanks")}
         </p>
       ) : null}
       {panelOpen ? (
         <div className="flex flex-col gap-2 rounded-md border border-brand/25 bg-brand-soft p-2.5">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="text-xs font-medium">Hook ideas</span>
+            <span className="text-xs font-medium">{t("hook_ideas")}</span>
             {ai.provider && hooks.length ? <ProviderBadge provider={ai.provider} model={ai.model ?? undefined} /> : null}
             <div className="ml-auto flex items-center gap-1">
               {hooks.length ? (
-                <AiButton type="button" variant="ghost" size="xs" pending={ai.isPending} pendingLabel="Writing…" onClick={() => void generate()}>
-                  More
+                <AiButton type="button" variant="ghost" size="xs" pending={ai.isPending} pendingLabel={t("writing")} onClick={() => void generate()}>
+                  {t("more")}
                 </AiButton>
               ) : null}
-              <Button type="button" variant="ghost" size="icon-xs" aria-label="Close hook ideas" onClick={() => setPanelOpen(false)}>
+              <Button type="button" variant="ghost" size="icon-xs" aria-label={t("close_hook_ideas")} onClick={() => setPanelOpen(false)}>
                 <X aria-hidden />
               </Button>
             </div>
           </div>
           <AiErrorNotice error={ai.error} onRetry={() => void generate()} />
-          {ai.isPending && !hooks.length ? <p className="py-2 text-xs text-muted-foreground">Writing hooks in your voice…</p> : null}
+          {ai.isPending && !hooks.length ? <p className="py-2 text-xs text-muted-foreground">{t("writing_hooks")}</p> : null}
           {hooks.length ? (
             <ul className={cn("flex flex-col divide-y rounded-md border bg-background/80 dark:bg-input/30", ai.isPending && "opacity-60")}>
               {hooks.map((hook) => {
@@ -133,8 +136,8 @@ export function HookField({ item, mainMessage, onSaved }: { item: ContentItem; m
                         type="button"
                         variant="ghost"
                         size="icon-xs"
-                        aria-label="Save to the Hook Library"
-                        title="Save to the Hook Library"
+                        aria-label={t("save_to_library")}
+                        title={t("save_to_library")}
                         onClick={() => saveToLibrary(hook.text, hook.category)}
                       >
                         <BookmarkPlus aria-hidden />
@@ -142,11 +145,11 @@ export function HookField({ item, mainMessage, onSaved }: { item: ContentItem; m
                       {current ? (
                         <span className="inline-flex h-6 items-center gap-1 px-1.5 text-xs font-medium text-good-fg">
                           <Check className="size-3.5" aria-hidden />
-                          In use
+                          {t("in_use")}
                         </span>
                       ) : (
-                        <Button type="button" variant="outline" size="xs" onClick={() => applyHook(hook.text, hook.category, null, "AI hook ideas")}>
-                          Use
+                        <Button type="button" variant="outline" size="xs" onClick={() => applyHook(hook.text, hook.category, null, t("ai_hook_ideas"))}>
+                          {t("use")}
                         </Button>
                       )}
                     </div>
@@ -155,7 +158,7 @@ export function HookField({ item, mainMessage, onSaved }: { item: ContentItem; m
               })}
             </ul>
           ) : null}
-          {hooks.length ? <AiNotice>Hooks are a first draft — make the promise one your content can pay off.</AiNotice> : null}
+          {hooks.length ? <AiNotice>{t("hooks_notice")}</AiNotice> : null}
         </div>
       ) : null}
     </FormField>
@@ -163,6 +166,7 @@ export function HookField({ item, mainMessage, onSaved }: { item: ContentItem; m
 }
 
 function HookLibraryPicker({ onPick }: { onPick: (hook: { id: string; text: string; category: HookCategory }) => void }) {
+  const t = useT(briefMessages)
   const hooks = useTable("hooks")
   const [open, setOpen] = useState(false)
   const groups = useMemo(
@@ -180,14 +184,14 @@ function HookLibraryPicker({ onPick }: { onPick: (hook: { id: string; text: stri
       <PopoverTrigger asChild>
         <Button type="button" variant="ghost" size="xs">
           <Library aria-hidden />
-          Library
+          {t("library")}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[min(26rem,calc(100vw-2rem))] gap-0 p-0">
         <Command>
-          <CommandInput placeholder="Search the Hook Library…" />
+          <CommandInput placeholder={t("search_library")} />
           <CommandList className="max-h-80">
-            <CommandEmpty>{hooks.length ? "No matching hooks." : "The Hook Library is empty."}</CommandEmpty>
+            <CommandEmpty>{hooks.length ? t("no_matching_hooks") : t("library_empty")}</CommandEmpty>
             {groups.map((group) => (
               <CommandGroup key={group.category} heading={HOOK_CATEGORIES[group.category].label}>
                 {group.hooks.map((hook) => (
@@ -201,7 +205,7 @@ function HookLibraryPicker({ onPick }: { onPick: (hook: { id: string; text: stri
                     }}
                     className="items-start"
                   >
-                    {hook.is_favorite ? <Star className="mt-0.5 fill-current text-muted-foreground" aria-label="Favourite" /> : null}
+                    {hook.is_favorite ? <Star className="mt-0.5 fill-current text-muted-foreground" aria-label={t("favourite")} /> : null}
                     <span className="min-w-0 text-pretty">{hook.text}</span>
                   </CommandItem>
                 ))}

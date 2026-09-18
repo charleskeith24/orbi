@@ -5,9 +5,11 @@ import Link from "next/link"
 import { useCallback, useMemo, useState } from "react"
 import { EmptyState, PageContainer, PageHeader } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/i18n"
 import { useLookup, useTable } from "@/lib/store"
 import type { ID } from "@/lib/types"
-import { formatNumber, pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { storyVaultMessages } from "./messages"
 import { StoryActionsProvider } from "./story-actions"
 import { StoryCard } from "./story-card"
 import { StoryCreateDialog } from "./story-create-dialog"
@@ -44,6 +46,7 @@ export function StoryVaultView() {
   const items = useTable("content_items")
   const pillars = useLookup("content_pillars")
   const [creating, setCreating] = useState(false)
+  const t = useT(storyVaultMessages)
   // The sheet tab belongs to the story it was chosen for; any other story opens on "Story".
   const [tabState, setTabState] = useState<{ id: ID | null; tab: StorySheetTab }>({ id: null, tab: "story" })
 
@@ -85,7 +88,7 @@ export function StoryVaultView() {
       <PageContainer>
         <PageHeader
           title="Story Vault"
-          description="Your content memory — the real stories, lessons and beliefs that make every draft sound like you."
+          description={t("description")}
           actions={
             <>
               <Button type="button" variant="outline" size="sm" asChild>
@@ -96,7 +99,7 @@ export function StoryVaultView() {
               </Button>
               <Button type="button" size="sm" onClick={() => setCreating(true)}>
                 <Plus aria-hidden />
-                New story
+                {t("new_story")}
               </Button>
             </>
           }
@@ -104,15 +107,15 @@ export function StoryVaultView() {
 
         {url.open && !openStory ? (
           <div role="status" className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">
-            <span className="min-w-0 flex-1">The story in this link no longer exists — it may have been deleted.</span>
-            <Button type="button" variant="ghost" size="icon-xs" aria-label="Dismiss" onClick={() => update({ open: "" })}>
+            <span className="min-w-0 flex-1">{t("missing_link")}</span>
+            <Button type="button" variant="ghost" size="icon-xs" aria-label={t("dismiss")} onClick={() => update({ open: "" })}>
               <X aria-hidden />
             </Button>
           </div>
         ) : null}
 
         {stories.length ? (
-          <section aria-label="Stories" className="flex min-w-0 flex-col gap-3">
+          <section aria-label={t("stories_label")} className="flex min-w-0 flex-col gap-3">
             <StoryFilterBar
               stories={stories}
               usage={usage}
@@ -134,11 +137,11 @@ export function StoryVaultView() {
                 <EmptyState
                   compact
                   icon={SearchX}
-                  title="No stories match"
-                  description="Try a different search or fewer filters."
+                  title={t("no_match_title")}
+                  description={t("no_match_description")}
                   action={
                     <Button type="button" size="sm" variant="outline" onClick={resetFilters}>
-                      Reset filters
+                      {t("reset_filters")}
                     </Button>
                   }
                 />
@@ -161,19 +164,19 @@ export function StoryVaultView() {
         ) : (
           <EmptyState
             icon={BookOpen}
-            title="Your Story Vault is empty"
-            description="Real stories are what make AI drafts sound like you. Capture the moments, failures and lessons only you can tell."
+            title={t("empty_title")}
+            description={t("empty_description")}
             action={
               <Button type="button" size="sm" onClick={() => setCreating(true)}>
                 <Plus aria-hidden />
-                New story
+                {t("new_story")}
               </Button>
             }
             secondaryAction={
               <Button type="button" size="sm" variant="outline" asChild>
                 <Link href="/stories/experience">
                   <Sparkles aria-hidden />
-                  Turn an experience into content
+                  {t("empty_experience")}
                 </Link>
               </Button>
             }
@@ -208,27 +211,31 @@ function StatsLine({
   filtered: boolean
   onShowUnused?: () => void
 }) {
+  const t = useT(storyVaultMessages)
+  const n = (key: "stories" | "lessons" | "ideas" | "pieces", count: number) => t.plural(key, count, { count: formatNumber(count) })
+  const unusedText = t("not_used_count", { count: formatNumber(stats.unused) })
   return (
     <p className="flex min-h-7 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground" aria-live="polite">
       <span className="num">
-        {filtered ? `${formatNumber(visible)} of ${pluralize(stats.stories, "story", "stories")}` : pluralize(stats.stories, "story", "stories")}
+        {filtered ? t("shown_of", { visible: formatNumber(visible), stories: n("stories", stats.stories) }) : n("stories", stats.stories)}
       </span>
       <span aria-hidden>·</span>
-      <span className="num">{pluralize(stats.lessons, "lesson")}</span>
+      <span className="num">{n("lessons", stats.lessons)}</span>
       <span aria-hidden>·</span>
       <span className="num">
-        used in {pluralize(stats.ideas, "idea")}
-        {stats.items ? ` and ${pluralize(stats.items, "piece")} of content` : ""}
+        {stats.items
+          ? t("used_in_content", { ideas: n("ideas", stats.ideas), pieces: n("pieces", stats.items) })
+          : t("used_in", { ideas: n("ideas", stats.ideas) })}
       </span>
       {stats.unused ? (
         <>
           <span aria-hidden>·</span>
           {onShowUnused ? (
             <Button type="button" variant="link" size="xs" className="h-auto px-0 text-xs num" onClick={onShowUnused}>
-              {formatNumber(stats.unused)} not used yet
+              {unusedText}
             </Button>
           ) : (
-            <span className="num">{formatNumber(stats.unused)} not used yet</span>
+            <span className="num">{unusedText}</span>
           )}
         </>
       ) : null}

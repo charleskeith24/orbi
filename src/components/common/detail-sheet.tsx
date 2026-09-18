@@ -3,6 +3,8 @@
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { cn } from "@/lib/utils"
 
 const WIDTHS = {
@@ -45,6 +47,7 @@ export function DetailSheet({
   /** e.g. commit or cancel an inline edit before Esc closes the sheet. */
   onEscapeKeyDown?: React.ComponentProps<typeof SheetContent>["onEscapeKeyDown"]
 }) {
+  const c = useT(commonMessages)
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -63,7 +66,7 @@ export function DetailSheet({
           <div className="-mr-1 flex shrink-0 items-center gap-1">
             {actions}
             <SheetClose asChild>
-              <Button type="button" variant="ghost" size="icon-sm" aria-label="Close">
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={c("close")}>
                 <X aria-hidden />
               </Button>
             </SheetClose>

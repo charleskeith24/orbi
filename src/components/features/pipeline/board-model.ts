@@ -248,14 +248,19 @@ export function defaultScheduleTime(item: Pick<ContentItem, "scheduled_at">, sug
   return parseDate(combineDateTime(addDays(startOfDay(now), 1), time)) ?? addDays(now, 1)
 }
 
-/** Quick due dates for the card menu; a date offered twice (e.g. "In 3 days" = next Monday) is listed once. */
-export function dueDateShortcuts(now: Date, weekStartsOn: 0 | 1): { label: string; value: ISODate }[] {
+export type DueShortcutKey = "today" | "tomorrow" | "in_3_days" | "next_week"
+
+/**
+ * Quick due dates for the card menu; a date offered twice (e.g. "In 3 days" = next Monday) is listed once.
+ * `key` names the label in `pipelineCardMessages` (`due_<key>`).
+ */
+export function dueDateShortcuts(now: Date, weekStartsOn: 0 | 1): { key: DueShortcutKey; value: ISODate }[] {
   const today = startOfDay(now)
-  const all = [
-    { label: "Today", value: toISODate(today) },
-    { label: "Tomorrow", value: toISODate(addDays(today, 1)) },
-    { label: "In 3 days", value: toISODate(addDays(today, 3)) },
-    { label: "Next week", value: toISODate(startOfWeek(addWeeks(today, 1), weekStartsOn)) },
+  const all: { key: DueShortcutKey; value: ISODate }[] = [
+    { key: "today", value: toISODate(today) },
+    { key: "tomorrow", value: toISODate(addDays(today, 1)) },
+    { key: "in_3_days", value: toISODate(addDays(today, 3)) },
+    { key: "next_week", value: toISODate(startOfWeek(addWeeks(today, 1), weekStartsOn)) },
   ]
   return all.filter((shortcut, index) => all.findIndex((s) => s.value === shortcut.value) === index)
 }

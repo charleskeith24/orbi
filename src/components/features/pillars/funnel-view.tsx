@@ -6,25 +6,31 @@ import { PageContainer, PageHeader } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { funnelMix, funnelPerformance, type FunnelAggregate, type FunnelMixRow } from "@/lib/analytics"
 import { FUNNEL_STAGE_IDS } from "@/lib/constants"
+import { useT, useUiLang } from "@/lib/i18n"
 import { useDb, useSettings } from "@/lib/store"
 import type { FunnelStage, FunnelTargets } from "@/lib/types"
 import { FunnelDistributionCard, FunnelPerformanceCard } from "./funnel-charts"
+import { funnelMessages } from "./funnel-messages"
 import { FunnelStageCard } from "./funnel-stage-card"
 import { FunnelTargetsDialog } from "./funnel-targets-dialog"
 import { contentByStage } from "./funnel-utils"
+import { pillarMessages } from "./pillar-messages"
 import { PillarsTabs } from "./pillars-tabs"
 import { windowDays, WindowToggle, type MixWindow } from "./segmented-toggle"
 import { UnassignedItems } from "./unassigned-items"
 
 /** Content Funnel (spec §8): TOFU / MOFU / BOFU distribution vs targets, performance per stage and quick-assign. */
 export function FunnelView() {
+  const t = useT(funnelMessages)
+  const p = useT(pillarMessages)
+  const lang = useUiLang()
   const db = useDb()
   const settings = useSettings()
   const [now] = useState(() => new Date())
   const [range, setRange] = useState<MixWindow>("30")
   const [targetsOpen, setTargetsOpen] = useState(false)
   const days = windowDays(range)
-  const windowLabel = `last ${days} days`
+  const windowLabel = p("window_label", { days })
 
   const targets: FunnelTargets = {
     tofu: settings.funnel_targets?.tofu ?? 0,
@@ -33,13 +39,13 @@ export function FunnelView() {
   }
 
   const data = useMemo(() => {
-    const mix = funnelMix(db, now, settings, { days })
-    const perf = funnelPerformance(db, now, { days, settings })
+    const mix = funnelMix(db, now, settings, { days, lang })
+    const perf = funnelPerformance(db, now, { days, settings, lang })
     const mixByStage = new Map<FunnelStage, FunnelMixRow>(mix.rows.map((r) => [r.stage, r]))
     const perfByStage = new Map<FunnelStage, FunnelAggregate>()
     for (const row of perf) if (row.stage) perfByStage.set(row.stage, row)
     return { mix, perf, mixByStage, perfByStage, content: contentByStage(db.content_items) }
-  }, [db, now, settings, days])
+  }, [db, now, settings, days, lang])
 
   const actual = Object.fromEntries(
     FUNNEL_STAGE_IDS.map((s) => [s, data.mixByStage.get(s)?.actualPct ?? 0])
@@ -51,13 +57,13 @@ export function FunnelView() {
     <PageContainer>
       <PageHeader
         title="Content Funnel"
-        description="Awareness brings new people in, trust turns them into followers who believe you, conversion creates an action. Balance all three."
+        description={t("description")}
         actions={
           <>
             <WindowToggle value={range} onChange={setRange} />
             <Button type="button" size="sm" variant="outline" onClick={() => setTargetsOpen(true)}>
               <Scale aria-hidden />
-              Edit targets
+              {t("edit_targets")}
             </Button>
           </>
         }
@@ -65,7 +71,7 @@ export function FunnelView() {
         <PillarsTabs />
       </PageHeader>
 
-      <section aria-label="Funnel stages" className="grid gap-4 xl:grid-cols-3">
+      <section aria-label={t("stages_aria")} className="grid gap-4 xl:grid-cols-3">
         {FUNNEL_STAGE_IDS.map((stage) => (
           <FunnelStageCard
             key={stage}

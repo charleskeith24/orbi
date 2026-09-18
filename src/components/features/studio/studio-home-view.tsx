@@ -6,12 +6,14 @@ import { useMemo, useState } from "react"
 import { EmptyState, PageContainer, PageHeader, PageSection, SearchInput, SectionCard } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { isOverdue, tieredRows } from "@/lib/analytics"
+import { useT } from "@/lib/i18n"
 import { PIPELINE_STAGE_ORDER } from "@/lib/constants"
 import { uiActions, useDb, useSettings } from "@/lib/store"
 import type { ContentScript, ID, ScriptFormat } from "@/lib/types"
-import { matchesQuery, pluralize } from "@/lib/utils"
+import { formatNumber, matchesQuery } from "@/lib/utils"
 import { ContentRow, ContinueCreating, IdeaStarts, RecentlyPublished, type PublishedEntry } from "./home-lists"
 import { QuickStartDialog, QuickStartGrid } from "./home-quick-start"
+import { studioHomeMessages } from "./messages"
 import { CONTINUE_STAGES, dueSortKey } from "./studio-utils"
 import { useNow } from "./use-now"
 
@@ -30,6 +32,7 @@ const newContent = () => uiActions.openDialog({ type: "new-content" })
  * and what just went live. `?q=` searches every piece (`?open=<id>` is redirected by the page).
  */
 export function StudioHomeView() {
+  const t = useT(studioHomeMessages)
   const searchParams = useSearchParams()
   const db = useDb()
   const settings = useSettings()
@@ -86,9 +89,9 @@ export function StudioHomeView() {
   }, [db.content_items, query])
 
   const summary = [
-    `${pluralize(inProgress.length, "piece")} in progress`,
-    overdue ? `${overdue} overdue` : "",
-    `${pluralize(ideas.length, "idea")} ready to start`,
+    t.plural("pieces_in_progress", inProgress.length, { count: formatNumber(inProgress.length) }),
+    overdue ? t("overdue", { count: overdue }) : "",
+    t.plural("ideas_ready", ideas.length, { count: formatNumber(ideas.length) }),
   ]
     .filter(Boolean)
     .join(" · ")
@@ -103,20 +106,23 @@ export function StudioHomeView() {
       <PageHeader
         title="Content Studio"
         icon={PenLine}
-        description={`Where content gets made. ${summary}.`}
+        description={t("description", { summary })}
         actions={
           <>
-            <SearchInput value={query} onChange={search} placeholder="Search content…" aria-label="Search content" />
+            <SearchInput value={query} onChange={search} placeholder={t("search_placeholder")} aria-label={t("search_label")} />
             <Button type="button" size="sm" onClick={newContent}>
               <Plus aria-hidden />
-              New content
+              {t("new_content")}
             </Button>
           </>
         }
       />
 
       {query.trim() ? (
-        <SectionCard title={`Results for “${query.trim()}”`} description={pluralize(results.length, "piece")}>
+        <SectionCard
+          title={t("results_for", { query: query.trim() })}
+          description={t.plural("pieces", results.length, { count: formatNumber(results.length) })}
+        >
           {results.length ? (
             <ul className="flex flex-col">
               {results.map((item) => (
@@ -129,11 +135,11 @@ export function StudioHomeView() {
             <EmptyState
               compact
               icon={SearchX}
-              title="No content matches that search"
-              description="Search looks at titles, hooks and notes. Try a shorter phrase, or start something new."
+              title={t("no_results_title")}
+              description={t("no_results_description")}
               action={
                 <Button type="button" size="sm" variant="outline" onClick={() => search("")}>
-                  Clear search
+                  {t("clear_search")}
                 </Button>
               }
             />
@@ -141,7 +147,7 @@ export function StudioHomeView() {
         </SectionCard>
       ) : (
         <>
-          <PageSection title="Start something new" description="Pick a format — you land in the Script tab with its structure ready to write.">
+          <PageSection title={t("start_new")} description={t("start_new_description")}>
             <QuickStartGrid
               onStart={(format) => setDialog((current) => ({ format, open: true, key: (current?.key ?? 0) + 1 }))}
               onScratch={newContent}

@@ -4,11 +4,14 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 import { toast } from "sonner"
 import { useConfirm } from "@/components/common"
 import { IDEA_STATUS_MAP, PRIORITY_MAP } from "@/lib/constants"
+import { translator } from "@/lib/i18n/core"
+import { getUiLang } from "@/lib/i18n/ui-lang"
 import { createIdea, dataActions, getEntityTagIds, setEntityTags, useRow } from "@/lib/store"
 import type { ContentIdea, ID, IdeaStatus, Priority, UpdateRow } from "@/lib/types"
-import { pluralize, truncate } from "@/lib/utils"
+import { formatNumber, truncate } from "@/lib/utils"
 import { IdeaConvertDialog } from "./idea-convert-dialog"
 import { duplicateIdeaValues, restoreStatus } from "./idea-model"
+import { ideaActionsMessages } from "./messages"
 
 export interface IdeaActions {
   /** Open the detail sheet. */
@@ -39,8 +42,13 @@ function ideasByIds(ids: ID[]): ContentIdea[] {
   return dataActions.getDb().content_ideas.filter((i) => set.has(i.id))
 }
 
+/** Toasts and confirmations run from handlers — read the UI language at call time. */
+const tx = () => translator(ideaActionsMessages, getUiLang())
+
 const subject = (ideas: ContentIdea[]) =>
-  ideas.length === 1 ? `“${truncate(ideas[0].title || "Untitled idea", 60)}”` : pluralize(ideas.length, "idea")
+  ideas.length === 1
+    ? `“${truncate(ideas[0].title || tx()("untitled_idea"), 60)}”`
+    : tx().plural("subject", ideas.length, { count: formatNumber(ideas.length) })
 
 type UndoField = "status" | "priority" | "pillar_id"
 
@@ -61,7 +69,7 @@ function updateField<K extends UndoField>(
   if (quiet) return
   const previous = changes.map(({ idea }) => ({ id: idea.id, patch: { [field]: idea[field] } as UpdateRow<"content_ideas"> }))
   toast.success(message(changes.map((c) => c.idea)), {
-    action: { label: "Undo", onClick: () => dataActions.updateMany("content_ideas", previous) },
+    action: { label: tx()("undo"), onClick: () => dataActions.updateMany("content_ideas", previous) },
   })
 }
 
@@ -89,13 +97,15 @@ export function IdeaActionsProvider({
   const convert = useCallback((id: ID) => setConvertId(id), [])
 
   const archive = useCallback((ids: ID[], options: { quiet?: boolean } = {}) => {
-    updateField(ideasByIds(ids), "status", () => "archived", (changed) => `Archived ${subject(changed)}`, options.quiet)
+    updateField(ideasByIds(ids), "status", () => "archived", (changed) => tx()("archived", { subject: subject(changed) }), options.quiet)
   }, [])
 
   const restore = useCallback((ids: ID[]) => {
     const ideas = ideasByIds(ids).filter((i) => i.status === "archived")
     updateField(ideas, "status", restoreStatus, (changed) =>
-      changed.length === 1 ? `Restored to ${IDEA_STATUS_MAP[restoreStatus(changed[0])].label}` : `Restored ${subject(changed)}`
+      changed.length === 1
+        ? tx()("restored_to", { status: IDEA_STATUS_MAP[restoreStatus(changed[0])].label })
+        : tx()("restored", { subject: subject(changed) })
     )
   }, [])
 
@@ -113,22 +123,26 @@ export function IdeaActionsProvider({
           return
         }
         const withContent = ideas.filter((i) => i.converted_item_id)
-        updateField(withContent, "status", () => "converted", (changed) => `Moved ${subject(changed)} to Converted to Content`, options.quiet)
+        updateField(withContent, "status", () => "converted", (changed) => tx()("moved_converted", { subject: subject(changed) }), options.quiet)
         return
       }
-      updateField(ideas, "status", () => status, (changed) => `Moved ${subject(changed)} to ${IDEA_STATUS_MAP[status].label}`, options.quiet)
+      updateField(ideas, "status", () => status, (changed) => tx()("moved", { subject: subject(changed), status: IDEA_STATUS_MAP[status].label }), options.quiet)
     },
     [archive]
   )
 
   const setPriority = useCallback((ids: ID[], priority: Priority) => {
-    updateField(ideasByIds(ids), "priority", () => priority, (changed) => `${PRIORITY_MAP[priority].label} priority · ${subject(changed)}`)
+    updateField(ideasByIds(ids), "priority", () => priority, (changed) =>
+      tx()("priority_set", { priority: PRIORITY_MAP[priority].label, subject: subject(changed) })
+    )
   }, [])
 
   const setPillar = useCallback((ids: ID[], pillarId: ID | null) => {
     const pillar = pillarId ? dataActions.getDb().content_pillars.find((p) => p.id === pillarId) : null
     updateField(ideasByIds(ids), "pillar_id", () => pillarId, (changed) =>
-      pillar ? `Moved ${subject(changed)} to ${pillar.name || "the pillar"}` : `Removed the pillar from ${subject(changed)}`
+      pillar
+        ? tx()("moved_pillar", { subject: subject(changed), pillar: pillar.name || tx()("the_pillar") })
+        : tx()("removed_pillar", { subject: subject(changed) })
     )
   }, [])
 
@@ -137,11 +151,11 @@ export function IdeaActionsProvider({
       const db = dataActions.getDb()
       const source = db.content_ideas.find((i) => i.id === id)
       if (!source) return
-      const copy = createIdea(duplicateIdeaValues(source))
+      const copy = createIdea(duplicateIdeaValues(source, getUiLang()))
       const tagIds = getEntityTagIds(db, "content_ideas", id)
       if (tagIds.length) setEntityTags("content_ideas", copy.id, tagIds)
       onOpen(copy.id)
-      toast.success("Idea duplicated", { description: copy.title })
+      toast.success(tx()("duplicated"), { description: copy.title })
     },
     [onOpen]
   )
@@ -153,17 +167,19 @@ export function IdeaActionsProvider({
       const set = new Set(ideas.map((i) => i.id))
       const linked = dataActions.getDb().content_items.filter((item) => item.idea_id && set.has(item.idea_id)).length
       const one = ideas.length === 1
+      const t = tx()
+      const count = formatNumber(ideas.length)
       const ok = await confirm({
-        title: one ? "Delete this idea?" : `Delete ${pluralize(ideas.length, "idea")}?`,
-        description: `${one ? `${subject(ideas)} is` : "They're"} removed from the Idea Bank permanently.${
-          linked ? ` The ${pluralize(linked, "content piece")} made from ${one ? "it" : "them"} stay in the pipeline.` : ""
+        title: one ? t("delete_title_single") : t("delete_title_many", { count }),
+        description: `${one ? t("delete_description_single", { subject: subject(ideas) }) : t("delete_description_many")}${
+          linked ? ` ${t.plural(one ? "linked_single" : "linked_many", linked, { count: formatNumber(linked) })}` : ""
         }`,
-        confirmLabel: one ? "Delete idea" : `Delete ${pluralize(ideas.length, "idea")}`,
+        confirmLabel: one ? t("delete_confirm_single") : t("delete_confirm_many", { count }),
       })
       if (!ok) return false
       if (openId && set.has(openId)) onOpen(null)
       dataActions.remove("content_ideas", [...set])
-      toast.success(one ? "Idea deleted" : `${pluralize(ideas.length, "idea")} deleted`)
+      toast.success(one ? t("deleted_single") : t("deleted_many", { count }))
       return true
     },
     [confirm, openId, onOpen]

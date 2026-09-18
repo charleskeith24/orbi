@@ -2,6 +2,7 @@
 
 import { CircleAlert, KeyRound, LogIn, ShieldCheck } from "lucide-react"
 import { useState } from "react"
+import { useScreenLang, useScreenT } from "@/components/app-shell/device-ui-lang"
 import { AuthCard, AuthNotice } from "@/components/features/auth/auth-card"
 import { authPageHref, describeAuthError } from "@/components/features/auth/auth-client"
 import { useAuthUser } from "@/components/features/auth/use-auth-user"
@@ -10,7 +11,6 @@ import { Button } from "@/components/ui/button"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
-import { useT } from "@/lib/i18n"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { setPasswordMessages } from "./set-password-messages"
 
@@ -19,7 +19,8 @@ const MAX_PASSWORD_BYTES = 72
 
 /** Sets (or changes) the signed-in user's password. `next` is already sanitized by the page. */
 export function SetPasswordForm({ next }: { next: string }) {
-  const t = useT(setPasswordMessages)
+  const t = useScreenT(setPasswordMessages)
+  const lang = useScreenLang()
   const { user, loading } = useAuthUser()
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")
@@ -41,7 +42,7 @@ export function SetPasswordForm({ next }: { next: string }) {
     setFormError(null)
     const { error } = await getSupabaseBrowserClient().auth.updateUser({ password })
     setPending(false)
-    if (error) setFormError(error.code === "reauthentication_needed" ? t("reauth") : describeAuthError(error))
+    if (error) setFormError(error.code === "reauthentication_needed" ? t("reauth") : describeAuthError(error, lang))
     else setDone(true)
   }
 

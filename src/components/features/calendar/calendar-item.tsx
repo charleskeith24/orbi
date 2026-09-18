@@ -15,11 +15,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { PIPELINE_STAGE_MAP, PLATFORMS } from "@/lib/constants"
+import { useT, type Translator } from "@/lib/i18n"
 import { uiActions } from "@/lib/store"
 import type { CategoricalColor, ContentItem } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useCalendarActions } from "./calendar-actions"
 import { isLiveItem, type PlacementKind } from "./calendar-model"
+import { calendarMessages } from "./messages"
 
 /** How an item shows up: placed on a day (published / scheduled / due) or waiting in the tray. */
 export type ItemKind = PlacementKind | "unscheduled"
@@ -50,12 +52,12 @@ export interface ItemBodyProps {
 
 const STRETCHED = "outline-none after:absolute after:inset-0 after:content-['']"
 
-function describe(item: ContentItem, kind: ItemKind, at: Date | null): string {
-  const parts = [item.title.trim() || "Untitled content", PLATFORMS[item.platform]?.label ?? item.platform, PIPELINE_STAGE_MAP[item.stage]?.label ?? item.stage]
-  if (at && kind === "published") parts.push(`Published ${format(at, "MMM d, h:mm a")}`)
-  if (at && kind === "scheduled") parts.push(`Scheduled ${format(at, "MMM d, h:mm a")}`)
-  if (at && kind === "due") parts.push(`Due ${format(at, "MMM d")} — no publish time yet`)
-  if (kind === "unscheduled") parts.push("No publish time yet")
+function describe(item: ContentItem, kind: ItemKind, at: Date | null, t: Translator<typeof calendarMessages.en>): string {
+  const parts = [item.title.trim() || t("untitled_content"), PLATFORMS[item.platform]?.label ?? item.platform, PIPELINE_STAGE_MAP[item.stage]?.label ?? item.stage]
+  if (at && kind === "published") parts.push(t("item_published", { date: format(at, "MMM d, h:mm a") }))
+  if (at && kind === "scheduled") parts.push(t("item_scheduled", { date: format(at, "MMM d, h:mm a") }))
+  if (at && kind === "due") parts.push(t("item_due", { date: format(at, "MMM d") }))
+  if (kind === "unscheduled") parts.push(t("no_publish_time"))
   return parts.join(" · ")
 }
 
@@ -72,7 +74,8 @@ function PillarBar({ color, className }: { color: CategoricalColor | null; class
 
 /** Presentational item (also the drag preview). */
 export function ItemBody({ item, kind, at, pillarColor, pillarName, variant, highlighted = false, action, menu, overlay = false }: ItemBodyProps) {
-  const title = item.title.trim() || "Untitled content"
+  const t = useT(calendarMessages)
+  const title = item.title.trim() || t("untitled_content")
   const live = kind === "published"
   const stage = PIPELINE_STAGE_MAP[item.stage]?.label ?? item.stage
   const time = at && (kind === "published" || kind === "scheduled") ? format(at, "h:mm a") : null
@@ -100,7 +103,7 @@ export function ItemBody({ item, kind, at, pillarColor, pillarName, variant, hig
     highlighted && "border-brand/60 ring-2 ring-brand/30",
     overlay && "cursor-grabbing shadow-lg ring-1 ring-foreground/10"
   )
-  const tooltip = describe(item, kind, at)
+  const tooltip = describe(item, kind, at, t)
 
   if (variant === "chip") {
     return (
@@ -111,14 +114,14 @@ export function ItemBody({ item, kind, at, pillarColor, pillarName, variant, hig
         {live ? (
           <>
             <CircleCheck className="size-3.5 shrink-0 text-good-fg" aria-hidden />
-            <span className="sr-only">Published</span>
+            <span className="sr-only">{t("published")}</span>
           </>
         ) : kind === "scheduled" ? (
           <span className="shrink-0 text-[11px] text-muted-foreground num">{time}</span>
         ) : kind === "due" ? (
           <>
             <Flag className="size-3 shrink-0 text-muted-foreground" aria-hidden />
-            <span className="sr-only">Due</span>
+            <span className="sr-only">{t("due")}</span>
           </>
         ) : (
           <>
@@ -142,13 +145,13 @@ export function ItemBody({ item, kind, at, pillarColor, pillarName, variant, hig
           {kind === "due" ? (
             <span className="inline-flex items-center gap-1">
               <Flag className="size-3" aria-hidden />
-              Due
+              {t("due")}
             </span>
           ) : time ? (
             <span className="num">{time}</span>
           ) : null}
           {live ? <CircleCheck className="ml-auto size-3.5 shrink-0 text-good-fg" aria-hidden /> : <StageIcon stage={item.stage} className="ml-auto" />}
-          <span className="sr-only">{live ? "Published" : stage}</span>
+          <span className="sr-only">{live ? t("published") : stage}</span>
         </span>
         <span className={cn("line-clamp-2 text-[13px] leading-snug font-medium break-words", live && "text-muted-foreground")}>{titleNode}</span>
         {stageLine ? (
@@ -169,7 +172,7 @@ export function ItemBody({ item, kind, at, pillarColor, pillarName, variant, hig
           {kind === "due" ? (
             <span className="inline-flex items-center gap-1 text-muted-foreground">
               <Flag className="size-3.5" aria-hidden />
-              Due
+              {t("due")}
             </span>
           ) : (
             <span className={cn("font-medium num", live && "text-muted-foreground")}>{time}</span>
@@ -185,7 +188,7 @@ export function ItemBody({ item, kind, at, pillarColor, pillarName, variant, hig
           </span>
           <span className="inline-flex min-w-0 items-center gap-1.5">
             {pillarName ? <ColorDot color={pillarColor} /> : null}
-            <span className="truncate">{pillarName ?? "No pillar"}</span>
+            <span className="truncate">{pillarName ?? t("no_pillar")}</span>
           </span>
           <span className="inline-flex items-center gap-1.5">
             {live ? <CircleCheck className="size-3.5 text-good-fg" aria-hidden /> : <StageIcon stage={item.stage} />}
@@ -238,10 +241,11 @@ const MENU_BUTTON: Record<ItemVariant, string> = {
 }
 
 function ItemMenu({ item, variant, drag }: { item: ContentItem; variant: ItemVariant; drag?: DragBinding }) {
+  const t = useT(calendarMessages)
   const actions = useCalendarActions()
   const [open, setOpen] = useState(false)
   const live = isLiveItem(item)
-  const title = item.title.trim() || "Untitled content"
+  const title = item.title.trim() || t("untitled_content")
 
   const dragHandlers = drag
     ? {
@@ -275,7 +279,7 @@ function ItemMenu({ item, variant, drag }: { item: ContentItem; variant: ItemVar
           size="icon-xs"
           {...drag?.attributes}
           {...dragHandlers}
-          aria-label={`Actions for ${title}`}
+          aria-label={t("actions_for", { title })}
           className={cn("text-muted-foreground", drag && "touch-none", MENU_BUTTON[variant])}
         >
           <Ellipsis aria-hidden />
@@ -290,38 +294,38 @@ function ItemMenu({ item, variant, drag }: { item: ContentItem; variant: ItemVar
         <DropdownMenuItem asChild>
           <Link href={`/studio/${item.id}`}>
             <ExternalLink aria-hidden />
-            Open in Content Studio
+            {t("open_in_studio")}
           </Link>
         </DropdownMenuItem>
         {!live ? (
           <DropdownMenuItem onSelect={() => actions.schedule(item)}>
             <CalendarClock aria-hidden />
-            {item.scheduled_at ? "Reschedule…" : "Schedule…"}
+            {item.scheduled_at ? t("reschedule_menu") : t("schedule_menu")}
           </DropdownMenuItem>
         ) : null}
         {!live && item.scheduled_at ? (
           <DropdownMenuItem onSelect={() => actions.unschedule(item)}>
             <CalendarX2 aria-hidden />
-            Unschedule
+            {t("unschedule")}
           </DropdownMenuItem>
         ) : null}
         {!live ? (
           <DropdownMenuItem onSelect={() => actions.changeDue(item)}>
             <Flag aria-hidden />
-            {item.due_date ? "Change due date…" : "Set due date…"}
+            {item.due_date ? t("change_due_menu") : t("set_due_menu")}
           </DropdownMenuItem>
         ) : null}
         {live ? (
           <DropdownMenuItem onSelect={() => uiActions.openDialog({ type: "add-metrics", itemId: item.id })}>
             <ChartColumn aria-hidden />
-            Add analytics
+            {t("add_analytics")}
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href={`/pipeline?open=${item.id}`}>
             <SquareKanban aria-hidden />
-            Show in Pipeline
+            {t("show_in_pipeline")}
           </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>

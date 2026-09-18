@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
+import { translate, useT, useUiLang, type UiLang } from "@/lib/i18n"
 import { PLATFORMS, REPURPOSE_TYPES, SCRIPT_FORMATS } from "@/lib/constants"
 import type { AiProviderId, ID, PlatformId, RepurposeType, ScriptSection } from "@/lib/types"
-import { cn, pluralize } from "@/lib/utils"
+import { cn, formatNumber } from "@/lib/utils"
+import { repurposeMessages } from "./messages"
 import { countWords, sectionsText } from "./repurpose-model"
 
 export type DraftOrigin = { kind: "ai"; provider: AiProviderId; model: string } | { kind: "suggestion"; rowId: ID }
@@ -27,10 +29,10 @@ export interface RepurposeDraft {
   edited: boolean
 }
 
-export function draftIssues(draft: Pick<RepurposeDraft, "title" | "sections">): { title: string | null; body: string | null } {
+export function draftIssues(draft: Pick<RepurposeDraft, "title" | "sections">, lang: UiLang = "en"): { title: string | null; body: string | null } {
   return {
-    title: draft.title.trim() ? null : "Add a title.",
-    body: draft.sections.some((s) => s.content.trim()) ? null : "Write at least one section.",
+    title: draft.title.trim() ? null : translate(repurposeMessages, lang, "add_title"),
+    body: draft.sections.some((s) => s.content.trim()) ? null : translate(repurposeMessages, lang, "write_section"),
   }
 }
 
@@ -65,16 +67,18 @@ export function RepurposeDraftCard({
   onSaveSuggestion: () => void
   onDiscard: () => void
 }) {
+  const t = useT(repurposeMessages)
+  const lang = useUiLang()
   const id = useId()
   const spec = REPURPOSE_TYPES[draft.type]
-  const issues = draftIssues(draft)
+  const issues = draftIssues(draft, lang)
   const text = sectionsText(draft.sections)
 
   if (draft.createdItemId) {
     return (
       <article className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border bg-card px-3 py-2.5">
         <StatusPill tone="good" icon={CircleCheck}>
-          Created
+          {t("created")}
         </StatusPill>
         <PlatformIcon platform={draft.platform} label className="size-3.5 text-muted-foreground" />
         <span className="min-w-0 flex-1 truncate text-sm" title={draft.title}>
@@ -83,11 +87,11 @@ export function RepurposeDraftCard({
         <span className="flex shrink-0 items-center gap-1">
           <Button asChild variant="outline" size="sm">
             <Link href={`/studio/${draft.createdItemId}`}>
-              Open in Studio
+              {t("open_in_studio")}
               <ArrowUpRight aria-hidden />
             </Link>
           </Button>
-          <Button type="button" variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label="Remove from the list" onClick={onDiscard}>
+          <Button type="button" variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label={t("remove_from_list")} onClick={onDiscard}>
             <X aria-hidden />
           </Button>
         </span>
@@ -110,21 +114,21 @@ export function RepurposeDraftCard({
           {PLATFORMS[draft.platform].label} · {SCRIPT_FORMATS[spec.scriptFormat].label}
         </span>
         <span className="ml-auto flex shrink-0 items-center gap-1">
-          {draft.edited ? <span className="mr-1 text-xs text-muted-foreground">Edited</span> : null}
+          {draft.edited ? <span className="mr-1 text-xs text-muted-foreground">{t("edited")}</span> : null}
           {draft.origin.kind === "ai" ? (
             <ProviderBadge provider={draft.origin.provider} model={draft.origin.model} />
           ) : (
             <StatusPill tone="neutral" icon={Lightbulb}>
-              Saved suggestion
+              {t("saved_suggestion_pill")}
             </StatusPill>
           )}
-          <CopyButton text={`${draft.title.trim()}\n\n${text}`.trim()} successMessage="Draft copied" />
+          <CopyButton text={`${draft.title.trim()}\n\n${text}`.trim()} successMessage={t("draft_copied")} />
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
             className="text-muted-foreground"
-            aria-label={`Discard the ${spec.label} draft`}
+            aria-label={t("discard_draft", { type: spec.label })}
             onClick={onDiscard}
           >
             <X aria-hidden />
@@ -136,7 +140,7 @@ export function RepurposeDraftCard({
         <div className={cn("grid min-w-0 gap-3", !spec.platform && "@xl:grid-cols-[minmax(0,1fr)_12rem]")}>
           <div className="flex min-w-0 flex-col gap-1.5">
             <label htmlFor={`${id}-title`} className="text-xs font-medium text-muted-foreground">
-              Title
+              {t("title")}
             </label>
             <Input
               id={`${id}-title`}
@@ -153,8 +157,12 @@ export function RepurposeDraftCard({
           </div>
           {!spec.platform ? (
             <div className="flex min-w-0 flex-col gap-1.5">
-              <span className="text-xs font-medium text-muted-foreground">Platform</span>
-              <PlatformSelect value={draft.platform} onChange={(p) => p && onChange({ platform: p })} aria-label={`Platform for the ${spec.label}`} />
+              <span className="text-xs font-medium text-muted-foreground">{t("platform")}</span>
+              <PlatformSelect
+                value={draft.platform}
+                onChange={(p) => p && onChange({ platform: p })}
+                aria-label={t("platform_for", { type: spec.label })}
+              />
             </div>
           ) : null}
         </div>
@@ -179,15 +187,15 @@ export function RepurposeDraftCard({
       </div>
 
       <footer className="flex min-w-0 flex-wrap items-center gap-2 border-t bg-muted/30 px-3 py-2">
-        <span className="text-xs text-muted-foreground num">{pluralize(countWords(text), "word")}</span>
+        <span className="text-xs text-muted-foreground num">{t.plural("words", countWords(text), { count: formatNumber(countWords(text)) })}</span>
         <span className="ml-auto flex flex-wrap items-center justify-end gap-2">
           <Button type="button" variant="outline" size="sm" onClick={onSaveSuggestion} disabled={Boolean(issues.title) || regenerating}>
             <Lightbulb aria-hidden />
-            Save as suggestion
+            {t("save_as_suggestion")}
           </Button>
           <Button type="button" size="sm" onClick={onCreate} disabled={Boolean(issues.title || issues.body) || regenerating}>
             <Plus aria-hidden />
-            Create content item
+            {t("create_item")}
           </Button>
         </span>
       </footer>

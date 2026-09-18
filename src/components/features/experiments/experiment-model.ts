@@ -6,6 +6,7 @@ import { differenceInCalendarDays } from "date-fns"
 import { isPublishedItem, latestMetricsByItem, metricValue, publishedAtOf } from "@/lib/analytics"
 import { EXPERIMENT_METRIC_MAP } from "@/lib/constants"
 import { formatDate, parseDate } from "@/lib/dates"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type {
   ContentExperiment,
   ContentItem,
@@ -18,7 +19,8 @@ import type {
   ISODate,
   UpdateRow,
 } from "@/lib/types"
-import { clamp, formatDuration, formatNumber, formatPercent, pluralize, truncate } from "@/lib/utils"
+import { clamp, formatDuration, formatNumber, formatPercent, truncate } from "@/lib/utils"
+import { experimentsMessages } from "./messages"
 
 export type Variant = "a" | "b"
 
@@ -26,11 +28,9 @@ export type Variant = "a" | "b"
 
 export const STATUS_ORDER: ExperimentStatus[] = ["running", "planned", "completed", "cancelled"]
 
-export const STATUS_COPY: Record<ExperimentStatus, string> = {
-  running: "Collecting posts and analytics now",
-  planned: "Designed and waiting to start",
-  completed: "Decided — the lesson is the output",
-  cancelled: "Stopped before a result",
+/** One-line description of a status group ("Collecting posts and analytics now"). */
+export function statusCopy(status: ExperimentStatus, lang: UiLang = "en"): string {
+  return translator(experimentsMessages, lang)(`group_${status}`)
 }
 
 const LAST = "9999-12-31"
@@ -89,31 +89,32 @@ export function experimentStats(experiments: ContentExperiment[], ideas: { sourc
 
 /* ------------------------------- Transitions ------------------------------- */
 
+type ExperimentsKey = keyof typeof experimentsMessages.en
+
 export interface StatusTransition {
   to: ExperimentStatus
-  label: string
+  /** Key of `experimentsMessages`. */
+  label: ExperimentsKey
   primary?: boolean
 }
 
 export const TRANSITIONS: Record<ExperimentStatus, StatusTransition[]> = {
   planned: [
-    { to: "running", label: "Start experiment", primary: true },
-    { to: "cancelled", label: "Cancel experiment" },
+    { to: "running", label: "start_experiment", primary: true },
+    { to: "cancelled", label: "cancel_experiment" },
   ],
   running: [
-    { to: "completed", label: "Mark completed", primary: true },
-    { to: "planned", label: "Back to planned" },
-    { to: "cancelled", label: "Cancel experiment" },
+    { to: "completed", label: "mark_completed", primary: true },
+    { to: "planned", label: "back_to_planned" },
+    { to: "cancelled", label: "cancel_experiment" },
   ],
-  completed: [{ to: "running", label: "Reopen" }],
-  cancelled: [{ to: "planned", label: "Restore to planned" }],
+  completed: [{ to: "running", label: "reopen" }],
+  cancelled: [{ to: "planned", label: "restore_planned" }],
 }
 
-export const TRANSITION_TOASTS: Record<ExperimentStatus, string> = {
-  running: "Experiment running",
-  planned: "Experiment moved to planned",
-  completed: "Experiment completed — record the result and lesson",
-  cancelled: "Experiment cancelled",
+/** Toast after a status change ("Experiment running"). */
+export function transitionToast(to: ExperimentStatus, lang: UiLang = "en"): string {
+  return translator(experimentsMessages, lang)(`toast_${to}`)
 }
 
 /** The status change plus the dates it implies: starting stamps today as the start; completing never ends in the future. */
@@ -157,13 +158,14 @@ export function formatMetricValue(metric: ExperimentMetric, value: number | null
 
 /* ---------------------------------- Timing --------------------------------- */
 
-export function dateRangeLabel(experiment: Pick<ContentExperiment, "start_date" | "end_date">): string {
+export function dateRangeLabel(experiment: Pick<ContentExperiment, "start_date" | "end_date">, lang: UiLang = "en"): string {
+  const t = translator(experimentsMessages, lang)
   const start = experiment.start_date ? formatDate(experiment.start_date, "MMM d") : null
   const end = experiment.end_date ? formatDate(experiment.end_date, "MMM d, yyyy") : null
   if (start && end) return `${start} – ${end}`
-  if (start) return `From ${formatDate(experiment.start_date, "MMM d, yyyy")}`
-  if (end) return `Until ${end}`
-  return "No dates set"
+  if (start) return t("range_from", { date: formatDate(experiment.start_date, "MMM d, yyyy") })
+  if (end) return t("range_until", { date: end })
+  return t("no_dates")
 }
 
 export interface ExperimentTiming {
@@ -172,7 +174,8 @@ export interface ExperimentTiming {
   progress: number | null
 }
 
-export function experimentTiming(experiment: ContentExperiment, now: Date): ExperimentTiming {
+export function experimentTiming(experiment: ContentExperiment, now: Date, lang: UiLang = "en"): ExperimentTiming {
+  const t = translator(experimentsMessages, lang)
   const start = parseDate(experiment.start_date)
   const end = parseDate(experiment.end_date)
   switch (experiment.status) {
@@ -181,22 +184,23 @@ export function experimentTiming(experiment: ContentExperiment, now: Date): Expe
         const total = Math.max(1, differenceInCalendarDays(end, start) + 1)
         const day = clamp(differenceInCalendarDays(now, start) + 1, 1, total)
         const left = differenceInCalendarDays(end, now)
-        if (left < 0) return { label: `Past its end date (${formatDate(end, "MMM d")})`, progress: 1 }
-        return { label: `Day ${day} of ${total} · ${left === 0 ? "ends today" : `${pluralize(left, "day")} left`}`, progress: day / total }
+        if (left < 0) return { label: t("past_end", { date: formatDate(end, "MMM d") }), progress: 1 }
+        const rest = left === 0 ? t("ends_today") : t.plural("days_left", left, { count: formatNumber(left) })
+        return { label: t("day_of", { day, total, rest }), progress: day / total }
       }
-      if (start) return { label: `Started ${formatDate(start, "MMM d")} · no end date`, progress: null }
-      return { label: "No dates set", progress: null }
+      if (start) return { label: t("started_no_end", { date: formatDate(start, "MMM d") }), progress: null }
+      return { label: t("no_dates"), progress: null }
     }
     case "planned": {
-      if (!start) return { label: "No start date yet", progress: null }
+      if (!start) return { label: t("no_start_yet"), progress: null }
       const until = differenceInCalendarDays(start, now)
-      if (until > 0) return { label: `Starts in ${pluralize(until, "day")}`, progress: null }
-      return { label: until === 0 ? "Starts today" : `Was due to start ${formatDate(start, "MMM d")}`, progress: null }
+      if (until > 0) return { label: t.plural("starts_in", until, { count: formatNumber(until) }), progress: null }
+      return { label: until === 0 ? t("starts_today") : t("was_due", { date: formatDate(start, "MMM d") }), progress: null }
     }
     case "completed":
-      return { label: end ? `Ended ${formatDate(end, "MMM d, yyyy")}` : "Completed", progress: null }
+      return { label: end ? t("ended", { date: formatDate(end, "MMM d, yyyy") }) : t("completed"), progress: null }
     case "cancelled":
-      return { label: "Cancelled", progress: null }
+      return { label: t("cancelled"), progress: null }
   }
 }
 
@@ -265,28 +269,34 @@ export function formValuesOf(experiment: ContentExperiment | null): ExperimentFo
   }
 }
 
-export function validateExperiment(values: ExperimentFormValues): ExperimentFormErrors {
+export function validateExperiment(values: ExperimentFormValues, lang: UiLang = "en"): ExperimentFormErrors {
+  const t = translator(experimentsMessages, lang)
   const errors: ExperimentFormErrors = {}
   const a = values.variant_a.trim()
   const b = values.variant_b.trim()
-  if (!values.name.trim()) errors.name = "Name the experiment."
-  if (!a) errors.variant_a = "Describe what variant A does."
-  if (!b) errors.variant_b = "Describe what variant B does."
-  else if (a && a.toLowerCase() === b.toLowerCase()) errors.variant_b = "Variant B has to differ from A."
-  if (values.start_date && values.end_date && values.end_date < values.start_date) errors.end_date = "The end date is before the start date."
+  if (!values.name.trim()) errors.name = t("error_name")
+  if (!a) errors.variant_a = t("error_variant_a")
+  if (!b) errors.variant_b = t("error_variant_b")
+  else if (a && a.toLowerCase() === b.toLowerCase()) errors.variant_b = t("error_same")
+  if (values.start_date && values.end_date && values.end_date < values.start_date) errors.end_date = t("error_end")
   return errors
 }
 
 /* ------------------------------ Lesson → idea ------------------------------ */
 
-export function winnerLabel(experiment: Pick<ContentExperiment, "variant_a" | "variant_b">, winner: ExperimentWinner): string {
-  if (winner === "inconclusive") return "Inconclusive"
+export function winnerLabel(experiment: Pick<ContentExperiment, "variant_a" | "variant_b">, winner: ExperimentWinner, lang: UiLang = "en"): string {
+  const t = translator(experimentsMessages, lang)
+  if (winner === "inconclusive") return t("inconclusive")
   const name = winner === "a" ? experiment.variant_a : experiment.variant_b
-  return `Variant ${winner.toUpperCase()}${name ? ` · ${name}` : ""}`
+  return `${t("variant", { letter: winner.toUpperCase() })}${name ? ` · ${name}` : ""}`
 }
 
-/** Idea Bank row for a lesson: the first sentence as the title, the full lesson as the description. */
-export function lessonIdeaValues(experiment: ContentExperiment, lesson: string): InsertRow<"content_ideas"> {
+/**
+ * Idea Bank row for a lesson: the first sentence as the title, the full lesson as the description. The
+ * `inspiration` credit is written in `lang` (the UI language when the idea is created).
+ */
+export function lessonIdeaValues(experiment: ContentExperiment, lesson: string, lang: UiLang = "en"): InsertRow<"content_ideas"> {
+  const t = translator(experimentsMessages, lang)
   const text = lesson.trim()
   const first = (text.match(/^[\s\S]*?[.!?](?=\s|$)/)?.[0] ?? text).trim().replace(/[.!?]+$/, "")
   const winner = experiment.winner === "a" ? experiment.variant_a : experiment.winner === "b" ? experiment.variant_b : ""
@@ -294,7 +304,7 @@ export function lessonIdeaValues(experiment: ContentExperiment, lesson: string):
     title: truncate(first || experiment.name, 120),
     description: text,
     why_it_matters: experiment.result.trim(),
-    inspiration: `Experiment · ${experiment.name}${winner ? ` — “${winner}” won` : ""}`,
+    inspiration: winner ? t("inspiration_winner", { name: experiment.name, winner }) : t("inspiration", { name: experiment.name }),
     source: "manual",
     source_ref_id: experiment.id,
     status: "inbox",

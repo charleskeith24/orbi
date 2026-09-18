@@ -19,13 +19,15 @@ import {
 } from "@dnd-kit/core"
 import { useMemo, useState } from "react"
 import { ContentCard } from "@/components/common"
+import { useT } from "@/lib/i18n"
 import { PIPELINE_STAGE_MAP } from "@/lib/constants"
 import type { ContentItem, ID, PerformanceTier, PipelineStage } from "@/lib/types"
 import { droppableId, STAGE_IDS, stageFromDroppable, type QuickAddDefaults, type StageColumnData } from "./board-model"
+import { pipelineCardMessages } from "./messages"
 import { usePipelineActions } from "./pipeline-actions"
 import { PipelineColumn } from "./pipeline-column"
 
-const stageLabel = (stage: PipelineStage | null | undefined) => (stage ? (PIPELINE_STAGE_MAP[stage]?.label ?? stage) : "no stage")
+const stageLabel = (stage: PipelineStage | null | undefined, none: string) => (stage ? (PIPELINE_STAGE_MAP[stage]?.label ?? stage) : none)
 
 /** Pointer drags target the column under the cursor; keyboard drags the column the card overlaps most. */
 const collisionDetection: CollisionDetection = (args) => {
@@ -58,11 +60,6 @@ const columnKeyboardCoordinates: KeyboardCoordinateGetter = (event, { context })
 
 const KEYBOARD_CODES = { start: ["Space"], cancel: ["Escape"], end: ["Space", "Enter", "Tab"] }
 
-const screenReaderInstructions: ScreenReaderInstructions = {
-  draggable:
-    "Press Space to pick up this card. Use the left and right arrow keys to choose a stage, then press Space or Enter to drop it, or Escape to cancel. Press Enter instead of Space to open the card's actions.",
-}
-
 interface PipelineBoardProps {
   columns: Record<PipelineStage, StageColumnData>
   collapsed: Set<PipelineStage>
@@ -89,6 +86,7 @@ export function PipelineBoard({
   onQuickAdd,
   onCollapsedChange,
 }: PipelineBoardProps) {
+  const t = useT(pipelineCardMessages)
   const actions = usePipelineActions()
   const [activeId, setActiveId] = useState<ID | null>(null)
   const sensors = useSensors(
@@ -103,21 +101,23 @@ export function PipelineBoard({
   }, [columns])
   const activeItem = activeId ? (itemsById.get(activeId) ?? null) : null
 
+  const screenReaderInstructions = useMemo<ScreenReaderInstructions>(() => ({ draggable: t("sr_instructions") }), [t])
   const announcements = useMemo<Announcements>(() => {
-    const title = (id: UniqueIdentifier) => `“${itemsById.get(String(id))?.title.trim() || "Untitled content"}”`
+    const title = (id: UniqueIdentifier) => `“${itemsById.get(String(id))?.title.trim() || t("untitled")}”`
     const from = (id: UniqueIdentifier) => itemsById.get(String(id))?.stage
+    const label = (stage: PipelineStage | null | undefined) => stageLabel(stage, t("no_stage"))
     return {
-      onDragStart: ({ active }) => `Picked up ${title(active.id)} from ${stageLabel(from(active.id))}.`,
-      onDragOver: ({ over }) => (over ? `Over ${stageLabel(stageFromDroppable(over.id))}.` : "Not over a stage."),
+      onDragStart: ({ active }) => t("sr_pick", { title: title(active.id), stage: label(from(active.id)) }),
+      onDragOver: ({ over }) => (over ? t("sr_over", { stage: label(stageFromDroppable(over.id)) }) : t("sr_not_over")),
       onDragEnd: ({ active, over }) => {
         const to = stageFromDroppable(over?.id)
         return to && to !== from(active.id)
-          ? `Dropped ${title(active.id)} in ${stageLabel(to)}.`
-          : `${title(active.id)} stays in ${stageLabel(from(active.id))}.`
+          ? t("sr_drop", { title: title(active.id), stage: label(to) })
+          : t("sr_stay", { title: title(active.id), stage: label(from(active.id)) })
       },
-      onDragCancel: ({ active }) => `Move cancelled. ${title(active.id)} stays in ${stageLabel(from(active.id))}.`,
+      onDragCancel: ({ active }) => t("sr_cancel", { title: title(active.id), stage: label(from(active.id)) }),
     }
-  }, [itemsById])
+  }, [itemsById, t])
 
   function handleDragEnd({ active, over }: DragEndEvent) {
     setActiveId(null)
@@ -137,7 +137,7 @@ export function PipelineBoard({
     >
       <div
         role="region"
-        aria-label="Pipeline board"
+        aria-label={t("board_label")}
         className="relative flex h-full min-h-0 gap-2.5 overflow-x-auto overscroll-x-contain pb-2"
       >
         {STAGE_IDS.map((stage) => (

@@ -4,11 +4,13 @@
  */
 import { endOfDay, startOfDay, subDays } from "date-fns"
 import { HEALTH_BANDS } from "@/lib/constants"
+import { translator, type Translator, type UiLang } from "@/lib/i18n/core"
 import type { AppSettings, Database } from "@/lib/types"
 import { clamp, formatPercent } from "@/lib/utils"
 import { aggregateRows } from "./aggregates"
 import { MIN_MIX_SAMPLE, pillarMix } from "./balance"
 import { consistencyStats } from "./consistency"
+import { healthMessages } from "./messages"
 import { sharedPerformanceRows } from "./metrics"
 import { getWinners, repurposedSourceIds } from "./performance"
 import { contentBuffer } from "./pipeline"
@@ -54,19 +56,26 @@ export const HEALTH_COMPONENTS: Record<HealthComponentKey, { label: string; max:
 /** Pillar drift (Σ|deviation| ÷ 2, in points) at which the balance component reaches 0. */
 const BALANCE_ZERO_DRIFT = 50
 
-function component(key: HealthComponentKey, score: number, detail: string): HealthComponent {
-  const spec = HEALTH_COMPONENTS[key]
-  return { key, label: spec.label, score: roundTo(clamp(score, 0, spec.max)), max: spec.max, detail, href: spec.href }
+/** A component's label in the UI language (HEALTH_COMPONENTS keeps the English labels). */
+export function healthComponentLabel(key: HealthComponentKey, lang: UiLang = "en"): string {
+  return lang === "en" ? HEALTH_COMPONENTS[key].label : translator(healthMessages, lang)(`label_${key}`)
 }
 
-function neutral(key: HealthComponentKey, detail: string): HealthComponent {
-  return component(key, HEALTH_COMPONENTS[key].max / 2, detail)
+type HealthTranslator = Translator<typeof healthMessages.en>
+
+function component(key: HealthComponentKey, score: number, detail: string, lang: UiLang = "en"): HealthComponent {
+  const spec = HEALTH_COMPONENTS[key]
+  return { key, label: healthComponentLabel(key, lang), score: roundTo(clamp(score, 0, spec.max)), max: spec.max, detail, href: spec.href }
+}
+
+function neutral(key: HealthComponentKey, detail: string, lang: UiLang = "en"): HealthComponent {
+  return component(key, HEALTH_COMPONENTS[key].max / 2, detail, lang)
 }
 
 /** Band from HEALTH_BANDS: the highest band whose `min` ≤ score. */
-export function healthBand(score: number): HealthBand {
+export function healthBand(score: number, lang: UiLang = "en"): HealthBand {
   const band = [...HEALTH_BANDS].sort((a, b) => b.min - a.min).find((b) => score >= b.min) ?? HEALTH_BANDS[HEALTH_BANDS.length - 1]
-  return { label: band.label, tone: band.tone }
+  return { label: lang === "en" ? band.label : translator(healthMessages, lang)(`band_${band.tone}`), tone: band.tone }
 }
 
 /** Engagement points: ≤ 0.6x → 3, 1.0x → 10, ≥ 1.3x → 15, linear in between. */
@@ -107,99 +116,109 @@ export function engagementTrend(db: Database, now: Date): EngagementTrend {
   }
 }
 
-function consistencyComponent(db: Database, now: Date, settings: AppSettings): HealthComponent {
+function consistencyComponent(db: Database, now: Date, settings: AppSettings, t: HealthTranslator, lang: UiLang): HealthComponent {
   const stats = consistencyStats(db, now, settings)
-  if (!stats.hasHistory) return component("consistency", 0, "No posts published yet — consistency starts with your first post")
-  if (stats.score === null) return neutral("consistency", "First week of publishing — no completed week to judge yet")
+  if (!stats.hasHistory) return component("consistency", 0, t("consistency_none"), lang)
+  if (stats.score === null) return neutral("consistency", t("consistency_first_week"), lang)
   return component(
     "consistency",
     (stats.score / 100) * HEALTH_COMPONENTS.consistency.max,
-    `${stats.weeksConsistent} of the last ${stats.weeksCounted} ${stats.weeksCounted === 1 ? "week" : "weeks"} reached 80% of your ${settings.weekly_post_target}-post target`
+    t.plural("consistency_weeks", stats.weeksCounted, { consistent: stats.weeksConsistent, target: settings.weekly_post_target }),
+    lang
   )
 }
 
-function balanceComponent(db: Database, now: Date, settings: AppSettings): HealthComponent {
-  const mix = pillarMix(db, now, settings)
-  if (!mix.rows.length) return neutral("balance", "No active pillars yet — define pillars to track balance")
+function balanceComponent(db: Database, now: Date, settings: AppSettings, t: HealthTranslator, lang: UiLang): HealthComponent {
+  const mix = pillarMix(db, now, settings, { lang })
+  if (!mix.rows.length) return neutral("balance", t("balance_no_pillars"), lang)
   if (mix.total < MIN_MIX_SAMPLE) {
-    return neutral("balance", `Only ${mix.total} ${mix.total === 1 ? "post" : "posts"} with a pillar in the last 30 days — not enough to judge balance`)
+    return neutral("balance", t.plural("balance_few", mix.total), lang)
   }
   const drift = mix.rows.reduce((acc, r) => acc + Math.abs(r.deviation), 0) / 2
   const score = HEALTH_COMPONENTS.balance.max * clamp(1 - drift / BALANCE_ZERO_DRIFT, 0, 1)
   const [first, ...rest] = mix.warnings
   const detail = first
-    ? `${first.message}${rest.length ? ` (+${rest.length} more)` : ""}`
-    : `All ${mix.rows.length} pillars within target range over the last 30 days`
-  return component("balance", score, detail)
+    ? rest.length
+      ? t("balance_more", { message: first.message, count: rest.length })
+      : first.message
+    : t("balance_ok", { count: mix.rows.length })
+  return component("balance", score, detail, lang)
 }
 
-function engagementComponent(db: Database, now: Date): HealthComponent {
+function engagementComponent(db: Database, now: Date, t: HealthTranslator, lang: UiLang): HealthComponent {
   const trend = engagementTrend(db, now)
   if (trend.ratio === null) {
-    return neutral("engagement", "Not enough measured posts to compare (needs 2+ in the last 30 days and in the 90 days before)")
+    return neutral("engagement", t("engagement_not_enough"), lang)
   }
   return component(
     "engagement",
     engagementTrendPoints(trend.ratio),
-    `Last 30 days: ${formatPercent(trend.current)} engagement vs ${formatPercent(trend.previous)} in the 90 days before (${formatMultiple(trend.ratio)})`
+    t("engagement_detail", {
+      current: formatPercent(trend.current),
+      previous: formatPercent(trend.previous),
+      multiple: formatMultiple(trend.ratio),
+    }),
+    lang
   )
 }
 
-function completionComponent(db: Database, now: Date): HealthComponent {
+function completionComponent(db: Database, now: Date, t: HealthTranslator, lang: UiLang): HealthComponent {
   const from = startOfDay(subDays(now, 13)).getTime()
   const to = endOfDay(now).getTime()
   const due = db.content_items.filter((i) => {
     const d = timeOf(i, "due_date")
     return d >= from && d <= to
   })
-  if (!due.length) return neutral("completion", "No production deadlines in the last 14 days")
+  if (!due.length) return neutral("completion", t("completion_none"), lang)
   const todayStart = startOfDay(now)
   const late = due.filter((i) => isOverdue(i, now, todayStart)).length
   return component(
     "completion",
     (HEALTH_COMPONENTS.completion.max * (due.length - late)) / due.length,
-    late
-      ? `${late} of ${due.length} items due in the last 14 days ${late === 1 ? "is" : "are"} overdue`
-      : `All ${due.length} ${due.length === 1 ? "item" : "items"} due in the last 14 days ${due.length === 1 ? "is" : "are"} on track`
+    late ? t.plural("completion_late", late, { total: due.length }) : t.plural("completion_ok", due.length),
+    lang
   )
 }
 
-function repurposingComponent(db: Database, now: Date, settings: AppSettings): HealthComponent {
+function repurposingComponent(db: Database, now: Date, settings: AppSettings, t: HealthTranslator, lang: UiLang): HealthComponent {
   const winners = getWinners(db, settings, now, { days: 60 })
-  if (!winners.length) return neutral("repurposing", "No winners in the last 60 days yet — nothing to repurpose")
+  if (!winners.length) return neutral("repurposing", t("repurposing_none"), lang)
   const repurposed = repurposedSourceIds(db)
   const done = winners.filter((w) => repurposed.has(w.id)).length
   return component(
     "repurposing",
     (HEALTH_COMPONENTS.repurposing.max * done) / winners.length,
-    `${done} of ${winners.length} ${winners.length === 1 ? "winner" : "winners"} from the last 60 days repurposed`
+    t.plural("repurposing_detail", winners.length, { done }),
+    lang
   )
 }
 
-function backlogComponent(db: Database, now: Date, settings: AppSettings): HealthComponent {
+function backlogComponent(db: Database, now: Date, settings: AppSettings, t: HealthTranslator, lang: UiLang): HealthComponent {
   const buffer = contentBuffer(db, now, settings)
   const healthy = settings.buffer_healthy_days
   const score = healthy > 0 ? HEALTH_COMPONENTS.backlog.max * clamp(buffer.days / healthy, 0, 1) : HEALTH_COMPONENTS.backlog.max
   const detail = buffer.readyCount
-    ? `${buffer.days} days of ready content vs a ${healthy}-day target (${buffer.readyCount} ready to publish)`
-    : `Nothing is ready to post — target is ${healthy} days of content`
-  return component("backlog", score, detail)
+    ? t("backlog_ready", { days: buffer.days, target: healthy, ready: buffer.readyCount })
+    : t("backlog_empty", { target: healthy })
+  return component("backlog", score, detail, lang)
 }
 
 /**
  * 0–100 = consistency 25 (consistencyScore) + pillar balance 20 (1 − drift ÷ 50) + engagement 15
  * (30-day vs prior-90-day rate) + completion 15 (on-track share of items due in 14 days) + repurposing 10
  * (repurposed share of 60-day winners) + backlog 15 (buffer days ÷ healthy days).
+ * Labels and details are in `lang` (default English).
  */
-export function contentHealthScore(db: Database, now: Date, settings: AppSettings): ContentHealth {
+export function contentHealthScore(db: Database, now: Date, settings: AppSettings, lang: UiLang = "en"): ContentHealth {
+  const t = translator(healthMessages, lang)
   const components = [
-    consistencyComponent(db, now, settings),
-    balanceComponent(db, now, settings),
-    engagementComponent(db, now),
-    completionComponent(db, now),
-    repurposingComponent(db, now, settings),
-    backlogComponent(db, now, settings),
+    consistencyComponent(db, now, settings, t, lang),
+    balanceComponent(db, now, settings, t, lang),
+    engagementComponent(db, now, t, lang),
+    completionComponent(db, now, t, lang),
+    repurposingComponent(db, now, settings, t, lang),
+    backlogComponent(db, now, settings, t, lang),
   ]
   const score = clamp(Math.round(components.reduce((acc, c) => acc + c.score, 0)), 0, 100)
-  return { score, band: healthBand(score), components }
+  return { score, band: healthBand(score, lang), components }
 }

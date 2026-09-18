@@ -5,10 +5,12 @@ import { useId } from "react"
 import { catWash, FormField, ListEditor, SectionCard } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { useT } from "@/lib/i18n"
 import { PLATFORMS, SCRIPT_FORMATS } from "@/lib/constants"
 import type { CategoricalColor, PlatformId, ScriptFormat, ScriptSection } from "@/lib/types"
-import { cn, pluralize } from "@/lib/utils"
+import { cn, formatNumber } from "@/lib/utils"
 import { CaptionCounter } from "./brief-fields"
+import { scriptMessages } from "./script-messages"
 import { captionWithHashtags, countWords, normalizeHashtag } from "./studio-utils"
 
 /** The script as a document: one row per section — label and hint on the left, the copy on the right. */
@@ -40,6 +42,7 @@ function SectionRow({
   hint: string | undefined
   onChange: (key: string, content: string) => void
 }) {
+  const t = useT(scriptMessages)
   const id = useId()
   const words = countWords(section.content)
   return (
@@ -49,12 +52,12 @@ function SectionRow({
           {section.label}
         </label>
         {hint ? <p className="mt-0.5 hidden text-xs text-pretty text-muted-foreground sm:block">{hint}</p> : null}
-        <p className="shrink-0 text-[11px] text-muted-foreground num sm:mt-1">{words ? pluralize(words, "word") : ""}</p>
+        <p className="shrink-0 text-[11px] text-muted-foreground num sm:mt-1">{words ? t.plural("words", words, { count: formatNumber(words) }) : ""}</p>
       </div>
       <textarea
         id={id}
         value={section.content}
-        placeholder={hint ?? "Write this section…"}
+        placeholder={hint ?? t("write_section")}
         onChange={(event) => onChange(section.key, event.target.value)}
         className="-mx-2 field-sizing-content min-h-[4.5rem] w-[calc(100%+1rem)] min-w-0 resize-none rounded-md bg-transparent px-2 py-1.5 text-base leading-relaxed outline-none placeholder:text-muted-foreground/70 hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/40 md:text-sm dark:hover:bg-input/20 dark:focus-visible:bg-input/20"
       />
@@ -75,19 +78,22 @@ export function SlidePreview({
   sections: ScriptSection[]
   color: CategoricalColor | null
 }) {
+  const t = useT(scriptMessages)
   const story = format === "story_sequence"
   const long = sections.filter((s) => countWords(s.content) > SLIDE_WORD_LIMIT).length
   return (
     <SectionCard
-      title={story ? "Frame preview" : "Slide preview"}
+      title={story ? t("frame_preview") : t("slide_preview")}
       description={
         long
-          ? `${pluralize(long, story ? "frame" : "slide")} over ${SLIDE_WORD_LIMIT} words — keep each one to a single idea.`
-          : `How the copy lands ${story ? "frame by frame" : "slide by slide"} — one idea each.`
+          ? t.plural(story ? "frames_long" : "slides_long", long, { count: formatNumber(long), limit: SLIDE_WORD_LIMIT })
+          : story
+            ? t("frames_hint")
+            : t("slides_hint")
       }
       contentClassName="px-0 pb-4"
     >
-      <ol className="flex gap-3 overflow-x-auto px-4 pb-1 scrollbar-thin" aria-label={story ? "Story frames" : "Carousel slides"}>
+      <ol className="flex gap-3 overflow-x-auto px-4 pb-1 scrollbar-thin" aria-label={story ? t("story_frames") : t("carousel_slides")}>
         {sections.map((section, index) => {
           const words = countWords(section.content)
           const tooLong = words > SLIDE_WORD_LIMIT
@@ -105,7 +111,7 @@ export function SlidePreview({
                 {tooLong ? (
                   <span className="inline-flex items-center gap-0.5 font-medium text-warning-fg">
                     <TriangleAlert className="size-3" aria-hidden />
-                    {words} words
+                    {t("slide_words", { count: words })}
                   </span>
                 ) : null}
               </span>
@@ -116,7 +122,7 @@ export function SlidePreview({
                   !section.content.trim() && "text-muted-foreground italic"
                 )}
               >
-                {section.content.trim() || "Empty"}
+                {section.content.trim() || t("empty")}
               </p>
               <span className="truncate text-[11px] text-muted-foreground">{section.label.replace(/^(Slide|Frame) \d+\s*—?\s*/, "")}</span>
             </li>
@@ -143,36 +149,37 @@ export function CaptionCard({
   onCaption: (value: string) => void
   onHashtags: (value: string[]) => void
 }) {
+  const t = useT(scriptMessages)
   const captionId = useId()
   const tagsId = useId()
   const canUseBrief = Boolean(briefCaption.trim()) && briefCaption.trim() !== caption.trim()
   return (
     <SectionCard
-      title="Caption & hashtags"
-      description={`Posted with the content on ${PLATFORMS[platform].label}.`}
+      title={t("caption_hashtags")}
+      description={t("posted_with", { platform: PLATFORMS[platform].label })}
       action={
         canUseBrief ? (
           <Button type="button" variant="ghost" size="xs" onClick={() => onCaption(briefCaption)}>
-            Use brief caption
+            {t("use_brief_caption")}
           </Button>
         ) : undefined
       }
       contentClassName="flex flex-col gap-4"
     >
-      <FormField label="Caption" htmlFor={captionId}>
+      <FormField label={t("caption")} htmlFor={captionId}>
         <Textarea
           id={captionId}
           value={caption}
           rows={3}
-          placeholder="Caption copy, in your voice"
+          placeholder={t("caption_placeholder")}
           onChange={(event) => onCaption(event.target.value)}
         />
         <CaptionCounter text={captionWithHashtags(caption, hashtags)} platform={platform} />
       </FormField>
       <FormField
-        label="Hashtags"
+        label={t("hashtags")}
         htmlFor={tagsId}
-        description={platform === "linkedin" ? "LinkedIn needs few or none — 3 at most." : "3–8 relevant hashtags. Enter or comma adds one."}
+        description={platform === "linkedin" ? t("hashtags_linkedin") : t("hashtags_hint")}
       >
         <ListEditor
           id={tagsId}
@@ -180,7 +187,7 @@ export function CaptionCard({
           onChange={(next) => onHashtags([...new Set(next.map(normalizeHashtag).filter(Boolean))])}
           placeholder="#hashtag"
           maxItems={30}
-          aria-label="Hashtags"
+          aria-label={t("hashtags")}
         />
       </FormField>
     </SectionCard>

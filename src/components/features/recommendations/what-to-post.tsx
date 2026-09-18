@@ -4,6 +4,8 @@ import { ArrowRight, ChevronRight, Undo2 } from "lucide-react"
 import { AiButton, ProviderBadge, SectionCard } from "@/components/common"
 import { AiErrorNotice } from "@/components/features/capture/ai-error-notice"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/i18n"
+import { whatToPostMessages } from "./messages"
 import { extraSignals } from "./suggestion"
 import {
   Alternatives,
@@ -38,43 +40,46 @@ export function WhatToPost({ variant = "card", className }: WhatToPostProps) {
 }
 
 function RefineButton({ state }: { state: WhatToPostState }) {
+  const t = useT(whatToPostMessages)
   if (!state.canRefine) return null
   return (
-    <AiButton size="sm" pending={state.ai.isPending} pendingLabel="Refining…" onClick={() => void state.refine()}>
-      {state.mode === "ai" ? "Refine again" : "Refine with AI"}
+    <AiButton size="sm" pending={state.ai.isPending} pendingLabel={t("refining")} onClick={() => void state.refine()}>
+      {state.mode === "ai" ? t("refine_again") : t("refine_ai")}
     </AiButton>
   )
 }
 
 function AiError({ state }: { state: WhatToPostState }) {
+  const t = useT(whatToPostMessages)
   if (!state.ai.error) return null
-  return <AiErrorNotice title="Couldn't refine" message={state.ai.error.message} onRetry={() => void state.refine()} />
+  return <AiErrorNotice title={t("couldnt_refine")} message={state.ai.error.message} onRetry={() => void state.refine()} />
 }
 
 /* --------------------------------- Card ---------------------------------- */
 
 function CardView({ state, className }: { state: WhatToPostState; className?: string }) {
+  const t = useT(whatToPostMessages)
   const s = state.current
   const total = state.list.length
   const provider = state.mode === "ai" ? state.ai.provider : null
   return (
     <SectionCard
-      title="What to post next"
+      title={t("card_title")}
       description={
         provider ? (
           <span className="inline-flex flex-wrap items-center gap-1.5">
-            Refined with AI from the engine&apos;s ranking
+            {t("refined_from")}
             <ProviderBadge provider={provider} model={state.ai.model ?? undefined} />
           </span>
         ) : (
-          "Ranked by the Content Decision Engine"
+          t("ranked_by_engine")
         )
       }
       className={className}
       contentClassName="flex flex-col gap-3"
       action={
         total > 1 ? (
-          <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={state.next} aria-label="Next suggestion">
+          <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={state.next} aria-label={t("next_suggestion")}>
             <span className="num">
               {state.position + 1}/{total}
             </span>
@@ -113,14 +118,15 @@ function CardView({ state, className }: { state: WhatToPostState; className?: st
 /* --------------------------------- Full ---------------------------------- */
 
 function FullView({ state, className }: { state: WhatToPostState; className?: string }) {
+  const t = useT(whatToPostMessages)
   const s = state.current
   const total = state.list.length
   const hook = state.edit?.hook ?? s?.hook ?? ""
   const cta = state.edit?.cta ?? s?.cta ?? ""
   return (
     <SectionCard
-      title="Suggested Content"
-      description="What to create next, ranked from pillar gaps, today's slot, audience demand, winners and platform fit."
+      title={t("full_title")}
+      description={t("full_description")}
       className={className}
       contentClassName="flex flex-col gap-4"
       action={
@@ -129,7 +135,7 @@ function FullView({ state, className }: { state: WhatToPostState; className?: st
             {state.mode === "ai" ? (
               <Button type="button" size="xs" variant="ghost" className="text-muted-foreground" onClick={state.showEngine}>
                 <Undo2 aria-hidden />
-                <span className="max-sm:sr-only">Engine ranking</span>
+                <span className="max-sm:sr-only">{t("engine_ranking")}</span>
               </Button>
             ) : null}
             <RefineButton state={state} />
@@ -156,16 +162,16 @@ function FullView({ state, className }: { state: WhatToPostState; className?: st
 
           <div className="flex flex-col gap-2.5" key={`${state.mode}:${s.key}`}>
             <EditableLine
-              label="Hook"
+              label={t("hook")}
               value={hook}
-              placeholder="Add a hook"
+              placeholder={t("hook_placeholder")}
               edited={state.edit?.hook !== undefined}
               onSave={(value) => state.updateEdit({ hook: value })}
             />
             <EditableLine
-              label="CTA"
+              label={t("cta")}
               value={cta}
-              placeholder="Add a call to action"
+              placeholder={t("cta_placeholder")}
               edited={state.edit?.cta !== undefined}
               onSave={(value) => state.updateEdit({ cta: value })}
             />
@@ -178,7 +184,7 @@ function FullView({ state, className }: { state: WhatToPostState; className?: st
           <div className="flex flex-wrap items-center gap-2">
             <CreateButton s={s} onCreate={() => state.create(s)} />
             <Button type="button" size="sm" variant="outline" onClick={state.next} disabled={total < 2}>
-              Next suggestion
+              {t("next_suggestion")}
               <ArrowRight aria-hidden />
             </Button>
             <OpenIdeaButton ideaId={s.ideaId} />

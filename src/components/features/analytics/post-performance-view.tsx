@@ -19,8 +19,9 @@ import { Button } from "@/components/ui/button"
 import { NO_KEY, tieredRows, type TieredRow } from "@/lib/analytics"
 import { PERFORMANCE_TIER_IDS, PERFORMANCE_TIERS, PLATFORMS } from "@/lib/constants"
 import { toISODate } from "@/lib/dates"
+import { useT, useUiLang } from "@/lib/i18n"
 import { uiActions, useDb, useLookup, useSettings } from "@/lib/store"
-import { countBy, formatCompact, formatPercent, matchesQuery, pluralize } from "@/lib/utils"
+import { countBy, formatCompact, formatNumber, formatPercent, matchesQuery } from "@/lib/utils"
 import { AnalyticsFilterBar } from "./analytics-filter-bar"
 import { ColumnMenu, useColumnVisibility } from "./column-menu"
 import { downloadCsv } from "./csv"
@@ -37,12 +38,14 @@ import {
 import { useAnalyticsFilters, useNow } from "./hooks"
 import { postsCsv, type PostLookups } from "./post-csv"
 import { PostDetailSheet } from "./post-detail-sheet"
+import { postMessages } from "./post-messages"
 import { buildPostColumns, tierKey } from "./post-table-columns"
 import { kpiTotals, scopeRows } from "./scope"
 
 const NO_SCOPE = { platforms: [], pillars: [] }
 const PAGE_EXTRA_KEYS = ["format", "tier"]
 
+/** Tier facet values; "untiered" / "none" labels are translated where the options are built. */
 const TIER_FACETS: { value: string; label: string }[] = [
   ...[...PERFORMANCE_TIER_IDS].reverse().map((tier) => ({ value: tier, label: PERFORMANCE_TIERS[tier].label })),
   { value: "untiered", label: "Not tiered yet" },
@@ -51,6 +54,8 @@ const TIER_FACETS: { value: string; label: string }[] = [
 
 /** Post Performance (spec §25): every published post with its latest snapshot; row → detail sheet (?open=). */
 export function PostPerformanceView() {
+  const t = useT(postMessages)
+  const lang = useUiLang()
   const db = useDb()
   const settings = useSettings()
   const now = useNow()
@@ -87,21 +92,22 @@ export function PostPerformanceView() {
       .filter((f) => counts[f.id] || formatFilter.includes(f.id))
       .map((f) => ({
         value: f.id,
-        label: f.name || "Untitled format",
+        label: f.name || t("untitled_format"),
         count: counts[f.id] ?? 0,
         icon: <FormatCategoryIcon category={f.category} className="size-3.5 text-muted-foreground" />,
       }))
-    if (counts[NO_KEY] || formatFilter.includes(NO_KEY)) options.push({ value: NO_KEY, label: "No format", count: counts[NO_KEY] ?? 0 })
+    if (counts[NO_KEY] || formatFilter.includes(NO_KEY)) options.push({ value: NO_KEY, label: t("no_format"), count: counts[NO_KEY] ?? 0 })
     return options
-  }, [scoped, formats, formatFilter])
+  }, [scoped, formats, formatFilter, t])
 
   const tierOptions = useMemo<FacetOption[]>(() => {
     const counts: Partial<Record<string, number>> = countBy(scoped, tierKey)
-    return TIER_FACETS.map((t) => {
-      const Icon = t.value in TIER_ICONS ? TIER_ICONS[t.value as keyof typeof TIER_ICONS] : null
-      return { ...t, count: counts[t.value] ?? 0, icon: Icon ? <Icon className="size-3.5 text-muted-foreground" aria-hidden /> : undefined }
+    return TIER_FACETS.map((facet) => {
+      const Icon = facet.value in TIER_ICONS ? TIER_ICONS[facet.value as keyof typeof TIER_ICONS] : null
+      const label = facet.value === "untiered" ? t("tier_untiered") : facet.value === "none" ? t("tier_none") : facet.label
+      return { ...facet, label, count: counts[facet.value] ?? 0, icon: Icon ? <Icon className="size-3.5 text-muted-foreground" aria-hidden /> : undefined }
     })
-  }, [scoped])
+  }, [scoped, t])
 
   // Detail sheet follows ?open= (also when it changes while the page is open, e.g. from ⌘K).
   const openId = params.get("open")
@@ -117,9 +123,9 @@ export function PostPerformanceView() {
   useEffect(() => {
     if (!openId || openItem || staleOpenId.current === openId) return
     staleOpenId.current = openId
-    toast.error("That post no longer exists")
+    toast.error(t("post_gone"))
     update((next) => next.delete("open"))
-  }, [openId, openItem, update])
+  }, [openId, openItem, update, t])
 
   const openPost = (id: string, addSnapshot = false) => {
     setAutoAddId(addSnapshot ? id : null)
@@ -134,6 +140,7 @@ export function PostPerformanceView() {
   const columns = buildPostColumns({
     visible: columnsState.visible,
     lookups,
+    t,
     onAddAnalytics: (row: TieredRow) => openPost(row.id, true),
   })
 
@@ -146,7 +153,7 @@ export function PostPerformanceView() {
   function exportCsv() {
     if (!rows.length) return
     downloadCsv(`post-performance-${toISODate(now)}.csv`, postsCsv(rows, lookups))
-    toast.success(`Exported ${pluralize(rows.length, "post")} to CSV`)
+    toast.success(t.plural("exported", rows.length, { count: formatNumber(rows.length) }))
   }
 
   const missing = rows.length - totals.measured
@@ -155,22 +162,22 @@ export function PostPerformanceView() {
     <PageContainer>
       <PageHeader
         title="Post Performance"
-        description="Every published post with its latest analytics snapshot. Open a post for its history, rates and tier."
+        description={t("description")}
         actions={
           <>
             <Button asChild variant="outline" size="sm">
               <Link href={hrefWithFilters("/analytics", filters, OVERVIEW_DEFAULTS)}>
                 <ChartColumn aria-hidden />
-                Overview
+                {t("overview")}
               </Link>
             </Button>
             <Button variant="outline" size="sm" onClick={exportCsv} disabled={!rows.length}>
               <Download aria-hidden />
-              Export CSV
+              {t("export_csv")}
             </Button>
             <Button size="sm" onClick={() => uiActions.openDialog({ type: "add-metrics" })}>
               <Plus aria-hidden />
-              Add analytics
+              {t("add_analytics")}
             </Button>
           </>
         }
@@ -186,20 +193,20 @@ export function PostPerformanceView() {
             now={now}
             actions={
               <>
-                <SearchInput value={query} onChange={setQuery} placeholder="Search posts…" className="sm:w-56" />
+                <SearchInput value={query} onChange={setQuery} placeholder={t("search_posts")} className="sm:w-56" />
                 <ColumnMenu visible={columnsState.visible} onToggle={columnsState.toggle} onReset={columnsState.reset} />
               </>
             }
           >
             <FacetFilter
-              title="Format"
+              title={t("format")}
               icon={Shapes}
               options={formatOptions}
               value={formatFilter}
               onChange={(value) => update((next) => setParam(next, "format", value.join(",")))}
             />
             <FacetFilter
-              title="Tier"
+              title={t("tier")}
               icon={Trophy}
               options={tierOptions}
               value={tierFilter}
@@ -210,32 +217,36 @@ export function PostPerformanceView() {
       </PageHeader>
 
       {allRows.length ? (
-        <section className="flex min-w-0 flex-col gap-2" aria-label="Posts">
+        <section className="flex min-w-0 flex-col gap-2" aria-label={t("posts_aria")}>
           <p className="num text-xs text-muted-foreground">
-            {describeRange(range)} · {pluralize(rows.length, "post")} · {formatCompact(totals.views)} views ·{" "}
-            {formatPercent(totals.engagementRate)} engagement rate
-            {missing > 0 ? ` · ${formatCompact(missing)} without analytics` : null}
+            {t.plural("summary", rows.length, {
+              count: formatNumber(rows.length),
+              range: describeRange(range, lang),
+              views: formatCompact(totals.views),
+              rate: formatPercent(totals.engagementRate),
+            })}
+            {missing > 0 ? t("summary_missing", { count: formatCompact(missing) }) : null}
           </p>
           <DataTable
             rows={rows}
             columns={columns}
             getRowId={(r) => r.id}
             onRowClick={(r) => openPost(r.id)}
-            rowLabel={(r) => r.item.title || "Untitled post"}
+            rowLabel={(r) => r.item.title || t("untitled_post")}
             defaultSort={{ id: "date", desc: true }}
             stickyHeader
             maxHeight="max(24rem, calc(100dvh - 19rem))"
             pageSize={100}
-            aria-label="Post performance"
+            aria-label={t("table_aria")}
             empty={
               <EmptyState
                 compact
                 icon={SearchX}
-                title="No posts match these filters"
-                description="Widen the date range or clear a filter to see more posts."
+                title={t("no_match_title")}
+                description={t("no_match_description")}
                 action={
                   <Button size="sm" variant="outline" onClick={resetAll}>
-                    Reset filters
+                    {t("reset_filters")}
                   </Button>
                 }
               />
@@ -245,12 +256,12 @@ export function PostPerformanceView() {
       ) : (
         <EmptyState
           icon={ChartColumn}
-          title="No published posts yet"
-          description="Posts appear here once they're live. Log a post you published elsewhere to start tracking it."
+          title={t("empty_title")}
+          description={t("empty_description")}
           action={
             <Button size="sm" onClick={() => uiActions.openDialog({ type: "log-post" })}>
               <Plus aria-hidden />
-              Log a published post
+              {t("log_published")}
             </Button>
           }
         />

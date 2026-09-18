@@ -5,7 +5,9 @@ import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
+import { settingsMessages } from "./settings-messages"
 
 const offsetCache = new Map<string, string>()
 
@@ -53,6 +55,7 @@ export function TimezoneSelect({
   now: Date
   invalid?: boolean
 }) {
+  const t = useT(settingsMessages)
   const [open, setOpen] = useState(false)
   const zones = useMemo(() => listTimeZones(value), [value])
   // Offsets for ~400 zones are only worth computing while the list is open.
@@ -72,7 +75,7 @@ export function TimezoneSelect({
         >
           <span className="flex min-w-0 items-center gap-2">
             <Globe className="text-muted-foreground" aria-hidden />
-            <span className={cn("truncate", !value && "text-muted-foreground")}>{value ? prettyZone(value) : "Choose a timezone"}</span>
+            <span className={cn("truncate", !value && "text-muted-foreground")}>{value ? prettyZone(value) : t("timezone_choose")}</span>
           </span>
           <span className="flex shrink-0 items-center gap-2">
             {value ? <span className="text-xs text-muted-foreground num">{offsetLabel(value, now)}</span> : null}
@@ -82,9 +85,9 @@ export function TimezoneSelect({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-(--radix-popover-trigger-width) min-w-72 gap-0 p-0">
         <Command>
-          <CommandInput placeholder="Search city or region…" />
+          <CommandInput placeholder={t("timezone_search")} />
           <CommandList>
-            <CommandEmpty>No timezone found.</CommandEmpty>
+            <CommandEmpty>{t("timezone_empty")}</CommandEmpty>
             <CommandGroup>
               {zones.map((zone) => (
                 <CommandItem

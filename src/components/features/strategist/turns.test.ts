@@ -3,7 +3,7 @@ import { buildAnalyticsSnapshot, buildBrandContext } from "@/lib/ai/context"
 import { createDemoDatabase } from "@/lib/data/seed"
 import type { AiGeneration } from "@/lib/types"
 import { consideredContext, mentions } from "./considered-context"
-import { dataPrompts, SUGGESTED_PROMPTS } from "./prompts"
+import { dataPrompts, SUGGESTED_PROMPTS, suggestedPrompts } from "./prompts"
 import {
   CONTEXT_KEYS,
   historyMessages,
@@ -155,5 +155,16 @@ describe("prompts", () => {
     const prompts = dataPrompts(buildAnalyticsSnapshot(createDemoDatabase("demo-user", NOW), NOW))
     expect(prompts.length).toBeGreaterThan(0)
     expect(prompts.length).toBeLessThanOrEqual(3)
+  })
+
+  it("translates only the chip label — the question sent to the strategist stays English", () => {
+    const en = suggestedPrompts("en")
+    const tl = suggestedPrompts("tl")
+    expect(tl.map((p) => p.text)).toEqual(SUGGESTED_PROMPTS.map((p) => p.text))
+    expect(tl.map((p) => p.prefill)).toEqual(en.map((p) => p.prefill))
+    expect(en.map((p) => p.label)).toEqual(en.map((p) => p.text))
+    expect(tl[0].label).not.toBe(tl[0].text)
+    const snapshot = buildAnalyticsSnapshot(createDemoDatabase("demo-user", NOW), NOW)
+    expect(dataPrompts(snapshot, "tl").map((p) => p.text)).toEqual(dataPrompts(snapshot).map((p) => p.text))
   })
 })

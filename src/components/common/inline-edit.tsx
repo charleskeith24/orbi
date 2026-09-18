@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { inlineEditMessages } from "@/components/common/messages"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 const TEXT_STYLES = {
@@ -19,7 +21,7 @@ const BOX = "-mx-1.5 -my-0.5 rounded-md px-1.5 py-0.5"
 export function InlineText({
   value,
   onSave,
-  placeholder = "Untitled",
+  placeholder: placeholderProp,
   as = "span",
   multiline = false,
   required = false,
@@ -39,6 +41,8 @@ export function InlineText({
   className?: string
   "aria-label"?: string
 }) {
+  const t = useT(inlineEditMessages)
+  const placeholder = placeholderProp ?? t("untitled")
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value)
   const displayRef = useRef<HTMLButtonElement>(null)
@@ -90,7 +94,7 @@ export function InlineText({
   }
 
   const textStyle = TEXT_STYLES[as]
-  const label = ariaLabel ?? (typeof placeholder === "string" ? placeholder : "Text")
+  const label = ariaLabel ?? (typeof placeholder === "string" ? placeholder : t("text"))
 
   if (editing) {
     const fieldClass = cn(
@@ -133,7 +137,7 @@ export function InlineText({
         type="button"
         onClick={start}
         disabled={disabled}
-        title={disabled ? undefined : "Click to edit"}
+        title={disabled ? undefined : t("click_to_edit")}
         className={cn(
           BOX,
           "inline max-w-full text-left break-words whitespace-pre-wrap outline-none enabled:hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-default",
@@ -141,7 +145,7 @@ export function InlineText({
         )}
       >
         {value || placeholder}
-        <span className="sr-only"> (edit)</span>
+        <span className="sr-only">{t("edit_suffix")}</span>
       </button>
     </Tag>
   )

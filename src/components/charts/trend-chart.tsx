@@ -3,6 +3,7 @@
 import { Area, CartesianGrid, ComposedChart, Line, XAxis, YAxis, type TooltipContentProps } from "recharts"
 import { CHART_SURFACE, MAX_SERIES, seriesColor, type ChartColor } from "@/components/charts/colors"
 import { EmptyChart } from "@/components/charts/empty-chart"
+import { chartMessages } from "@/components/charts/messages"
 import { ChartTooltipCard, SeriesLegend } from "@/components/charts/primitives"
 import {
   AXIS_TICK_STYLE,
@@ -13,6 +14,7 @@ import {
 } from "@/components/charts/utils"
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart"
 import { formatDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import type { ISODate } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -63,10 +65,11 @@ export function TrendChart({
   dateFormatter = shortDate,
   tooltipDateFormatter = longDate,
   endLabel,
-  emptyMessage = "No data for this period yet.",
+  emptyMessage,
   className,
   "aria-label": ariaLabel,
 }: TrendChartProps) {
+  const t = useT(chartMessages)
   const series = seriesProp.slice(0, MAX_SERIES)
   const lastIndex = new Map<string, number>()
   let min = Infinity
@@ -84,7 +87,7 @@ export function TrendChart({
   }
 
   if (!data.length || !lastIndex.size) {
-    return <EmptyChart message={emptyMessage} height={height} className={className} />
+    return <EmptyChart message={emptyMessage ?? t("no_data_period")} height={height} className={className} />
   }
 
   const showEndLabel = endLabel ?? series.length === 1

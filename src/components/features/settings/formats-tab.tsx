@@ -23,10 +23,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { FORMAT_CATEGORY_MAP, SCRIPT_FORMATS } from "@/lib/constants"
 import { createStarterDatabase } from "@/lib/data/starter"
+import { useT, type Translator } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions, useDataStore, useDb, useTable } from "@/lib/store"
 import type { ContentFormat, Database, ID } from "@/lib/types"
-import { matchesQuery, pluralize } from "@/lib/utils"
+import { formatNumber, matchesQuery } from "@/lib/utils"
 import { FormatDialog } from "./format-dialog"
+import { formatsMessages } from "./formats-messages"
 import { replaceSettingsUrl } from "./tabs"
 
 interface FormatUsage {
@@ -61,13 +64,18 @@ function formatUsage(db: Database): Map<ID, FormatUsage> {
   return out
 }
 
-function usageParts(usage: FormatUsage): string[] {
+type FormatsT = Translator<(typeof formatsMessages)["en"]>
+
+/** "12 content items" — counts formatted like `pluralize`. */
+const countOf = (t: FormatsT, key: Parameters<FormatsT["plural"]>[0], count: number) => t.plural(key, count, { count: formatNumber(count) })
+
+function usageParts(usage: FormatUsage, t: FormatsT): string[] {
   return [
-    usage.items ? pluralize(usage.items, "content item") : "",
-    usage.ideas ? pluralize(usage.ideas, "idea") : "",
-    usage.slots ? pluralize(usage.slots, "posting slot") : "",
-    usage.series ? pluralize(usage.series, "series", "series") : "",
-    usage.platforms ? pluralize(usage.platforms, "platform strategy", "platform strategies") : "",
+    usage.items ? countOf(t, "usage_items", usage.items) : "",
+    usage.ideas ? countOf(t, "usage_ideas", usage.ideas) : "",
+    usage.slots ? countOf(t, "usage_slots", usage.slots) : "",
+    usage.series ? countOf(t, "usage_series", usage.series) : "",
+    usage.platforms ? countOf(t, "usage_platforms", usage.platforms) : "",
   ].filter(Boolean)
 }
 
@@ -78,6 +86,8 @@ export function FormatsTab({ openId, now }: { openId: string | null; now: Date }
   const [confirm, confirmDialog] = useConfirm()
   const [query, setQuery] = useState("")
   const [creating, setCreating] = useState(false)
+  const t = useT(formatsMessages)
+  const c = useT(commonMessages)
 
   const usage = useMemo(() => formatUsage(db), [db])
   const sorted = useMemo(
@@ -127,23 +137,21 @@ export function FormatsTab({ openId, now }: { openId: string | null; now: Date }
       .map((id, index) => ({ id, patch: { sort_order: index } }))
       .filter((u) => byId.get(u.id)?.sort_order !== u.patch.sort_order)
     dataActions.updateMany("content_formats", updates)
-    toast.success(`Moved “${format.name || "Untitled format"}” ${delta < 0 ? "up" : "down"}`)
+    toast.success(t(delta < 0 ? "moved_up" : "moved_down", { name: format.name || t("untitled") }))
   }
 
   async function remove(format: ContentFormat) {
-    const parts = usageParts(usage.get(format.id) ?? EMPTY_USAGE)
-    const name = format.name || "Untitled format"
+    const parts = usageParts(usage.get(format.id) ?? EMPTY_USAGE, t)
+    const name = format.name || t("untitled")
     const ok = await confirm({
-      title: `Delete “${name}”?`,
-      description: parts.length
-        ? `It's used by ${parts.join(", ")}. They keep all their data but lose this format.`
-        : "Nothing uses this format yet. This can't be undone.",
-      confirmLabel: "Delete format",
+      title: t("delete_title", { name }),
+      description: parts.length ? t("delete_used", { parts: parts.join(", ") }) : t("delete_unused"),
+      confirmLabel: t("delete_action"),
     })
     if (!ok) return
     if (openId === format.id) replaceSettingsUrl("formats")
     dataActions.remove("content_formats", format.id)
-    toast.success("Format deleted", { description: name })
+    toast.success(t("deleted"), { description: name })
   }
 
   function addDefaults() {
@@ -160,13 +168,13 @@ export function FormatsTab({ openId, now }: { openId: string | null; now: Date }
         sort_order: base + i,
       }))
     )
-    toast.success(`Added ${pluralize(missingDefaults.length, "default format")}`)
+    toast.success(countOf(t, "added_defaults", missingDefaults.length))
   }
 
   const columns: DataTableColumn<FormatRow>[] = [
     {
       id: "name",
-      header: "Format",
+      header: t("col_format"),
       sortValue: (r) => r.format.name,
       cell: (r) => (
         <div className="flex min-w-0 items-center gap-3">
@@ -175,8 +183,8 @@ export function FormatsTab({ openId, now }: { openId: string | null; now: Date }
           </span>
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-1.5">
-              <span className="truncate font-medium">{r.format.name || "Untitled format"}</span>
-              {r.format.is_default ? <Token className="font-normal text-muted-foreground">Default</Token> : null}
+              <span className="truncate font-medium">{r.format.name || t("untitled")}</span>
+              {r.format.is_default ? <Token className="font-normal text-muted-foreground">{t("default_token")}</Token> : null}
             </div>
             {r.format.description ? (
               <p className="max-w-[18rem] truncate text-xs text-muted-foreground xl:max-w-[24rem]" title={r.format.description}>
@@ -189,14 +197,14 @@ export function FormatsTab({ openId, now }: { openId: string | null; now: Date }
     },
     {
       id: "category",
-      header: "Category",
+      header: t("col_category"),
       hideBelow: "lg",
       sortValue: (r) => FORMAT_CATEGORY_MAP[r.format.category]?.label ?? "",
       cell: (r) => <span className="text-muted-foreground">{FORMAT_CATEGORY_MAP[r.format.category]?.label ?? "—"}</span>,
     },
     {
       id: "script",
-      header: "Script structure",
+      header: t("col_script"),
       hideBelow: "md",
       sortValue: (r) => SCRIPT_FORMATS[r.format.script_format]?.label ?? "",
       cell: (r) => {
@@ -204,7 +212,7 @@ export function FormatsTab({ openId, now }: { openId: string | null; now: Date }
         return spec ? (
           <div className="min-w-0">
             <p className="whitespace-nowrap">{spec.label}</p>
-            <p className="text-xs text-muted-foreground">{pluralize(spec.sections.length, "section")}</p>
+            <p className="text-xs text-muted-foreground">{countOf(t, "sections", spec.sections.length)}</p>
           </div>
         ) : (
           "—"
@@ -213,52 +221,52 @@ export function FormatsTab({ openId, now }: { openId: string | null; now: Date }
     },
     {
       id: "usage",
-      header: "Used by",
+      header: t("col_used_by"),
       align: "right",
       hideBelow: "sm",
       sortValue: (r) => r.total,
       cell: (r) =>
         r.total ? (
-          <div className="whitespace-nowrap" title={usageParts(r.usage).join(", ")}>
-            <p>{pluralize(r.usage.items, "item")}</p>
-            <p className="text-xs text-muted-foreground">{pluralize(r.usage.ideas, "idea")}</p>
+          <div className="whitespace-nowrap" title={usageParts(r.usage, t).join(", ")}>
+            <p>{countOf(t, "items", r.usage.items)}</p>
+            <p className="text-xs text-muted-foreground">{countOf(t, "usage_ideas", r.usage.ideas)}</p>
           </div>
         ) : (
-          <span className="text-muted-foreground">Not used</span>
+          <span className="text-muted-foreground">{t("not_used")}</span>
         ),
     },
     {
       id: "actions",
-      header: <span className="sr-only">Actions</span>,
+      header: <span className="sr-only">{t("col_actions")}</span>,
       align: "right",
       width: 52,
       cell: (r) => {
         const index = sorted.findIndex((f) => f.id === r.format.id)
-        const name = r.format.name || "Untitled format"
+        const name = r.format.name || t("untitled")
         return (
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
-              <Button type="button" variant="ghost" size="icon-sm" aria-label={`Actions for ${name}`}>
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={t("actions_for", { name })}>
                 <Ellipsis aria-hidden />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
               <DropdownMenuItem onSelect={() => openEdit(r.format.id)}>
                 <Pencil aria-hidden />
-                Edit
+                {c("edit")}
               </DropdownMenuItem>
               <DropdownMenuItem disabled={index <= 0} onSelect={() => move(r.format, -1)}>
                 <ArrowUp aria-hidden />
-                Move up
+                {t("move_up")}
               </DropdownMenuItem>
               <DropdownMenuItem disabled={index >= sorted.length - 1} onSelect={() => move(r.format, 1)}>
                 <ArrowDown aria-hidden />
-                Move down
+                {t("move_down")}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onSelect={() => void remove(r.format)}>
                 <Trash2 aria-hidden />
-                Delete
+                {c("delete")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -271,12 +279,12 @@ export function FormatsTab({ openId, now }: { openId: string | null; now: Date }
     <>
       {missingDefaults.length ? (
         <Button type="button" variant="outline" size="sm" onClick={addDefaults}>
-          Add {pluralize(missingDefaults.length, "default format")}
+          {countOf(t, "add_defaults", missingDefaults.length)}
         </Button>
       ) : null}
       <Button type="button" size="sm" onClick={() => setCreating(true)}>
         <Plus aria-hidden />
-        New format
+        {t("new_format")}
       </Button>
     </>
   )
@@ -289,55 +297,54 @@ export function FormatsTab({ openId, now }: { openId: string | null; now: Date }
             actions={
               <>
                 <span className="text-xs text-muted-foreground num">
-                  {filtered.length === rows.length ? pluralize(rows.length, "format") : `${filtered.length} of ${rows.length}`}
+                  {filtered.length === rows.length ? countOf(t, "count", rows.length) : t("filtered", { shown: filtered.length, total: rows.length })}
                 </span>
                 {addButtons}
               </>
             }
           >
-            <SearchInput value={query} onChange={setQuery} placeholder="Search formats…" />
+            <SearchInput value={query} onChange={setQuery} placeholder={t("search")} />
           </FilterBar>
           <DataTable
             rows={filtered}
             columns={columns}
             getRowId={(r) => r.format.id}
             onRowClick={(r) => openEdit(r.format.id)}
-            rowLabel={(r) => `Edit ${r.format.name || "Untitled format"}`}
-            aria-label="Content formats"
+            rowLabel={(r) => t("edit_row", { name: r.format.name || t("untitled") })}
+            aria-label={t("table_aria")}
             empty={
               <EmptyState
                 compact
                 icon={Shapes}
-                title="No formats match"
-                description="Try a different search."
+                title={t("no_match_title")}
+                description={t("no_match_description")}
                 action={
                   <Button type="button" size="sm" variant="outline" onClick={() => setQuery("")}>
-                    Clear search
+                    {t("clear_search")}
                   </Button>
                 }
               />
             }
           />
           <p className="text-xs text-muted-foreground">
-            Order here is the order formats appear in pickers. Deleting a format keeps content that uses it — it just loses the
-            format.
+            {t("order_note")}
           </p>
         </>
       ) : (
         <EmptyState
           icon={Shapes}
-          title="No content formats yet"
-          description="Formats — Reels, carousels, LinkedIn posts, long-form videos — tell Content Studio which script structure to start from."
+          title={t("empty_title")}
+          description={t("empty_description")}
           action={
             <Button type="button" size="sm" onClick={() => setCreating(true)}>
               <Plus aria-hidden />
-              New format
+              {t("new_format")}
             </Button>
           }
           secondaryAction={
             missingDefaults.length ? (
               <Button type="button" size="sm" variant="outline" onClick={addDefaults}>
-                Add {pluralize(missingDefaults.length, "default format")}
+                {countOf(t, "add_defaults", missingDefaults.length)}
               </Button>
             ) : undefined
           }

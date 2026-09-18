@@ -4,6 +4,8 @@ import { useId } from "react"
 import { FormField, ListEditor } from "@/components/common"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { useT } from "@/lib/i18n"
+import { researchMessages } from "./messages"
 import type { AnalysisFields } from "./research-model"
 
 /** Edit an analysis before saving or adapting it: hook, structure, angle, psychology, why it works, patterns. */
@@ -16,13 +18,14 @@ export function AnalysisEditor({
   onChange: (next: AnalysisFields) => void
   disabled?: boolean
 }) {
+  const t = useT(researchMessages)
   const id = useId()
   const field = (name: string) => `${id}-${name}`
   const set = (patch: Partial<AnalysisFields>) => onChange({ ...value, ...patch })
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <FormField label="Hook" htmlFor={field("hook")} description="The opening, and what kind of hook it is.">
+      <FormField label={t("hook")} htmlFor={field("hook")} description={t("hook_kind")}>
         <Textarea
           id={field("hook")}
           rows={2}
@@ -33,22 +36,22 @@ export function AnalysisEditor({
           onChange={(event) => set({ hook: event.target.value })}
         />
       </FormField>
-      <FormField label="Structure" description="The beats, in order.">
+      <FormField label={t("structure")} description={t("structure_description")}>
         <ListEditor
           variant="lines"
           value={value.structure}
           onChange={(structure) => set({ structure })}
           maxItems={12}
-          addLabel="Add beat"
-          placeholder="e.g. Proof: a before/after number"
-          aria-label="Structure"
+          addLabel={t("add_beat")}
+          placeholder={t("beat_placeholder")}
+          aria-label={t("structure")}
           disabled={disabled}
         />
       </FormField>
-      <FormField label="Angle" htmlFor={field("angle")}>
+      <FormField label={t("analysis_angle")} htmlFor={field("angle")}>
         <Input id={field("angle")} value={value.angle} maxLength={300} disabled={disabled} onChange={(event) => set({ angle: event.target.value })} />
       </FormField>
-      <FormField label="Psychology" htmlFor={field("psychology")} description="Which levers it pulls, and how.">
+      <FormField label={t("psychology")} htmlFor={field("psychology")} description={t("psychology_description")}>
         <Textarea
           id={field("psychology")}
           rows={3}
@@ -58,7 +61,7 @@ export function AnalysisEditor({
           onChange={(event) => set({ psychology: event.target.value })}
         />
       </FormField>
-      <FormField label="Why it works" htmlFor={field("why")}>
+      <FormField label={t("why_it_works")} htmlFor={field("why")}>
         <Textarea
           id={field("why")}
           rows={3}
@@ -68,15 +71,15 @@ export function AnalysisEditor({
           onChange={(event) => set({ why_it_works: event.target.value })}
         />
       </FormField>
-      <FormField label="Patterns to borrow" description="Structure, not words — reusable with your own substance.">
+      <FormField label={t("patterns")} description={t("patterns_description")}>
         <ListEditor
           variant="lines"
           value={value.patterns}
           onChange={(patterns) => set({ patterns })}
           maxItems={10}
-          addLabel="Add pattern"
-          placeholder="e.g. Put a specific moment before the advice"
-          aria-label="Patterns to borrow"
+          addLabel={t("add_pattern")}
+          placeholder={t("pattern_placeholder")}
+          aria-label={t("patterns")}
           disabled={disabled}
         />
       </FormField>

@@ -6,9 +6,11 @@ import { useMemo } from "react"
 import { EmptyState, Meter, PlatformIcon, SectionCard, TierBadge } from "@/components/common"
 import { computeTiers, itemPerformanceRows, type TierInfo } from "@/lib/analytics"
 import { PERFORMANCE_TIERS } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import { useDb, useSettings } from "@/lib/store"
 import type { AppSettings, ID, PerformanceTier } from "@/lib/types"
-import { cn, formatNumber, pluralize } from "@/lib/utils"
+import { cn, formatNumber } from "@/lib/utils"
+import { performanceMessages } from "./performance-messages"
 import type { PerformanceValues } from "./sections"
 
 const TIER_ORDER: PerformanceTier[] = ["breakout", "winner", "good", "normal"]
@@ -44,6 +46,7 @@ export function tierFieldsFrom(v: PerformanceValues): TierFields | null {
 export function TierPreview({ fields, dirty, now, className }: { fields: TierFields | null; dirty: boolean; now: Date; className?: string }) {
   const db = useDb()
   const settings = useSettings()
+  const t = useT(performanceMessages)
   const published = useMemo(() => itemPerformanceRows(db, now), [db, now])
   const savedTiers = useMemo(() => computeTiers(db, settings, now), [db, settings, now])
   const draftTiers = useMemo(() => (fields ? computeTiers(db, { ...settings, ...fields }, now) : null), [db, settings, fields, now])
@@ -59,10 +62,10 @@ export function TierPreview({ fields, dirty, now, className }: { fields: TierFie
       const from = before && before.ratio !== null ? before.tier : null
       const to = info.ratio !== null ? info.tier : null
       const row = byId.get(id)
-      if (from !== to && row) out.push({ id, title: row.item.title || "Untitled", platform: row.platform, from, to })
+      if (from !== to && row) out.push({ id, title: row.item.title || t("untitled"), platform: row.platform, from, to })
     }
     return out.sort((a, b) => TIER_RANK[b.to ?? "normal"] - TIER_RANK[a.to ?? "normal"] || a.title.localeCompare(b.title))
-  }, [draftTiers, savedTiers, published])
+  }, [draftTiers, savedTiers, published, t])
 
   const counts = draft ?? saved
   const measured = savedTiers.size
@@ -71,26 +74,20 @@ export function TierPreview({ fields, dirty, now, className }: { fields: TierFie
 
   return (
     <SectionCard
-      title="Live preview"
-      description={
-        !fields
-          ? "Fix the highlighted fields to see the preview."
-          : dirty
-            ? "Your published posts, tiered with the edited settings."
-            : "How your published posts are tiered right now."
-      }
+      title={t("preview_title")}
+      description={!fields ? t("preview_invalid") : dirty ? t("preview_dirty") : t("preview_saved")}
       className={className}
     >
       {!published.length ? (
         <EmptyState
           compact
           icon={Trophy}
-          title="No published posts yet"
-          description="Tiers appear once published posts have analytics."
+          title={t("preview_empty_title")}
+          description={t("preview_empty_description")}
         />
       ) : (
         <div className="flex flex-col gap-3">
-          <ul className="flex flex-col gap-2.5" aria-label="Posts per tier">
+          <ul className="flex flex-col gap-2.5" aria-label={t("per_tier_aria")}>
             {TIER_ORDER.map((tier) => {
               const value = counts[tier]
               const delta = draft ? draft[tier] - saved[tier] : 0
@@ -113,23 +110,25 @@ export function TierPreview({ fields, dirty, now, className }: { fields: TierFie
                     max={Math.max(1, tiered)}
                     size="sm"
                     tone={tier === "normal" ? "neutral" : "good"}
-                    aria-label={`${PERFORMANCE_TIERS[tier].label} posts`}
-                    valueText={`${value} of ${tiered} tiered posts`}
+                    aria-label={t("tier_posts_aria", { tier: PERFORMANCE_TIERS[tier].label })}
+                    valueText={t("tier_value", { value, total: tiered })}
                   />
                 </li>
               )
             })}
           </ul>
           <p className="text-xs text-pretty text-muted-foreground">
-            {counts.untiered ? `${pluralize(counts.untiered, "measured post")} not tiered yet (fewer than ${minSample} earlier posts on the platform). ` : ""}
+            {counts.untiered
+              ? `${t.plural("untiered", counts.untiered, { count: formatNumber(counts.untiered), min: minSample })} `
+              : ""}
             {published.length - measured
-              ? `${pluralize(published.length - measured, "published post")} without analytics.`
-              : "Every published post has analytics."}
+              ? t.plural("no_analytics", published.length - measured, { count: formatNumber(published.length - measured) })
+              : t("all_analytics")}
           </p>
           {draft && dirty ? (
             <div className="flex flex-col gap-2 border-t pt-3">
               <p className="text-xs font-medium">
-                {changes.length ? `${pluralize(changes.length, "post")} would change tier` : "No post changes tier with these settings"}
+                {changes.length ? t.plural("changes", changes.length, { count: formatNumber(changes.length) }) : t("no_changes")}
               </p>
               {changes.length ? (
                 <ul className="flex flex-col gap-1.5">
@@ -144,15 +143,15 @@ export function TierPreview({ fields, dirty, now, className }: { fields: TierFie
                         {c.title}
                       </Link>
                       <span className="flex shrink-0 items-center gap-1 text-muted-foreground">
-                        {c.from ? PERFORMANCE_TIERS[c.from].label : "Untiered"}
-                        <ArrowRight className="size-3" aria-label="to" />
+                        {c.from ? PERFORMANCE_TIERS[c.from].label : t("untiered")}
+                        <ArrowRight className="size-3" aria-label={t("arrow_to")} />
                         <span className={cn(c.to && c.to !== "normal" && "font-medium text-foreground")}>
-                          {c.to ? PERFORMANCE_TIERS[c.to].label : "Untiered"}
+                          {c.to ? PERFORMANCE_TIERS[c.to].label : t("untiered")}
                         </span>
                       </span>
                     </li>
                   ))}
-                  {changes.length > 5 ? <li className="text-xs text-muted-foreground">and {changes.length - 5} more</li> : null}
+                  {changes.length > 5 ? <li className="text-xs text-muted-foreground">{t("and_more", { count: changes.length - 5 })}</li> : null}
                 </ul>
               ) : null}
             </div>
@@ -165,6 +164,7 @@ export function TierPreview({ fields, dirty, now, className }: { fields: TierFie
 
 /** Normal | Good | Winner | Breakout as four equal bands, each labelled with where it starts. */
 export function TierScale({ good, winner, breakout }: { good: number; winner: number; breakout: number }) {
+  const t = useT(performanceMessages)
   const stops: { tier: PerformanceTier; label: string; fill: string }[] = [
     { tier: "normal", label: `< ${formatTimes(good)}`, fill: "bg-muted-foreground/25" },
     { tier: "good", label: `≥ ${formatTimes(good)}`, fill: "bg-good/45" },
@@ -174,8 +174,7 @@ export function TierScale({ good, winner, breakout }: { good: number; winner: nu
   return (
     <div className="flex max-w-md flex-col gap-1.5">
       <p className="sr-only">
-        Normal below {formatTimes(good)}, Good from {formatTimes(good)}, Winner from {formatTimes(winner)}, Breakout from{" "}
-        {formatTimes(breakout)} the platform average.
+        {t("scale_sr", { good: formatTimes(good), winner: formatTimes(winner), breakout: formatTimes(breakout) })}
       </p>
       <div aria-hidden className="grid grid-cols-4 gap-0.5">
         {stops.map((s) => (

@@ -203,3 +203,65 @@ Everything under "Shared contract". Done when tsc, eslint and the full vitest su
 2. Wave 2 after FOUNDATION: MONEY, REMINDERS.
 3. Wave 3: i18n of existing screens.
 4. Lead QA and commit.
+
+---
+
+## Wave 3 — Taglish for the existing screens (I18N-A … I18N-I)
+
+Goal: with **Settings → General → App language = Taglish** (`app_settings.ui_language = "tl"`), every screen reads in natural Taglish. English mode must look **exactly** as it does today.
+
+### Rules
+- Follow ARCHITECTURE §11 exactly: `defineMessages` in a `messages.ts` in your feature folder (or `<name>-messages.ts` next to a shared component), `useT` in components, `translate(m, getUiLang(), key)` from `@/lib/i18n/core` + `@/lib/i18n/ui-lang` in non-React code (toasts from handlers, domain helpers). Plurals with `_one`/`_other`. Big folders may split into several `*-messages.ts` files.
+- **English text stays byte-identical** (same wording, punctuation, casing). Tests, audits and e2e scripts depend on it. Move the string into the `en` dictionary; don't reword it.
+- **Translate:** headings, descriptions, buttons, menu items, tabs, empty states, dialogs, confirm text, toasts, validation errors, placeholders, helper text, tooltips, `aria-label`s, `sr-only` text, relative-time phrases the component builds itself.
+- **Keep English:** §9 terms and page/module names in the navigation; option labels from `src/lib/constants.ts` (stages, statuses, categories, platforms, formats — they're product nouns); user data (anything the creator typed, Starter Kit rows such as formats/angles/hook templates); AI output (it follows Brand HQ's writing language); page `metadata` titles; the media-kit document; developer errors; number and date formatting (`formatNumber`, `formatMoney`, date-fns output stays in English locale).
+- **Taglish voice:** match `features/onboarding/copy-tl.ts` and the already-translated files (`features/money/*messages.ts`, `features/reminders/messages.ts`, `app-shell/topbar-messages.ts`, `features/settings/data-messages.ts`). English nouns + Tagalog glue/verbs, short and friendly: "I-save", "Wala pang ideas", "May mali — subukan ulit", "Bagong content", "I-log ang metrics". No deep/formal Tagalog. "Cancel", "Delete", "Edit" can stay English when that's how creators say it; be consistent with `src/lib/i18n/messages/common.ts`.
+- **Shared words:** use `commonMessages` from `src/lib/i18n/messages/common.ts` where the key already exists. **Only I18N-A edits `common.ts`**; everyone else defines missing words locally.
+- **Ownership:** edit only your folders. Page components under `src/app/(app)/<route>/page.tsx` stay as they are (metadata is English). If a string you need to translate lives in another owner's file, list it in your report.
+- **`src/lib/analytics/**` text** (recommendations, health, reports, buffer sentences) belongs to I18N-B, which adds an optional trailing `lang: UiLang = "en"` parameter (or an options field) to the functions that return user-facing text. Other agents: at the end, check whether functions you call gained a `lang` parameter and pass `useUiLang()` (from `@/lib/i18n`).
+- **Shared helpers that gained a language (batch 1, I18N-A):** `contentDateInfo(item, now, lang)` from common — pass `useUiLang()` as the third argument (e.g. `series/series-detail-sheet.tsx`). `foldToOther(…)` in charts — pass a translated `otherLabel` when you fold series yourself (default "Other"). Command-palette search builders take an optional `lang`. Screens that can render **without a workspace** use `useScreenT` / `useScreenLang` from `@/components/app-shell/device-ui-lang` instead of `useT`.
+- **Onboarding** (`features/onboarding/**`) is out of scope (it has its own copy system and may be redesigned).
+
+### Verify (each agent)
+- `npx tsc --noEmit -p .` — no errors in your files. `npx eslint <your files>` clean.
+- `npx vitest run <your folders> src/lib/i18n` passes (the messages test checks keys, placeholders, plurals). Don't run the full suite — the lead does.
+- Screenshots: `node scripts/smoke.mjs <route> --seed=demo --lang=tl --out=…` for every route you own (light desktop) plus 390px dark for the main one; open dialogs/sheets/empty states with `--actions` or `--seed=fresh --lang=tl`. One `--lang=en` screenshot per main route to confirm English is unchanged. **Look at every screenshot** and fix leftovers (untranslated strings, overflow from longer Taglish text).
+- `node scripts/route-audit.mjs --only=<your routes> --seed=demo --lang=tl --modes=light,mobile --dir=…` → 0 failures.
+- Work in compiling increments; foreground commands; the usage limit can cut you off. Don't commit.
+
+### Ownership
+| Agent | Owns |
+|---|---|
+| **I18N-A** | `src/components/common/**`, `src/components/charts/**`, `src/components/app-shell/**` (files not yet translated: command palette, global dialogs, data gate, keyboard shortcuts, theme toggle, etc.), `src/components/features/auth/**`, `src/app/(auth)/login/**`, `src/app/(auth)/signup/**`, `src/lib/i18n/messages/common.ts` (additions only) |
+| **I18N-B** | `features/dashboard/**`, `features/today/**`, `features/analytics/**`, `features/winners/**`, `features/recommendations/**`, `src/lib/analytics/**` (user-facing sentences + `lang` param) |
+| **I18N-C** | `features/studio/**`, `features/pipeline/**`, `features/repurpose/**` |
+| **I18N-D** | `features/calendar/**`, `features/campaigns/**`, `features/series/**` |
+| **I18N-E** | `features/ideas/**`, `features/ideas-lab/**` |
+| **I18N-F** | `features/audience/**`, `features/pillars/**` |
+| **I18N-G** | `features/strategy/**`, `features/stories/**`, `features/strategist/**` |
+| **I18N-H** | `features/research/**`, `features/reports/**`, `features/experiments/**` |
+| **I18N-I** | `features/settings/**` files not yet translated (save bar, performance, funnel, formats, tags, engagement, AI, integrations connections — `integrations-tab`, `integration-card`, `connect-dialog` — plus `src/lib/integrations/registry.ts` display strings), `features/capture/**` |
+
+### Lead QA result (2026-09-18)
+All nine I18N agents and the leftovers pass (I18N-J) are done. Results:
+- `tsc` is clean, eslint is clean on all 522 changed files, and vitest passes 102 files / 1,391 tests.
+- route-audit shows 0 failures:
+  - 42 routes in Taglish (light, mobile);
+  - English (light, dark, mobile);
+  - the fresh workspace in Taglish.
+- `e2e-flow` passes.
+- A text scan compared English and Taglish across 48 routes and tabs, excluding workspace data. The English lines that remain in Taglish are intentional, per the rules:
+  - §9 terms and module names;
+  - `constants.ts` option labels and descriptions;
+  - metric nouns;
+  - currency names;
+  - the English-only media kit.
+
+**Decisions**
+- `constants.ts` option labels and descriptions stay English. G and I kept local Taglish copies of a few long descriptions (system principles, flywheel, rhythm, goal categories), which need to stay in sync.
+- `src/components/ui/*` is unedited, so the sr-only "Close" and "Toggle Sidebar" labels stay English.
+- Text saved into the workspace:
+  - report snapshots and plan snapshots stay English;
+  - UI-generated titles such as "(copy)" and matrix working titles follow the UI language when created.
+- `formatRelativeDay(value, now, lang)` is the shared Taglish relative-day helper. `ideas/idea-badges.tsx` keeps a deliberately shorter kanban form.
+- Settings → AI matches the English status sentences from `src/lib/ai/providers/index.ts` and `use-ai-task.ts` by prefix. Keep the two in sync.

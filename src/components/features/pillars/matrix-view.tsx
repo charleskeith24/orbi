@@ -7,9 +7,10 @@ import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { EmptyState, PageContainer, PageHeader } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { useT, useUiLang, type UiLang } from "@/lib/i18n"
 import { createIdea, dataActions, useDb, useSettings } from "@/lib/store"
 import type { ID } from "@/lib/types"
-import { formatNumber, pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
 import { MatrixCoverage } from "./matrix-coverage"
 import {
   buildMatrixData,
@@ -23,6 +24,7 @@ import {
 import { MatrixDimensions } from "./matrix-dimensions"
 import { comboCount, generateCombinations, type MatrixCombo } from "./matrix-engine"
 import { matrixIdeaValues } from "./matrix-idea"
+import { matrixMessages } from "./matrix-messages"
 import { MatrixResults } from "./matrix-results"
 import { PillarsTabs } from "./pillars-tabs"
 
@@ -32,9 +34,13 @@ interface Generated {
   signature: string
 }
 
-function run(data: MatrixData, ids: MatrixSelectionIds): Generated {
+function run(data: MatrixData, ids: MatrixSelectionIds, lang: UiLang): Generated {
   const selection = resolveSelection(data, ids)
-  return { combos: generateCombinations(selection, data.coverage), total: comboCount(selection), signature: selectionSignature(ids) }
+  return {
+    combos: generateCombinations(selection, data.coverage, undefined, lang),
+    total: comboCount(selection),
+    signature: selectionSignature(ids),
+  }
 }
 
 /** Content Matrix (spec §7). `?pillar=` / `?format=` / `?persona=` preselect dimensions (remounts when they change). */
@@ -50,15 +56,17 @@ export function MatrixView() {
 
 function MatrixWorkspace({ params }: { params: { pillar: string | null; format: string | null; persona: string | null } }) {
   const router = useRouter()
+  const t = useT(matrixMessages)
+  const lang = useUiLang()
   const db = useDb()
   const settings = useSettings()
   const [now] = useState(() => new Date())
-  const data = useMemo(() => buildMatrixData(db, now, settings), [db, now, settings])
+  const data = useMemo(() => buildMatrixData(db, now, settings, lang), [db, now, settings, lang])
 
   // Start with a ranked list so the page shows value immediately; later runs are explicit.
   const [initial] = useState(() => {
     const ids = defaultSelection(data, db, params)
-    return { ids, generated: run(data, ids) }
+    return { ids, generated: run(data, ids, lang) }
   })
   const [selection, setSelection] = useState<MatrixSelectionIds>(initial.ids)
   const [generated, setGenerated] = useState<Generated | null>(initial.generated)
@@ -77,19 +85,19 @@ function MatrixWorkspace({ params }: { params: { pillar: string | null; format: 
   const stale = generated !== null && generated.signature !== signature
 
   function generate(ids: MatrixSelectionIds) {
-    const next = run(data, ids)
+    const next = run(data, ids, lang)
     setGenerated(next)
-    toast.success(`${pluralize(next.combos.length, "combination")} ranked`, {
-      description: `From ${formatNumber(next.total)} possible — under-target pillars and severe problems first.`,
+    toast.success(t.plural("ranked", next.combos.length, { count: formatNumber(next.combos.length) }), {
+      description: t("ranked_description", { total: formatNumber(next.total) }),
     })
     requestAnimationFrame(() => document.getElementById("matrix-results")?.scrollIntoView({ behavior: "smooth", block: "start" }))
   }
 
   function save(combo: MatrixCombo) {
     const idea = createIdea(matrixIdeaValues(combo, dataActions.getDb()))
-    toast.success("Saved to the Idea Bank", {
+    toast.success(t("saved"), {
       description: idea.title,
-      action: { label: "Open", onClick: () => router.push(`/ideas?open=${idea.id}`) },
+      action: { label: t("open"), onClick: () => router.push(`/ideas?open=${idea.id}`) },
     })
   }
 
@@ -112,17 +120,22 @@ function MatrixWorkspace({ params }: { params: { pillar: string | null; format: 
   }
 
   const prerequisites = [
-    !data.pillars.length && { label: "active content pillars", href: "/pillars", action: "Set up pillars" },
-    !data.problems.length && { label: "audience problems", href: "/audience/problems", action: "Open the Problem Bank" },
-    !data.goals.length && { label: "active goals", href: "/strategy/goals", action: "Set goals" },
-    !data.formats.length && { label: "content formats", href: "/settings", action: "Open Settings" },
+    !data.pillars.length && { label: t("need_pillars"), href: "/pillars", action: t("setup_pillars") },
+    !data.problems.length && { label: t("need_problems"), href: "/audience/problems", action: t("open_problem_bank") },
+    !data.goals.length && { label: t("need_goals"), href: "/strategy/goals", action: t("set_goals") },
+    !data.formats.length && { label: t("need_formats"), href: "/settings", action: t("open_settings") },
   ].filter((p): p is { label: string; href: string; action: string } => Boolean(p))
+  const labels = prerequisites.map((p) => p.label)
+  const needList =
+    lang === "en" || labels.length < 2
+      ? new Intl.ListFormat("en", { type: "conjunction" }).format(labels)
+      : t("list_and", { list: labels.slice(0, -1).join(", "), last: labels[labels.length - 1] })
 
   return (
     <PageContainer>
       <PageHeader
         title="Content Matrix"
-        description="Combine pillars, formats, audience problems, goals and funnel stages into ranked ideas — the biggest gaps come first."
+        description={t("description")}
       >
         <PillarsTabs />
       </PageHeader>
@@ -130,8 +143,8 @@ function MatrixWorkspace({ params }: { params: { pillar: string | null; format: 
       {prerequisites.length ? (
         <EmptyState
           icon={Grid3x3}
-          title="The matrix needs a few building blocks"
-          description={`Add ${new Intl.ListFormat("en", { type: "conjunction" }).format(prerequisites.map((p) => p.label))} first — the matrix combines them into ranked, ready-to-save ideas.`}
+          title={t("needs_title")}
+          description={t("needs_description", { list: needList })}
           action={
             <Button asChild size="sm">
               <Link href={prerequisites[0].href}>{prerequisites[0].action}</Link>

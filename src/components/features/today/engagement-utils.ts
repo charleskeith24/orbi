@@ -5,7 +5,9 @@
  */
 import { addDays, format } from "date-fns"
 import { toISODate } from "@/lib/dates"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type { EngagementLog, EngagementTaskConfig, ISODate, UpdateRow } from "@/lib/types"
+import { rhythmMessages } from "./messages"
 
 export type CounterKey = "comments_replied" | "dms_replied" | "creator_comments" | "questions_collected" | "ideas_captured"
 
@@ -48,8 +50,11 @@ export function logForDay(logs: EngagementLog[], day: ISODate): EngagementLog | 
   return best
 }
 
-/** One row per configured task (with its counter when it has one), then every counter no task covers. */
-export function trackerRows(tasks: EngagementTaskConfig[], log: EngagementLog | null): TrackerRow[] {
+/** One row per configured task (with its counter when it has one), then every counter no task covers. Default labels in `lang`. */
+export function trackerRows(tasks: EngagementTaskConfig[], log: EngagementLog | null, lang: UiLang = "en"): TrackerRow[] {
+  const t = translator(rhythmMessages, lang)
+  const label = (key: CounterKey) => (lang === "en" ? (COUNTER_MAP.get(key)?.label ?? key) : t(`counter_${key}`))
+  const hint = (key: CounterKey) => (lang === "en" ? (COUNTER_MAP.get(key)?.hint ?? "") : t(`counter_${key}_hint`))
   const completed = new Set(log?.completed_tasks ?? [])
   const covered = new Set<CounterKey>()
   const rows: TrackerRow[] = tasks.map((task) => {
@@ -58,8 +63,8 @@ export function trackerRows(tasks: EngagementTaskConfig[], log: EngagementLog | 
     return {
       key: task.key,
       kind: "task",
-      label: task.label.trim() || (counter ? (COUNTER_MAP.get(counter)?.label ?? task.key) : task.key),
-      hint: counter ? (COUNTER_MAP.get(counter)?.hint ?? "") : "Tick it off when done",
+      label: task.label.trim() || (counter ? label(counter) : task.key),
+      hint: counter ? hint(counter) : t("tick_hint"),
       target: Math.max(0, Math.round(task.target)),
       counter,
       count: counter && log ? log[counter] : 0,
@@ -71,8 +76,8 @@ export function trackerRows(tasks: EngagementTaskConfig[], log: EngagementLog | 
     rows.push({
       key: counter.key,
       kind: "counter",
-      label: counter.label,
-      hint: counter.hint,
+      label: label(counter.key),
+      hint: hint(counter.key),
       target: 0,
       counter: counter.key,
       count: log ? log[counter.key] : 0,

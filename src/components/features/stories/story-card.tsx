@@ -2,8 +2,10 @@
 
 import { PillarBadge, Token } from "@/components/common"
 import { formatDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import type { ContentPillar, Story } from "@/lib/types"
-import { cn, pluralize } from "@/lib/utils"
+import { cn, formatNumber } from "@/lib/utils"
+import { storyVaultMessages } from "./messages"
 import { useStoryActions } from "./story-actions"
 import { StoryActionsMenu } from "./story-actions-menu"
 import { FavoriteToggle, StoryTypeBadge } from "./story-badges"
@@ -12,8 +14,9 @@ import { storyDay, type SourceUsage } from "./story-model"
 /** Grid card: type, favourite, title, lesson preview, keywords, pillar, date and usage. The whole card opens the story. */
 export function StoryCard({ story, usage, pillar }: { story: Story; usage?: SourceUsage; pillar?: ContentPillar }) {
   const actions = useStoryActions()
+  const t = useT(storyVaultMessages)
   const ideas = usage?.ideas.length ?? 0
-  const title = story.title.trim() || "Untitled story"
+  const title = story.title.trim() || t("untitled")
   const keywords = story.keywords.slice(0, 3)
   const more = story.keywords.length - keywords.length
 
@@ -39,7 +42,7 @@ export function StoryCard({ story, usage, pillar }: { story: Story; usage?: Sour
       {story.lesson.trim() ? (
         <p className="mt-1.5 line-clamp-3 text-sm text-pretty text-muted-foreground">{story.lesson}</p>
       ) : (
-        <p className="mt-1.5 text-sm text-muted-foreground/80 italic">No lesson written yet</p>
+        <p className="mt-1.5 text-sm text-muted-foreground/80 italic">{t("no_lesson")}</p>
       )}
       {keywords.length ? (
         <div className="mt-3 flex min-w-0 flex-wrap items-center gap-1">
@@ -55,7 +58,7 @@ export function StoryCard({ story, usage, pillar }: { story: Story; usage?: Sour
         <PillarBadge pillar={pillar ?? null} variant="plain" className="min-w-0" />
         <span className="ml-auto shrink-0 num">{formatDate(storyDay(story), "MMM yyyy")}</span>
         <span aria-hidden>·</span>
-        <span className={cn("shrink-0 num", ideas > 0 && "text-foreground/80")}>{ideas ? pluralize(ideas, "idea") : "Not used yet"}</span>
+        <span className={cn("shrink-0 num", ideas > 0 && "text-foreground/80")}>{ideas ? t.plural("ideas", ideas, { count: formatNumber(ideas) }) : t("not_used")}</span>
       </div>
     </article>
   )

@@ -3,7 +3,9 @@
 import { Check, Copy } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
+import { copyButtonMessages } from "@/components/common/messages"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 async function writeClipboard(text: string): Promise<boolean> {
@@ -35,7 +37,7 @@ async function writeClipboard(text: string): Promise<boolean> {
 export function CopyButton({
   text,
   label,
-  successMessage = "Copied to clipboard",
+  successMessage,
   variant = "ghost",
   size,
   disabled,
@@ -49,16 +51,17 @@ export function CopyButton({
   disabled?: boolean
   className?: string
 }) {
+  const t = useT(copyButtonMessages)
   const [copied, setCopied] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   useEffect(() => () => clearTimeout(timer.current), [])
 
   async function copy() {
     if (!(await writeClipboard(text))) {
-      toast.error("Couldn't copy", { description: "Select the text and copy it manually." })
+      toast.error(t("copy_failed"), { description: t("copy_failed_description") })
       return
     }
-    toast.success(successMessage)
+    toast.success(successMessage ?? t("copied_to_clipboard"))
     setCopied(true)
     clearTimeout(timer.current)
     timer.current = setTimeout(() => setCopied(false), 1600)
@@ -72,12 +75,12 @@ export function CopyButton({
       size={size ?? (label ? "sm" : "icon-sm")}
       disabled={disabled || !text}
       onClick={() => void copy()}
-      aria-label={label ? undefined : copied ? "Copied" : "Copy to clipboard"}
-      title={label ? undefined : "Copy"}
+      aria-label={label ? undefined : copied ? t("copied") : t("copy_to_clipboard")}
+      title={label ? undefined : t("copy")}
       className={cn(!label && "text-muted-foreground hover:text-foreground", className)}
     >
       <Icon aria-hidden className={cn(copied && "text-good-fg")} />
-      {label ? (copied ? "Copied" : label) : null}
+      {label ? (copied ? t("copied") : label) : null}
     </Button>
   )
 }

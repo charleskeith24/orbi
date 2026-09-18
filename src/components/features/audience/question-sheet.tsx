@@ -18,19 +18,21 @@ import {
 } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { formatRelativeDay, toISODate } from "@/lib/dates"
+import { toISODate } from "@/lib/dates"
+import { useT, useUiLang, type Translator, type UiLang } from "@/lib/i18n"
 import { dataActions, useRow } from "@/lib/store"
 import type { AudienceQuestion, UpdateRow } from "@/lib/types"
 import { formatNumber, truncate } from "@/lib/utils"
-import { questionPriority } from "./audience-model"
+import { questionPriority, relativeDayLabel } from "./audience-model"
 import { AutosaveInput, AutosaveTextarea } from "./autosave-field"
+import { audienceMessages } from "./messages"
 import { QuestionActionsMenu, type QuestionActions } from "./question-actions"
+import { questionMessages } from "./question-messages"
 import { QuestionStatusBadge, questionStatusLabel } from "./question-status"
 
-function lastAskedPhrase(value: string, now: Date): string {
-  if (!value) return "never logged"
-  const relative = formatRelativeDay(value, now)
-  return `last asked ${/^(Today|Yesterday|Tomorrow)$/.test(relative) ? relative.toLowerCase() : relative}`
+function lastAskedPhrase(value: string, now: Date, t: Translator<(typeof questionMessages)["en"]>, lang: UiLang): string {
+  if (!value) return t("never_logged")
+  return t("last_asked_when", { when: relativeDayLabel(value, now, lang, true) })
 }
 
 /** `/audience/questions?open=<id>` — edit the question, count repeats, see the idea and the answer. */
@@ -46,6 +48,8 @@ export function QuestionSheet({
   onOpenChange: (open: boolean) => void
 }) {
   const [now] = useState(() => new Date())
+  const t = useT(questionMessages)
+  const lang = useUiLang()
   if (!question) return null
   return (
     <DetailSheet
@@ -53,8 +57,12 @@ export function QuestionSheet({
       onOpenChange={onOpenChange}
       width="lg"
       onOpenAutoFocus={(event) => event.preventDefault()}
-      title={truncate(question.question || "Untitled question", 160)}
-      description={`${questionStatusLabel(question.status)} · asked ${formatNumber(question.frequency)}× · ${lastAskedPhrase(question.last_asked_at, now)}`}
+      title={truncate(question.question || t("untitled"), 160)}
+      description={t("sheet_description", {
+        status: questionStatusLabel(question.status),
+        count: formatNumber(question.frequency),
+        last: lastAskedPhrase(question.last_asked_at, now, t, lang),
+      })}
       actions={<QuestionActionsMenu question={question} actions={actions} showOpen={false} className="size-7" />}
       footer={<SheetFooter question={question} actions={actions} />}
     >
@@ -65,6 +73,8 @@ export function QuestionSheet({
 
 function SheetBody({ question, actions, now }: { question: AudienceQuestion; actions: QuestionActions; now: Date }) {
   const id = useId()
+  const t = useT(questionMessages)
+  const a = useT(audienceMessages)
   const idea = useRow("content_ideas", question.idea_id)
   const item = useRow("content_items", question.content_item_id)
   const save = (patch: UpdateRow<"audience_questions">) => dataActions.update("audience_questions", question.id, patch)
@@ -72,19 +82,19 @@ function SheetBody({ question, actions, now }: { question: AudienceQuestion; act
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
-      <FormField label="Question" htmlFor={`${id}-question`} required>
+      <FormField label={t("question")} htmlFor={`${id}-question`} required>
         <AutosaveTextarea
           id={`${id}-question`}
           value={question.question}
           required
-          requiredMessage="Write down what they asked."
+          requiredMessage={t("what_they_asked")}
           maxLength={300}
           rows={2}
           onCommit={(text) => save({ question: text })}
         />
       </FormField>
 
-      <FormField label="Times asked" htmlFor={`${id}-frequency`} description="Priority rises with repeats: asked 3+ times is Medium, 5+ is High.">
+      <FormField label={t("times_asked")} htmlFor={`${id}-frequency`} description={t("times_asked_description")}>
         <div className="flex flex-wrap items-center gap-2">
           <NumberField
             id={`${id}-frequency`}
@@ -97,35 +107,35 @@ function SheetBody({ question, actions, now }: { question: AudienceQuestion; act
             }}
           />
           <Button type="button" variant="outline" size="sm" onClick={() => actions.askedAgain(question)}>
-            +1 asked again
+            {t("asked_again_button")}
           </Button>
           <PriorityBadge priority={questionPriority(frequency)} />
         </div>
       </FormField>
 
       <FormRow>
-        <FormField label="Who asked" htmlFor={`${id}-source`}>
+        <FormField label={t("who_asked")} htmlFor={`${id}-source`}>
           <AutosaveInput
             id={`${id}-source`}
             value={question.source_person}
             maxLength={120}
-            placeholder="A name, or e.g. TikTok comments"
+            placeholder={t("who_asked_placeholder")}
             onCommit={(source_person) => save({ source_person })}
           />
         </FormField>
-        <FormField label="Platform" htmlFor={`${id}-platform`}>
+        <FormField label={a("platform")} htmlFor={`${id}-platform`}>
           <PlatformSelect id={`${id}-platform`} allowNone value={question.platform} onChange={(platform) => save({ platform })} />
         </FormField>
-        <FormField label="Topic" htmlFor={`${id}-topic`}>
+        <FormField label={t("topic")} htmlFor={`${id}-topic`}>
           <AutosaveInput
             id={`${id}-topic`}
             value={question.topic}
             maxLength={80}
-            placeholder="e.g. Scaling"
+            placeholder={t("topic_placeholder")}
             onCommit={(topic) => save({ topic })}
           />
         </FormField>
-        <FormField label="Last asked" htmlFor={`${id}-last`}>
+        <FormField label={t("last_asked")} htmlFor={`${id}-last`}>
           <DatePicker
             id={`${id}-last`}
             value={question.last_asked_at || null}
@@ -136,23 +146,23 @@ function SheetBody({ question, actions, now }: { question: AudienceQuestion; act
             }}
           />
         </FormField>
-        <FormField label="Persona" htmlFor={`${id}-persona`}>
+        <FormField label={a("persona")} htmlFor={`${id}-persona`}>
           <PersonaSelect id={`${id}-persona`} allowNone value={question.persona_id} onChange={(persona_id) => save({ persona_id })} />
         </FormField>
-        <FormField label="Pillar" htmlFor={`${id}-pillar`}>
+        <FormField label={a("pillar")} htmlFor={`${id}-pillar`}>
           <PillarSelect id={`${id}-pillar`} allowNone value={question.pillar_id} onChange={(pillar_id) => save({ pillar_id })} />
         </FormField>
       </FormRow>
 
       <Separator />
 
-      <section className="flex min-w-0 flex-col gap-3" aria-label="Answer">
+      <section className="flex min-w-0 flex-col gap-3" aria-label={t("answer_aria")}>
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-medium">From question to content</h3>
+          <h3 className="text-sm font-medium">{t("from_question")}</h3>
           <QuestionStatusBadge status={question.status} />
         </div>
         <div className="flex min-w-0 flex-col gap-1.5">
-          <span className="text-xs text-muted-foreground">Idea</span>
+          <span className="text-xs text-muted-foreground">{t("idea")}</span>
           {idea ? (
             <Link
               href={`/ideas?open=${idea.id}`}
@@ -160,23 +170,23 @@ function SheetBody({ question, actions, now }: { question: AudienceQuestion; act
             >
               <Lightbulb className="size-4 shrink-0 text-muted-foreground" aria-hidden />
               <span className="min-w-0 flex-1 truncate" title={idea.title}>
-                {idea.title || "Untitled idea"}
+                {idea.title || a("untitled_idea")}
               </span>
               <IdeaStatusBadge status={idea.status} />
             </Link>
           ) : (
             <p className="rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">
-              Not an idea yet — convert it to put it in the Idea Bank.
+              {t("not_an_idea")}
             </p>
           )}
         </div>
         <div className="flex min-w-0 flex-col gap-1.5">
-          <span className="text-xs text-muted-foreground">Answered in</span>
+          <span className="text-xs text-muted-foreground">{t("answered_in")}</span>
           {item ? (
             <ContentCard item={item} compact href={`/studio/${item.id}`} now={now} />
           ) : (
             <p className="rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">
-              No content answers it yet — link one with Mark answered.
+              {t("no_answer")}
             </p>
           )}
         </div>
@@ -186,11 +196,13 @@ function SheetBody({ question, actions, now }: { question: AudienceQuestion; act
 }
 
 function SheetFooter({ question, actions }: { question: AudienceQuestion; actions: QuestionActions }) {
+  const t = useT(questionMessages)
+  const a = useT(audienceMessages)
   if (question.status === "dismissed") {
     return (
       <Button type="button" size="sm" onClick={() => actions.restore(question)}>
         <RotateCcw aria-hidden />
-        Restore
+        {t("restore")}
       </Button>
     )
   }
@@ -200,15 +212,15 @@ function SheetFooter({ question, actions }: { question: AudienceQuestion; action
     <>
       <Button type="button" variant="ghost" size="sm" className="mr-auto" onClick={() => actions.dismiss(question)}>
         <CircleMinus aria-hidden />
-        Dismiss
+        {t("dismiss")}
       </Button>
       <Button type="button" variant={hasIdea && !answered ? "default" : "outline"} size="sm" onClick={() => actions.markAnswered(question)}>
         <CircleCheck aria-hidden />
-        {answered ? "Change answer…" : "Mark answered…"}
+        {answered ? t("change_answer") : t("mark_answered")}
       </Button>
       <Button type="button" variant={hasIdea ? "outline" : "default"} size="sm" onClick={() => actions.convertToIdea(question)}>
         <Lightbulb aria-hidden />
-        {hasIdea ? "Open idea" : "Convert to idea"}
+        {hasIdea ? a("open_idea") : t("convert_to_idea")}
       </Button>
     </>
   )

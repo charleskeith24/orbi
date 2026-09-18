@@ -3,9 +3,11 @@
 import { Bar, BarChart, CartesianGrid, LabelList, Rectangle, XAxis, YAxis, type TooltipContentProps } from "recharts"
 import { seriesColor, type ChartColor } from "@/components/charts/colors"
 import { EmptyChart } from "@/components/charts/empty-chart"
+import { chartMessages } from "@/components/charts/messages"
 import { ChartTooltipCard } from "@/components/charts/primitives"
 import { AXIS_TICK_STYLE, defaultValueFormatter, formatAxisValue } from "@/components/charts/utils"
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart"
+import { useT } from "@/lib/i18n"
 import { cn, truncate } from "@/lib/utils"
 
 export interface ColumnDatum {
@@ -46,12 +48,14 @@ export function ColumnChart({
   axisFormatter = formatAxisValue,
   highlight,
   labels = "highlight",
-  valueLabel = "Value",
-  emptyMessage = "No data yet.",
+  valueLabel: valueLabelProp,
+  emptyMessage,
   className,
   "aria-label": ariaLabel,
 }: ColumnChartProps) {
-  if (!data.length) return <EmptyChart message={emptyMessage} height={height} className={className} />
+  const t = useT(chartMessages)
+  const valueLabel = valueLabelProp ?? t("value")
+  if (!data.length) return <EmptyChart message={emptyMessage ?? t("no_data_yet")} height={height} className={className} />
 
   const rows: Row[] = data.map((d, i) => ({ ...d, key: d.id ?? `${d.label}-${i}` }))
   const isHighlighted = (d: ColumnDatum | undefined) =>

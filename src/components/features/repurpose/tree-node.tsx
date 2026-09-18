@@ -3,9 +3,11 @@
 import { Lightbulb } from "lucide-react"
 import Link from "next/link"
 import { FormatCategoryIcon, IdeaStatusBadge, PlatformIcon, StageIcon, TierBadge } from "@/components/common"
+import { useT, type Translator } from "@/lib/i18n"
 import { IDEA_STATUS_MAP, PIPELINE_STAGE_MAP, PLATFORMS, REPURPOSE_TYPES } from "@/lib/constants"
 import type { ContentFormat, ContentItem, ID } from "@/lib/types"
 import { cn, formatCompact } from "@/lib/utils"
+import { treeMessages } from "./messages"
 import type { TreeIdeaNode, TreeItemNode, TreeNode, TreeSuggestionNode } from "./tree-model"
 
 /** Fixed node size of the layered layout — connectors are positioned from it. */
@@ -19,13 +21,15 @@ export interface TreeContext {
 
 const FOCUS = "outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 
-function itemTitle(item: ContentItem) {
-  return item.title.trim() || "Untitled content"
+type TreeT = Translator<(typeof treeMessages)["en"]>
+
+function itemTitle(item: ContentItem, t: TreeT) {
+  return item.title.trim() || t("untitled_content")
 }
 
-function itemEyebrow(item: ContentItem, format: ContentFormat | undefined): string {
+function itemEyebrow(item: ContentItem, format: ContentFormat | undefined, t: TreeT): string {
   const platform = PLATFORMS[item.platform]?.label ?? item.platform
-  if (item.repurpose_type) return `${REPURPOSE_TYPES[item.repurpose_type]?.label ?? "Repurposed"} · ${platform}`
+  if (item.repurpose_type) return `${REPURPOSE_TYPES[item.repurpose_type]?.label ?? t("repurposed")} · ${platform}`
   return format ? `${platform} · ${format.name}` : platform
 }
 
@@ -35,22 +39,27 @@ export function nodeHref(node: TreeNode): string {
   return `/studio/${node.sourceId}?tab=repurpose`
 }
 
-function nodeLabel(node: TreeNode, ctx: TreeContext): string {
-  if (node.kind === "idea") return `Original idea: ${node.idea.title || "Untitled idea"}`
-  if (node.kind === "suggestion") return `Suggested ${REPURPOSE_TYPES[node.row.type].label}, not created yet: ${node.row.title}`
-  const current = node.id === ctx.currentId ? " (current)" : ""
-  return `${itemTitle(node.item)} — ${itemEyebrow(node.item, ctx.formats.get(node.item.format_id ?? ""))}, ${PIPELINE_STAGE_MAP[node.item.stage]?.label ?? node.item.stage}${current}`
+function nodeLabel(node: TreeNode, ctx: TreeContext, t: TreeT): string {
+  if (node.kind === "idea") return t("original_idea_label", { title: node.idea.title || t("untitled_idea") })
+  if (node.kind === "suggestion") return t("suggested_label", { type: REPURPOSE_TYPES[node.row.type].label, title: node.row.title })
+  return t("item_label", {
+    title: itemTitle(node.item, t),
+    eyebrow: itemEyebrow(node.item, ctx.formats.get(node.item.format_id ?? ""), t),
+    stage: PIPELINE_STAGE_MAP[node.item.stage]?.label ?? node.item.stage,
+    current: node.id === ctx.currentId ? t("current_suffix") : "",
+  })
 }
 
 /** Live items show their tier (or "Published"); items in production show their stage. */
 function StageOrTier({ node }: { node: TreeItemNode }) {
+  const t = useT(treeMessages)
   const { item, perf } = node
   const stage = PIPELINE_STAGE_MAP[item.stage]?.label ?? item.stage
   const tiered = perf.published && perf.tier !== null && perf.tier !== "normal"
   return (
     <span className="inline-flex min-w-0 items-center gap-1.5" title={stage}>
       <StageIcon stage={item.stage} className="size-3" />
-      {tiered ? <TierBadge tier={perf.tier} /> : <span className="min-w-0 truncate">{perf.published ? "Published" : stage}</span>}
+      {tiered ? <TierBadge tier={perf.tier} /> : <span className="min-w-0 truncate">{perf.published ? t("published") : stage}</span>}
     </span>
   )
 }
@@ -58,6 +67,7 @@ function StageOrTier({ node }: { node: TreeItemNode }) {
 /* ------------------------------ Layered cards ----------------------------- */
 
 function ItemCardBody({ node, ctx }: { node: TreeItemNode; ctx: TreeContext }) {
+  const t = useT(treeMessages)
   const { item, perf } = node
   const format = item.format_id ? ctx.formats.get(item.format_id) : undefined
   const current = node.id === ctx.currentId
@@ -66,30 +76,31 @@ function ItemCardBody({ node, ctx }: { node: TreeItemNode; ctx: TreeContext }) {
       <span className="flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-muted-foreground">
         <PlatformIcon platform={item.platform} className="size-3.5" />
         <FormatCategoryIcon category={format?.category} className="size-3.5 shrink-0" />
-        <span className="min-w-0 truncate">{itemEyebrow(item, format)}</span>
-        {current ? <span className="ml-auto shrink-0 font-medium text-brand">Current</span> : null}
+        <span className="min-w-0 truncate">{itemEyebrow(item, format, t)}</span>
+        {current ? <span className="ml-auto shrink-0 font-medium text-brand">{t("current")}</span> : null}
       </span>
-      <span className="truncate text-sm leading-5 font-medium">{itemTitle(item)}</span>
+      <span className="truncate text-sm leading-5 font-medium">{itemTitle(item, t)}</span>
       <span className="flex min-w-0 items-center gap-1.5 text-xs leading-5 text-muted-foreground">
         <StageOrTier node={node} />
-        {perf.views !== null ? <span className="ml-auto shrink-0 num">{formatCompact(perf.views)} views</span> : null}
+        {perf.views !== null ? <span className="ml-auto shrink-0 num">{t("views", { count: formatCompact(perf.views) })}</span> : null}
       </span>
     </>
   )
 }
 
 function IdeaCardBody({ node }: { node: TreeIdeaNode }) {
+  const t = useT(treeMessages)
   const { idea } = node
   return (
     <>
       <span className="flex min-w-0 items-center gap-1.5 text-[11px] leading-4 font-medium tracking-wide text-muted-foreground uppercase">
         <Lightbulb className="size-3.5 shrink-0" aria-hidden />
-        Original idea
+        {t("original_idea")}
       </span>
-      <span className="truncate text-sm leading-5 font-medium">{idea.title || "Untitled idea"}</span>
+      <span className="truncate text-sm leading-5 font-medium">{idea.title || t("untitled_idea")}</span>
       <span className="flex min-w-0 items-center gap-1.5 text-xs leading-5 text-muted-foreground">
         <IdeaStatusBadge status={idea.status} />
-        {idea.score !== null ? <span className="shrink-0 num">Score {Math.round(idea.score)}</span> : null}
+        {idea.score !== null ? <span className="shrink-0 num">{t("score", { score: Math.round(idea.score) })}</span> : null}
         <span className="ml-auto flex shrink-0 items-center gap-1">
           {idea.platforms.slice(0, 4).map((p) => (
             <PlatformIcon key={p} platform={p} className="size-3" />
@@ -101,18 +112,19 @@ function IdeaCardBody({ node }: { node: TreeIdeaNode }) {
 }
 
 function SuggestionCardBody({ node }: { node: TreeSuggestionNode }) {
+  const t = useT(treeMessages)
   const spec = REPURPOSE_TYPES[node.row.type]
   const platform = node.row.platform ?? spec.platform
   return (
     <>
       <span className="flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-muted-foreground">
         {platform ? <PlatformIcon platform={platform} className="size-3.5" /> : null}
-        <span className="min-w-0 truncate">Suggested · {spec.label}</span>
+        <span className="min-w-0 truncate">{t("suggested_type", { type: spec.label })}</span>
       </span>
       <span className="truncate text-sm leading-5 text-foreground/80">{node.row.title || spec.label}</span>
       <span className="flex min-w-0 items-center gap-1 text-xs leading-5 text-muted-foreground">
         <Lightbulb className="size-3 shrink-0" aria-hidden />
-        Not created yet
+        {t("not_created")}
       </span>
     </>
   )
@@ -120,13 +132,14 @@ function SuggestionCardBody({ node }: { node: TreeSuggestionNode }) {
 
 /** Fixed-size node of the layered (desktop) tree. The whole card is the link. */
 export function TreeNodeCard({ node, ctx }: { node: TreeNode; ctx: TreeContext }) {
+  const t = useT(treeMessages)
   const current = node.id === ctx.currentId
   return (
     <Link
       href={nodeHref(node)}
-      aria-label={nodeLabel(node, ctx)}
+      aria-label={nodeLabel(node, ctx, t)}
       aria-current={current ? "true" : undefined}
-      title={node.kind === "suggestion" ? "Suggested — open the source's Repurpose tab to create it" : undefined}
+      title={node.kind === "suggestion" ? t("suggested_title") : undefined}
       style={{ width: NODE_W, height: NODE_H }}
       className={cn(
         "flex shrink-0 flex-col justify-center gap-0.5 rounded-lg border px-2.5 py-2 text-left transition-[border-color,box-shadow]",
@@ -177,36 +190,37 @@ function RowGlyph({ node }: { node: TreeNode }) {
 
 /** Compact row of the indented (mobile / narrow) tree. */
 export function TreeRow({ node, ctx }: { node: TreeNode; ctx: TreeContext }) {
+  const t = useT(treeMessages)
   const current = node.id === ctx.currentId
   let title: string
   let meta: React.ReactNode
   if (node.kind === "idea") {
-    title = node.idea.title || "Untitled idea"
+    title = node.idea.title || t("untitled_idea")
     meta = (
       <>
-        <span>Original idea</span>
+        <span>{t("original_idea")}</span>
         <span aria-hidden>·</span>
         <span>{IDEA_STATUS_MAP[node.idea.status]?.label ?? node.idea.status}</span>
       </>
     )
   } else if (node.kind === "suggestion") {
     title = node.row.title || REPURPOSE_TYPES[node.row.type].label
-    meta = <span>Suggested · {REPURPOSE_TYPES[node.row.type].label} · not created yet</span>
+    meta = <span>{t("suggested_row", { type: REPURPOSE_TYPES[node.row.type].label })}</span>
   } else {
     const format = node.item.format_id ? ctx.formats.get(node.item.format_id) : undefined
-    title = itemTitle(node.item)
+    title = itemTitle(node.item, t)
     meta = (
       <>
-        <span className="min-w-0 truncate">{itemEyebrow(node.item, format)}</span>
+        <span className="min-w-0 truncate">{itemEyebrow(node.item, format, t)}</span>
         <StageOrTier node={node} />
-        {node.perf.views !== null ? <span className="shrink-0 num">{formatCompact(node.perf.views)} views</span> : null}
+        {node.perf.views !== null ? <span className="shrink-0 num">{t("views", { count: formatCompact(node.perf.views) })}</span> : null}
       </>
     )
   }
   return (
     <Link
       href={nodeHref(node)}
-      aria-label={nodeLabel(node, ctx)}
+      aria-label={nodeLabel(node, ctx, t)}
       aria-current={current ? "true" : undefined}
       className={cn(
         "flex min-w-0 items-start gap-2 rounded-md border border-transparent px-2 py-1.5 hover:bg-muted/60",
@@ -218,7 +232,7 @@ export function TreeRow({ node, ctx }: { node: TreeNode; ctx: TreeContext }) {
       <span className="min-w-0 flex-1">
         <span className={cn("block truncate text-sm leading-5", node.kind === "suggestion" ? "text-foreground/80" : "font-medium")}>
           {title}
-          {current ? <span className="ml-1.5 text-xs font-medium text-brand">Current</span> : null}
+          {current ? <span className="ml-1.5 text-xs font-medium text-brand">{t("current")}</span> : null}
         </span>
         <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs leading-5 text-muted-foreground">{meta}</span>
       </span>

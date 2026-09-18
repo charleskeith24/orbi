@@ -7,23 +7,23 @@ import { toast } from "sonner"
 import { EmptyState, PageContainer, PageHeader, PageSection, useConfirm } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { hasPublishedContent } from "@/components/features/dashboard/first-run"
+import { useT } from "@/lib/i18n"
 import { dataActions, updateBrand, useBrand, useDataStore, useDb, useSettings } from "@/lib/store"
 import type { ContentGoal, GoalCategory, ID } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
 import { GoalCard } from "./goal-card"
 import { GoalCategoryTiles } from "./goal-categories"
 import { GoalFocusCard } from "./goal-focus"
 import { GoalFormDialog, type GoalDialogTarget } from "./goal-form-dialog"
+import { goalsMessages } from "./goals-messages"
 import { focusPatch, goalPace, goalReferences, goalsSummary, type GoalRole } from "./goals-model"
 import { StrategyTabs } from "./strategy-tabs"
 import { useNow } from "./use-now"
 
-function listJoin(parts: string[]): string {
+function listJoin(parts: string[], and: string): string {
   if (parts.length <= 1) return parts.join("")
-  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`
+  return `${parts.slice(0, -1).join(", ")}${and}${parts[parts.length - 1]}`
 }
-
-const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 /** Strategy → Goals (spec §4, §15): goal CRUD, primary / secondary focus and progress per goal. `?open=<id>` edits a goal. */
 export function GoalsView() {
@@ -35,6 +35,7 @@ export function GoalsView() {
   const brand = useBrand()
   const now = useNow()
   const [confirm, confirmDialog] = useConfirm()
+  const t = useT(goalsMessages)
 
   const summary = useMemo(() => goalsSummary(db, now, settings), [db, now, settings])
   const withTargets = summary.rows.filter((r) => r.goal.is_active && r.progress.target !== null)
@@ -76,8 +77,8 @@ export function GoalsView() {
     updateBrand(patch)
     const goal = goalId ? db.content_goals.find((g) => g.id === goalId) : null
     const swapped = Object.keys(patch).length > 1
-    toast.success(goal ? `“${goal.name || "Untitled goal"}” is now your ${role} goal` : `${capitalize(role)} goal cleared`, {
-      description: swapped ? `Your previous ${role} goal is now the ${role === "primary" ? "secondary" : "primary"} goal.` : undefined,
+    toast.success(goal ? t("now_role", { name: goal.name || t("untitled"), role }) : t(role === "primary" ? "role_cleared_primary" : "role_cleared_secondary"), {
+      description: swapped ? t("role_swapped", { role, other: role === "primary" ? "secondary" : "primary" }) : undefined,
     })
   }
 
@@ -93,41 +94,43 @@ export function GoalsView() {
     const next = !goal.is_active
     dataActions.update("content_goals", goal.id, { is_active: next })
     const cleared = next ? null : clearRoleIfFocused(goal.id)
-    toast.success(next ? "Goal activated" : "Goal deactivated", {
-      description: cleared ? `“${goal.name}” is no longer your ${cleared} goal.` : goal.name,
+    toast.success(next ? t("activated") : t("deactivated"), {
+      description: cleared ? t("no_longer_role", { name: goal.name, role: cleared }) : goal.name,
     })
   }
 
   async function deleteGoal(goal: ContentGoal) {
     const refs = goalReferences(useDataStore.getState().db, goal.id)
-    const name = goal.name || "Untitled goal"
+    const name = goal.name || t("untitled")
+    const count = (key: "linked_items" | "linked_ideas" | "linked_campaigns" | "linked_platforms", n: number) =>
+      n ? t.plural(key, n, { count: formatNumber(n) }) : ""
     const linked = [
-      refs.items ? pluralize(refs.items, "content item") : "",
-      refs.ideas ? pluralize(refs.ideas, "idea") : "",
-      refs.campaigns ? pluralize(refs.campaigns, "campaign") : "",
-      refs.platforms ? pluralize(refs.platforms, "platform plan") : "",
+      count("linked_items", refs.items),
+      count("linked_ideas", refs.ideas),
+      count("linked_campaigns", refs.campaigns),
+      count("linked_platforms", refs.platforms),
     ].filter(Boolean)
     const ok = await confirm({
-      title: `Delete “${name}”?`,
+      title: t("delete_title", { name }),
       description: [
-        linked.length ? `${listJoin(linked)} keep working without a goal.` : "",
-        refs.role ? `It stops being your ${refs.role} goal.` : "",
-        "This can't be undone.",
+        linked.length ? t("delete_linked", { list: listJoin(linked, t("list_and")) }) : "",
+        refs.role ? t("delete_role", { role: refs.role }) : "",
+        t("delete_permanent"),
       ]
         .filter(Boolean)
         .join(" "),
-      confirmLabel: "Delete goal",
+      confirmLabel: t("delete_confirm"),
     })
     if (!ok) return
     if (openId === goal.id) setOpen(null)
     dataActions.remove("content_goals", goal.id)
-    toast.success("Goal deleted", { description: name })
+    toast.success(t("deleted"), { description: name })
   }
 
   function handleSaved(goal: ContentGoal) {
     if (!goal.is_active) {
       const cleared = clearRoleIfFocused(goal.id)
-      if (cleared) toast.info(`“${goal.name}” is inactive, so it's no longer your ${cleared} goal.`)
+      if (cleared) toast.info(t("inactive_cleared", { name: goal.name, role: cleared }))
     }
   }
 
@@ -136,11 +139,11 @@ export function GoalsView() {
       <PageHeader
         title="Goals"
         icon={Target}
-        description="What your content is for. Every goal has a target and a period — and every piece of content should serve one."
+        description={t("description")}
         actions={
           <Button type="button" size="sm" onClick={() => startCreate("awareness")}>
             <Plus aria-hidden />
-            New goal
+            {t("new_goal")}
           </Button>
         }
       >
@@ -151,11 +154,15 @@ export function GoalsView() {
         <>
           <GoalFocusCard summary={summary} brand={brand} onChange={setRole} />
           <PageSection
-            title="Your goals"
+            title={t("your_goals")}
             description={
               started
-                ? `${pluralize(activeCount, "active goal")} · ${withTargets.length - behind} of ${withTargets.length} with a target on pace · progress counts content published this period`
-                : `${pluralize(activeCount, "active goal")} · progress starts with your first published post and counts content published each period`
+                ? t.plural("summary_started", activeCount, {
+                    count: formatNumber(activeCount),
+                    onPace: withTargets.length - behind,
+                    withTarget: withTargets.length,
+                  })
+                : t.plural("summary_new", activeCount, { count: formatNumber(activeCount) })
             }
           >
             <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -179,12 +186,12 @@ export function GoalsView() {
       ) : (
         <EmptyState
           icon={Target}
-          title="No goals yet"
-          description="Goals give every piece of content a purpose. Start with the outcome that matters most this quarter."
+          title={t("empty_title")}
+          description={t("empty_description")}
           action={
             <Button type="button" size="sm" onClick={() => startCreate("awareness")}>
               <Plus aria-hidden />
-              Add your first goal
+              {t("empty_action")}
             </Button>
           }
         />

@@ -8,9 +8,11 @@ import { AiButton, AiNotice, ProviderBadge } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { useAiTask } from "@/lib/ai"
+import { useT } from "@/lib/i18n"
 import { createIdea, dataActions } from "@/lib/store"
 import type { ContentIdea } from "@/lib/types"
 import { AiErrorNotice } from "./ai-error-notice"
+import { quickCaptureMessages } from "./capture-messages"
 import { CaptureBody, CaptureDialog, CaptureFooter, CaptureHeader, ShortcutHint } from "./capture-dialog"
 import { ideaTitleFromText, submitOnModEnter } from "./capture-utils"
 import { draftFromCapture, IdeaPreviewFields, ideaValuesFromDraft, type IdeaDraft } from "./idea-preview"
@@ -41,6 +43,7 @@ export function QuickCaptureDialog({
 
 function QuickCaptureForm({ initialText, onClose }: { initialText: string; onClose: () => void }) {
   const router = useRouter()
+  const t = useT(quickCaptureMessages)
   const textId = useId()
   const textRef = useRef<HTMLTextAreaElement>(null)
   const [text, setText] = useState(initialText)
@@ -58,15 +61,15 @@ function QuickCaptureForm({ initialText, onClose }: { initialText: string; onClo
   }, [])
 
   function announce(idea: ContentIdea) {
-    toast.success("Idea saved to the Idea Bank", {
+    toast.success(t("saved"), {
       description: idea.title,
-      action: { label: "Open", onClick: () => router.push(`/ideas?open=${idea.id}`) },
+      action: { label: t("open"), onClick: () => router.push(`/ideas?open=${idea.id}`) },
     })
   }
 
   function requireText(): boolean {
     if (trimmed) return true
-    setNoteError("Write the idea first.")
+    setNoteError(t("write_first"))
     textRef.current?.focus()
     return false
   }
@@ -95,7 +98,7 @@ function QuickCaptureForm({ initialText, onClose }: { initialText: string; onClo
   function saveDraft() {
     if (!draft || ai.isPending) return
     if (!draft.title.trim()) {
-      setTitleError("Give the idea a title.")
+      setTitleError(t("title_required"))
       return
     }
     const idea = createIdea({
@@ -123,13 +126,13 @@ function QuickCaptureForm({ initialText, onClose }: { initialText: string; onClo
       {step === "preview" && draft ? (
         <>
           <CaptureHeader
-            title="Review your idea"
-            description="Structured from your note. Edit anything before it goes into the Idea Bank."
+            title={t("review_title")}
+            description={t("review_description")}
           />
           <CaptureBody className="flex flex-col gap-4">
             <div className="flex min-w-0 flex-col gap-2 rounded-lg border bg-muted/30 px-3 py-2.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-medium text-muted-foreground">Your note</span>
+                <span className="text-xs font-medium text-muted-foreground">{t("your_note")}</span>
                 <ProviderBadge provider={ai.provider ?? "offline"} model={ai.model ?? undefined} />
               </div>
               <p className="line-clamp-3 text-xs text-pretty whitespace-pre-line text-muted-foreground">{trimmed}</p>
@@ -146,15 +149,15 @@ function QuickCaptureForm({ initialText, onClose }: { initialText: string; onClo
             <AiNotice />
           </CaptureBody>
           <CaptureFooter status={<ShortcutHint />}>
-            <Button type="button" variant="ghost" onClick={() => setStep("note")} aria-label="Back to your note">
+            <Button type="button" variant="ghost" onClick={() => setStep("note")} aria-label={t("back_aria")}>
               <ArrowLeft aria-hidden />
-              <span className="max-sm:hidden">Edit note</span>
+              <span className="max-sm:hidden">{t("edit_note")}</span>
             </Button>
-            <AiButton type="button" pending={ai.isPending} pendingLabel="Regenerating…" onClick={() => void transform()}>
-              Regenerate
+            <AiButton type="button" pending={ai.isPending} pendingLabel={t("regenerating")} onClick={() => void transform()}>
+              {t("regenerate")}
             </AiButton>
             <Button type="submit" disabled={ai.isPending}>
-              Save idea
+              {t("save_idea")}
             </Button>
           </CaptureFooter>
         </>
@@ -162,11 +165,11 @@ function QuickCaptureForm({ initialText, onClose }: { initialText: string; onClo
         <>
           <CaptureHeader
             title="Quick Capture"
-            description="Get the idea down the moment it appears. It lands in your Idea Bank inbox."
+            description={t("description")}
           />
           <CaptureBody className="flex flex-col gap-3">
             <label htmlFor={textId} className="sr-only">
-              Idea
+              {t("idea_label")}
             </label>
             <Textarea
               ref={textRef}
@@ -175,7 +178,7 @@ function QuickCaptureForm({ initialText, onClose }: { initialText: string; onClo
               value={text}
               maxLength={MAX_LENGTH}
               rows={6}
-              placeholder="Enter an idea…"
+              placeholder={t("placeholder")}
               aria-invalid={Boolean(noteError) || undefined}
               aria-describedby={`${textId}-help`}
               className="min-h-40 resize-none max-sm:flex-1"
@@ -191,8 +194,7 @@ function QuickCaptureForm({ initialText, onClose }: { initialText: string; onClo
             ) : null}
             <div className="flex items-start justify-between gap-3">
               <p id={`${textId}-help`} className="text-xs text-pretty text-muted-foreground">
-                Saves exactly as written. <span className="font-medium text-foreground">Transform with AI</span> turns it into
-                a full idea — pillar, persona, hook, format and talking points — for you to edit first.
+                {t("help_before")} <span className="font-medium text-foreground">{t("transform")}</span> {t("help_after")}
               </p>
               {text.length >= COUNTER_FROM ? (
                 <span className="shrink-0 text-xs text-muted-foreground num">
@@ -204,10 +206,10 @@ function QuickCaptureForm({ initialText, onClose }: { initialText: string; onClo
           </CaptureBody>
           <CaptureFooter status={<ShortcutHint />}>
             <AiButton type="button" pending={ai.isPending} disabled={!trimmed} onClick={() => void transform()}>
-              Transform with AI
+              {t("transform")}
             </AiButton>
             <Button type="submit" disabled={!trimmed || ai.isPending}>
-              Save idea
+              {t("save_idea")}
             </Button>
           </CaptureFooter>
         </>

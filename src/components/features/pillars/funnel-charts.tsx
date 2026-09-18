@@ -6,9 +6,12 @@ import { ChartFrame, FunnelBars, MixBar, type ChartTable } from "@/components/ch
 import { Button } from "@/components/ui/button"
 import { MIN_MIX_SAMPLE, type FunnelAggregate, type FunnelMix } from "@/lib/analytics"
 import { FUNNEL_STAGES } from "@/lib/constants"
-import { formatCompact, formatNumber, formatPercent, pluralize } from "@/lib/utils"
+import { useT, useUiLang } from "@/lib/i18n"
+import { formatCompact, formatNumber, formatPercent } from "@/lib/utils"
+import { funnelMessages } from "./funnel-messages"
 import { FUNNEL_COLORS } from "./funnel-utils"
 import { formatPoints, TARGET_TOTAL } from "./pillar-math"
+import { pillarMessages } from "./pillar-messages"
 import { SegmentedToggle, type SegmentOption } from "./segmented-toggle"
 
 /** TOFU / MOFU / BOFU share of the window vs settings.funnel_targets, with warnings. */
@@ -24,33 +27,36 @@ export function FunnelDistributionCard({
   targetTotal: number
   onEditTargets: () => void
 }) {
+  const t = useT(funnelMessages)
+  const p = useT(pillarMessages)
+  const lang = useUiLang()
   const table: ChartTable = {
-    columns: ["Stage", "Items", "Actual", "Target", "vs target"],
+    columns: [t("stage"), p("items"), p("actual"), p("target"), p("vs_target")],
     rows: mix.rows.map((r) => [
       `${r.label} · ${FUNNEL_STAGES[r.stage].name}`,
       r.count,
       `${Math.round(r.actualPct)}%`,
       `${Math.round(r.targetPct)}%`,
-      formatPoints(r.deviation),
+      formatPoints(r.deviation, lang),
     ]),
   }
   const description = [
-    `Published in the ${windowLabel} plus scheduled for the next 7 days`,
-    pluralize(mix.total, "item"),
-    mix.unassigned ? `${mix.unassigned} without a stage` : null,
+    p("mix_window", { window: windowLabel }),
+    p.plural("items", mix.total, { count: formatNumber(mix.total) }),
+    mix.unassigned ? t("without_stage", { count: mix.unassigned }) : null,
   ]
     .filter(Boolean)
     .join(" · ")
 
   return (
-    <ChartFrame title="Distribution vs targets" description={description} table={table}>
+    <ChartFrame title={t("distribution_title")} description={description} table={table}>
       <div className="flex flex-col gap-4">
         <MixBar
           segments={mix.rows.map((r) => ({ id: r.stage, label: `${r.label} · ${FUNNEL_STAGES[r.stage].name}`, value: r.count, color: FUNNEL_COLORS[r.stage] }))}
           targets={mix.rows.map((r) => ({ id: r.stage, value: r.targetPct }))}
-          valueLabel="Items"
-          aria-label="Funnel mix, actual vs target"
-          emptyMessage="Nothing with a funnel stage was published or scheduled in this window."
+          valueLabel={p("items")}
+          aria-label={t("mix_aria")}
+          emptyMessage={t("distribution_empty")}
         />
         {targetTotal !== TARGET_TOTAL ? (
           <div
@@ -59,18 +65,18 @@ export function FunnelDistributionCard({
           >
             <TriangleAlert className="size-3.5 shrink-0 text-warning-fg" aria-hidden />
             <span className="min-w-0 flex-1">
-              Funnel targets add up to <strong className="num font-semibold">{targetTotal}%</strong> — set them to 100%.
+              {t("targets_total_before")} <strong className="num font-semibold">{targetTotal}%</strong> {t("targets_total_after")}
             </span>
             <Button type="button" size="xs" variant="outline" onClick={onEditTargets}>
               <Scale aria-hidden />
-              Edit targets
+              {t("edit_targets")}
             </Button>
           </div>
         ) : null}
         {!mix.total ? null : !mix.enoughData ? (
-          <p className="text-xs text-muted-foreground">Balance warnings start once {MIN_MIX_SAMPLE} or more items are in the window.</p>
+          <p className="text-xs text-muted-foreground">{p("balance_warnings_start", { count: MIN_MIX_SAMPLE })}</p>
         ) : mix.warnings.length ? (
-          <ul className="flex flex-col gap-1.5" aria-label="Funnel warnings">
+          <ul className="flex flex-col gap-1.5" aria-label={t("warnings_aria")}>
             {mix.warnings.map((warning) => (
               <li key={warning.key} className="flex items-start gap-2 text-xs">
                 <TriangleAlert className="mt-px size-3.5 shrink-0 text-warning-fg" aria-hidden />
@@ -81,7 +87,7 @@ export function FunnelDistributionCard({
         ) : (
           <p className="flex items-center gap-1.5 text-xs text-good-fg">
             <CircleCheck className="size-3.5 shrink-0" aria-hidden />
-            Every stage is within its target range.
+            {t("every_stage_ok")}
           </p>
         )}
       </div>
@@ -91,11 +97,6 @@ export function FunnelDistributionCard({
 
 type PerfMetric = "views" | "engagement" | "leads"
 
-const METRIC_OPTIONS: SegmentOption<PerfMetric>[] = [
-  { value: "views", label: "Views" },
-  { value: "engagement", label: "Engagement" },
-  { value: "leads", label: "Leads" },
-]
 
 const METRIC_VALUE: Record<PerfMetric, (row: FunnelAggregate) => number> = {
   views: (row) => row.views,
@@ -111,11 +112,18 @@ const METRIC_FORMAT: Record<PerfMetric, (value: number) => string> = {
 
 /** Views, engagement rate and leads per funnel stage for published posts in the window (table twin included). */
 export function FunnelPerformanceCard({ perf, windowLabel }: { perf: FunnelAggregate[]; windowLabel: string }) {
+  const t = useT(funnelMessages)
+  const p = useT(pillarMessages)
   const [metric, setMetric] = useState<PerfMetric>("views")
+  const metricOptions: SegmentOption<PerfMetric>[] = [
+    { value: "views", label: t("views") },
+    { value: "engagement", label: p("engagement") },
+    { value: "leads", label: p("leads") },
+  ]
   const stages = perf.filter((row) => row.stage)
   const unassigned = perf.find((row) => !row.stage)
   const table: ChartTable = {
-    columns: ["Stage", "Posts", "Views", "Avg views", "Engagement", "Leads"],
+    columns: [t("stage"), p("posts"), t("views"), p("avg_views"), p("engagement"), p("leads")],
     rows: perf.map((row) => [
       row.stage ? `${row.label} · ${FUNNEL_STAGES[row.stage].name}` : row.label,
       row.posts,
@@ -129,14 +137,16 @@ export function FunnelPerformanceCard({ perf, windowLabel }: { perf: FunnelAggre
 
   return (
     <ChartFrame
-      title="Performance by stage"
-      description={`Published posts in the ${windowLabel}${unassigned ? ` · ${pluralize(unassigned.posts, "post")} without a stage` : ""}`}
+      title={t("performance_title")}
+      description={`${t("performance_description", { window: windowLabel })}${
+        unassigned ? ` · ${t.plural("posts_without_stage", unassigned.posts, { count: formatNumber(unassigned.posts) })}` : ""
+      }`}
       table={table}
-      footer={metric === "engagement" ? "Engagement rate = likes + comments + shares + saves ÷ reach." : undefined}
+      footer={metric === "engagement" ? t("engagement_footer") : undefined}
     >
       {/* Metric switch lives in the body so the header title keeps its width on narrow screens. */}
       <div className="flex flex-col gap-4">
-        <SegmentedToggle value={metric} options={METRIC_OPTIONS} onChange={setMetric} aria-label="Metric" className="self-start" />
+        <SegmentedToggle value={metric} options={metricOptions} onChange={setMetric} aria-label={t("metric")} className="self-start" />
         <FunnelBars
           stages={
             hasPosts
@@ -151,8 +161,8 @@ export function FunnelPerformanceCard({ perf, windowLabel }: { perf: FunnelAggre
           }
           valueFormatter={METRIC_FORMAT[metric]}
           showShare={metric !== "engagement"}
-          aria-label={`${METRIC_OPTIONS.find((o) => o.value === metric)?.label} by funnel stage`}
-          emptyMessage="No published posts with a funnel stage in this window."
+          aria-label={t("metric_by_stage", { metric: metricOptions.find((o) => o.value === metric)?.label ?? "" })}
+          emptyMessage={t("performance_empty")}
         />
       </div>
     </ChartFrame>

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useMemo } from "react"
 import { ContentCard, EmptyState, OptionSelect, StageIcon, type SelectOption } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/i18n"
 import { PIPELINE_STAGE_MAP } from "@/lib/constants"
 import type { ContentItem, ID, PerformanceTier, PipelineStage } from "@/lib/types"
 import { cn, formatNumber } from "@/lib/utils"
@@ -18,8 +19,9 @@ import {
   type StageColumnData,
 } from "./board-model"
 import { CardActions } from "./card-actions"
+import { pipelineMessages } from "./messages"
 import { usePipelineActions } from "./pipeline-actions"
-import { STAGE_EMPTY_HINTS } from "./pipeline-column"
+import { stageEmptyHint } from "./pipeline-column"
 import { QuickAddForm } from "./quick-add"
 
 const label = (stage: PipelineStage) => PIPELINE_STAGE_MAP[stage]?.label ?? stage
@@ -54,6 +56,7 @@ export function MobileBoard({
   onQuickAdd,
   onResetFilters,
 }: MobileBoardProps) {
+  const t = useT(pipelineMessages)
   const column = columns[stage]
   const { prev, next } = adjacentStages(stage)
   const options = useMemo<SelectOption<PipelineStage>[]>(
@@ -74,14 +77,14 @@ export function MobileBoard({
   const noMatches = filtered && column.total > 0
 
   return (
-    <section id={MOBILE_STAGE_LIST_ID} aria-label="Pipeline stage" className="flex scroll-mt-14 flex-col gap-3">
+    <section id={MOBILE_STAGE_LIST_ID} aria-label={t("mobile_stage")} className="flex scroll-mt-14 flex-col gap-3">
       <div className="sticky top-12 z-10 -mx-4 flex items-center gap-2 border-b bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <Button
           type="button"
           variant="outline"
           size="icon-sm"
           disabled={!prev}
-          aria-label={prev ? `Previous stage: ${label(prev)}` : "No previous stage"}
+          aria-label={prev ? t("previous_stage", { stage: label(prev) }) : t("no_previous_stage")}
           onClick={() => prev && onStageChange(prev)}
         >
           <ChevronLeft aria-hidden />
@@ -92,7 +95,7 @@ export function MobileBoard({
           onChange={(value) => {
             if (value) onStageChange(value)
           }}
-          aria-label="Stage"
+          aria-label={t("stage")}
           className="min-w-0 flex-1"
         />
         <Button
@@ -100,7 +103,7 @@ export function MobileBoard({
           variant="outline"
           size="icon-sm"
           disabled={!next}
-          aria-label={next ? `Next stage: ${label(next)}` : "No next stage"}
+          aria-label={next ? t("next_stage", { stage: label(next) }) : t("no_next_stage")}
           onClick={() => next && onStageChange(next)}
         >
           <ChevronRight aria-hidden />
@@ -109,9 +112,9 @@ export function MobileBoard({
 
       {stage === "published" ? (
         <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span>Last {PUBLISHED_COLUMN_DAYS} days</span>
+          <span>{t("last_days", { days: PUBLISHED_COLUMN_DAYS })}</span>
           <Link href="/analytics/posts" className="inline-flex items-center gap-0.5 font-medium text-foreground/80 hover:underline">
-            All posts in Analytics
+            {t("all_posts")}
             <ArrowUpRight className="size-3.5" aria-hidden />
           </Link>
         </div>
@@ -129,13 +132,13 @@ export function MobileBoard({
             onClick={() => onQuickAdd(stage)}
           >
             <Plus aria-hidden />
-            Add to {label(stage)}
+            {t("add_to", { stage: label(stage) })}
           </Button>
         )
       ) : null}
 
       {column.items.length ? (
-        <ul className="flex flex-col gap-2" aria-label={`${label(stage)} cards`}>
+        <ul className="flex flex-col gap-2" aria-label={t("stage_cards", { stage: label(stage) })}>
           {column.items.map((item) => (
             <li key={item.id}>
               <MobileCard item={item} now={now} tier={tiers.get(item.id) ?? null} highlighted={item.id === highlightId} />
@@ -146,16 +149,16 @@ export function MobileBoard({
         <EmptyState
           compact
           icon={SquareKanban}
-          title={noMatches ? "No matches in this stage" : `Nothing in ${label(stage)}`}
-          description={noMatches ? "Cards in this stage don't match your filters." : STAGE_EMPTY_HINTS[stage]}
+          title={noMatches ? t("no_matches_stage") : t("nothing_in", { stage: label(stage) })}
+          description={noMatches ? t("no_matches_stage_description") : stageEmptyHint(t, stage)}
           action={
             noMatches ? (
               <Button type="button" size="sm" variant="outline" onClick={onResetFilters}>
-                Reset filters
+                {t("reset_filters")}
               </Button>
             ) : nearest ? (
               <Button type="button" size="sm" variant="outline" onClick={() => onStageChange(nearest)}>
-                Show {label(nearest)} · {formatNumber(columns[nearest].items.length)}
+                {t("show_stage", { stage: label(nearest), count: formatNumber(columns[nearest].items.length) })}
               </Button>
             ) : undefined
           }
@@ -177,6 +180,7 @@ function MobileCard({
   tier: PerformanceTier | null
   highlighted: boolean
 }) {
+  const t = useT(pipelineMessages)
   const actions = usePipelineActions()
   const { prev, next } = adjacentStages(item.stage)
   return (
@@ -203,7 +207,7 @@ function MobileCard({
               variant="ghost"
               size="sm"
               className="h-9 min-w-0 flex-1 justify-start rounded-none px-3 font-normal text-muted-foreground"
-              aria-label={`Move back to ${label(prev)}`}
+              aria-label={t("move_back_to", { stage: label(prev) })}
               onClick={() => actions.moveItem(item, prev)}
             >
               <ArrowLeft aria-hidden />
@@ -216,7 +220,7 @@ function MobileCard({
               variant="ghost"
               size="sm"
               className="h-9 min-w-0 flex-1 justify-end rounded-none px-3"
-              aria-label={`Move to ${label(next)}`}
+              aria-label={t("move_to_stage", { stage: label(next) })}
               onClick={() => actions.moveItem(item, next)}
             >
               <span className="truncate">{label(next)}</span>

@@ -18,10 +18,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { CAMPAIGN_STATUSES } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import { dataActions, useDataStore } from "@/lib/store"
 import type { CampaignStatus, ContentCampaign } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
 import { setCampaignStatus } from "./campaign-status"
+import { campaignMessages } from "./messages"
 
 /** Row / header overflow menu: open, edit, status, delete (confirmed). */
 export function CampaignActionsMenu({
@@ -43,32 +45,35 @@ export function CampaignActionsMenu({
   /** Extra items rendered first. */
   children?: React.ReactNode
 }) {
+  const t = useT(campaignMessages)
   const [confirm, confirmDialog] = useConfirm()
-  const name = campaign.name || "Untitled campaign"
+  const name = campaign.name || t("untitled_campaign")
 
   async function handleDelete() {
     const db = useDataStore.getState().db
     const pieces = db.content_items.filter((i) => i.campaign_id === campaign.id).length
     const ideas = db.content_ideas.filter((i) => i.campaign_id === campaign.id).length
-    const linked = [pieces ? pluralize(pieces, "content piece") : "", ideas ? pluralize(ideas, "idea") : ""].filter(Boolean).join(" and ")
+    const parts = [
+      pieces ? t.plural("content_pieces", pieces, { count: formatNumber(pieces) }) : "",
+      ideas ? t.plural("ideas", ideas, { count: formatNumber(ideas) }) : "",
+    ].filter(Boolean)
+    const linked = parts.length === 2 ? t("linked_and", { first: parts[0], second: parts[1] }) : (parts[0] ?? "")
     const ok = await confirm({
-      title: `Delete “${name}”?`,
-      description: linked
-        ? `The campaign is removed. Its ${linked} stay in your workspace, no longer linked to a campaign.`
-        : "The campaign is removed. This can’t be undone.",
-      confirmLabel: "Delete campaign",
+      title: t("delete_title", { name }),
+      description: linked ? t("delete_linked", { linked }) : t("delete_plain"),
+      confirmLabel: t("delete_confirm"),
     })
     if (!ok) return
     onBeforeDelete?.()
     dataActions.remove("content_campaigns", campaign.id)
-    toast.success("Campaign deleted", { description: name })
+    toast.success(t("deleted"), { description: name })
   }
 
   return (
     <>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button type="button" variant="ghost" size="icon-sm" aria-label={`Actions for ${name}`}>
+          <Button type="button" variant="ghost" size="icon-sm" aria-label={t("actions_for", { name })}>
             <Ellipsis aria-hidden />
           </Button>
         </DropdownMenuTrigger>
@@ -78,21 +83,21 @@ export function CampaignActionsMenu({
             <DropdownMenuItem asChild>
               <Link href={`/campaigns/${campaign.id}`}>
                 <ArrowUpRight aria-hidden />
-                Open campaign
+                {t("open_campaign")}
               </Link>
             </DropdownMenuItem>
           ) : null}
           {showEdit && onEdit ? (
             <DropdownMenuItem onSelect={onEdit}>
               <Pencil aria-hidden />
-              Edit campaign…
+              {t("edit_campaign")}
             </DropdownMenuItem>
           ) : null}
           {showStatus ? (
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <CircleDot aria-hidden />
-                Status
+                {t("status")}
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
                 <DropdownMenuRadioGroup
@@ -111,7 +116,7 @@ export function CampaignActionsMenu({
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onSelect={() => void handleDelete()}>
             <Trash2 aria-hidden />
-            Delete campaign…
+            {t("delete_campaign_menu")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

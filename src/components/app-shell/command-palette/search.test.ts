@@ -219,3 +219,15 @@ describe("recentDocs", () => {
     expect(recentDocs(index.idea, 1).map((d) => d.title)).toEqual(["Newer"])
   })
 })
+
+describe("buildSearchIndex in Taglish", () => {
+  it("translates the text it builds, not the workspace data", () => {
+    const pillar = buildRow("content_pillars", { name: "Education", target_percentage: 30, is_active: false }, USER, NOW)
+    const untitled = buildRow("content_ideas", { title: "", core_topic: "Pricing" }, USER, NOW)
+    const index = buildSearchIndex(sources({ pillars: [pillar], ideas: [untitled] }), "tl")
+    expect(index.pillar[0]).toMatchObject({ title: "Education", secondary: "30% ng mix · Hindi active" })
+    expect(index.idea[0].title).toBe("Idea na walang title")
+    expect(index.topic[0]).toMatchObject({ title: "Pricing", secondary: "1 idea", hint: "Topic" })
+    expect(buildSearchIndex(sources({ pillars: [pillar] })).pillar[0].secondary).toBe("30% of the mix · Inactive")
+  })
+})

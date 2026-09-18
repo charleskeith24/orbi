@@ -6,11 +6,13 @@ import { toast } from "sonner"
 import { PlatformSelect } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useT } from "@/lib/i18n"
 import { PIPELINE_STAGE_MAP } from "@/lib/constants"
 import { createContentItem, useBrand } from "@/lib/store"
 import type { InsertRow, PipelineStage, PlatformId } from "@/lib/types"
 import { cn, truncate } from "@/lib/utils"
 import type { QuickAddDefaults } from "./board-model"
+import { pipelineMessages } from "./messages"
 
 const INHERITED: [keyof QuickAddDefaults, string][] = [
   ["pillar_id", "pillar"],
@@ -32,6 +34,7 @@ export function QuickAddForm({
   onClose: () => void
   className?: string
 }) {
+  const t = useT(pipelineMessages)
   const router = useRouter()
   const brand = useBrand()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -51,9 +54,9 @@ export function QuickAddForm({
     if (defaults.owner) values.owner = defaults.owner
     if (defaults.priority) values.priority = defaults.priority
     const item = createContentItem(values)
-    toast.success(`Added to ${label}`, {
+    toast.success(t("added_to", { stage: label }), {
       description: truncate(clean, 64),
-      action: { label: "Open", onClick: () => router.push(`/studio/${item.id}`) },
+      action: { label: t("open"), onClick: () => router.push(`/studio/${item.id}`) },
     })
     setTitle("")
     inputRef.current?.focus()
@@ -62,7 +65,7 @@ export function QuickAddForm({
   return (
     <form
       onSubmit={submit}
-      aria-label={`Add to ${label}`}
+      aria-label={t("add_to", { stage: label })}
       className={cn("flex shrink-0 flex-col gap-2 rounded-lg border bg-card p-2 shadow-xs", className)}
     >
       <Input
@@ -78,8 +81,8 @@ export function QuickAddForm({
             onClose()
           }
         }}
-        placeholder="Working title…"
-        aria-label={`Title of the new ${label} item`}
+        placeholder={t("working_title")}
+        aria-label={t("new_item_title", { stage: label })}
         className="h-7"
       />
       <div className="flex items-center gap-1.5">
@@ -89,18 +92,18 @@ export function QuickAddForm({
           onChange={(next) => {
             if (next) setPlatform(next)
           }}
-          aria-label="Platform"
+          aria-label={t("platform")}
           className="min-w-0 flex-1"
         />
         <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-          Cancel
+          {t("cancel")}
         </Button>
         <Button type="submit" size="sm" disabled={!clean}>
-          Add
+          {t("add")}
         </Button>
       </div>
       {inherited.length ? (
-        <p className="px-0.5 text-[11px] leading-4 text-muted-foreground">Uses your {inherited.join(", ")} filter</p>
+        <p className="px-0.5 text-[11px] leading-4 text-muted-foreground">{t("uses_filter", { filters: inherited.join(", ") })}</p>
       ) : null}
     </form>
   )

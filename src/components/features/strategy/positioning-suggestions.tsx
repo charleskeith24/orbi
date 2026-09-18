@@ -6,18 +6,16 @@ import { AiButton, AiNotice, ProviderBadge } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
+import { useT } from "@/lib/i18n"
 import type { AiProviderId } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { AiErrorNotice } from "./ai-error"
+import { positioningSuggestionMessages } from "./brand-messages"
 
 export type SuggestionField = "statement" | "known_for" | "point_of_view"
 export type SuggestionValues = Record<SuggestionField, string>
 
-const ROWS: { key: SuggestionField; label: string; hint: string }[] = [
-  { key: "statement", label: "Positioning statement", hint: "Fills the three parts of the statement builder." },
-  { key: "known_for", label: "Known for", hint: "Replaces “What do I want to be known for?”" },
-  { key: "point_of_view", label: "Point of view", hint: "Replaces “What makes my point of view different?”" },
-]
+const ROWS: { key: SuggestionField }[] = [{ key: "statement" }, { key: "known_for" }, { key: "point_of_view" }]
 
 const same = (a: string, b: string) => a.replace(/\s+/g, " ").trim().toLowerCase() === b.replace(/\s+/g, " ").trim().toLowerCase()
 
@@ -48,20 +46,21 @@ export function PositioningSuggestions({
 }) {
   const [drafts, setDrafts] = useState<SuggestionValues | null>(suggestion)
   const [applied, setApplied] = useState<Partial<Record<SuggestionField, boolean>>>({})
+  const t = useT(positioningSuggestionMessages)
 
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-brand/30 bg-card">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-brand-soft px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
           <Sparkles className="size-4 shrink-0 text-brand" aria-hidden />
-          <span className="text-sm font-medium">AI suggestions</span>
+          <span className="text-sm font-medium">{t("title")}</span>
           {provider && suggestion ? <ProviderBadge provider={provider} model={model ?? undefined} /> : null}
         </div>
         <div className="flex items-center gap-1">
           <AiButton type="button" size="sm" variant="ghost" pending={pending} onClick={onRegenerate}>
-            Regenerate
+            {t("regenerate")}
           </AiButton>
-          <Button type="button" variant="ghost" size="icon-sm" aria-label="Dismiss suggestions" onClick={onDismiss}>
+          <Button type="button" variant="ghost" size="icon-sm" aria-label={t("dismiss")} onClick={onDismiss}>
             <X aria-hidden />
           </Button>
         </div>
@@ -74,7 +73,7 @@ export function PositioningSuggestions({
           </div>
         ) : null}
         {!drafts && pending ? (
-          <div className="flex flex-col gap-3 p-3" aria-label="Generating suggestions">
+          <div className="flex flex-col gap-3 p-3" aria-label={t("generating")}>
             {ROWS.map((row) => (
               <div key={row.key} className="flex flex-col gap-2">
                 <Skeleton className="h-4 w-40" />
@@ -94,9 +93,9 @@ export function PositioningSuggestions({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <label htmlFor={id} className="text-sm font-medium">
-                        {row.label}
+                        {t(`${row.key}_label`)}
                       </label>
-                      <p className="text-xs text-muted-foreground">{row.hint}</p>
+                      <p className="text-xs text-muted-foreground">{t(`${row.key}_hint`)}</p>
                     </div>
                     <Button
                       type="button"
@@ -109,7 +108,7 @@ export function PositioningSuggestions({
                       }}
                     >
                       {done ? <Check className="text-good-fg" aria-hidden /> : null}
-                      {applied[row.key] ? "Applied" : matches ? "Matches current" : "Use this"}
+                      {applied[row.key] ? t("applied") : matches ? t("matches") : t("use")}
                     </Button>
                   </div>
                   <Textarea
@@ -123,7 +122,7 @@ export function PositioningSuggestions({
                     }}
                   />
                   <p className="line-clamp-2 text-xs text-muted-foreground">
-                    <span className="font-medium">Current:</span> {current[row.key] || "empty"}
+                    <span className="font-medium">{t("current")}</span> {current[row.key] || t("empty")}
                   </p>
                 </div>
               )
@@ -132,10 +131,7 @@ export function PositioningSuggestions({
       </div>
 
       <div className="border-t px-3 py-2">
-        <AiNotice>
-          Drafted from your current answers, including unsaved edits. Using a suggestion only changes the form — review it, then
-          save.
-        </AiNotice>
+        <AiNotice>{t("notice")}</AiNotice>
       </div>
     </div>
   )

@@ -7,13 +7,16 @@ import { useMemo } from "react"
 import { catVar, ColorDot, DataTable, EmptyState, SectionCard, type DataTableColumn } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import type { PillarAggregate } from "@/lib/analytics"
+import { useT } from "@/lib/i18n"
 import { formatCompact, formatNumber, formatPercent } from "@/lib/utils"
 import { CardLink } from "./card-link"
+import { dashboardMessages } from "./messages"
 
 const pillarHref = (row: PillarAggregate) => (row.pillar ? `/pillars?open=${row.pillar.id}` : "/pillars")
 
 /** Pillar | Posts | Avg views | Engagement | Leads over the last 30 days. */
 export function PillarPerformanceCard({ rows, className }: { rows: PillarAggregate[]; className?: string }) {
+  const t = useT(dashboardMessages)
   const router = useRouter()
   const columns = useMemo<DataTableColumn<PillarAggregate>[]>(() => {
     const maxAvg = Math.max(0, ...rows.map((row) => row.avgViews ?? 0))
@@ -80,8 +83,8 @@ export function PillarPerformanceCard({ rows, className }: { rows: PillarAggrega
 
   return (
     <SectionCard
-      title="Content Pillar Performance"
-      description="Last 30 days · averages across posts with analytics"
+      title={t("pillar_performance_title")}
+      description={t("pillar_performance_description")}
       action={
         <CardLink href="/pillars">
           <span className="hidden sm:inline">Content Pillars</span>
@@ -97,20 +100,20 @@ export function PillarPerformanceCard({ rows, className }: { rows: PillarAggrega
           columns={columns}
           getRowId={(row) => row.key}
           onRowClick={(row) => router.push(pillarHref(row))}
-          rowLabel={(row) => `Open ${row.label}`}
+          rowLabel={(row) => t("open_row", { name: row.label })}
           bordered={false}
           dense
-          aria-label="Content Pillar performance, last 30 days"
+          aria-label={t("pillar_performance_aria")}
         />
       ) : (
         <EmptyState
           compact
           icon={Columns3}
-          title="No Content Pillars yet"
-          description="Pillars are the 3–6 themes you're known for — define them to see which ones perform."
+          title={t("no_pillars")}
+          description={t("no_pillars_description")}
           action={
             <Button asChild size="sm" variant="outline">
-              <Link href="/pillars">Set up pillars</Link>
+              <Link href="/pillars">{t("set_up_pillars")}</Link>
             </Button>
           }
         />

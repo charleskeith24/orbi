@@ -22,12 +22,14 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { buildBriefInput, useAiTask } from "@/lib/ai"
+import { useT } from "@/lib/i18n"
 import { FUNNEL_STAGES, PLATFORMS, PROBLEM_CATEGORY_MAP, PUBLISHED_STAGES } from "@/lib/constants"
 import { dataActions, moveItemToStage, useRow } from "@/lib/store"
 import type { AiProviderId, ContentItem, UpdateRow } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
 import { BRIEF_KEYS, isListKey, useBriefAutosave, type BriefDraft, type BriefKey } from "./brief-autosave"
 import { BriefListField, BriefTextField, CaptionCounter, SaveIndicator, SuggestionBox } from "./brief-fields"
+import { briefMessages } from "./brief-messages"
 import { HookField } from "./brief-hook-field"
 import { AiErrorNotice } from "./studio-ai"
 import { copyText } from "./studio-utils"
@@ -36,18 +38,7 @@ import { useSaveShortcut } from "./workspace-save"
 
 type Suggestions = Partial<Record<BriefKey, string>>
 
-const LABELS: Record<BriefKey, string> = {
-  objective: "Objective",
-  main_message: "Main message",
-  supporting_points: "Supporting points",
-  cta: "CTA",
-  visual_direction: "Visual direction",
-  reference: "Reference",
-  caption: "Caption",
-  production_notes: "Production notes",
-  b_roll: "B-roll",
-  on_screen_text: "On-screen text",
-}
+const labelKey = (key: BriefKey) => `label_${key}` as const
 
 const splitLines = (text: string) =>
   text
@@ -59,6 +50,7 @@ const asText = (draft: BriefDraft, key: BriefKey) => (isListKey(key) ? draft[key
 
 /** The Content Brief (spec §17): every field autosaves; "Generate brief with AI" proposes per-field suggestions. */
 export function BriefTab({ item }: { item: ContentItem }) {
+  const t = useT(briefMessages)
   const { draft, set, flush, state, markSaved } = useBriefAutosave(item.id)
   const ai = useAiTask("content_brief")
   const [suggestions, setSuggestions] = useState<Suggestions>({})
@@ -69,8 +61,8 @@ export function BriefTab({ item }: { item: ContentItem }) {
 
   useSaveShortcut("brief", () => {
     const saved = flush()
-    toast.success(saved ? "Brief saved" : "Brief is up to date", {
-      description: saved ? undefined : "The brief saves automatically as you type.",
+    toast.success(saved ? t("brief_saved") : t("brief_up_to_date"), {
+      description: saved ? undefined : t("brief_autosaves"),
     })
   })
 
@@ -104,7 +96,7 @@ export function BriefTab({ item }: { item: ContentItem }) {
     }
     setSuggestions(next)
     setEngine({ provider: result.provider, model: result.model })
-    if (!Object.keys(next).length) toast.info("Nothing new to suggest", { description: "The AI draft matches your current brief." })
+    if (!Object.keys(next).length) toast.info(t("nothing_new"), { description: t("nothing_new_description") })
   }
 
   function write(key: BriefKey, text: string) {
@@ -132,7 +124,7 @@ export function BriefTab({ item }: { item: ContentItem }) {
     for (const key of pending) write(key, suggestions[key] ?? "")
     flush()
     setSuggestions({})
-    toast.success("Brief updated from the AI draft", { description: `${pluralize(pending.length, "field")} applied — edit anything that doesn't sound like you.` })
+    toast.success(t("brief_updated"), { description: t.plural("fields_applied", pending.length, { count: formatNumber(pending.length) }) })
   }
 
   function suggestionFor(key: BriefKey) {
@@ -140,7 +132,7 @@ export function BriefTab({ item }: { item: ContentItem }) {
     if (value === undefined) return null
     return (
       <SuggestionBox
-        label={LABELS[key]}
+        label={t(labelKey(key))}
         value={value}
         list={isListKey(key)}
         onChange={(text) => setSuggestions((current) => ({ ...current, [key]: text }))}
@@ -153,32 +145,33 @@ export function BriefTab({ item }: { item: ContentItem }) {
   async function copyBrief() {
     const lines = [
       `# ${item.title}`,
-      `Platform: ${PLATFORMS[item.platform].label}${item.funnel_stage ? ` · ${FUNNEL_STAGES[item.funnel_stage].label}` : ""}`,
-      persona ? `Audience: ${persona.name}` : "",
-      problem ? `Problem: ${problem.problem}` : "",
-      item.hook ? `Hook: ${item.hook}` : "",
+      `${t("copy_platform")}: ${PLATFORMS[item.platform].label}${item.funnel_stage ? ` · ${FUNNEL_STAGES[item.funnel_stage].label}` : ""}`,
+      persona ? `${t("copy_audience")}: ${persona.name}` : "",
+      problem ? `${t("copy_problem")}: ${problem.problem}` : "",
+      item.hook ? `${t("copy_hook")}: ${item.hook}` : "",
       ...BRIEF_KEYS.map((key) => {
         const value = draft[key]
-        if (Array.isArray(value)) return value.length ? `${LABELS[key]}:\n${value.map((v) => `- ${v}`).join("\n")}` : ""
-        return value.trim() ? `${LABELS[key]}: ${value.trim()}` : ""
+        const label = t(labelKey(key))
+        if (Array.isArray(value)) return value.length ? `${label}:\n${value.map((v) => `- ${v}`).join("\n")}` : ""
+        return value.trim() ? `${label}: ${value.trim()}` : ""
       }),
     ].filter(Boolean)
-    if (await copyText(lines.join("\n\n"))) toast.success("Brief copied", { description: "Paste it into a message to your editor or designer." })
-    else toast.error("Couldn't copy the brief")
+    if (await copyText(lines.join("\n\n"))) toast.success(t("brief_copied"), { description: t("brief_copied_description") })
+    else toast.error(t("brief_copy_failed"))
   }
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <h2 className="text-sm font-semibold">Content Brief</h2>
+        <h2 className="text-sm font-semibold">{t("content_brief")}</h2>
         <SaveIndicator state={state} />
         <div className="ml-auto flex items-center gap-2">
           <Button type="button" variant="ghost" size="sm" onClick={() => void copyBrief()}>
             <ClipboardCopy aria-hidden />
-            Copy brief
+            {t("copy_brief")}
           </Button>
           <AiButton type="button" size="sm" pending={ai.isPending} onClick={() => void generate()}>
-            {engine ? "Regenerate brief" : "Generate brief with AI"}
+            {engine ? t("regenerate_brief") : t("generate_brief")}
           </AiButton>
         </div>
       </div>
@@ -190,70 +183,74 @@ export function BriefTab({ item }: { item: ContentItem }) {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <Sparkles className="size-4 shrink-0 text-brand" aria-hidden />
             <p className="min-w-0 flex-1 text-sm text-pretty">
-              <span className="font-medium">AI brief ready</span>{" "}
+              <span className="font-medium">{t("ai_brief_ready")}</span>{" "}
               <span className="text-muted-foreground">
-                — {pluralize(pending.length, "suggestion")} below. Edit them, then apply field by field or all at once.
+                {t.plural("suggestions_below", pending.length, { count: formatNumber(pending.length) })}
               </span>
             </p>
             {engine ? <ProviderBadge provider={engine.provider} model={engine.model} /> : null}
             <div className="flex items-center gap-1.5">
               <Button type="button" variant="ghost" size="sm" onClick={() => setSuggestions({})}>
-                Discard
+                {t("discard")}
               </Button>
               <Button type="button" size="sm" onClick={applyAll}>
-                Apply all
+                {t("apply_all")}
               </Button>
             </div>
           </div>
-          <AiNotice>Built from your Brand HQ, audience, pillars and winners. It&apos;s a first draft — make it sound like you.</AiNotice>
+          <AiNotice>{t("ai_notice")}</AiNotice>
         </div>
       ) : null}
 
-      <SectionCard title="Strategy" description="Who it's for, why it exists and where it sits in your system." contentClassName="flex flex-col gap-4">
+      <SectionCard title={t("strategy")} description={t("strategy_description")} contentClassName="flex flex-col gap-4">
         <TitleField item={item} onSaved={markSaved} />
         <BriefTextField
-          label="Objective"
+          label={t("label_objective")}
           value={draft.objective}
           onChange={(v) => set("objective", v)}
-          placeholder="What this piece must achieve, for whom, at which funnel stage"
+          placeholder={t("objective_placeholder")}
           suggestion={suggestionFor("objective")}
         />
         <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-          <FormField label="Target audience" description={persona ? [persona.profession, persona.experience_level].filter(Boolean).join(" · ") : undefined}>
-            <PersonaSelect value={item.persona_id} onChange={(persona_id) => updateItem({ persona_id })} allowNone aria-label="Target audience" />
+          <FormField label={t("target_audience")} description={persona ? [persona.profession, persona.experience_level].filter(Boolean).join(" · ") : undefined}>
+            <PersonaSelect value={item.persona_id} onChange={(persona_id) => updateItem({ persona_id })} allowNone aria-label={t("target_audience")} />
           </FormField>
           <FormField
-            label="Audience problem"
-            description={problem ? `${PROBLEM_CATEGORY_MAP[problem.category]?.label ?? problem.category} · severity ${problem.severity}/5` : undefined}
+            label={t("audience_problem")}
+            description={
+              problem
+                ? t("severity", { category: PROBLEM_CATEGORY_MAP[problem.category]?.label ?? problem.category, severity: problem.severity })
+                : undefined
+            }
           >
             <ProblemSelect
               value={item.problem_id}
               personaId={item.persona_id}
               onChange={(problem_id) => updateItem({ problem_id })}
               allowNone
-              noneLabel="Not linked to a problem"
-              aria-label="Audience problem"
+              noneLabel={t("no_problem")}
+              aria-label={t("audience_problem")}
             />
           </FormField>
-          <FormField label="Content pillar">
-            <PillarSelect value={item.pillar_id} onChange={(pillar_id) => updateItem({ pillar_id })} allowNone aria-label="Content pillar" />
+          <FormField label={t("content_pillar")}>
+            <PillarSelect value={item.pillar_id} onChange={(pillar_id) => updateItem({ pillar_id })} allowNone aria-label={t("content_pillar")} />
           </FormField>
-          <FormField label="Funnel stage">
-            <FunnelSelect value={item.funnel_stage} onChange={(funnel_stage) => updateItem({ funnel_stage })} allowNone aria-label="Funnel stage" />
+          <FormField label={t("funnel_stage")}>
+            <FunnelSelect value={item.funnel_stage} onChange={(funnel_stage) => updateItem({ funnel_stage })} allowNone aria-label={t("funnel_stage")} />
           </FormField>
-          <FormField label="Platform">
-            <PlatformSelect value={item.platform} onChange={(platform) => platform && updateItem({ platform })} aria-label="Platform" />
+          <FormField label={t("platform")}>
+            <PlatformSelect value={item.platform} onChange={(platform) => platform && updateItem({ platform })} aria-label={t("platform")} />
           </FormField>
-          <FormField label="Format">
-            <FormatSelect value={item.format_id} onChange={(format_id) => updateItem({ format_id })} allowNone aria-label="Format" />
+          <FormField label={t("format")}>
+            <FormatSelect value={item.format_id} onChange={(format_id) => updateItem({ format_id })} allowNone aria-label={t("format")} />
           </FormField>
-          <FormField label="Angle">
-            <AngleSelect value={item.angle_id} onChange={(angle_id) => updateItem({ angle_id })} allowNone aria-label="Angle" />
+          <FormField label={t("angle")}>
+            <AngleSelect value={item.angle_id} onChange={(angle_id) => updateItem({ angle_id })} allowNone aria-label={t("angle")} />
           </FormField>
-          <FormField label="Deadline">
-            <DatePicker value={item.due_date} onChange={(due_date) => updateItem({ due_date })} placeholder="No deadline" aria-label="Deadline" />
+          <FormField label={t("deadline")}>
+            <DatePicker value={item.due_date} onChange={(due_date) => updateItem({ due_date })} placeholder={t("no_deadline")} aria-label={t("deadline")} />
           </FormField>
-          <FormField label="Status">
+          <FormField label={t("status")}>
             <StageSelect
               value={item.stage}
               onChange={(stage) => {
@@ -263,88 +260,88 @@ export function BriefTab({ item }: { item: ContentItem }) {
                 markSaved()
                 if (PUBLISHED_STAGES.includes(stage) && !wasLive) publishedToast(item.id)
               }}
-              aria-label="Status"
+              aria-label={t("status")}
             />
           </FormField>
         </div>
       </SectionCard>
 
-      <SectionCard title="Message" description="The hook, the one idea and the proof behind it." contentClassName="flex flex-col gap-4">
+      <SectionCard title={t("message")} description={t("message_description")} contentClassName="flex flex-col gap-4">
         <HookField item={item} mainMessage={draft.main_message} onSaved={markSaved} />
         <BriefTextField
-          label="Main message"
+          label={t("label_main_message")}
           value={draft.main_message}
           onChange={(v) => set("main_message", v)}
-          placeholder="The one sentence the audience should remember"
+          placeholder={t("main_message_placeholder")}
           suggestion={suggestionFor("main_message")}
         />
         <BriefListField
-          label="Supporting points"
+          label={t("label_supporting_points")}
           value={draft.supporting_points}
           onChange={(v) => set("supporting_points", v)}
-          placeholder="A point that proves or unpacks the message"
-          addLabel="Add point"
+          placeholder={t("supporting_placeholder")}
+          addLabel={t("add_point")}
           suggestion={suggestionFor("supporting_points")}
         />
         <BriefTextField
-          label="CTA"
+          label={t("label_cta")}
           value={draft.cta}
           onChange={(v) => set("cta", v)}
           rows={1}
-          placeholder="What should they do next?"
+          placeholder={t("cta_placeholder")}
           suggestion={suggestionFor("cta")}
         />
       </SectionCard>
 
-      <SectionCard title="Production" description="Everything a creator or editor needs to produce it." contentClassName="flex flex-col gap-4">
+      <SectionCard title={t("production")} description={t("production_description")} contentClassName="flex flex-col gap-4">
         <BriefTextField
-          label="Visual direction"
+          label={t("label_visual_direction")}
           value={draft.visual_direction}
           onChange={(v) => set("visual_direction", v)}
-          placeholder="Setting, framing, style, pacing"
+          placeholder={t("visual_placeholder")}
           suggestion={suggestionFor("visual_direction")}
         />
         <div className="grid min-w-0 gap-4 lg:grid-cols-2">
           <BriefListField
-            label="B-roll"
+            label={t("label_b_roll")}
             value={draft.b_roll}
             onChange={(v) => set("b_roll", v)}
-            placeholder="A cutaway or supporting shot"
-            addLabel="Add shot"
+            placeholder={t("b_roll_placeholder")}
+            addLabel={t("add_shot")}
             suggestion={suggestionFor("b_roll")}
           />
           <BriefListField
-            label="On-screen text"
+            label={t("label_on_screen_text")}
             value={draft.on_screen_text}
             onChange={(v) => set("on_screen_text", v)}
-            placeholder="A caption or callout"
-            addLabel="Add text"
+            placeholder={t("on_screen_placeholder")}
+            addLabel={t("add_text")}
             suggestion={suggestionFor("on_screen_text")}
           />
         </div>
         <BriefTextField
-          label="Production notes"
+          label={t("label_production_notes")}
           value={draft.production_notes}
           onChange={(v) => set("production_notes", v)}
-          placeholder="Takes, props, numbers to have ready, batching"
+          placeholder={t("notes_placeholder")}
           suggestion={suggestionFor("production_notes")}
         />
         <BriefTextField
-          label="Reference"
+          label={t("label_reference")}
           value={draft.reference}
           onChange={(v) => set("reference", v)}
-          placeholder="Past winners or structures to model — structure only, never copy"
+          placeholder={t("reference_placeholder")}
           suggestion={suggestionFor("reference")}
         />
       </SectionCard>
 
-      <SectionCard title="Caption" description={`What goes with the post on ${PLATFORMS[item.platform].label}.`} contentClassName="flex flex-col gap-4">
+      <SectionCard title={t("caption")} description={t("caption_description", { platform: PLATFORMS[item.platform].label })} contentClassName="flex flex-col gap-4">
         <BriefTextField
-          label="Caption"
+          label={t("label_caption")}
           value={draft.caption}
           onChange={(v) => set("caption", v)}
           rows={4}
-          placeholder="Caption copy, in your voice"
+          placeholder={t("caption_placeholder")}
           footer={<CaptionCounter text={draft.caption} platform={item.platform} />}
           suggestion={suggestionFor("caption")}
         />
@@ -354,6 +351,7 @@ export function BriefTab({ item }: { item: ContentItem }) {
 }
 
 function TitleField({ item, onSaved }: { item: ContentItem; onSaved: () => void }) {
+  const t = useT(briefMessages)
   const id = useId()
   const [draft, setDraft] = useState(item.title)
   const [source, setSource] = useState(item.title)
@@ -376,7 +374,7 @@ function TitleField({ item, onSaved }: { item: ContentItem; onSaved: () => void 
   }
 
   return (
-    <FormField label="Content title" htmlFor={id} required error={empty ? "A title is required — the previous one is kept." : undefined}>
+    <FormField label={t("content_title")} htmlFor={id} required error={empty ? t("title_required") : undefined}>
       <Input
         id={id}
         value={draft}

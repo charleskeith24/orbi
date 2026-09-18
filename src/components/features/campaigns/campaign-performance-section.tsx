@@ -17,18 +17,21 @@ import { BarList, ChartFrame, platformColor } from "@/components/charts"
 import type { CampaignPerformance, TieredRow } from "@/lib/analytics"
 import { PLATFORMS } from "@/lib/constants"
 import { formatDate } from "@/lib/dates"
-import { formatCompact, formatNumber, formatPercent, pluralize } from "@/lib/utils"
+import { useT } from "@/lib/i18n"
+import { formatCompact, formatNumber, formatPercent } from "@/lib/utils"
+import { campaignDetailMessages } from "./messages"
 
 const RUNNERS_UP = 3
 
 /** Best piece in detail, then the runners-up — ranked by views among pieces with analytics. */
 function TopPiecesCard({ rows, avgViews }: { rows: TieredRow[]; avgViews: number | null }) {
+  const t = useT(campaignDetailMessages)
   const ranked = rows.filter((r) => r.metric).sort((a, b) => b.views - a.views || b.engagements - a.engagements)
   const best = ranked[0]
   const rest = ranked.slice(1, 1 + RUNNERS_UP)
 
   return (
-    <SectionCard title="Top pieces" description="Ranked by views among published campaign pieces" icon={Trophy}>
+    <SectionCard title={t("top_pieces")} description={t("top_pieces_description")} icon={Trophy}>
       {best ? (
         <div className="flex flex-col gap-3">
           <div className="flex min-w-0 items-start gap-2.5">
@@ -38,7 +41,7 @@ function TopPiecesCard({ rows, avgViews }: { rows: TieredRow[]; avgViews: number
                 href={`/studio/${best.id}`}
                 className="line-clamp-2 text-sm leading-snug font-medium outline-none hover:underline focus-visible:underline"
               >
-                {best.item.title || "Untitled content"}
+                {best.item.title || t("untitled_content")}
               </Link>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <PlatformIcon platform={best.platform} label className="size-3.5" />
@@ -48,22 +51,22 @@ function TopPiecesCard({ rows, avgViews }: { rows: TieredRow[]; avgViews: number
             </div>
           </div>
           <DefinitionList>
-            <KeyValue label="Views">
+            <KeyValue label={t("views")}>
               <span className="num">{formatNumber(best.views)}</span>
               {avgViews ? (
-                <span className="text-xs text-muted-foreground num">{(best.views / avgViews).toFixed(1)}× campaign avg</span>
+                <span className="text-xs text-muted-foreground num">{t("campaign_avg", { value: (best.views / avgViews).toFixed(1) })}</span>
               ) : null}
             </KeyValue>
-            <KeyValue label="Engagement rate">
+            <KeyValue label={t("engagement_rate")}>
               <span className="num">{formatPercent(best.rates.engagement_rate)}</span>
             </KeyValue>
-            <KeyValue label="Leads">
+            <KeyValue label={t("leads")}>
               <span className="num">{formatNumber(best.leads)}</span>
             </KeyValue>
           </DefinitionList>
           {rest.length ? (
             <div className="border-t pt-2.5">
-              <p className="text-xs text-muted-foreground">Runners-up</p>
+              <p className="text-xs text-muted-foreground">{t("runners_up")}</p>
               <ol className="mt-1 flex flex-col">
                 {rest.map((row, index) => (
                   <li key={row.id} className="flex min-w-0 items-center gap-2 py-1">
@@ -74,7 +77,7 @@ function TopPiecesCard({ rows, avgViews }: { rows: TieredRow[]; avgViews: number
                       title={row.item.title}
                       className="min-w-0 flex-1 truncate text-sm outline-none hover:underline focus-visible:underline"
                     >
-                      {row.item.title || "Untitled content"}
+                      {row.item.title || t("untitled_content")}
                     </Link>
                     <span className="shrink-0 text-xs text-muted-foreground num">{formatCompact(row.views)}</span>
                   </li>
@@ -84,7 +87,7 @@ function TopPiecesCard({ rows, avgViews }: { rows: TieredRow[]; avgViews: number
           ) : null}
         </div>
       ) : (
-        <EmptyState compact title="No analytics yet" description="Log analytics for a published piece to see which one leads." />
+        <EmptyState compact title={t("no_analytics")} description={t("no_analytics_description")} />
       )}
     </SectionCard>
   )
@@ -92,18 +95,20 @@ function TopPiecesCard({ rows, avgViews }: { rows: TieredRow[]; avgViews: number
 
 /** Campaign results from `campaignPerformance`: totals, per-platform split and the top pieces. */
 export function CampaignPerformanceSection({ perf }: { perf: CampaignPerformance }) {
+  const t = useT(campaignDetailMessages)
   const { totals } = perf
+  const pieces = (count: number) => t.plural("pieces", count, { count: formatNumber(count) })
   const unmeasured = perf.published - totals.measured
 
   if (!perf.published) {
     return (
-      <PageSection title="Performance" description="Latest analytics snapshot for each published campaign piece.">
+      <PageSection title={t("performance")} description={t("performance_empty_description")}>
         <SectionCard>
           <EmptyState
             compact
             icon={ChartColumn}
-            title="No published pieces yet"
-            description="Views, reach, engagement and leads appear here as campaign pieces go live and their analytics are logged."
+            title={t("no_published")}
+            description={t("no_published_description")}
           />
         </SectionCard>
       </PageSection>
@@ -112,7 +117,7 @@ export function CampaignPerformanceSection({ perf }: { perf: CampaignPerformance
 
   const platformRows = perf.byPlatform
   const table = {
-    columns: ["Platform", "Pieces", "Views", "Engagement rate", "Leads"],
+    columns: [t("col_platform"), t("col_pieces"), t("views"), t("engagement_rate"), t("leads")],
     rows: platformRows.map((p) => [
       p.label,
       p.posts,
@@ -124,40 +129,43 @@ export function CampaignPerformanceSection({ perf }: { perf: CampaignPerformance
 
   return (
     <PageSection
-      title="Performance"
-      description={`Latest analytics snapshot for ${pluralize(perf.published, "published piece")}${
-        unmeasured > 0 ? ` · ${pluralize(unmeasured, "piece")} without analytics yet` : ""
-      }.`}
+      title={t("performance")}
+      description={t("performance_description", {
+        published: t.plural("published_pieces", perf.published, { count: formatNumber(perf.published) }),
+        unmeasured: unmeasured > 0 ? t("unmeasured_suffix", { pieces: pieces(unmeasured) }) : "",
+      })}
     >
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
         <StatTile
-          label="Published"
+          label={t("published")}
           value={formatNumber(perf.published)}
-          sublabel={perf.targetPosts ? `of ${formatNumber(perf.targetPosts)} target` : `${formatNumber(perf.planned)} planned`}
+          sublabel={
+            perf.targetPosts ? t("of_target", { target: formatNumber(perf.targetPosts) }) : t("planned", { count: formatNumber(perf.planned) })
+          }
         />
         <StatTile
-          label="Views"
+          label={t("views")}
           value={formatCompact(totals.views)}
-          sublabel={totals.avgViews !== null ? `${formatCompact(totals.avgViews)} avg per piece` : undefined}
+          sublabel={totals.avgViews !== null ? t("avg_per_piece", { value: formatCompact(totals.avgViews) }) : undefined}
         />
         <StatTile
-          label="Reach"
+          label={t("reach")}
           value={formatCompact(totals.reach)}
-          sublabel={`${pluralize(totals.followersGained, "follower")} gained`}
+          sublabel={t.plural("followers_gained", totals.followersGained, { count: formatNumber(totals.followersGained) })}
         />
         <StatTile
-          label="Engagement rate"
+          label={t("engagement_rate")}
           value={formatPercent(totals.engagementRate)}
-          sublabel={`${formatCompact(totals.engagements)} engagements`}
+          sublabel={t("engagements", { count: formatCompact(totals.engagements) })}
         />
         <StatTile
-          label="Leads"
+          label={t("leads")}
           value={formatNumber(totals.leads)}
           sublabel={
             totals.sales
-              ? pluralize(totals.sales, "sale")
+              ? t.plural("sales", totals.sales, { count: formatNumber(totals.sales) })
               : totals.leadsPerPost !== null
-                ? `${totals.leadsPerPost.toFixed(1)} per piece`
+                ? t("per_piece", { value: totals.leadsPerPost.toFixed(1) })
                 : undefined
           }
         />
@@ -166,19 +174,23 @@ export function CampaignPerformanceSection({ perf }: { perf: CampaignPerformance
       <div className="grid gap-4 lg:grid-cols-3">
         <ChartFrame
           className="lg:col-span-2"
-          title="Views by platform"
-          description="Published campaign pieces, latest snapshot"
+          title={t("views_by_platform")}
+          description={t("views_by_platform_description")}
           table={table}
         >
           <BarList
-            aria-label="Views by platform"
+            aria-label={t("views_by_platform")}
             valueFormatter={formatCompact}
             items={platformRows.map((p) => ({
               id: p.platform,
               label: PLATFORMS[p.platform]?.label ?? p.label,
               value: p.views,
               color: platformColor(p.platform),
-              secondary: `${pluralize(p.posts, "piece")} · ${formatPercent(p.engagementRate)} eng. · ${pluralize(p.leads, "lead")}`,
+              secondary: t("bar_secondary", {
+                pieces: pieces(p.posts),
+                rate: formatPercent(p.engagementRate),
+                leads: t.plural("leads", p.leads, { count: formatNumber(p.leads) }),
+              }),
             }))}
           />
         </ChartFrame>

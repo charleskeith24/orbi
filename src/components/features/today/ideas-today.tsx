@@ -7,13 +7,16 @@ import { IdeaStatusBadge, PillarBadge } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { IDEA_SOURCE_MAP } from "@/lib/constants"
 import { parseDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import { uiActions } from "@/lib/store"
 import type { ContentIdea } from "@/lib/types"
+import { todayMessages } from "./messages"
 import { InlineEmpty, WorkSection } from "./work-section"
 
 function IdeaRow({ idea }: { idea: ContentIdea }) {
+  const t = useT(todayMessages)
   const created = parseDate(idea.created_at)
-  const title = idea.title.trim() || "Untitled idea"
+  const title = idea.title.trim() || t("untitled_idea")
   return (
     <div className="flex min-w-0 flex-col gap-2 px-4 py-2.5 @lg/work:flex-row @lg/work:items-center @lg/work:gap-4">
       <div className="min-w-0 flex-1">
@@ -35,13 +38,13 @@ function IdeaRow({ idea }: { idea: ContentIdea }) {
           <Button asChild size="sm" variant="outline">
             <Link href={`/studio/${idea.converted_item_id}`}>
               <ArrowUpRight aria-hidden />
-              Open content
+              {t("open_content")}
             </Link>
           </Button>
         ) : (
           <Button type="button" size="sm" variant="outline" onClick={() => uiActions.openDialog({ type: "new-content", ideaId: idea.id })}>
             <Wand2 aria-hidden />
-            Convert
+            {t("convert")}
           </Button>
         )}
       </div>
@@ -51,12 +54,13 @@ function IdeaRow({ idea }: { idea: ContentIdea }) {
 
 /** Ideas created today, newest first — convert the strongest straight into content. */
 export function IdeasTodaySection({ ideas, className }: { ideas: ContentIdea[]; className?: string }) {
+  const t = useT(todayMessages)
   return (
     <WorkSection
       id="ideas-today"
-      title="Ideas Captured Today"
+      title={t("ideas_title")}
       icon={Lightbulb}
-      description="Raw material for next week — convert the strongest into content."
+      description={t("ideas_description")}
       action={
         <Button asChild variant="ghost" size="xs" className="text-muted-foreground">
           <Link href="/ideas">Idea Bank</Link>
@@ -71,11 +75,11 @@ export function IdeasTodaySection({ ideas, className }: { ideas: ContentIdea[]; 
           icon={Lightbulb}
           action={
             <Button type="button" size="sm" variant="outline" onClick={() => uiActions.openDialog({ type: "quick-capture" })}>
-              Capture idea
+              {t("capture_idea")}
             </Button>
           }
         >
-          No ideas captured yet today. Get them down the moment they appear.
+          {t("ideas_empty")}
         </InlineEmpty>
       }
     />

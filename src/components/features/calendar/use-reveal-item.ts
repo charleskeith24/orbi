@@ -3,9 +3,12 @@
 import { useEffect, useEffectEvent } from "react"
 import { toast } from "sonner"
 import { toISODate } from "@/lib/dates"
+import { translate } from "@/lib/i18n/core"
+import { getUiLang } from "@/lib/i18n/ui-lang"
 import { dataActions } from "@/lib/store"
 import type { ID } from "@/lib/types"
 import { placementOf, type CalendarView } from "./calendar-model"
+import { calendarMessages } from "./messages"
 
 /**
  * `?open=<itemId>`: bring the item's day into view (tray items open the tray through the view), focus it once
@@ -29,7 +32,7 @@ export function useRevealItem({
   const reveal = useEffectEvent((id: ID) => {
     const item = dataActions.getDb().content_items.find((row) => row.id === id)
     if (!item) {
-      toast.error("That content item no longer exists.", { id: "calendar-open-missing" })
+      toast.error(translate(calendarMessages, getUiLang(), "missing_item"), { id: "calendar-open-missing" })
       clearOpen()
       return
     }

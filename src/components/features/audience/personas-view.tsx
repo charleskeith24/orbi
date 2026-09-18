@@ -4,6 +4,7 @@ import { Crosshair, MessageCircleQuestion, Plus, Users } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 import { EmptyState, PageContainer, PageHeader, StatTile } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/i18n"
 import { useTable } from "@/lib/store"
 import type { ID } from "@/lib/types"
 import { formatNumber } from "@/lib/utils"
@@ -20,6 +21,7 @@ import { usePersonaActions } from "./persona-actions"
 import { PersonaCard, type PersonaStats } from "./persona-card"
 import { PersonaCoverage } from "./persona-coverage"
 import { PersonaCreateDialog } from "./persona-create-dialog"
+import { personaMessages } from "./persona-messages"
 import { PersonaSheet } from "./persona-sheet"
 import { useUrlState } from "./use-url-state"
 
@@ -30,6 +32,7 @@ const URL_KEYS = ["open"] as const
  * and recent content; `?open=<personaId>` opens the profile sheet.
  */
 export function PersonasView() {
+  const t = useT(personaMessages)
   const [url, setUrl] = useUrlState(URL_KEYS)
   const personas = useTable("audience_personas")
   const problems = useTable("audience_problems")
@@ -98,11 +101,11 @@ export function PersonasView() {
     <PageContainer>
       <PageHeader
         title="Audience HQ"
-        description="Who you create for — their goals, problems, fears and the words they use. Every idea and piece of content should speak to one of them."
+        description={t("description")}
         actions={
           <Button type="button" size="sm" onClick={() => setCreating(true)}>
             <Plus aria-hidden />
-            New persona
+            {t("new_persona")}
           </Button>
         }
       />
@@ -111,7 +114,7 @@ export function PersonasView() {
 
       {sorted.length ? (
         <>
-          <section aria-label="Personas" className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <section aria-label={t("personas_aria")} className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {sorted.map((persona) => (
               <PersonaCard
                 key={persona.id}
@@ -130,14 +133,14 @@ export function PersonasView() {
                 label="Problem Bank"
                 icon={Crosshair}
                 value={formatNumber(problems.length)}
-                sublabel={`${formatNumber(banks.untapped)} untapped · ${formatNumber(banks.severe)} high severity`}
+                sublabel={t("problems_sublabel", { untapped: formatNumber(banks.untapped), severe: formatNumber(banks.severe) })}
                 href="/audience/problems"
               />
               <StatTile
                 label="Question Bank"
                 icon={MessageCircleQuestion}
                 value={formatNumber(questions.length)}
-                sublabel={`${formatNumber(banks.open)} open · ${formatNumber(banks.highOpen)} asked 5+ times`}
+                sublabel={t("questions_sublabel", { open: formatNumber(banks.open), high: formatNumber(banks.highOpen) })}
                 href="/audience/questions"
               />
             </div>
@@ -146,12 +149,12 @@ export function PersonasView() {
       ) : (
         <EmptyState
           icon={Users}
-          title="Define who you create for"
-          description="Personas keep every idea aimed at a real person — their goals, problems and the words they use. Start with the one you most want to reach."
+          title={t("empty_title")}
+          description={t("empty_description")}
           action={
             <Button type="button" size="sm" onClick={() => setCreating(true)}>
               <Plus aria-hidden />
-              New persona
+              {t("new_persona")}
             </Button>
           }
         />

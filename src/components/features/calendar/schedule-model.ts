@@ -5,8 +5,10 @@
  */
 import { POSTING_SLOTS } from "@/lib/data/seed/starter-data"
 import { PLATFORM_IDS, PLATFORMS } from "@/lib/constants"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type { AppSettings, BrandProfile, CategoricalColor, ContentFormat, ContentPillar, ID, InsertRow, PlatformId, PlatformStrategy, PostingSlot } from "@/lib/types"
 import { compareSlots } from "./calendar-model"
+import { scheduleMessages } from "./schedule-messages"
 
 /** Posts a slot produces per week: one per platform (one when it names none). */
 export const slotPosts = (slot: Pick<PostingSlot, "platforms">) => Math.max(1, slot.platforms.length)
@@ -106,8 +108,10 @@ export interface SlotMix {
 /**
  * Slot posts per active pillar vs `target_percentage` (normalised). Under-represented when the deviation is
  * below −min(tolerance, target ÷ 2), over when above the tolerance — the same rule the analytics mix uses.
+ * Warning messages and the untitled-pillar label are in `lang` (default English).
  */
-export function slotPillarMix(slots: PostingSlot[], pillars: ContentPillar[], tolerance: number): SlotMix {
+export function slotPillarMix(slots: PostingSlot[], pillars: ContentPillar[], tolerance: number, lang: UiLang = "en"): SlotMix {
+  const t = translator(scheduleMessages, lang)
   const active = pillars.filter((p) => p.is_active).sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
   const counts = new Map(active.map((p) => [p.id, 0]))
   let unassigned = 0
@@ -126,7 +130,7 @@ export function slotPillarMix(slots: PostingSlot[], pillars: ContentPillar[], to
     const targetPct = targetTotal ? round1((Math.max(0, p.target_percentage) / targetTotal) * 100) : 0
     const deviation = round1(actualPct - targetPct)
     const status = deviation < -Math.min(tolerance, targetPct / 2) ? "under" : deviation > tolerance ? "over" : "on_target"
-    return { pillarId: p.id, label: p.name || "Untitled pillar", color: p.color, posts, actualPct, targetPct, deviation, status }
+    return { pillarId: p.id, label: p.name || t("untitled_pillar"), color: p.color, posts, actualPct, targetPct, deviation, status }
   })
   const warnings = total
     ? rows
@@ -136,8 +140,8 @@ export function slotPillarMix(slots: PostingSlot[], pillars: ContentPillar[], to
           pillarId: r.pillarId,
           direction: r.status === "under" ? ("under" as const) : ("over" as const),
           message: r.posts
-            ? `${r.label} gets ${Math.round(r.actualPct)}% of your slot posts vs a ${Math.round(r.targetPct)}% target`
-            : `No slot for ${r.label} — its target is ${Math.round(r.targetPct)}%`,
+            ? t("mix_share", { pillar: r.label, actual: Math.round(r.actualPct), target: Math.round(r.targetPct) })
+            : t("mix_missing", { pillar: r.label, target: Math.round(r.targetPct) }),
         }))
     : []
   return { rows, total, unassigned, warnings }

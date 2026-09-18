@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Spinner } from "@/components/ui/spinner"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { useT } from "@/lib/i18n"
 import { PLATFORMS, REPURPOSE_TYPE_IDS, REPURPOSE_TYPES } from "@/lib/constants"
 import type { ContentRepurpose, RepurposeType } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { repurposeMessages } from "./messages"
 import type { TileState } from "./repurpose-model"
 
 interface TileActions {
@@ -29,11 +31,12 @@ function RepurposeTile({
   onReview,
   onDismiss,
 }: TileActions & { state: TileState; checked: boolean; recommended: boolean; generating: boolean; disabled: boolean }) {
+  const t = useT(repurposeMessages)
   const id = useId()
   const spec = REPURPOSE_TYPES[state.type]
   const [first, ...more] = state.created
   const suggestion = state.suggestion
-  const where = spec.platform ? PLATFORMS[spec.platform].label : "Any platform"
+  const where = spec.platform ? PLATFORMS[spec.platform].label : t("any_platform")
   const Glyph = spec.scriptFormat === "newsletter" ? Mail : spec.scriptFormat === "short_video" ? Video : AlignLeft
 
   return (
@@ -66,7 +69,7 @@ function RepurposeTile({
           <span
             id={`${id}-desc`}
             className="mt-0.5 block text-xs text-pretty text-muted-foreground"
-            title={spec.platform ? undefined : `Defaults to ${PLATFORMS[state.platform].label}, the source's platform — pick another on the draft.`}
+            title={spec.platform ? undefined : t("defaults_to", { platform: PLATFORMS[state.platform].label })}
           >
             {spec.description} · {where}
           </span>
@@ -74,28 +77,28 @@ function RepurposeTile({
         {recommended ? (
           <span className="inline-flex shrink-0 items-center gap-1 text-[11px] leading-5 font-medium text-brand">
             <Sparkles className="size-3" aria-hidden />
-            Recommended
+            {t("recommended")}
           </span>
         ) : state.samePlatform ? (
-          <span className="shrink-0 text-[11px] leading-5 text-muted-foreground">Same platform</span>
+          <span className="shrink-0 text-[11px] leading-5 text-muted-foreground">{t("same_platform")}</span>
         ) : null}
       </div>
 
       {first ? (
         <div className="flex min-w-0 items-center gap-2 pl-[26px]">
           <StatusPill tone="good" icon={CircleCheck}>
-            {state.created.length > 1 ? `${state.created.length} created` : "Created"}
+            {state.created.length > 1 ? t("created_count", { count: state.created.length }) : t("created")}
           </StatusPill>
           <Link
             href={`/studio/${first.id}`}
-            title={`Open “${first.title || "Untitled content"}” in the Content Studio`}
+            title={t("open_title", { title: first.title || t("untitled_content") })}
             className="inline-flex min-w-0 items-center gap-1 rounded-sm text-xs text-muted-foreground outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring/60"
           >
             <StageIcon stage={first.stage} className="size-3" />
-            <span className="truncate">{first.title || "Untitled content"}</span>
+            <span className="truncate">{first.title || t("untitled_content")}</span>
           </Link>
           {more.length ? (
-            <span className="shrink-0 text-xs text-muted-foreground num" title={more.map((i) => i.title || "Untitled content").join("\n")}>
+            <span className="shrink-0 text-xs text-muted-foreground num" title={more.map((i) => i.title || t("untitled_content")).join("\n")}>
               +{more.length}
             </span>
           ) : null}
@@ -105,13 +108,13 @@ function RepurposeTile({
       {suggestion ? (
         <div className="flex min-w-0 items-center gap-1.5 pl-[26px]">
           <StatusPill tone="neutral" icon={Lightbulb}>
-            Suggested
+            {t("suggested")}
           </StatusPill>
           <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground" title={suggestion.title}>
             {suggestion.title}
           </span>
           <Button type="button" variant="ghost" size="xs" onClick={() => onReview(suggestion)}>
-            Review
+            {t("review")}
           </Button>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -120,13 +123,13 @@ function RepurposeTile({
                 variant="ghost"
                 size="icon-xs"
                 className="text-muted-foreground"
-                aria-label={`Dismiss the ${spec.label} suggestion`}
+                aria-label={t("dismiss_suggestion_aria", { type: spec.label })}
                 onClick={() => onDismiss(suggestion)}
               >
                 <X aria-hidden />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Dismiss suggestion</TooltipContent>
+            <TooltipContent>{t("dismiss_suggestion")}</TooltipContent>
           </Tooltip>
         </div>
       ) : null}
@@ -149,8 +152,9 @@ export function RepurposeTiles({
   generating: Set<RepurposeType>
   disabled?: boolean
 }) {
+  const t = useT(repurposeMessages)
   return (
-    <ul className="grid min-w-0 gap-2 @lg:grid-cols-2 @4xl:grid-cols-3" aria-label="Repurpose formats">
+    <ul className="grid min-w-0 gap-2 @lg:grid-cols-2 @4xl:grid-cols-3" aria-label={t("formats_label")}>
       {REPURPOSE_TYPE_IDS.map((type) => (
         <RepurposeTile
           key={type}

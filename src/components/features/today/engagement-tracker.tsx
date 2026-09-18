@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { toISODate } from "@/lib/dates"
+import { useT, useUiLang } from "@/lib/i18n"
 import { dataActions } from "@/lib/store"
 import type { EngagementLog, EngagementTaskConfig, UpdateRow } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -23,20 +24,29 @@ import {
   type CounterKey,
   type TrackerRow,
 } from "./engagement-utils"
+import { todayMessages } from "./messages"
 import { QuestionForm } from "./question-form"
 import { JUMP_TARGET } from "./work-section"
 
 function Stepper({ row, onStep }: { row: TrackerRow; onStep: (delta: number) => void }) {
+  const t = useT(todayMessages)
   return (
     <div className="flex shrink-0 items-center gap-1">
-      <Button type="button" variant="outline" size="icon-sm" aria-label={`One less: ${row.label}`} disabled={row.count <= 0} onClick={() => onStep(-1)}>
+      <Button
+        type="button"
+        variant="outline"
+        size="icon-sm"
+        aria-label={t("one_less", { label: row.label })}
+        disabled={row.count <= 0}
+        onClick={() => onStep(-1)}
+      >
         <Minus aria-hidden />
       </Button>
-      <span className="min-w-12 text-center text-sm font-medium num" aria-live="polite" aria-label={`${row.label}: ${row.count}`}>
+      <span className="min-w-12 text-center text-sm font-medium num" aria-live="polite" aria-label={t("count_aria", { label: row.label, count: row.count })}>
         {row.count}
         {row.target > 0 ? <span className="font-normal text-muted-foreground">/{row.target}</span> : null}
       </span>
-      <Button type="button" variant="outline" size="icon-sm" aria-label={`One more: ${row.label}`} onClick={() => onStep(1)}>
+      <Button type="button" variant="outline" size="icon-sm" aria-label={t("one_more", { label: row.label })} onClick={() => onStep(1)}>
         <Plus aria-hidden />
       </Button>
     </div>
@@ -52,12 +62,13 @@ function TrackerLine({
   onToggle: (done: boolean) => void
   onStep: (delta: number) => void
 }) {
+  const t = useT(todayMessages)
   const id = useId()
   const reached = row.target > 0 && row.count >= row.target
   return (
     <li className="flex min-w-0 items-center gap-3 py-2">
       {row.kind === "task" ? (
-        <Checkbox id={id} checked={row.done} onCheckedChange={(value) => onToggle(value === true)} aria-label={`${row.label} — done`} />
+        <Checkbox id={id} checked={row.done} onCheckedChange={(value) => onToggle(value === true)} aria-label={t("task_done_aria", { label: row.label })} />
       ) : (
         <span className="size-4 shrink-0" aria-hidden />
       )}
@@ -75,8 +86,8 @@ function TrackerLine({
             size="sm"
             tone={reached ? "good" : "brand"}
             className="mt-1.5 max-w-44"
-            aria-label={`${row.label} progress`}
-            valueText={`${row.count} of ${row.target}`}
+            aria-label={t("progress_aria", { label: row.label })}
+            valueText={t("of_target", { count: row.count, target: row.target })}
           />
         ) : (
           <p className="truncate text-xs text-muted-foreground">{row.hint}</p>
@@ -86,7 +97,7 @@ function TrackerLine({
         <Stepper row={row} onStep={onStep} />
       ) : row.target > 0 ? (
         <span className="shrink-0 text-xs text-muted-foreground">
-          Goal <span className="num">{row.target}</span>
+          {t("goal")} <span className="num">{row.target}</span>
         </span>
       ) : null}
     </li>
@@ -95,6 +106,7 @@ function TrackerLine({
 
 /** Notes for the day — saved as you pause typing and on blur (the day's row is created on first save). */
 function NotesField({ value, onSave }: { value: string; onSave: (notes: string) => void }) {
+  const t = useT(todayMessages)
   const id = useId()
   const [draft, setDraft] = useState(value)
   const [synced, setSynced] = useState(value)
@@ -118,7 +130,7 @@ function NotesField({ value, onSave }: { value: string; onSave: (notes: string) 
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="text-xs font-medium">
-        Notes
+        {t("notes")}
       </label>
       <Textarea
         id={id}
@@ -126,7 +138,7 @@ function NotesField({ value, onSave }: { value: string; onSave: (notes: string) 
         className="min-h-14"
         value={draft}
         maxLength={2000}
-        placeholder="Objections, questions, conversations worth turning into a post…"
+        placeholder={t("notes_placeholder")}
         onFocus={() => setFocused(true)}
         onBlur={() => {
           setFocused(false)
@@ -160,8 +172,10 @@ export function EngagementTracker({
   now: Date
   className?: string
 }) {
+  const t = useT(todayMessages)
+  const lang = useUiLang()
   const day = toISODate(now)
-  const rows = useMemo(() => trackerRows(tasks, log), [tasks, log])
+  const rows = useMemo(() => trackerRows(tasks, log, lang), [tasks, log, lang])
   const history = useMemo(() => engagementHistory(logs, tasks, now), [logs, tasks, now])
   const completed = new Set(log?.completed_tasks ?? [])
   const done = tasks.filter((task) => completed.has(task.key)).length
@@ -173,7 +187,7 @@ export function EngagementTracker({
     else dataActions.insert("engagement_logs", { date: day, ...patch })
     const wasDone = allTasksDone(current?.completed_tasks, tasks)
     if (!wasDone && patch.completed_tasks && allTasksDone(patch.completed_tasks, tasks)) {
-      toast.success("Every engagement task done for today", { description: "That's the Engage habit in today's rhythm." })
+      toast.success(t("all_done"), { description: t("all_done_description") })
     }
   }
 
@@ -189,15 +203,15 @@ export function EngagementTracker({
         description={
           tasks.length ? (
             <>
-              <span className="num">{done}</span> of {tasks.length} daily tasks done
+              <span className="num">{done}</span> {t("daily_tasks_done", { total: tasks.length })}
             </>
           ) : (
-            "No daily tasks set — counters still track your engagement"
+            t("no_daily_tasks")
           )
         }
         action={
           <Button asChild variant="ghost" size="xs" className="text-muted-foreground">
-            <Link href="/settings?tab=engagement">Edit tasks</Link>
+            <Link href="/settings?tab=engagement">{t("edit_tasks")}</Link>
           </Button>
         }
         className="h-full"

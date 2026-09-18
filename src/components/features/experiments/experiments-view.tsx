@@ -8,15 +8,19 @@ import { EmptyState, FilterBar, PageContainer, PageHeader, PageSection, SearchIn
 import { Button } from "@/components/ui/button"
 import { EXPERIMENT_STATUS_MAP } from "@/lib/constants"
 import { formatDate } from "@/lib/dates"
+import { useT, useUiLang } from "@/lib/i18n"
 import { dataActions, useTable } from "@/lib/store"
 import type { ContentExperiment } from "@/lib/types"
-import { formatNumber, matchesQuery, pluralize } from "@/lib/utils"
+import { formatNumber, matchesQuery } from "@/lib/utils"
 import { ExperimentCard } from "./experiment-card"
 import { ExperimentDetailSheet } from "./experiment-detail-sheet"
 import { ExperimentFormDialog } from "./experiment-form-dialog"
-import { experimentStats, groupExperiments, STATUS_COPY } from "./experiment-model"
+import { experimentStats, groupExperiments, statusCopy } from "./experiment-model"
+import { experimentsMessages } from "./messages"
 
 export function ExperimentsView() {
+  const t = useT(experimentsMessages)
+  const lang = useUiLang()
   const router = useRouter()
   const searchParams = useSearchParams()
   const experiments = useTable("content_experiments")
@@ -49,23 +53,23 @@ export function ExperimentsView() {
   const duplicate = useCallback(
     (source: ContentExperiment) => {
       const copy = dataActions.insert("content_experiments", {
-        name: `${source.name} (again)`,
+        name: t("duplicate_name", { name: source.name }),
         hypothesis: source.hypothesis,
         variant_a: source.variant_a,
         variant_b: source.variant_b,
         metric: source.metric,
         status: "planned",
       })
-      toast.success("Experiment duplicated", { description: "Set new dates and link fresh posts to run it again." })
+      toast.success(t("duplicated"), { description: t("duplicated_description") })
       setOpen(copy.id)
     },
-    [setOpen]
+    [setOpen, t]
   )
 
   const newButton = (
     <Button type="button" size="sm" onClick={openCreate}>
       <Plus aria-hidden />
-      New experiment
+      {t("new_experiment")}
     </Button>
   )
 
@@ -73,7 +77,7 @@ export function ExperimentsView() {
     <PageContainer>
       <PageHeader
         title="Experiments"
-        description="Test one variable at a time — hook length, video length, language, CTA — and turn every result into a rule you reuse."
+        description={t("description")}
         actions={newButton}
       />
 
@@ -84,7 +88,11 @@ export function ExperimentsView() {
               label="Running"
               value={formatNumber(stats.running)}
               sublabel={
-                stats.nextEnd?.end_date ? `Next ends ${formatDate(stats.nextEnd.end_date, "MMM d")}` : stats.running ? "No end dates set" : "Nothing running"
+                stats.nextEnd?.end_date
+                  ? t("next_ends", { date: formatDate(stats.nextEnd.end_date, "MMM d") })
+                  : stats.running
+                    ? t("no_end_dates")
+                    : t("nothing_running")
               }
               href={stats.nextEnd ? `/experiments?open=${stats.nextEnd.id}` : undefined}
             />
@@ -93,10 +101,10 @@ export function ExperimentsView() {
               value={formatNumber(stats.planned)}
               sublabel={
                 stats.nextStart?.start_date
-                  ? `Next starts ${formatDate(stats.nextStart.start_date, "MMM d")}`
+                  ? t("next_starts", { date: formatDate(stats.nextStart.start_date, "MMM d") })
                   : stats.planned
-                    ? "No start dates set"
-                    : "Nothing planned"
+                    ? t("no_start_dates")
+                    : t("nothing_planned")
               }
               href={stats.nextStart ? `/experiments?open=${stats.nextStart.id}` : undefined}
             />
@@ -105,14 +113,14 @@ export function ExperimentsView() {
               value={formatNumber(stats.completed)}
               sublabel={
                 stats.completed
-                  ? `${formatNumber(stats.decided)} with a winner${stats.completed > stats.decided ? ` · ${formatNumber(stats.completed - stats.decided)} inconclusive` : ""}`
-                  : "No results yet"
+                  ? `${t("with_winner", { count: formatNumber(stats.decided) })}${stats.completed > stats.decided ? t("inconclusive_count", { count: formatNumber(stats.completed - stats.decided) }) : ""}`
+                  : t("no_results_yet")
               }
             />
             <StatTile
-              label="Lessons learned"
+              label={t("lessons_learned")}
               value={formatNumber(stats.lessons)}
-              sublabel={stats.lessons ? `${formatNumber(stats.lessonIdeas)} turned into ideas` : "Record a lesson when a test ends"}
+              sublabel={stats.lessons ? t("lessons_ideas", { count: formatNumber(stats.lessonIdeas) }) : t("lessons_hint")}
             />
           </div>
 
@@ -120,11 +128,13 @@ export function ExperimentsView() {
             <FilterBar
               actions={
                 <span className="text-xs text-muted-foreground num">
-                  {filtered.length === experiments.length ? pluralize(experiments.length, "experiment") : `${filtered.length} of ${experiments.length}`}
+                  {filtered.length === experiments.length
+                    ? t.plural("count", experiments.length, { count: formatNumber(experiments.length) })
+                    : t("shown_of", { shown: filtered.length, total: experiments.length })}
                 </span>
               }
             >
-              <SearchInput value={query} onChange={setQuery} placeholder="Search experiments…" />
+              <SearchInput value={query} onChange={setQuery} placeholder={t("search_placeholder")} />
             </FilterBar>
 
             {groups.length ? (
@@ -133,7 +143,7 @@ export function ExperimentsView() {
                   key={group.status}
                   id={`experiments-${group.status}`}
                   title={`${EXPERIMENT_STATUS_MAP[group.status]?.label ?? group.status} · ${group.experiments.length}`}
-                  description={STATUS_COPY[group.status]}
+                  description={statusCopy(group.status, lang)}
                 >
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {group.experiments.map((experiment) => (
@@ -146,11 +156,11 @@ export function ExperimentsView() {
               <EmptyState
                 compact
                 icon={FlaskConical}
-                title="No experiments match"
-                description="Try a different word — search covers names, hypotheses, variants, results and lessons."
+                title={t("nomatch_title")}
+                description={t("nomatch_description")}
                 action={
                   <Button type="button" size="sm" variant="outline" onClick={() => setQuery("")}>
-                    Clear search
+                    {t("clear_search")}
                   </Button>
                 }
               />
@@ -160,8 +170,8 @@ export function ExperimentsView() {
       ) : (
         <EmptyState
           icon={FlaskConical}
-          title="No experiments yet"
-          description="An experiment compares two versions of one variable — short vs long hooks, Taglish vs English — across real posts, so you stop guessing what works."
+          title={t("empty_title")}
+          description={t("empty_description")}
           action={newButton}
         />
       )}

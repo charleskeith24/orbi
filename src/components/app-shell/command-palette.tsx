@@ -57,6 +57,7 @@ import {
   type SearchIndex,
   type SearchKind,
 } from "@/components/app-shell/command-palette/search"
+import { paletteMessages } from "@/components/app-shell/command-palette-messages"
 import { KeyboardShortcuts, useIsMac } from "@/components/app-shell/keyboard-shortcuts"
 import {
   Command,
@@ -68,6 +69,7 @@ import {
   CommandShortcut,
 } from "@/components/ui/command"
 import { Kbd } from "@/components/ui/kbd"
+import { translator, useT, useUiLang, type UiLang } from "@/lib/i18n"
 import { ALL_PAGES, NAV_SECTIONS } from "@/lib/navigation"
 import { uiActions, useTable, useUIStore } from "@/lib/store"
 
@@ -145,7 +147,7 @@ function rankEntries<T extends PaletteEntry>(entries: T[], query: string): T[] {
 }
 
 /** Search documents memoized per table, built only while the palette is open. */
-function useSearchIndex(): SearchIndex {
+function useSearchIndex(lang: UiLang): SearchIndex {
   const items = useTable("content_items")
   const ideas = useTable("content_ideas")
   const hooks = useTable("hooks")
@@ -165,22 +167,22 @@ function useSearchIndex(): SearchIndex {
 
   const pillarNames = useMemo(() => new Map(pillars.map((p) => [p.id, p.name])), [pillars])
   const scriptBodies = useMemo(() => currentScriptBodies(scripts), [scripts])
-  const content = useMemo(() => buildContentDocs(items, pillarNames, scriptBodies), [items, pillarNames, scriptBodies])
-  const idea = useMemo(() => buildIdeaDocs(ideas, pillarNames), [ideas, pillarNames])
-  const hook = useMemo(() => buildHookDocs(hooks), [hooks])
-  const angle = useMemo(() => buildAngleDocs(angles), [angles])
-  const story = useMemo(() => buildStoryDocs(stories, pillarNames), [stories, pillarNames])
-  const campaign = useMemo(() => buildCampaignDocs(campaigns), [campaigns])
-  const series = useMemo(() => buildSeriesDocs(seriesRows, pillarNames), [seriesRows, pillarNames])
-  const pillar = useMemo(() => buildPillarDocs(pillars), [pillars])
-  const persona = useMemo(() => buildPersonaDocs(personas), [personas])
-  const problem = useMemo(() => buildProblemDocs(problems), [problems])
-  const question = useMemo(() => buildQuestionDocs(questions), [questions])
-  const researchDocs = useMemo(() => buildResearchDocs(research), [research])
-  const experiment = useMemo(() => buildExperimentDocs(experiments), [experiments])
-  const deal = useMemo(() => buildDealDocs(deals), [deals])
-  const topic = useMemo(() => buildTopicDocs(ideas), [ideas])
-  const analytics = useMemo(() => buildAnalyticsDocs(items, metrics), [items, metrics])
+  const content = useMemo(() => buildContentDocs(items, pillarNames, scriptBodies, lang), [items, pillarNames, scriptBodies, lang])
+  const idea = useMemo(() => buildIdeaDocs(ideas, pillarNames, lang), [ideas, pillarNames, lang])
+  const hook = useMemo(() => buildHookDocs(hooks, lang), [hooks, lang])
+  const angle = useMemo(() => buildAngleDocs(angles, lang), [angles, lang])
+  const story = useMemo(() => buildStoryDocs(stories, pillarNames, lang), [stories, pillarNames, lang])
+  const campaign = useMemo(() => buildCampaignDocs(campaigns, lang), [campaigns, lang])
+  const series = useMemo(() => buildSeriesDocs(seriesRows, pillarNames, lang), [seriesRows, pillarNames, lang])
+  const pillar = useMemo(() => buildPillarDocs(pillars, lang), [pillars, lang])
+  const persona = useMemo(() => buildPersonaDocs(personas, lang), [personas, lang])
+  const problem = useMemo(() => buildProblemDocs(problems, lang), [problems, lang])
+  const question = useMemo(() => buildQuestionDocs(questions, lang), [questions, lang])
+  const researchDocs = useMemo(() => buildResearchDocs(research, lang), [research, lang])
+  const experiment = useMemo(() => buildExperimentDocs(experiments, lang), [experiments, lang])
+  const deal = useMemo(() => buildDealDocs(deals, lang), [deals, lang])
+  const topic = useMemo(() => buildTopicDocs(ideas, lang), [ideas, lang])
+  const analytics = useMemo(() => buildAnalyticsDocs(items, metrics, lang), [items, metrics, lang])
 
   return useMemo(
     () => ({
@@ -226,6 +228,7 @@ function useSearchIndex(): SearchIndex {
 export function CommandPalette() {
   const open = useUIStore((s) => s.commandOpen)
   const setOpen = useUIStore((s) => s.setCommandOpen)
+  const t = useT(paletteMessages)
 
   return (
     <>
@@ -233,8 +236,8 @@ export function CommandPalette() {
       <CommandDialog
         open={open}
         onOpenChange={setOpen}
-        title="Search and commands"
-        description="Search your workspace, jump to a page or run a command."
+        title={t("dialog_title")}
+        description={t("dialog_description")}
         className="top-[10vh] sm:top-[14vh] sm:max-w-xl"
       >
         <PaletteContent onClose={() => setOpen(false)} />
@@ -252,7 +255,9 @@ function PaletteContent({ onClose }: { onClose: () => void }) {
   const router = useRouter()
   const { resolvedTheme, setTheme } = useTheme()
   const isMac = useIsMac()
-  const index = useSearchIndex()
+  const lang = useUiLang()
+  const t = useT(paletteMessages)
+  const index = useSearchIndex(lang)
   const [query, setQuery] = useState("")
 
   const trimmed = query.trim()
@@ -274,49 +279,49 @@ function PaletteContent({ onClose }: { onClose: () => void }) {
     onClose()
   }
   const dark = resolvedTheme === "dark"
+  // Translated titles keep the English title as a keyword, so English searches still find the action.
+  const en = translator(paletteMessages, "en")
+  const titled = (key: Parameters<typeof t>[0], keywords: string[]) => ({
+    title: t(key),
+    keywords: lang === "en" ? keywords : [en(key), ...keywords],
+  })
   const actions: PaletteAction[] = [
     {
       id: "capture",
-      title: "Capture idea",
+      ...titled("action_capture", ["quick capture", "new idea", "note"]),
       icon: Lightbulb,
-      keywords: ["quick capture", "new idea", "note"],
       shortcut: isMac ? "⌥N" : "Alt N",
       perform: () => uiActions.openDialog({ type: "quick-capture" }),
     },
     {
       id: "new-content",
-      title: "New content",
+      ...titled("action_new_content", ["create", "post", "draft"]),
       icon: Plus,
-      keywords: ["create", "post", "draft"],
       perform: () => uiActions.openDialog({ type: "new-content" }),
     },
     {
       id: "log-post",
-      title: "Log published post",
+      ...titled("action_log_post", ["published", "record"]),
       icon: Send,
-      keywords: ["published", "record"],
       perform: () => uiActions.openDialog({ type: "log-post" }),
     },
     {
       id: "add-metrics",
-      title: "Add analytics",
+      ...titled("action_add_metrics", ["metrics", "views", "stats", "performance", "log"]),
       icon: ChartColumn,
-      keywords: ["metrics", "views", "stats", "performance", "log"],
       perform: () => uiActions.openDialog({ type: "add-metrics" }),
     },
     {
       id: "strategist",
-      title: "Ask the Content Strategist",
+      ...titled("action_strategist", ["ai", "assistant", "chat", "advice"]),
       icon: Sparkles,
-      keywords: ["ai", "assistant", "chat", "advice"],
       shortcut: isMac ? "⌘J" : "Ctrl J",
       perform: () => uiActions.askStrategist(),
     },
     {
       id: "theme",
-      title: dark ? "Switch to light theme" : "Switch to dark theme",
+      ...titled(dark ? "action_light" : "action_dark", ["toggle theme", "dark mode", "light mode", "appearance"]),
       icon: dark ? Sun : Moon,
-      keywords: ["toggle theme", "dark mode", "light mode", "appearance"],
       perform: () => {
         setTheme(dark ? "light" : "dark")
         onClose()
@@ -324,9 +329,8 @@ function PaletteContent({ onClose }: { onClose: () => void }) {
     },
     {
       id: "planner",
-      title: "Open Weekly Planner",
+      ...titled("action_planner", ["plan the week", "calendar", "schedule"]),
       icon: CalendarRange,
-      keywords: ["plan the week", "calendar", "schedule"],
       perform: () => go("/calendar/planner"),
     },
   ]
@@ -356,39 +360,39 @@ function PaletteContent({ onClose }: { onClose: () => void }) {
   )
 
   return (
-    <Command shouldFilter={false} loop label="Command palette">
+    <Command shouldFilter={false} loop label={t("palette_label")}>
       <CommandInput
         value={query}
         onValueChange={setQuery}
-        placeholder="Search content, ideas, pages… or run a command"
+        placeholder={t("placeholder")}
       />
       <CommandList className="max-h-[min(55dvh,26rem)] sm:max-h-[min(60vh,28rem)]">
         {trimmed ? (
           <>
-            {matchedActions.length ? <CommandGroup heading="Actions">{matchedActions.map(actionItem)}</CommandGroup> : null}
-            {matchedPages.length ? <CommandGroup heading="Pages">{matchedPages.map(pageItem)}</CommandGroup> : null}
+            {matchedActions.length ? <CommandGroup heading={t("group_actions")}>{matchedActions.map(actionItem)}</CommandGroup> : null}
+            {matchedPages.length ? <CommandGroup heading={t("group_pages")}>{matchedPages.map(pageItem)}</CommandGroup> : null}
             {results.map((group) => (
               <CommandGroup key={group.kind} heading={group.heading}>
                 {group.docs.map((doc) => docItem(doc))}
               </CommandGroup>
             ))}
-            <CommandGroup heading="Capture or ask">
+            <CommandGroup heading={t("group_capture")}>
               <CommandItem
                 value="query:capture"
                 onSelect={() => uiActions.openDialog({ type: "quick-capture", initialText: trimmed })}
               >
-                <Row icon={Lightbulb} title={`Capture “${trimmed}” as an idea`} />
+                <Row icon={Lightbulb} title={t("capture_query", { query: trimmed })} />
               </CommandItem>
               <CommandItem value="query:ask" onSelect={() => uiActions.askStrategist(trimmed)}>
-                <Row icon={Sparkles} title={`Ask the Content Strategist: “${trimmed}”`} />
+                <Row icon={Sparkles} title={t("ask_query", { query: trimmed })} />
               </CommandItem>
             </CommandGroup>
           </>
         ) : (
           <>
-            <CommandGroup heading="Actions">{actions.map(actionItem)}</CommandGroup>
-            {recent.length ? <CommandGroup heading="Recent">{recent.map((doc) => docItem(doc, "recent:"))}</CommandGroup> : null}
-            <CommandGroup heading="Pages">{PAGES.map(pageItem)}</CommandGroup>
+            <CommandGroup heading={t("group_actions")}>{actions.map(actionItem)}</CommandGroup>
+            {recent.length ? <CommandGroup heading={t("group_recent")}>{recent.map((doc) => docItem(doc, "recent:"))}</CommandGroup> : null}
+            <CommandGroup heading={t("group_pages")}>{PAGES.map(pageItem)}</CommandGroup>
           </>
         )}
       </CommandList>
@@ -397,23 +401,23 @@ function PaletteContent({ onClose }: { onClose: () => void }) {
           <Kbd>
             <ArrowUpDown />
           </Kbd>
-          Navigate
+          {t("hint_navigate")}
         </span>
         <span className="flex items-center gap-1.5">
           <Kbd>
             <CornerDownLeft />
           </Kbd>
-          Open
+          {t("hint_open")}
         </span>
         <span className="flex items-center gap-1.5">
           <Kbd>Esc</Kbd>
-          Close
+          {t("hint_close")}
         </span>
         <span className="ml-auto hidden items-center gap-1.5 sm:flex">
           <Kbd>/</Kbd>
-          or
+          {t("hint_or")}
           <Kbd>{isMac ? "⌘K" : "Ctrl K"}</Kbd>
-          from anywhere
+          {t("hint_anywhere")}
         </span>
       </div>
     </Command>

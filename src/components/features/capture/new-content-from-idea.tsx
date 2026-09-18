@@ -5,9 +5,12 @@ import { useId, useRef, useState } from "react"
 import { toast } from "sonner"
 import { DatePicker, EmptyState, FormField, FormRow, PlatformToggleGroup, StageSelect } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { convertIdeaToContent, uiActions, useBrand, useLookup } from "@/lib/store"
 import type { ContentIdea, ID, ISODate, PipelineStage, PlatformId } from "@/lib/types"
 import { CaptureBody, CaptureFooter, ShortcutHint } from "./capture-dialog"
+import { captureMessages, newContentMessages } from "./capture-messages"
 import { submitOnModEnter } from "./capture-utils"
 import { IdeaPicker, SelectedIdea } from "./idea-picker"
 import { createLabel, platformsFor, type ContentDefaults, type OnContentCreated } from "./new-content-shared"
@@ -29,6 +32,9 @@ export function FromIdeaForm({
   onScratch: () => void
 }) {
   const formId = useId()
+  const t = useT(newContentMessages)
+  const f = useT(captureMessages)
+  const c = useT(commonMessages)
   const formRef = useRef<HTMLFormElement>(null)
   const brand = useBrand()
   const pillars = useLookup("content_pillars")
@@ -42,8 +48,8 @@ export function FromIdeaForm({
   const [attempted, setAttempted] = useState(false)
 
   const errors = {
-    idea: idea ? null : "Choose an idea to produce.",
-    platforms: platforms.length ? null : "Pick at least one platform.",
+    idea: idea ? null : t("choose_idea"),
+    platforms: platforms.length ? null : t("pick_platform"),
   }
   const firstError = errors.idea ?? errors.platforms
   const valid = firstError === null
@@ -53,7 +59,7 @@ export function FromIdeaForm({
     setPlatforms(platformsFor(ideas.find((i) => i.id === id), defaults, brand))
     setAttempted(false)
     // The picker unmounts with focus inside it — keep focus in the form so ⌘/Ctrl+Enter still creates.
-    requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>('[role="group"][aria-label="Platforms"] button')?.focus())
+    requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>("[data-platforms] [role=group] button")?.focus())
   }
 
   function submit() {
@@ -69,7 +75,7 @@ export function FromIdeaForm({
       })
       onCreated(items, idea.title)
     } catch (error) {
-      toast.error("Couldn't create the content", { description: error instanceof Error ? error.message : String(error) })
+      toast.error(t("create_failed"), { description: error instanceof Error ? error.message : String(error) })
     }
   }
 
@@ -79,23 +85,23 @@ export function FromIdeaForm({
         <CaptureBody className="flex flex-col justify-center">
           <EmptyState
             icon={Lightbulb}
-            title="Your Idea Bank is empty"
-            description="Ideas carry the strategy — pillar, persona and hook — into production. Capture one first, or start this piece from scratch."
+            title={t("empty_title")}
+            description={t("empty_description")}
             action={
               <Button type="button" size="sm" onClick={onScratch}>
-                Start from scratch
+                {t("start_scratch")}
               </Button>
             }
             secondaryAction={
               <Button type="button" size="sm" variant="outline" onClick={() => uiActions.openDialog({ type: "quick-capture" })}>
-                Capture an idea
+                {t("capture_idea")}
               </Button>
             }
           />
         </CaptureBody>
         <CaptureFooter>
           <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
+            {c("cancel")}
           </Button>
         </CaptureFooter>
       </>
@@ -114,7 +120,7 @@ export function FromIdeaForm({
       onKeyDown={(event) => submitOnModEnter(event, submit)}
     >
       <CaptureBody className="flex flex-col gap-4">
-        <FormField label="Idea" required error={attempted ? (errors.idea ?? undefined) : undefined}>
+        <FormField label={t("idea")} required error={attempted ? (errors.idea ?? undefined) : undefined}>
           {idea ? (
             <SelectedIdea idea={idea} onChange={() => setIdeaId(null)} />
           ) : (
@@ -122,35 +128,37 @@ export function FromIdeaForm({
           )}
         </FormField>
         {idea?.status === "converted" ? (
-          <p className="-mt-2 text-xs text-muted-foreground">Already converted once — this adds another set of content items.</p>
+          <p className="-mt-2 text-xs text-muted-foreground">{t("already_converted")}</p>
         ) : null}
         {idea ? (
           <>
-            <FormField
-              label="Platforms"
-              required
-              description="One content item per platform, each with its own brief."
-              error={attempted ? (errors.platforms ?? undefined) : undefined}
-            >
-              <PlatformToggleGroup value={platforms} onChange={setPlatforms} aria-label="Platforms" />
-            </FormField>
+            <div data-platforms className="contents">
+              <FormField
+                label={f("platforms")}
+                required
+                description={t("per_platform")}
+                error={attempted ? (errors.platforms ?? undefined) : undefined}
+              >
+                <PlatformToggleGroup value={platforms} onChange={setPlatforms} aria-label={f("platforms")} />
+              </FormField>
+            </div>
             <FormRow>
-              <FormField label="Stage" htmlFor={`${formId}-stage`}>
+              <FormField label={f("stage")} htmlFor={`${formId}-stage`}>
                 <StageSelect id={`${formId}-stage`} value={stage} onChange={(next) => next && setStage(next)} />
               </FormField>
-              <FormField label="Due date" htmlFor={`${formId}-due`}>
-                <DatePicker id={`${formId}-due`} value={due} placeholder="No deadline" onChange={setDue} />
+              <FormField label={f("due_date")} htmlFor={`${formId}-due`}>
+                <DatePicker id={`${formId}-due`} value={due} placeholder={f("no_deadline")} onChange={setDue} />
               </FormField>
             </FormRow>
           </>
         ) : null}
       </CaptureBody>
-      <CaptureFooter status={valid ? <ShortcutHint label="to create" /> : <span className="truncate max-sm:hidden">{firstError}</span>}>
+      <CaptureFooter status={valid ? <ShortcutHint label={f("to_create")} /> : <span className="truncate max-sm:hidden">{firstError}</span>}>
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={!valid}>
-          {createLabel(platforms.length)}
+          {createLabel(platforms.length, t)}
         </Button>
       </CaptureFooter>
     </form>

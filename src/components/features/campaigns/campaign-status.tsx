@@ -4,8 +4,10 @@ import { CircleCheck, CircleDashed, CirclePause, CirclePlay, type LucideIcon } f
 import { toast } from "sonner"
 import { OptionSelect, StatusPill, type ControlSize, type SelectOption, type StatusTone } from "@/components/common"
 import { CAMPAIGN_STATUS_MAP, CAMPAIGN_STATUSES } from "@/lib/constants"
+import { getUiLang, translate, useT } from "@/lib/i18n"
 import { dataActions } from "@/lib/store"
 import type { CampaignStatus, ContentCampaign } from "@/lib/types"
+import { campaignMessages } from "./messages"
 
 export const CAMPAIGN_STATUS_META: Record<CampaignStatus, { tone: StatusTone; icon: LucideIcon }> = {
   planning: { tone: "neutral", icon: CircleDashed },
@@ -41,6 +43,7 @@ export function CampaignStatusSelect({
   id?: string
   className?: string
 }) {
+  const t = useT(campaignMessages)
   return (
     <OptionSelect
       id={id}
@@ -51,7 +54,7 @@ export function CampaignStatusSelect({
       }}
       size={size}
       className={className}
-      aria-label="Campaign status"
+      aria-label={t("status_aria")}
     />
   )
 }
@@ -60,7 +63,7 @@ export function CampaignStatusSelect({
 export function setCampaignStatus(campaign: ContentCampaign, status: CampaignStatus) {
   if (campaign.status === status) return
   dataActions.update("content_campaigns", campaign.id, { status })
-  toast.success(`Campaign marked ${CAMPAIGN_STATUS_MAP[status]?.label.toLowerCase() ?? status}`, {
+  toast.success(translate(campaignMessages, getUiLang(), "marked_status", { status: CAMPAIGN_STATUS_MAP[status]?.label.toLowerCase() ?? status }), {
     description: campaign.name || undefined,
   })
 }

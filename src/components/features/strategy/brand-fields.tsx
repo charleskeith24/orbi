@@ -4,17 +4,17 @@ import { TriangleAlert } from "lucide-react"
 import { FormField, SectionCard } from "@/components/common"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { SECTION_ICONS } from "./brand-icons"
-import { BRAND_SECTIONS, CONTEXT_LIMITS, fieldId, type BrandErrors, type BrandFormValues, type BrandSectionKey, type BrandTextField, type SetBrandValue } from "./brand-model"
+import { brandFieldMessages, brandSectionMessages } from "./brand-messages"
+import { CONTEXT_LIMITS, fieldId, type BrandErrors, type BrandFormValues, type BrandSectionKey, type BrandTextField, type SetBrandValue } from "./brand-model"
 
 export interface BrandSectionProps {
   values: BrandFormValues
   set: SetBrandValue
   errors: BrandErrors
 }
-
-const SECTION_META = new Map(BRAND_SECTIONS.map((s) => [s.key, s]))
 
 /** One Brand HQ section: an anchored SectionCard (the sticky nav scrolls to `#<key>`). */
 export function BrandSection({
@@ -26,12 +26,12 @@ export function BrandSection({
   action?: React.ReactNode
   children: React.ReactNode
 }) {
-  const meta = SECTION_META.get(sectionKey)
+  const t = useT(brandSectionMessages)
   return (
     <div id={sectionKey} className="scroll-mt-16">
       <SectionCard
-        title={meta?.title}
-        description={meta?.description}
+        title={t(`${sectionKey}_title`)}
+        description={t(`${sectionKey}_description`)}
         icon={SECTION_ICONS[sectionKey]}
         action={action}
         contentClassName="flex flex-col gap-4"
@@ -44,16 +44,17 @@ export function BrandSection({
 
 /** "412 / 400" near a field's AI context limit; a warning once the AI would only read part of it. */
 export function LimitHint({ length, limit }: { length: number; limit: number }) {
+  const t = useT(brandFieldMessages)
   if (length < limit * 0.85) return null
   const over = length > limit
   return (
     <span
       className={cn("inline-flex items-center gap-1 text-xs num", over ? "text-warning-fg" : "text-muted-foreground")}
-      title={over ? `The AI reads the first ${limit} characters of this field.` : undefined}
+      title={over ? t("limit_title", { limit }) : undefined}
     >
       {over ? <TriangleAlert className="size-3.5 shrink-0" aria-hidden /> : null}
       {length} / {limit}
-      {over ? <span className="sr-only">— the AI reads the first {limit} characters</span> : null}
+      {over ? <span className="sr-only">{t("limit_sr", { limit })}</span> : null}
     </span>
   )
 }

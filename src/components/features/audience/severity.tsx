@@ -1,8 +1,10 @@
 "use client"
 
 import { ChipToggleGroup, type ChipOption } from "@/components/common"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { clampSeverity, SEVERITY_LEVELS, severityLabel } from "./audience-model"
+import { problemMessages } from "./problem-messages"
 
 const BAR_HEIGHTS = ["h-1.5", "h-2", "h-2.5", "h-3", "h-3.5"]
 
@@ -16,10 +18,11 @@ export function SeverityMeter({
   showLabel?: boolean
   className?: string
 }) {
+  const t = useT(problemMessages)
   const level = clampSeverity(value)
   const label = severityLabel(level)
   return (
-    <span title={`Severity ${level}/5 · ${label}`} className={cn("inline-flex shrink-0 items-center gap-1.5", className)}>
+    <span title={t("severity_title", { level, label })} className={cn("inline-flex shrink-0 items-center gap-1.5", className)}>
       <span aria-hidden className="flex h-3.5 items-end gap-[2px]">
         {BAR_HEIGHTS.map((height, index) => (
           <span
@@ -31,9 +34,7 @@ export function SeverityMeter({
       {showLabel ? (
         <span className="text-xs text-muted-foreground">{label}</span>
       ) : (
-        <span className="sr-only">
-          Severity {level} of 5, {label}
-        </span>
+        <span className="sr-only">{t("severity_sr", { level, label })}</span>
       )}
     </span>
   )
@@ -56,13 +57,14 @@ export function SeverityPicker({
   onChange: (value: number) => void
   className?: string
 }) {
+  const t = useT(problemMessages)
   const level = clampSeverity(value)
   return (
     <div className={cn("flex flex-wrap items-center gap-2", className)}>
       <ChipToggleGroup
         required
         size="sm"
-        aria-label="Severity"
+        aria-label={t("severity")}
         options={OPTIONS}
         value={String(level) as SeverityValue}
         onChange={(next) => {

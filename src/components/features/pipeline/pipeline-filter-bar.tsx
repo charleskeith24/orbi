@@ -24,10 +24,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useT, type Translator } from "@/lib/i18n"
 import { PIPELINE_STAGES, PLATFORM_IDS, PLATFORMS, PRIORITIES } from "@/lib/constants"
 import { useTable } from "@/lib/store"
 import type { ContentItem, PipelineStage } from "@/lib/types"
-import { formatNumber, pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
 import {
   countFacet,
   FACET_KEYS,
@@ -38,18 +39,21 @@ import {
   type PipelineFilters,
   type StageColumnData,
 } from "./board-model"
+import { pipelineMessages } from "./messages"
 
-const FACETS: { key: FacetKey; title: string }[] = [
-  { key: "platform", title: "Platform" },
-  { key: "pillar", title: "Pillar" },
-  { key: "owner", title: "Owner" },
-  { key: "priority", title: "Priority" },
-  { key: "campaign", title: "Campaign" },
-  { key: "format", title: "Format" },
+const FACETS: { key: FacetKey; title: `facet_${FacetKey}` }[] = [
+  { key: "platform", title: "facet_platform" },
+  { key: "pillar", title: "facet_pillar" },
+  { key: "owner", title: "facet_owner" },
+  { key: "priority", title: "facet_priority" },
+  { key: "campaign", title: "facet_campaign" },
+  { key: "format", title: "facet_format" },
 ]
 
+type PipelineT = Translator<(typeof pipelineMessages)["en"]>
+
 /** Facet options with counts over the board's cards; options with no cards are hidden unless selected. */
-function useFacetOptions(pool: ContentItem[], owners: string[], filters: PipelineFilters) {
+function useFacetOptions(pool: ContentItem[], owners: string[], filters: PipelineFilters, t: PipelineT) {
   const pillars = useTable("content_pillars")
   const campaigns = useTable("content_campaigns")
   const formats = useTable("content_formats")
@@ -77,15 +81,15 @@ function useFacetOptions(pool: ContentItem[], owners: string[], filters: Pipelin
           .filter((p) => keep("pillar", p.id))
           .map((p) => ({
             value: p.id,
-            label: p.name || "Untitled pillar",
+            label: p.name || t("untitled_pillar"),
             count: count("pillar", p.id),
             icon: <ColorDot color={p.color} />,
           })),
-        ...none("pillar", "No pillar"),
+        ...none("pillar", t("no_pillar")),
       ],
       owner: [
         ...owners.filter((o) => keep("owner", o)).map((o) => ({ value: o, label: o, count: count("owner", o) })),
-        ...none("owner", "Unassigned"),
+        ...none("owner", t("unassigned")),
       ],
       priority: PRIORITIES.map((p) => ({
         value: p.id,
@@ -99,11 +103,11 @@ function useFacetOptions(pool: ContentItem[], owners: string[], filters: Pipelin
           .filter((c) => keep("campaign", c.id))
           .map((c) => ({
             value: c.id,
-            label: c.name || "Untitled campaign",
+            label: c.name || t("untitled_campaign"),
             count: count("campaign", c.id),
             icon: <ColorDot color={c.color} shape="square" />,
           })),
-        ...none("campaign", "No campaign"),
+        ...none("campaign", t("no_campaign")),
       ],
       format: [
         ...[...formats]
@@ -111,15 +115,15 @@ function useFacetOptions(pool: ContentItem[], owners: string[], filters: Pipelin
           .filter((f) => keep("format", f.id))
           .map((f) => ({
             value: f.id,
-            label: f.name || "Untitled format",
+            label: f.name || t("untitled_format"),
             count: count("format", f.id),
             icon: <FormatCategoryIcon category={f.category} className="size-3.5 text-muted-foreground" />,
           })),
-        ...none("format", "No format"),
+        ...none("format", t("no_format")),
       ],
     }
     return options
-  }, [pool, owners, filters, pillars, campaigns, formats])
+  }, [pool, owners, filters, pillars, campaigns, formats, t])
 }
 
 export function PipelineFilterBar({
@@ -142,25 +146,27 @@ export function PipelineFilterBar({
   onReset: () => void
   actions?: React.ReactNode
 }) {
-  const options = useFacetOptions(pool, owners, filters)
+  const t = useT(pipelineMessages)
+  const options = useFacetOptions(pool, owners, filters, t)
   const active = hasActiveFilters(filters)
+  const cards = t.plural("cards", pool.length, { count: formatNumber(pool.length) })
 
   return (
     <FilterBar
       actions={
         <>
           <span className="text-xs text-muted-foreground num" aria-live="polite">
-            {active ? `${formatNumber(shown)} of ${pluralize(pool.length, "card")}` : pluralize(pool.length, "card")}
+            {active ? t("shown_of", { shown: formatNumber(shown), cards }) : cards}
           </span>
           {actions}
         </>
       }
     >
-      <SearchInput value={filters.q} onChange={onSearch} placeholder="Search pipeline…" />
+      <SearchInput value={filters.q} onChange={onSearch} placeholder={t("search_placeholder")} />
       {FACETS.map((facet) => (
         <FacetFilter
           key={facet.key}
-          title={facet.title}
+          title={t(facet.title)}
           options={options[facet.key]}
           value={filters[facet.key]}
           onChange={(values) => onFacet(facet.key, values)}
@@ -183,6 +189,7 @@ export function ColumnsMenu({
   onToggle: (stage: PipelineStage, collapsed: boolean) => void
   onSetAll: (stages: PipelineStage[]) => void
 }) {
+  const t = useT(pipelineMessages)
   const empty = STAGE_IDS.filter((stage) => !columns[stage].items.length)
   const expanded = STAGE_IDS.length - collapsed.size
   return (
@@ -190,7 +197,7 @@ export function ColumnsMenu({
       <DropdownMenuTrigger asChild>
         <Button type="button" variant="outline" size="sm">
           <Columns3 aria-hidden />
-          Columns
+          {t("columns")}
           {collapsed.size ? (
             <span className="text-xs text-muted-foreground num">
               {expanded}/{STAGE_IDS.length}
@@ -199,7 +206,7 @@ export function ColumnsMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuLabel>Expanded columns</DropdownMenuLabel>
+        <DropdownMenuLabel>{t("expanded_columns")}</DropdownMenuLabel>
         {PIPELINE_STAGES.map((stage) => (
           <DropdownMenuCheckboxItem
             key={stage.id}
@@ -214,13 +221,13 @@ export function ColumnsMenu({
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled={!collapsed.size} onSelect={() => onSetAll([])}>
-          Expand all
+          {t("expand_all")}
         </DropdownMenuItem>
         <DropdownMenuItem
           disabled={empty.every((stage) => collapsed.has(stage))}
           onSelect={() => onSetAll([...new Set([...collapsed, ...empty])])}
         >
-          Collapse empty columns
+          {t("collapse_empty")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

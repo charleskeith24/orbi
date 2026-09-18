@@ -2,20 +2,23 @@
 
 import { ChartFrame, Heatmap } from "@/components/charts"
 import { DAYS_OF_WEEK } from "@/lib/constants"
-import { formatCompact, formatNumber, pluralize } from "@/lib/utils"
+import { useT } from "@/lib/i18n"
+import { formatCompact, formatNumber } from "@/lib/utils"
 import { hourLabel, hourLongLabel } from "./format"
+import { analyticsMessages } from "./messages"
 import type { PostingHeatmapData } from "./scope"
 
 const dayName = (day: number) => DAYS_OF_WEEK.find((d) => d.value === day)
 
 /** Weekday × publish hour, shaded by average views. */
 export function PostingHeatmap({ data, className }: { data: PostingHeatmapData; className?: string }) {
+  const t = useT(analyticsMessages)
   const best = data.best
   return (
     <ChartFrame
       className={className}
-      title="Best posting times"
-      description={`Average views by publish day and hour · ${pluralize(data.measured, "measured post")}`}
+      title={t("heatmap_title")}
+      description={t.plural("heatmap_description", data.measured, { count: formatNumber(data.measured) })}
       table={{
         columns: ["Slot", "Posts", "Avg views"],
         rows: [...data.slots]
@@ -25,9 +28,9 @@ export function PostingHeatmap({ data, className }: { data: PostingHeatmapData; 
       footer={
         best ? (
           <>
-            Best slot: <span className="font-medium text-foreground">{dayName(best.day)?.label} · {hourLongLabel(best.hour)}</span> —{" "}
-            {formatCompact(best.avgViews)} avg views across {pluralize(best.posts, "post")}.
-            {best.posts < 2 ? " One post per slot so far — treat it as a hint, not a rule." : null}
+            {t("best_slot")} <span className="font-medium text-foreground">{dayName(best.day)?.label} · {hourLongLabel(best.hour)}</span> —{" "}
+            {t.plural("best_slot_rest", best.posts, { count: formatNumber(best.posts), views: formatCompact(best.avgViews) })}
+            {best.posts < 2 ? t("one_post_hint") : null}
           </>
         ) : undefined
       }
@@ -39,8 +42,8 @@ export function PostingHeatmap({ data, className }: { data: PostingHeatmapData; 
         formatter={formatCompact}
         valueLabel="Avg views"
         cellHeight={26}
-        emptyMessage="Log analytics on a few posts to see which days and hours perform best."
-        aria-label="Average views by weekday and publish hour"
+        emptyMessage={t("heatmap_empty")}
+        aria-label={t("heatmap_aria")}
       />
     </ChartFrame>
   )

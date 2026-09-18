@@ -15,6 +15,7 @@ import {
   PLATFORMS,
 } from "@/lib/constants"
 import { formatDate } from "@/lib/dates"
+import { translate, type UiLang, type Vars } from "@/lib/i18n/core"
 import type {
   AiGeneration,
   AiProviderId,
@@ -29,6 +30,8 @@ import type {
   PlatformId,
 } from "@/lib/types"
 import { truncate } from "@/lib/utils"
+import { generatorMessages } from "./generator-messages"
+import { labMessages } from "./messages"
 
 export const MIN_COUNT = 1
 export const MAX_COUNT = 20
@@ -94,6 +97,7 @@ function knownOrNull(rows: readonly { id: ID }[], id: unknown): ID | null {
 }
 
 const oneLine = (text: string) => text.replace(/\s+/g, " ").trim()
+const gt = (lang: UiLang, key: keyof (typeof generatorMessages)["en"], vars?: Vars) => translate(generatorMessages, lang, key, vars)
 
 /** "Before vs. After" → "beforevsafter": names compared without case, spacing or punctuation. */
 export function nameKey(value: string): string {
@@ -259,18 +263,18 @@ export function briefFromTaskInput(input: unknown, db: BriefDb): GeneratorBrief 
 }
 
 /** Short labels for the constraints of a brief, e.g. ["Education", "for Founders", "TikTok", "TOFU"]. */
-export function describeBrief(brief: GeneratorBrief, db: BriefDb): string[] {
+export function describeBrief(brief: GeneratorBrief, db: BriefDb, lang: UiLang = "en"): string[] {
   const parts: string[] = []
   const pillar = brief.pillarId ? db.content_pillars.find((p) => p.id === brief.pillarId) : undefined
-  if (pillar) parts.push(pillar.name || "Untitled pillar")
+  if (pillar) parts.push(pillar.name || gt(lang, "brief_untitled_pillar"))
   const persona = brief.personaId ? db.audience_personas.find((p) => p.id === brief.personaId) : undefined
-  if (persona) parts.push(`for ${persona.name || "a persona"}`)
+  if (persona) parts.push(gt(lang, "brief_for", { name: persona.name || gt(lang, "brief_a_persona") }))
   if (brief.platform) parts.push(PLATFORMS[brief.platform].label)
   const goal = brief.goalId ? db.content_goals.find((g) => g.id === brief.goalId) : undefined
   if (goal) parts.push(goal.name || GOAL_CATEGORIES[goal.category].label)
   if (brief.funnel) parts.push(FUNNEL_STAGES[brief.funnel].label)
   const angle = brief.angleId ? db.angles.find((a) => a.id === brief.angleId) : undefined
-  if (angle) parts.push(`${angle.name} angle`)
+  if (angle) parts.push(gt(lang, "brief_angle", { name: angle.name }))
   const format = brief.formatId ? db.content_formats.find((f) => f.id === brief.formatId) : undefined
   if (format) parts.push(format.name)
   const problem = brief.problemId ? db.audience_problems.find((p) => p.id === brief.problemId) : undefined
@@ -376,16 +380,22 @@ export function moreLikeThisBrief(parent: GeneratorBrief, draft: GeneratedDraft)
 }
 
 /** Plain-text version of a draft for the clipboard. */
-export function draftToText(draft: GeneratedDraft, names: { format: string; angle: string }): string {
+export function draftToText(draft: GeneratedDraft, names: { format: string; angle: string }, lang: UiLang = "en"): string {
   const funnel = FUNNEL_STAGES[draft.funnel_stage]
   return [
     draft.title,
-    draft.hook ? `Hook: ${draft.hook}` : "",
-    draft.core_idea ? `Core idea: ${draft.core_idea}` : "",
-    draft.why_it_matters ? `Why it matters: ${draft.why_it_matters}` : "",
-    draft.talking_points.length ? `Key talking points:\n${draft.talking_points.map((point) => `- ${point}`).join("\n")}` : "",
-    draft.cta ? `CTA: ${draft.cta}` : "",
-    `Format: ${names.format} · Angle: ${names.angle} · Platform: ${PLATFORMS[draft.platform].label} · Funnel stage: ${funnel.label} (${funnel.name})`,
+    draft.hook ? gt(lang, "text_hook", { text: draft.hook }) : "",
+    draft.core_idea ? gt(lang, "text_core_idea", { text: draft.core_idea }) : "",
+    draft.why_it_matters ? gt(lang, "text_why", { text: draft.why_it_matters }) : "",
+    draft.talking_points.length ? `${gt(lang, "text_points")}\n${draft.talking_points.map((point) => `- ${point}`).join("\n")}` : "",
+    draft.cta ? gt(lang, "text_cta", { text: draft.cta }) : "",
+    gt(lang, "text_meta", {
+      format: names.format,
+      angle: names.angle,
+      platform: PLATFORMS[draft.platform].label,
+      funnel: funnel.label,
+      name: funnel.name,
+    }),
   ]
     .filter(Boolean)
     .join("\n\n")
@@ -497,7 +507,7 @@ export interface ExampleBrief {
 }
 
 /** Starting briefs built from real workspace gaps (pillar mix, untapped problems, open questions, goals). */
-export function exampleBriefs(db: Database, now: Date, settings: AppSettings, limit = 4): ExampleBrief[] {
+export function exampleBriefs(db: Database, now: Date, settings: AppSettings, limit = 4, lang: UiLang = "en"): ExampleBrief[] {
   const out: ExampleBrief[] = []
   const base: GeneratorBrief = { ...EMPTY_BRIEF }
 
@@ -506,8 +516,12 @@ export function exampleBriefs(db: Database, now: Date, settings: AppSettings, li
   if (gap) {
     out.push({
       id: "pillar-gap",
-      title: `Fill the ${gap.pillar.name || "pillar"} gap`,
-      reason: `${gap.pillar.name || "This pillar"} is ${Math.round(gap.actualPct)}% of recent content against a ${Math.round(gap.targetPct)}% target.`,
+      title: gt(lang, "example_gap_title", { pillar: gap.pillar.name || gt(lang, "example_gap_pillar") }),
+      reason: gt(lang, "example_gap_reason", {
+        pillar: gap.pillar.name || gt(lang, "example_gap_this_pillar"),
+        actual: Math.round(gap.actualPct),
+        target: Math.round(gap.targetPct),
+      }),
       brief: { ...base, pillarId: gap.pillar.id },
     })
   }
@@ -520,8 +534,8 @@ export function exampleBriefs(db: Database, now: Date, settings: AppSettings, li
   if (problem) {
     out.push({
       id: "problem",
-      title: `Solve “${truncate(oneLine(problem.problem), 60)}”`,
-      reason: `Severity ${problem.severity}/5 in your Problem Bank — no ideas or content yet.`,
+      title: gt(lang, "example_problem_title", { problem: truncate(oneLine(problem.problem), 60) }),
+      reason: gt(lang, "example_problem_reason", { severity: problem.severity }),
       brief: {
         ...base,
         problemId: problem.id,
@@ -538,8 +552,11 @@ export function exampleBriefs(db: Database, now: Date, settings: AppSettings, li
   if (question) {
     out.push({
       id: "question",
-      title: `Answer “${truncate(oneLine(question.question), 60)}”`,
-      reason: question.frequency > 1 ? `Asked ${question.frequency} times and not answered in content yet.` : "An open question from your Question Bank.",
+      title: gt(lang, "example_question_title", { question: truncate(oneLine(question.question), 60) }),
+      reason:
+        question.frequency > 1
+          ? gt(lang, "example_question_asked", { count: question.frequency })
+          : gt(lang, "example_question_open"),
       brief: {
         ...base,
         topic: oneLine(question.question).slice(0, TOPIC_MAX),
@@ -555,8 +572,11 @@ export function exampleBriefs(db: Database, now: Date, settings: AppSettings, li
   if (persona || platform) {
     out.push({
       id: "reach",
-      title: "Reach new people",
-      reason: `Top-of-funnel ideas${persona ? ` for ${persona.name || "your primary persona"}` : ""}${platform ? ` on ${PLATFORMS[platform].label}` : ""}, built to be shared.`,
+      title: gt(lang, "example_reach_title"),
+      reason: gt(lang, "example_reach_reason", {
+        persona: persona ? gt(lang, "example_reach_persona", { name: persona.name || gt(lang, "example_reach_primary") }) : "",
+        platform: platform ? gt(lang, "example_reach_platform", { platform: PLATFORMS[platform].label }) : "",
+      }),
       brief: { ...base, personaId: persona?.id ?? null, platform, funnel: "tofu" },
     })
   }
@@ -566,16 +586,16 @@ export function exampleBriefs(db: Database, now: Date, settings: AppSettings, li
   if (goal) {
     out.push({
       id: "leads",
-      title: "Turn attention into leads",
-      reason: `Bottom-of-funnel ideas for “${goal.name || GOAL_CATEGORIES[goal.category].label}”, each with a clear next step.`,
+      title: gt(lang, "example_leads_title"),
+      reason: gt(lang, "example_leads_reason", { goal: goal.name || GOAL_CATEGORIES[goal.category].label }),
       brief: { ...base, goalId: goal.id, funnel: "bofu", count: 5 },
     })
   }
 
   out.push({
     id: "balanced",
-    title: "A balanced batch",
-    reason: "No filters — spread across your pillars, favouring the ones under target.",
+    title: gt(lang, "example_balanced_title"),
+    reason: gt(lang, "example_balanced_reason"),
     brief: base,
   })
   return out.slice(0, limit)
@@ -584,16 +604,17 @@ export function exampleBriefs(db: Database, now: Date, settings: AppSettings, li
 /* ---------------------------------- Time ---------------------------------- */
 
 /** "just now", "12 min ago", "3 h ago", "yesterday", "4 days ago", then "Sep 3". */
-export function timeAgo(iso: string, now: Date): string {
+export function timeAgo(iso: string, now: Date, lang: UiLang = "en"): string {
   const time = Date.parse(iso)
   if (!Number.isFinite(time)) return ""
+  const t = (key: keyof (typeof labMessages)["en"], vars?: Vars) => translate(labMessages, lang, key, vars)
   const minutes = Math.floor((now.getTime() - time) / 60_000)
-  if (minutes < 1) return "just now"
-  if (minutes < 60) return `${minutes} min ago`
+  if (minutes < 1) return t("just_now")
+  if (minutes < 60) return t("minutes_ago", { count: minutes })
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours} h ago`
+  if (hours < 24) return t("hours_ago", { count: hours })
   const days = Math.floor(hours / 24)
-  if (days === 1) return "yesterday"
-  if (days < 7) return `${days} days ago`
+  if (days === 1) return t("yesterday")
+  if (days < 7) return t("days_ago", { count: days })
   return formatDate(iso, "MMM d")
 }

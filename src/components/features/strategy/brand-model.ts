@@ -4,7 +4,9 @@
  */
 import type { AiTaskInput } from "@/lib/ai"
 import { PERSONALITY_TRAIT_MAP, TONE_MAP } from "@/lib/constants"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type { BrandProfile, Database, GoalCategory, UpdateRow } from "@/lib/types"
+import { brandSectionMessages } from "./brand-messages"
 
 /** Every Brand HQ field the page edits, in page order. */
 export const BRAND_FORM_FIELDS = [
@@ -149,12 +151,13 @@ export function brandPatch(values: BrandFormValues): UpdateRow<"brand_profiles">
   }
 }
 
-export function validateBrand(values: BrandFormValues): BrandErrors {
+export function validateBrand(values: BrandFormValues, lang: UiLang = "en"): BrandErrors {
+  const t = translator(brandSectionMessages, lang)
   const errors: BrandErrors = {}
-  if (!values.name.trim()) errors.name = "Add your name — every AI draft is written as you."
+  if (!values.name.trim()) errors.name = t("error_name")
   const years = values.years_experience
   if (years !== null && (!Number.isFinite(years) || years < 0 || years > 80)) {
-    errors.years_experience = "Enter a number of years between 0 and 80."
+    errors.years_experience = t("error_years")
   }
   return errors
 }

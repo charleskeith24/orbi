@@ -6,9 +6,12 @@ import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { InlineText, PillarBadge, PlatformLabel } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { createIdea, dataActions, useDataStore, useTable } from "@/lib/store"
 import type { ContentIdea, Database, ID } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { strategistIdeasMessages } from "./strategist-messages"
 import { clip, withSavedIdeas, type StrategistTurn, type SuggestedIdea } from "./turns"
 
 const INITIAL = 3
@@ -48,6 +51,8 @@ export function SuggestedIdeas({ turn, onNavigate }: { turn: StrategistTurn; onN
   const ideaRows = useTable("content_ideas")
   const [drafts, setDrafts] = useState<Record<number, Draft>>({})
   const [expanded, setExpanded] = useState(false)
+  const t = useT(strategistIdeasMessages)
+  const c = useT(commonMessages)
 
   const savedIdeas = useMemo(() => {
     const byId = new Map(ideaRows.map((idea) => [idea.id, idea]))
@@ -70,9 +75,9 @@ export function SuggestedIdeas({ turn, onNavigate }: { turn: StrategistTurn; onN
   function save(index: number) {
     const created = saveIdea(useDataStore.getState().db, turn.ideas[index], draftOf(index), turn.question)
     recordSaved(turn.id, { [String(index)]: created.id })
-    toast.success("Saved to Idea Bank", {
+    toast.success(t("saved"), {
       description: created.title,
-      action: { label: "Open", onClick: () => open(`/ideas?open=${created.id}`) },
+      action: { label: c("open"), onClick: () => open(`/ideas?open=${created.id}`) },
     })
   }
 
@@ -85,20 +90,20 @@ export function SuggestedIdeas({ turn, onNavigate }: { turn: StrategistTurn; onN
     const count = Object.keys(saved).length
     if (!count) return
     recordSaved(turn.id, saved)
-    toast.success(`${count} ideas saved to Idea Bank`, { action: { label: "Open Idea Bank", onClick: () => open("/ideas") } })
+    toast.success(t("saved_all", { count }), { action: { label: t("open_bank"), onClick: () => open("/ideas") } })
   }
 
   const unsaved = savedIdeas.filter((idea) => !idea).length
   const shown = expanded ? turn.ideas : turn.ideas.slice(0, INITIAL)
 
   return (
-    <section aria-label="Suggested ideas" className="flex flex-col gap-2">
+    <section aria-label={t("section_label")} className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-xs font-medium text-muted-foreground">Suggested ideas · {turn.ideas.length}</h4>
+        <h4 className="text-xs font-medium text-muted-foreground">{t("heading", { count: turn.ideas.length })}</h4>
         {unsaved > 1 ? (
           <Button type="button" variant="ghost" size="xs" onClick={saveAll}>
             <BookmarkPlus aria-hidden />
-            Save all {unsaved}
+            {t("save_all", { count: unsaved })}
           </Button>
         ) : null}
       </div>
@@ -124,7 +129,7 @@ export function SuggestedIdeas({ turn, onNavigate }: { turn: StrategistTurn; onN
           onClick={() => setExpanded((value) => !value)}
           className="self-start text-muted-foreground"
         >
-          {expanded ? "Show fewer" : `Show all ${turn.ideas.length}`}
+          {expanded ? t("show_fewer") : t("show_all", { count: turn.ideas.length })}
           <ChevronDown className={cn("transition-transform", expanded && "rotate-180")} aria-hidden />
         </Button>
       ) : null}
@@ -148,6 +153,7 @@ function IdeaCard({
   onOpen: (id: ID) => void
 }) {
   const hook = saved ? saved.hook : draft.hook
+  const t = useT(strategistIdeasMessages)
   return (
     <li className="flex flex-col gap-2 rounded-lg border bg-card p-3 dark:bg-input/20">
       {saved ? (
@@ -158,12 +164,12 @@ function IdeaCard({
           onSave={(title) => onChange({ ...draft, title })}
           required
           maxLength={200}
-          aria-label="Idea title"
+          aria-label={t("idea_title")}
           className="font-medium"
         />
       )}
       <div className="flex items-start gap-1.5 text-xs leading-5 text-muted-foreground">
-        <span className="shrink-0 font-medium">Hook</span>
+        <span className="shrink-0 font-medium">{t("hook")}</span>
         {saved ? (
           <span className="min-w-0 break-words">{hook || "—"}</span>
         ) : (
@@ -172,8 +178,8 @@ function IdeaCard({
             onSave={(value) => onChange({ ...draft, hook: value })}
             multiline
             maxLength={300}
-            placeholder="Add a hook"
-            aria-label="Hook"
+            placeholder={t("add_hook")}
+            aria-label={t("hook")}
             className="min-w-0 flex-1 text-xs leading-5"
           />
         )}
@@ -187,13 +193,13 @@ function IdeaCard({
         {saved ? (
           <Button type="button" variant="ghost" size="xs" onClick={() => onOpen(saved.id)}>
             <Check className="text-good-fg" aria-hidden />
-            Saved · Open
+            {t("saved_open")}
             <ArrowUpRight aria-hidden />
           </Button>
         ) : (
           <Button type="button" variant="outline" size="xs" onClick={onSave}>
             <BookmarkPlus aria-hidden />
-            Save to Idea Bank
+            {t("save")}
           </Button>
         )}
       </div>

@@ -19,10 +19,13 @@ import { useNow } from "@/components/features/today/use-now"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { parseDate, toISODate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { logPublishedPost, uiActions, useBrand, useLookup } from "@/lib/store"
 import type { FunnelStage, HookCategory, ID, ISODateTime, PlatformId } from "@/lib/types"
 import { truncate } from "@/lib/utils"
 import { CaptureBody, CaptureDialog, CaptureFooter, CaptureHeader, ShortcutHint } from "./capture-dialog"
+import { captureMessages, logPostMessages } from "./capture-messages"
 import {
   emptyMetricDraft,
   hasAnyMetric,
@@ -64,6 +67,9 @@ export function LogPostDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 
 function LogPostForm({ onClose }: { onClose: () => void }) {
   const router = useRouter()
+  const t = useT(logPostMessages)
+  const f = useT(captureMessages)
+  const c = useT(commonMessages)
   const id = useId()
   const field = (name: string) => `${id}-${name}`
   const now = useNow()
@@ -91,13 +97,13 @@ function LogPostForm({ onClose }: { onClose: () => void }) {
 
   const publishedDate = parseDate(values.publishedAt)
   const errors: Record<FieldKey, string | null> = {
-    title: values.title.trim() ? null : "Give the post a title.",
+    title: values.title.trim() ? null : t("title_required"),
     publishedAt: !publishedDate
-      ? "When did it go live?"
+      ? t("when_live")
       : publishedDate.getTime() > now.getTime() + FUTURE_TOLERANCE_MS
-        ? "That time hasn't happened yet — plan upcoming posts in the Calendar."
+        ? t("future")
         : null,
-    url: isValidUrl(values.url) ? null : "Enter a full link, e.g. https://facebook.com/…",
+    url: isValidUrl(values.url) ? null : t("url_invalid"),
   }
   const firstError = errors.title ?? errors.publishedAt ?? errors.url
   const valid = firstError === null
@@ -129,13 +135,14 @@ function LogPostForm({ onClose }: { onClose: () => void }) {
       },
       metrics: withNumbers ? { ...toMetricValues(metrics), recorded_at: toISODate(new Date()) } : null,
     })
-    const open = { label: "Open", onClick: () => router.push(`/studio/${item.id}`) }
-    toast.success("Post logged", {
-      description: `${truncate(item.title, 60)}${withNumbers ? " · first numbers saved" : ""}`,
+    const open = { label: t("open"), onClick: () => router.push(`/studio/${item.id}`) }
+    const title = truncate(item.title, 60)
+    toast.success(t("logged"), {
+      description: withNumbers ? t("logged_with_numbers", { title }) : title,
       ...(withNumbers
         ? { action: open }
         : {
-            action: { label: "Add analytics", onClick: () => uiActions.openDialog({ type: "add-metrics", itemId: item.id }) },
+            action: { label: t("add_analytics"), onClick: () => uiActions.openDialog({ type: "add-metrics", itemId: item.id }) },
             cancel: open,
           }),
     })
@@ -153,17 +160,17 @@ function LogPostForm({ onClose }: { onClose: () => void }) {
       onKeyDown={(event) => submitOnModEnter(event, submit)}
     >
       <CaptureHeader
-        title="Log published post"
-        description="Record a post that went out without the app so it counts toward consistency, analytics and winners."
+        title={t("heading")}
+        description={t("description")}
       />
       <CaptureBody className="flex flex-col gap-4">
-        <FormField label="Title" htmlFor={field("title")} required error={shown("title")}>
+        <FormField label={f("title")} htmlFor={field("title")} required error={shown("title")}>
           <Input
             id={field("title")}
             autoFocus
             value={values.title}
             maxLength={200}
-            placeholder="What was the post about?"
+            placeholder={t("title_placeholder")}
             aria-invalid={Boolean(shown("title")) || undefined}
             onChange={(event) => set("title", event.target.value)}
             onBlur={() => setTouched((t) => ({ ...t, title: true }))}
@@ -171,10 +178,10 @@ function LogPostForm({ onClose }: { onClose: () => void }) {
         </FormField>
 
         <FormRow>
-          <FormField label="Platform" htmlFor={field("platform")} required>
+          <FormField label={t("platform")} htmlFor={field("platform")} required>
             <PlatformSelect id={field("platform")} value={values.platform} onChange={(next) => next && set("platform", next)} />
           </FormField>
-          <FormField label="Published" htmlFor={field("published")} required error={shown("publishedAt")}>
+          <FormField label={t("published")} htmlFor={field("published")} required error={shown("publishedAt")}>
             <DateTimePicker
               id={field("published")}
               value={values.publishedAt}
@@ -186,7 +193,7 @@ function LogPostForm({ onClose }: { onClose: () => void }) {
           </FormField>
         </FormRow>
 
-        <FormField label="Post URL" htmlFor={field("url")} error={shown("url")}>
+        <FormField label={t("post_url")} htmlFor={field("url")} error={shown("url")}>
           <Input
             id={field("url")}
             type="url"
@@ -201,48 +208,48 @@ function LogPostForm({ onClose }: { onClose: () => void }) {
         </FormField>
 
         <FormRow>
-          <FormField label="Pillar" htmlFor={field("pillar")}>
+          <FormField label={f("pillar")} htmlFor={field("pillar")}>
             <PillarSelect id={field("pillar")} allowNone value={values.pillarId} onChange={(next) => set("pillarId", next)} />
           </FormField>
-          <FormField label="Format" htmlFor={field("format")}>
+          <FormField label={f("format")} htmlFor={field("format")}>
             <FormatSelect id={field("format")} allowNone value={values.formatId} onChange={(next) => set("formatId", next)} />
           </FormField>
         </FormRow>
 
         <div className="grid min-w-0 gap-4 sm:grid-cols-[minmax(0,1fr)_11rem]">
-          <FormField label="Hook" htmlFor={field("hook")}>
+          <FormField label={f("hook")} htmlFor={field("hook")}>
             <Input
               id={field("hook")}
               value={values.hook}
               maxLength={300}
-              placeholder="The opening line you used"
+              placeholder={t("hook_placeholder")}
               onChange={(event) => set("hook", event.target.value)}
             />
           </FormField>
-          <FormField label="Hook type" htmlFor={field("hook-type")}>
+          <FormField label={f("hook_type")} htmlFor={field("hook-type")}>
             <HookCategorySelect id={field("hook-type")} allowNone value={values.hookCategory} onChange={(next) => set("hookCategory", next)} />
           </FormField>
         </div>
 
         <FormRow>
-          <FormField label="Funnel stage" htmlFor={field("funnel")}>
+          <FormField label={f("funnel_stage")} htmlFor={field("funnel")}>
             <FunnelSelect id={field("funnel")} allowNone value={values.funnel} onChange={(next) => set("funnel", next)} />
           </FormField>
-          <FormField label="Campaign" htmlFor={field("campaign")}>
+          <FormField label={f("campaign")} htmlFor={field("campaign")}>
             <CampaignSelect id={field("campaign")} allowNone value={values.campaignId} onChange={(next) => set("campaignId", next)} />
           </FormField>
         </FormRow>
 
         {showMetrics ? (
-          <section aria-label="First numbers" className="flex flex-col gap-3 rounded-lg border p-3">
+          <section aria-label={t("first_numbers")} className="flex flex-col gap-3 rounded-lg border p-3">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <h3 className="text-sm font-medium">First numbers</h3>
-                <p className="text-xs text-muted-foreground">Optional — you can add or update them any time.</p>
+                <h3 className="text-sm font-medium">{t("first_numbers")}</h3>
+                <p className="text-xs text-muted-foreground">{t("first_numbers_hint")}</p>
               </div>
               <Button type="button" variant="ghost" size="xs" className="text-muted-foreground" onClick={() => setShowMetrics(false)}>
                 <X aria-hidden />
-                Remove
+                {t("remove")}
               </Button>
             </div>
             <MetricFields
@@ -256,16 +263,16 @@ function LogPostForm({ onClose }: { onClose: () => void }) {
         ) : (
           <Button type="button" variant="outline" className="self-start" onClick={() => setShowMetrics(true)}>
             <ChartColumn aria-hidden />
-            Add first numbers
+            {t("add_first_numbers")}
           </Button>
         )}
       </CaptureBody>
       <CaptureFooter status={valid ? <ShortcutHint /> : <span className="truncate max-sm:hidden">{firstError}</span>}>
         <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={!valid}>
-          Log post
+          {t("log_post")}
         </Button>
       </CaptureFooter>
     </form>

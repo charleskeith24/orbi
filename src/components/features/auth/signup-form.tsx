@@ -2,10 +2,12 @@
 
 import { Check, CircleAlert, MailCheck } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
-import { AuthCard, AuthNotice } from "@/components/features/auth/auth-card"
-import { authPageHref, describeAuthError, emailRedirectUrl } from "@/components/features/auth/auth-client"
-import { fieldErrors, signUpSchema, type SignUpValues } from "@/components/features/auth/auth-schemas"
+import { useMemo, useState } from "react"
+import { useScreenLang, useScreenT } from "@/components/app-shell/device-ui-lang"
+import { AuthCard, AuthNotice, EmailSentence } from "@/components/features/auth/auth-card"
+import { authPageHref, describeAuthError, emailRedirectUrl, type AuthErrorLike } from "@/components/features/auth/auth-client"
+import { authSchemas, fieldErrors, type SignUpValues } from "@/components/features/auth/auth-schemas"
+import { authMessages } from "@/components/features/auth/messages"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
@@ -19,10 +21,13 @@ const linkClass = "font-medium text-foreground underline-offset-4 hover:underlin
 
 /** Email + password sign-up. Shows "Check your email to confirm" when the project requires confirmation. */
 export function SignupForm({ next }: { next: string }) {
+  const t = useScreenT(authMessages)
+  const lang = useScreenLang()
+  const { signUpSchema } = useMemo(() => authSchemas(lang), [lang])
   const [values, setValues] = useState<SignUpValues>({ full_name: "", email: "", password: "" })
   const [touched, setTouched] = useState<Record<FieldName, boolean>>({ full_name: false, email: false, password: false })
   const [pending, setPending] = useState(false)
-  const [formError, setFormError] = useState<string | null>(null)
+  const [formError, setFormError] = useState<AuthErrorLike | null>(null)
   const [confirmEmail, setConfirmEmail] = useState<string | null>(null)
   const [resend, setResend] = useState<"idle" | "sending" | "sent">("idle")
 
@@ -55,7 +60,7 @@ export function SignupForm({ next }: { next: string }) {
       options: { emailRedirectTo: emailRedirectUrl(next), data: full_name ? { full_name } : undefined },
     })
     if (error) {
-      setFormError(describeAuthError(error))
+      setFormError(error)
       setPending(false)
       return
     }
@@ -67,7 +72,7 @@ export function SignupForm({ next }: { next: string }) {
     setPending(false)
     // Supabase doesn't reveal existing accounts, but returns no identities for them.
     if (data.user && data.user.identities?.length === 0) {
-      setFormError(describeAuthError({ code: "user_already_exists" }))
+      setFormError({ code: "user_already_exists" })
       return
     }
     setConfirmEmail(email)
@@ -83,7 +88,7 @@ export function SignupForm({ next }: { next: string }) {
       options: { emailRedirectTo: emailRedirectUrl(next) },
     })
     if (error) {
-      setFormError(describeAuthError(error))
+      setFormError(error)
       setResend("idle")
     } else setResend("sent")
   }
@@ -92,31 +97,30 @@ export function SignupForm({ next }: { next: string }) {
     return (
       <AuthNotice
         icon={MailCheck}
-        title="Check your email to confirm"
+        title={t("confirm_title")}
         actions={
           <>
             <Button variant="outline" size="lg" onClick={() => void resendConfirmation()} disabled={resend !== "idle"}>
               {resend === "sending" ? (
                 <>
-                  <Spinner /> Sending…
+                  <Spinner /> {t("sending")}
                 </>
               ) : resend === "sent" ? (
                 <>
-                  <Check aria-hidden /> Confirmation email sent again
+                  <Check aria-hidden /> {t("confirmation_resent")}
                 </>
               ) : (
-                "Resend confirmation email"
+                t("resend_confirmation")
               )}
             </Button>
             <Button variant="ghost" size="lg" asChild>
-              <Link href={authPageHref("/login", next)}>Back to sign in</Link>
+              <Link href={authPageHref("/login", next)}>{t("back_to_sign_in")}</Link>
             </Button>
-            {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
+            {formError ? <p className="text-sm text-destructive">{describeAuthError(formError, lang)}</p> : null}
           </>
         }
       >
-        We sent a confirmation link to <span className="font-medium text-foreground">{confirmEmail}</span>. Open it to
-        activate your account and you&apos;ll land right in your workspace.
+        <EmailSentence template={t("confirm_sent")} email={confirmEmail} />
       </AuthNotice>
     )
   }
@@ -127,13 +131,13 @@ export function SignupForm({ next }: { next: string }) {
 
   return (
     <AuthCard
-      title="Create your account"
-      description="Your brand strategy, ideas, content and analytics, synced across devices."
+      title={t("signup_title")}
+      description={t("signup_description")}
       footer={
         <>
-          Already have an account?{" "}
+          {t("have_account")}{" "}
           <Link href={authPageHref("/login", next)} className={linkClass}>
-            Sign in
+            {t("sign_in")}
           </Link>
         </>
       }
@@ -141,7 +145,7 @@ export function SignupForm({ next }: { next: string }) {
       {formError ? (
         <Alert variant="destructive">
           <CircleAlert aria-hidden />
-          <AlertDescription>{formError}</AlertDescription>
+          <AlertDescription>{describeAuthError(formError, lang)}</AlertDescription>
         </Alert>
       ) : null}
 
@@ -155,13 +159,13 @@ export function SignupForm({ next }: { next: string }) {
         <FieldGroup className="gap-4">
           <Field data-invalid={nameError ? true : undefined}>
             <FieldLabel htmlFor="signup-full_name">
-              Name <span className="font-normal text-muted-foreground">(optional)</span>
+              {t("name")} <span className="font-normal text-muted-foreground">{t("optional")}</span>
             </FieldLabel>
-            <Input {...inputProps("full_name")} autoComplete="name" placeholder="Your name" autoFocus />
+            <Input {...inputProps("full_name")} autoComplete="name" placeholder={t("name_placeholder")} autoFocus />
             <FieldError id="signup-full_name-error">{nameError}</FieldError>
           </Field>
           <Field data-invalid={emailError ? true : undefined}>
-            <FieldLabel htmlFor="signup-email">Email</FieldLabel>
+            <FieldLabel htmlFor="signup-email">{t("email")}</FieldLabel>
             <Input
               {...inputProps("email")}
               type="email"
@@ -169,26 +173,26 @@ export function SignupForm({ next }: { next: string }) {
               inputMode="email"
               autoCapitalize="none"
               spellCheck={false}
-              placeholder="you@example.com"
+              placeholder={t("email_placeholder")}
             />
             <FieldError id="signup-email-error">{emailError}</FieldError>
           </Field>
           <Field data-invalid={passwordError ? true : undefined}>
-            <FieldLabel htmlFor="signup-password">Password</FieldLabel>
+            <FieldLabel htmlFor="signup-password">{t("password")}</FieldLabel>
             <Input {...inputProps("password")} type="password" autoComplete="new-password" />
             {passwordError ? (
               <FieldError id="signup-password-error">{passwordError}</FieldError>
             ) : (
-              <FieldDescription className="text-xs">At least 8 characters.</FieldDescription>
+              <FieldDescription className="text-xs">{t("password_hint")}</FieldDescription>
             )}
           </Field>
           <Button type="submit" size="lg" className="w-full" disabled={pending || !parsed.success}>
             {pending ? (
               <>
-                <Spinner /> Creating account…
+                <Spinner /> {t("creating_account")}
               </>
             ) : (
-              "Create account"
+              t("create_account")
             )}
           </Button>
         </FieldGroup>

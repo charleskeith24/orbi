@@ -2,91 +2,94 @@
 
 import Link from "next/link"
 import { FormField, FormRow, NumberField, PlatformToggleGroup } from "@/components/common"
+import { useT } from "@/lib/i18n"
 import { BrandSection, BrandTextField, type BrandSectionProps } from "./brand-fields"
+import { brandFieldMessages } from "./brand-messages"
 import { fieldId } from "./brand-model"
 
 /** Identity: who you are, what you do and where you publish. */
 export function IdentitySection({ values, set, errors }: BrandSectionProps) {
+  const t = useT(brandFieldMessages)
   return (
     <BrandSection sectionKey="identity">
       <FormRow>
         <BrandTextField
           field="name"
-          label="Your name"
+          label={t("name_label")}
           required
           autoComplete="name"
           value={values.name}
           error={errors.name}
-          placeholder="e.g. Maria Santos"
+          placeholder={t("name_placeholder")}
           onChange={(value) => set("name", value)}
         />
         <BrandTextField
           field="brand_name"
-          label="Brand name"
+          label={t("brand_name_label")}
           value={values.brand_name}
-          placeholder="e.g. Santos Studio"
+          placeholder={t("brand_name_placeholder")}
           onChange={(value) => set("brand_name", value)}
         />
       </FormRow>
       <FormRow>
         <BrandTextField
           field="role"
-          label="Role / profession"
+          label={t("role_label")}
           wrap
           value={values.role}
-          placeholder="e.g. Founder & CEO"
+          placeholder={t("role_placeholder")}
           onChange={(value) => set("role", value)}
         />
         <BrandTextField
           field="industry"
-          label="Industry"
+          label={t("industry_label")}
           wrap
           value={values.industry}
-          placeholder="e.g. E-commerce growth & performance advertising"
+          placeholder={t("industry_placeholder")}
           onChange={(value) => set("industry", value)}
         />
       </FormRow>
       <BrandTextField
         field="expertise_summary"
-        label="Expertise summary"
+        label={t("expertise_summary_label")}
         multiline
         value={values.expertise_summary}
-        placeholder="What you've done, for whom and at what scale."
-        description="Two or three sentences the AI uses to introduce you and back up your claims."
+        placeholder={t("expertise_summary_placeholder")}
+        description={t("expertise_summary_description")}
         onChange={(value) => set("expertise_summary", value)}
       />
       <FormRow>
-        <FormField label="Years of experience" htmlFor={fieldId("years_experience")} error={errors.years_experience}>
+        <FormField label={t("years_label")} htmlFor={fieldId("years_experience")} error={errors.years_experience}>
           <NumberField
             id={fieldId("years_experience")}
             value={values.years_experience}
             min={0}
             max={80}
-            suffix="years"
-            placeholder="e.g. 11"
+            suffix={t("years_suffix")}
+            placeholder={t("years_placeholder")}
             aria-invalid={Boolean(errors.years_experience) || undefined}
             onChange={(value) => set("years_experience", value)}
           />
         </FormField>
         <BrandTextField
           field="location"
-          label="Location"
+          label={t("location_label")}
           wrap
           autoComplete="address-level2"
           value={values.location}
-          placeholder="e.g. Pasig City, Metro Manila"
+          placeholder={t("location_placeholder")}
           onChange={(value) => set("location", value)}
         />
       </FormRow>
       <FormField
-        label="Main platforms"
+        label={t("platforms_label")}
         description={
           <>
-            Where you publish. Posting frequency and goals per platform live in{" "}
+            {t("platforms_hint_before")}
             <Link href="/strategy/platforms" className="font-medium text-foreground underline-offset-2 hover:underline">
-              Platforms
+              {t("platforms_hint_link")}
             </Link>
-            .
+            {t("platforms_hint_after")}
           </>
         }
       >
@@ -94,7 +97,7 @@ export function IdentitySection({ values, set, errors }: BrandSectionProps) {
           <PlatformToggleGroup
             value={values.main_platforms}
             onChange={(value) => set("main_platforms", value)}
-            aria-label="Main platforms"
+            aria-label={t("platforms_label")}
           />
         </div>
       </FormField>
@@ -109,48 +112,49 @@ export function PositioningSection({
   action,
   suggestions,
 }: BrandSectionProps & { action?: React.ReactNode; suggestions?: React.ReactNode }) {
+  const t = useT(brandFieldMessages)
   return (
     <BrandSection sectionKey="positioning" action={action}>
       {suggestions}
       <BrandTextField
         field="who_am_i"
-        label="Who am I?"
+        label={t("who_am_i_label")}
         multiline
         value={values.who_am_i}
-        placeholder="I'm … I started … Today I …"
-        description="Your story in a few sentences, in first person — the AI writes as this person."
+        placeholder={t("who_am_i_placeholder")}
+        description={t("who_am_i_description")}
         onChange={(value) => set("who_am_i", value)}
       />
       <BrandTextField
         field="known_for"
-        label="What do I want to be known for?"
+        label={t("known_for_label")}
         multiline
         value={values.known_for}
-        placeholder="The one or two things people should think of when they hear your name."
+        placeholder={t("known_for_placeholder")}
         onChange={(value) => set("known_for", value)}
       />
       <BrandTextField
         field="problems_solved"
-        label="What problems do I help solve?"
+        label={t("problems_label")}
         multiline
         value={values.problems_solved}
-        placeholder="The situations your audience is stuck in."
+        placeholder={t("problems_placeholder")}
         onChange={(value) => set("problems_solved", value)}
       />
       <BrandTextField
         field="why_listen"
-        label="Why should people listen to me?"
+        label={t("why_listen_label")}
         multiline
         value={values.why_listen}
-        placeholder="Proof: results, years, numbers, lived experience."
+        placeholder={t("why_listen_placeholder")}
         onChange={(value) => set("why_listen", value)}
       />
       <BrandTextField
         field="point_of_view"
-        label="What makes my point of view different?"
+        label={t("point_of_view_label")}
         multiline
         value={values.point_of_view}
-        placeholder="Opinionated beliefs you can defend from experience — one per sentence."
+        placeholder={t("point_of_view_placeholder")}
         onChange={(value) => set("point_of_view", value)}
       />
     </BrandSection>

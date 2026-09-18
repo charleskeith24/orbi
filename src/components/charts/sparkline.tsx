@@ -1,4 +1,8 @@
+"use client"
+
 import { CHART_SURFACE, seriesColor, type ChartColor } from "@/components/charts/colors"
+import { chartMessages } from "@/components/charts/messages"
+import { useT } from "@/lib/i18n"
 import { formatNumber, cn } from "@/lib/utils"
 
 export interface SparklineProps {
@@ -28,12 +32,15 @@ export function Sparkline({
   area = false,
   "aria-label": ariaLabel,
 }: SparklineProps) {
+  const t = useT(chartMessages)
   const points = values.map((v, i) => ({ i, v: typeof v === "number" && Number.isFinite(v) ? v : null }))
   const finite = points.filter((p): p is { i: number; v: number } => p.v !== null)
   const stroke = color === "muted" ? "var(--chart-muted)" : seriesColor(color)
   const label =
     ariaLabel ??
-    (finite.length ? `Trend from ${formatNumber(finite[0].v)} to ${formatNumber(finite[finite.length - 1].v)}` : "No trend data")
+    (finite.length
+      ? t("trend_from", { from: formatNumber(finite[0].v), to: formatNumber(finite[finite.length - 1].v) })
+      : t("no_trend"))
 
   if (finite.length === 0) {
     return (

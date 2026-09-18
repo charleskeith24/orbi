@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { onColorTextClass, seriesColor, type ChartColor } from "@/components/charts/colors"
 import { EmptyChart } from "@/components/charts/empty-chart"
+import { chartMessages } from "@/components/charts/messages"
 import {
   anchorFor,
   ChartTooltipCard,
@@ -13,6 +14,7 @@ import {
   type TooltipRow,
 } from "@/components/charts/primitives"
 import { defaultValueFormatter, estimateTextWidth, formatShare } from "@/components/charts/utils"
+import { useT, type Translator } from "@/lib/i18n"
 import { cn, sum } from "@/lib/utils"
 
 export interface MixSegment {
@@ -48,10 +50,10 @@ export interface MixBarProps {
 
 const GAP = 2
 
-function formatPoints(delta: number): string {
+function formatPoints(delta: number, t: Translator<(typeof chartMessages)["en"]>): string {
   const rounded = Math.round(delta)
-  if (rounded === 0) return "on target"
-  return `${rounded > 0 ? "+" : "−"}${Math.abs(rounded)} pts`
+  if (rounded === 0) return t("on_target")
+  return t("points", { sign: rounded > 0 ? "+" : "−", count: Math.abs(rounded) })
 }
 
 /** 100% stacked bar (part-to-whole) with 2px surface gaps, optional targets and a value legend. */
@@ -61,19 +63,21 @@ export function MixBar({
   height = 24,
   showLegend = true,
   valueFormatter = defaultValueFormatter,
-  valueLabel = "Value",
-  emptyMessage = "Nothing to show yet.",
+  valueLabel: valueLabelProp,
+  emptyMessage,
   className,
   "aria-label": ariaLabel,
 }: MixBarProps) {
+  const t = useT(chartMessages)
+  const valueLabel = valueLabelProp ?? t("value")
   const { measure: measureTrack, width: trackWidth } = useElementWidth<HTMLDivElement>()
   const { measure: measureWrap, width: wrapWidth, node: wrapNode } = useElementWidth<HTMLDivElement>()
   const [active, setActive] = useState<{ id: string; anchor: TooltipAnchor } | null>(null)
 
   const total = sum(segments.map((s) => Math.max(0, s.value)))
-  if (!(total > 0)) return <EmptyChart message={emptyMessage} height={96} className={className} />
+  if (!(total > 0)) return <EmptyChart message={emptyMessage ?? t("nothing_to_show")} height={96} className={className} />
 
-  const targetById = new Map((targets ?? []).map((t) => [t.id, t.value]))
+  const targetById = new Map((targets ?? []).map((target) => [target.id, target.value]))
   const hasTargets = targetById.size > 0
   const filled = segments.filter((s) => s.value > 0)
   const targetFilled = segments.filter((s) => (targetById.get(s.id) ?? 0) > 0)
@@ -90,13 +94,13 @@ export function MixBar({
 
   const tooltipRows = (segment: MixSegment): TooltipRow[] => {
     const rows: TooltipRow[] = [
-      { key: "share", label: "of total", value: formatShare(segment.value, total), color: segment.color },
+      { key: "share", label: t("of_total"), value: formatShare(segment.value, total), color: segment.color },
       { key: "value", label: valueLabel, value: valueFormatter(segment.value) },
     ]
     const target = targetById.get(segment.id)
     if (target !== undefined) {
-      rows.push({ key: "target", label: "target", value: `${Math.round(target)}%` })
-      rows.push({ key: "delta", label: "vs target", value: formatPoints((segment.value / total) * 100 - target) })
+      rows.push({ key: "target", label: t("target"), value: `${Math.round(target)}%` })
+      rows.push({ key: "delta", label: t("vs_target"), value: formatPoints((segment.value / total) * 100 - target, t) })
     }
     return rows
   }
@@ -111,7 +115,7 @@ export function MixBar({
           hasTargets ? "grid-cols-[auto_minmax(0,1fr)]" : "grid-cols-1"
         )}
       >
-        {hasTargets ? <span className="text-[11px] leading-none text-muted-foreground">Actual</span> : null}
+        {hasTargets ? <span className="text-[11px] leading-none text-muted-foreground">{t("lane_actual")}</span> : null}
         <div ref={measureTrack} className="flex min-w-0" style={{ height, gap: GAP }}>
           {filled.map((segment, i) => {
             const share = formatShare(segment.value, total)
@@ -123,7 +127,7 @@ export function MixBar({
                 role="img"
                 tabIndex={0}
                 aria-label={`${segment.label}: ${share} (${valueFormatter(segment.value)})${
-                  target !== undefined ? `, target ${Math.round(target)}%` : ""
+                  target !== undefined ? t("segment_target", { pct: Math.round(target) }) : ""
                 }`}
                 onPointerEnter={(event) => show(segment.id, event.currentTarget)}
                 onPointerLeave={hide}
@@ -144,7 +148,7 @@ export function MixBar({
         </div>
         {hasTargets ? (
           <>
-            <span className="text-[11px] leading-none text-muted-foreground">Target</span>
+            <span className="text-[11px] leading-none text-muted-foreground">{t("lane_target")}</span>
             <div aria-hidden className="flex h-1.5 min-w-0" style={{ gap: GAP }}>
               {targetFilled.map((segment, i) => (
                 <div
@@ -179,7 +183,7 @@ export function MixBar({
                 <span className="num font-medium text-foreground">{formatShare(segment.value, total)}</span>
                 <span className="num text-muted-foreground">({valueFormatter(segment.value)})</span>
                 {target !== undefined ? (
-                  <span className="num text-muted-foreground">· target {Math.round(target)}%</span>
+                  <span className="num text-muted-foreground">{t("legend_target", { pct: Math.round(target) })}</span>
                 ) : null}
               </li>
             )

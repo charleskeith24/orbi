@@ -5,10 +5,12 @@ import { useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PLATFORMS } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import { useTable } from "@/lib/store"
 import type { ContentItem, ID, InsertRow } from "@/lib/types"
 import { truncate } from "@/lib/utils"
 import { CaptureDialog, CaptureHeader } from "./capture-dialog"
+import { newContentMessages } from "./capture-messages"
 import { FromIdeaForm } from "./new-content-from-idea"
 import { FromScratchForm } from "./new-content-from-scratch"
 import type { ContentDefaults } from "./new-content-shared"
@@ -39,6 +41,7 @@ export function NewContentDialog({
 
 function NewContentForm({ ideaId, defaults, onClose }: { ideaId?: ID; defaults?: ContentDefaults; onClose: () => void }) {
   const router = useRouter()
+  const t = useT(newContentMessages)
   const ideas = useTable("content_ideas")
   const choosable = useMemo(() => ideas.filter((idea) => idea.status !== "archived"), [ideas])
   const [tab, setTab] = useState<Tab>(() =>
@@ -56,7 +59,7 @@ function NewContentForm({ ideaId, defaults, onClose }: { ideaId?: ID; defaults?:
   function created(items: ContentItem[], title: string) {
     if (!items.length) return
     const platforms = items.map((item) => PLATFORMS[item.platform]?.label ?? item.platform).join(", ")
-    toast.success(items.length > 1 ? `Created ${items.length} content items` : "Content created", {
+    toast.success(items.length > 1 ? t("created_many", { count: items.length }) : t("created_single"), {
       description: `${truncate(title, 60)} · ${platforms}`,
     })
     onClose()
@@ -66,12 +69,12 @@ function NewContentForm({ ideaId, defaults, onClose }: { ideaId?: ID; defaults?:
   return (
     <Tabs value={tab} onValueChange={switchTab} className="flex min-h-0 flex-1 flex-col gap-0">
       <CaptureHeader
-        title="New content"
-        description="Start from an idea or from scratch. One content item is created per platform, each with its own brief."
+        title={t("title")}
+        description={t("description")}
       >
         <TabsList className="mt-2 w-full sm:w-fit">
-          <TabsTrigger value="idea">From an idea</TabsTrigger>
-          <TabsTrigger value="scratch">From scratch</TabsTrigger>
+          <TabsTrigger value="idea">{t("tab_idea")}</TabsTrigger>
+          <TabsTrigger value="scratch">{t("tab_scratch")}</TabsTrigger>
         </TabsList>
       </CaptureHeader>
       <TabsContent

@@ -6,8 +6,10 @@ import { endOfDay, startOfDay } from "date-fns"
 import { previousPeriod, trailingDays, type DateRange } from "@/lib/analytics"
 import { PLATFORM_IDS } from "@/lib/constants"
 import { formatDate, parseDate, toISODate } from "@/lib/dates"
+import { translate, type UiLang } from "@/lib/i18n/core"
 import type { ISODate, PlatformId } from "@/lib/types"
 import { uniq } from "@/lib/utils"
+import { analyticsMessages } from "./messages"
 
 export type RangePreset = "7" | "30" | "90" | "180" | "all" | "custom"
 
@@ -76,8 +78,15 @@ export function validISODate(value: string | null | undefined): ISODate | null {
   return date && toISODate(date) === value ? value : null
 }
 
-export function rangeOptions(allowAll: boolean): RangeOption[] {
-  return RANGE_OPTIONS.filter((o) => allowAll || o.id !== "all")
+/** Presets offered on a page; labels and descriptions in `lang` (default English). */
+export function rangeOptions(allowAll: boolean, lang: UiLang = "en"): RangeOption[] {
+  const options = RANGE_OPTIONS.filter((o) => allowAll || o.id !== "all")
+  if (lang === "en") return options
+  return options.map((o) => ({
+    ...o,
+    label: o.id === "all" ? translate(analyticsMessages, lang, "label_all") : o.id === "custom" ? translate(analyticsMessages, lang, "label_custom") : o.label,
+    description: translate(analyticsMessages, lang, `range_${o.id}`),
+  }))
 }
 
 function isRangePreset(value: string | null, allowAll: boolean): value is RangePreset {
@@ -139,8 +148,8 @@ export function comparisonRange(range: DateRange | null): DateRange | null {
 }
 
 /** "Aug 13 – Sep 11, 2026" · "Dec 20, 2025 – Jan 5, 2026" · "All time". */
-export function describeRange(range: DateRange | null): string {
-  if (!range) return "All time"
+export function describeRange(range: DateRange | null, lang: UiLang = "en"): string {
+  if (!range) return translate(analyticsMessages, lang, "all_time")
   const sameYear = range.start.getFullYear() === range.end.getFullYear()
   const start = formatDate(range.start, sameYear ? "MMM d" : "MMM d, yyyy")
   return `${start} – ${formatDate(range.end, "MMM d, yyyy")}`

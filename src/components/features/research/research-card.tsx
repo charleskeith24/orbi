@@ -4,14 +4,17 @@ import { PillarBadge, PlatformIcon, Token } from "@/components/common"
 import type { SourceUsage } from "@/components/features/stories/story-model"
 import { PLATFORMS } from "@/lib/constants"
 import { formatDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import type { ContentPillar, ResearchItem } from "@/lib/types"
-import { cn, pluralize } from "@/lib/utils"
+import { cn, formatNumber } from "@/lib/utils"
+import { researchMessages } from "./messages"
 import { useResearchActions } from "./research-actions"
 import { ResearchActionsMenu } from "./research-actions-menu"
 import { ResearchStatusBadge, ResearchTypeBadge } from "./research-badges"
 
 /** Card view: type, status, title, byline, why it caught attention, the analysed angle, pillar and usage. */
 export function ResearchCard({ item, usage, pillar }: { item: ResearchItem; usage?: SourceUsage; pillar?: ContentPillar }) {
+  const t = useT(researchMessages)
   const actions = useResearchActions()
   const ideas = usage?.ideas.length ?? 0
   const byline = [item.creator, item.platform ? PLATFORMS[item.platform].label : item.source].filter(Boolean).join(" · ")
@@ -33,7 +36,7 @@ export function ResearchCard({ item, usage, pillar }: { item: ResearchItem; usag
           onClick={() => actions.open(item.id)}
           className="text-left outline-none after:absolute after:inset-0 after:rounded-lg after:content-['']"
         >
-          {item.title || "Untitled reference"}
+          {item.title || t("untitled")}
         </button>
       </h3>
       {byline ? (
@@ -46,7 +49,7 @@ export function ResearchCard({ item, usage, pillar }: { item: ResearchItem; usag
       {item.analysis?.angle ? (
         <div className="mt-3">
           <Token className="max-w-full font-normal text-muted-foreground">
-            <span className="truncate">Angle · {item.analysis.angle}</span>
+            <span className="truncate">{t("angle", { angle: item.analysis.angle })}</span>
           </Token>
         </div>
       ) : null}
@@ -54,7 +57,7 @@ export function ResearchCard({ item, usage, pillar }: { item: ResearchItem; usag
         <PillarBadge pillar={pillar ?? null} variant="plain" className="min-w-0" />
         <span className="ml-auto shrink-0 num">{formatDate(item.created_at, "MMM d")}</span>
         <span aria-hidden>·</span>
-        <span className={cn("shrink-0 num", ideas > 0 && "text-foreground/80")}>{ideas ? pluralize(ideas, "idea") : "No ideas yet"}</span>
+        <span className={cn("shrink-0 num", ideas > 0 && "text-foreground/80")}>{ideas ? t.plural("ideas", ideas, { count: formatNumber(ideas) }) : t("no_ideas")}</span>
       </div>
     </article>
   )

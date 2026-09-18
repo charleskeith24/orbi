@@ -20,6 +20,7 @@ import {
   weeklyPostingProgress,
 } from "@/lib/analytics"
 import { weekRange } from "@/lib/dates"
+import type { UiLang } from "@/lib/i18n/core"
 import type { AppSettings, Database } from "@/lib/types"
 import { buildWeekDays, platformGrowthRows, strategistPrompts } from "./dashboard-utils"
 import { firstSteps, hasPublishedContent, workspaceStartKey } from "./first-run"
@@ -27,11 +28,11 @@ import { firstSteps, hasPublishedContent, workspaceStartKey } from "./first-run"
 /** Trailing window for performance sections (top content, pillars, platforms). */
 export const PERFORMANCE_DAYS = 30
 
-export function computeDashboard(db: Database, settings: AppSettings, now: Date) {
+export function computeDashboard(db: Database, settings: AppSettings, now: Date, lang: UiLang = "en") {
   const weekly = weeklyPostingProgress(db, now, settings)
   const top = topPerformers(db, settings, now, { days: PERFORMANCE_DAYS, limit: 5 })
-  const pillars = pillarPerformance(db, now, { days: PERFORMANCE_DAYS, settings })
-  const mix = pillarMix(db, now, settings)
+  const pillars = pillarPerformance(db, now, { days: PERFORMANCE_DAYS, settings, lang })
+  const mix = pillarMix(db, now, settings, { lang })
   const growthCurrent = periodTotals(db, subDays(now, 6), now)
   const growthPrevious = periodTotals(db, subDays(now, 13), subDays(now, 7))
   const platformsNow = platformPerformance(db, now, { days: PERFORMANCE_DAYS, settings })
@@ -47,27 +48,27 @@ export function computeDashboard(db: Database, settings: AppSettings, now: Date)
     weekly,
     history: postingHistory(db, now, settings, 8),
     today: contentToday(db, now),
-    buffer: contentBuffer(db, now, settings),
+    buffer: contentBuffer(db, now, settings, lang),
     growth: {
       current: growthCurrent,
       previous: growthPrevious,
       deltas: comparePeriods(growthCurrent, growthPrevious),
       trend: timeSeries(db, now, { days: 28, metric: "followers_gained" }),
     },
-    health: contentHealthScore(db, now, settings),
+    health: contentHealthScore(db, now, settings, lang),
     pipeline: pipelineCounts(db, now),
     top,
     pillars,
     mix,
     platforms: platformGrowthRows(platformsNow, platformsBefore),
-    insights: strategicInsights(db, now, settings),
+    insights: strategicInsights(db, now, settings, lang),
     weekDays: buildWeekDays(db, now, settings.week_starts_on),
-    prompts: strategistPrompts({ mixWarning: mix.warnings[0], pillars, top: top[0], weekly }),
+    prompts: strategistPrompts({ mixWarning: mix.warnings[0], pillars, top: top[0], weekly }, lang),
     /** Nothing published yet: Home shows first steps instead of scores built on zeros. */
     hasPublished: hasPublishedContent(db.content_items),
     hasContent: db.content_items.length > 0,
     startKey: workspaceStartKey(db),
-    steps: firstSteps(db),
+    steps: firstSteps(db, lang),
   }
 }
 

@@ -10,10 +10,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { computeTiers, formatMultiple, isPublishedItem, latestMetricsByItem, publishedAtOf, type TierInfo } from "@/lib/analytics"
 import { BUFFER_STAGES, PERFORMANCE_TIERS, PLATFORMS, WINNER_METRIC_MAP } from "@/lib/constants"
 import { formatDate, toISODate } from "@/lib/dates"
+import { translate, useT, useUiLang, type UiLang } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions, logMetrics, useLookup, useSettings, useTable } from "@/lib/store"
 import type { AppSettings, ContentItem, ID, ISODate } from "@/lib/types"
 import { truncate } from "@/lib/utils"
 import { CaptureBody, CaptureDialog, CaptureFooter, CaptureHeader, ShortcutHint } from "./capture-dialog"
+import { addMetricsMessages, captureMessages } from "./capture-messages"
 import { draftFromSnapshot, hasAnyMetric, isVideoContent, submitOnModEnter, toMetricValues, type MetricDraft } from "./capture-utils"
 import { ContentPicker, SelectedContent } from "./content-picker"
 import { MetricFields, RatesPreview } from "./metric-fields"
@@ -38,25 +41,33 @@ export function AddMetricsDialog({
   )
 }
 
-function tierMessage(tier: TierInfo | undefined, item: ContentItem, settings: AppSettings, markedPublished: boolean) {
+function tierMessage(tier: TierInfo | undefined, item: ContentItem, settings: AppSettings, markedPublished: boolean, lang: UiLang) {
+  const t = (key: keyof (typeof addMetricsMessages)["en"] & string, vars?: Record<string, string | number>) =>
+    translate(addMetricsMessages, lang, key, vars)
   const platform = PLATFORMS[item.platform]?.label ?? item.platform
-  const title = truncate(item.title.trim() || "Untitled content", 60)
-  const published = markedPublished ? " Marked as published." : ""
+  const title = truncate(item.title.trim() || translate(captureMessages, lang, "untitled_content"), 60)
+  const published = markedPublished ? ` ${t("marked_published")}` : ""
   if (!tier || tier.ratio === null) {
     return {
-      title: "Analytics saved",
-      description: `${title} — not enough ${platform} posts to compare yet (tiers start after ${settings.winner_min_sample}).${published}`,
+      title: t("saved"),
+      description: `${t("not_enough", { title, platform, min: settings.winner_min_sample })}${published}`,
     }
   }
-  const metric = settings.winner_metric === "composite" ? "performance" : (WINNER_METRIC_MAP[settings.winner_metric]?.label.toLowerCase() ?? "views")
+  const metric =
+    settings.winner_metric === "composite"
+      ? t("metric_performance")
+      : (WINNER_METRIC_MAP[settings.winner_metric]?.label.toLowerCase() ?? t("metric_views"))
   return {
-    title: `Analytics saved · ${PERFORMANCE_TIERS[tier.tier].label}`,
-    description: `${title} — ${formatMultiple(tier.ratio)} your ${platform} average ${metric} over the last ${tier.sampleSize} posts.${published}`,
+    title: t("saved_tier", { tier: PERFORMANCE_TIERS[tier.tier].label }),
+    description: `${t("tier_description", { title, ratio: formatMultiple(tier.ratio), platform, metric, count: tier.sampleSize })}${published}`,
   }
 }
 
 function AddMetricsForm({ initialItemId, onClose }: { initialItemId?: ID; onClose: () => void }) {
   const router = useRouter()
+  const t = useT(addMetricsMessages)
+  const c = useT(commonMessages)
+  const lang = useUiLang()
   const formId = useId()
   const now = useNow()
   const today = toISODate(now)
@@ -86,15 +97,15 @@ function AddMetricsForm({ initialItemId, onClose }: { initialItemId?: ID; onClos
   const minDate = publishedAt ? toISODate(publishedAt) : undefined
 
   const errors = {
-    item: item ? null : "Choose the post these numbers belong to.",
+    item: item ? null : t("choose_post"),
     date: !recordedAt
-      ? "Pick the day you read these numbers."
+      ? t("pick_day")
       : recordedAt > today
-        ? "That day hasn't happened yet."
+        ? t("future_day")
         : minDate && recordedAt < minDate
-          ? `That's before it went live (${formatDate(minDate, "MMM d")}).`
+          ? t("before_live", { date: formatDate(minDate, "MMM d") })
           : null,
-    metrics: hasAnyMetric(values) ? null : "Enter at least one number.",
+    metrics: hasAnyMetric(values) ? null : t("enter_number"),
   }
   const firstError = errors.item ?? errors.date ?? errors.metrics
   const valid = firstError === null
@@ -123,14 +134,14 @@ function AddMetricsForm({ initialItemId, onClose }: { initialItemId?: ID; onClos
     try {
       logMetrics(item.id, { ...toMetricValues(values), recorded_at: recordedAt, notes: notes.trim(), source: "manual" })
     } catch (error) {
-      toast.error("Couldn't save analytics", { description: error instanceof Error ? error.message : String(error) })
+      toast.error(t("save_failed"), { description: error instanceof Error ? error.message : String(error) })
       return
     }
     const tier = computeTiers(dataActions.getDb(), settings, new Date()).get(item.id)
-    const message = tierMessage(tier, item, settings, !wasLive)
+    const message = tierMessage(tier, item, settings, !wasLive, lang)
     toast.success(message.title, {
       description: message.description,
-      action: { label: "Open", onClick: () => router.push(`/studio/${item.id}`) },
+      action: { label: t("open"), onClick: () => router.push(`/studio/${item.id}`) },
     })
     onClose()
   }
@@ -146,11 +157,11 @@ function AddMetricsForm({ initialItemId, onClose }: { initialItemId?: ID; onClos
       onKeyDown={(event) => submitOnModEnter(event, submit)}
     >
       <CaptureHeader
-        title="Add analytics"
-        description="Log the latest numbers for a post. Analytics, winner detection and reports update right away."
+        title={t("heading")}
+        description={t("description")}
       />
       <CaptureBody className="flex flex-col gap-5">
-        <FormField label="Post" required error={attempted ? errors.item : undefined}>
+        <FormField label={t("post")} required error={attempted ? errors.item : undefined}>
           {item ? (
             <SelectedContent item={item} previous={previous} onChange={() => setItemId(null)} />
           ) : (
@@ -161,13 +172,13 @@ function AddMetricsForm({ initialItemId, onClose }: { initialItemId?: ID; onClos
         {item ? (
           <>
             <FormField
-              label="Recorded on"
+              label={t("recorded_on")}
               htmlFor={`${formId}-date`}
               error={attempted ? errors.date : undefined}
               description={
                 previous
-                  ? `Pre-filled from the ${formatDate(previous.recorded_at, "MMM d")} snapshot — update what changed.`
-                  : "First numbers for this post."
+                  ? t("prefilled", { date: formatDate(previous.recorded_at, "MMM d") })
+                  : t("first_numbers")
               }
             >
               <DatePicker
@@ -196,14 +207,14 @@ function AddMetricsForm({ initialItemId, onClose }: { initialItemId?: ID; onClos
 
             <RatesPreview values={values} />
 
-            <FormField label="Notes" htmlFor={`${formId}-notes`}>
+            <FormField label={t("notes")} htmlFor={`${formId}-notes`}>
               <Textarea
                 id={`${formId}-notes`}
                 rows={2}
                 className="min-h-14"
                 value={notes}
                 maxLength={1000}
-                placeholder="Anything behind these numbers — a boost, a repost, a comment that took off…"
+                placeholder={t("notes_placeholder")}
                 onChange={(event) => setNotes(event.target.value)}
               />
             </FormField>
@@ -212,10 +223,10 @@ function AddMetricsForm({ initialItemId, onClose }: { initialItemId?: ID; onClos
       </CaptureBody>
       <CaptureFooter status={valid ? <ShortcutHint /> : <span className="truncate max-sm:hidden">{firstError}</span>}>
         <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={!valid}>
-          Save analytics
+          {t("save")}
         </Button>
       </CaptureFooter>
     </form>

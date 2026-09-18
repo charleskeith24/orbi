@@ -9,10 +9,13 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { useAiTask, type AiTaskOutput } from "@/lib/ai"
 import { HOOK_CATEGORIES } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions } from "@/lib/store"
 import type { ContentIdea } from "@/lib/types"
 import { IdeaAiError } from "./idea-ai-error"
 import { AutosaveTextarea } from "./idea-autosave"
+import { ideaDetailMessages } from "./idea-detail-messages"
 import { hookTopicFor } from "./idea-model"
 
 const HOOK_COUNT = 6
@@ -22,6 +25,7 @@ type GeneratedHook = AiTaskOutput<"generate_hooks">["hooks"][number]
 /** Hook field with "Generate hooks": editable suggestions → use one as the idea's hook or save it to the Hook Library. */
 export function IdeaHookField({ idea }: { idea: ContentIdea }) {
   const id = useId()
+  const t = useT(ideaDetailMessages)
   const hooks = useAiTask("generate_hooks")
   const [dismissed, setDismissed] = useState(false)
   const topic = hookTopicFor(idea)
@@ -35,9 +39,9 @@ export function IdeaHookField({ idea }: { idea: ContentIdea }) {
   return (
     <div className="flex flex-col gap-3">
       <FormField
-        label="Hook"
+        label={t("hook")}
         htmlFor={`${id}-hook`}
-        description="The first line, or the first two seconds."
+        description={t("hook_help")}
         labelAction={
           <AiButton
             type="button"
@@ -45,10 +49,10 @@ export function IdeaHookField({ idea }: { idea: ContentIdea }) {
             variant="ghost"
             pending={hooks.isPending}
             disabled={!topic}
-            title={topic ? "Write hook options for this idea" : "Add a title first"}
+            title={topic ? t("hook_ai_title") : t("hook_needs_title")}
             onClick={generate}
           >
-            {hooks.data ? "More hooks" : "Generate hooks"}
+            {hooks.data ? t("more_hooks") : t("generate_hooks")}
           </AiButton>
         }
       >
@@ -56,7 +60,7 @@ export function IdeaHookField({ idea }: { idea: ContentIdea }) {
           id={`${id}-hook`}
           rows={2}
           value={idea.hook}
-          placeholder="Write the opening line…"
+          placeholder={t("hook_placeholder")}
           onCommit={(hook) => dataActions.update("content_ideas", idea.id, { hook })}
         />
       </FormField>
@@ -64,16 +68,16 @@ export function IdeaHookField({ idea }: { idea: ContentIdea }) {
       {hooks.error ? <IdeaAiError message={hooks.error.message} onRetry={generate} /> : null}
 
       {results.length ? (
-        <section aria-label="Suggested hooks" className="flex flex-col gap-1 rounded-lg border bg-muted/30 p-3 dark:bg-muted/15">
+        <section aria-label={t("suggested_hooks")} className="flex flex-col gap-1 rounded-lg border bg-muted/30 p-3 dark:bg-muted/15">
           <div className="flex items-center gap-2">
-            <h4 className="text-xs font-medium">Suggested hooks</h4>
+            <h4 className="text-xs font-medium">{t("suggested_hooks")}</h4>
             <ProviderBadge provider={hooks.provider ?? "offline"} model={hooks.model ?? undefined} />
             <Button
               type="button"
               variant="ghost"
               size="icon-xs"
               className="ml-auto text-muted-foreground"
-              aria-label="Dismiss suggested hooks"
+              aria-label={t("dismiss_suggested")}
               onClick={() => setDismissed(true)}
             >
               <X aria-hidden />
@@ -84,7 +88,7 @@ export function IdeaHookField({ idea }: { idea: ContentIdea }) {
               <HookSuggestion key={`${index}-${hook.text}`} idea={idea} hook={hook} />
             ))}
           </ul>
-          <p className="text-xs text-muted-foreground">Edit any suggestion before you use it — keep the ones that sound like you.</p>
+          <p className="text-xs text-muted-foreground">{t("suggestions_note")}</p>
         </section>
       ) : null}
     </div>
@@ -93,6 +97,8 @@ export function IdeaHookField({ idea }: { idea: ContentIdea }) {
 
 function HookSuggestion({ idea, hook }: { idea: ContentIdea; hook: GeneratedHook }) {
   const router = useRouter()
+  const t = useT(ideaDetailMessages)
+  const c = useT(commonMessages)
   const [text, setText] = useState(hook.text)
   const [saved, setSaved] = useState(false)
   const clean = text.replace(/\s+/g, " ").trim()
@@ -102,7 +108,7 @@ function HookSuggestion({ idea, hook }: { idea: ContentIdea; hook: GeneratedHook
   function use() {
     if (!clean) return
     dataActions.update("content_ideas", idea.id, { hook: clean, hook_category: hook.category })
-    toast.success("Hook updated", { description: clean })
+    toast.success(t("hook_updated"), { description: clean })
   }
 
   function save() {
@@ -115,9 +121,9 @@ function HookSuggestion({ idea, hook }: { idea: ContentIdea; hook: GeneratedHook
       is_template: false,
     })
     setSaved(true)
-    toast.success("Saved to the Hook Library", {
+    toast.success(t("saved_to_hook_library"), {
       description: clean,
-      action: { label: "Open", onClick: () => router.push(`/ideas/hooks?open=${row.id}`) },
+      action: { label: c("open"), onClick: () => router.push(`/ideas/hooks?open=${row.id}`) },
     })
   }
 
@@ -127,7 +133,7 @@ function HookSuggestion({ idea, hook }: { idea: ContentIdea; hook: GeneratedHook
       <Textarea
         rows={1}
         value={text}
-        aria-label={`Suggested ${category.toLowerCase()} hook`}
+        aria-label={t("suggested_label", { category: category.toLowerCase() })}
         onChange={(event) => setText(event.target.value)}
         className="min-h-0 bg-background text-sm dark:bg-input/30"
       />
@@ -135,11 +141,11 @@ function HookSuggestion({ idea, hook }: { idea: ContentIdea; hook: GeneratedHook
       <div className="flex flex-wrap items-center gap-1.5">
         <Button type="button" size="xs" variant="outline" disabled={!clean || inUse} onClick={use}>
           {inUse ? <Check aria-hidden /> : null}
-          {inUse ? "In use" : "Use this hook"}
+          {inUse ? t("in_use") : t("use_hook")}
         </Button>
         <Button type="button" size="xs" variant="ghost" disabled={!clean || saved} onClick={save}>
           <BookmarkPlus aria-hidden />
-          {saved ? "Saved to library" : "Save to Hook Library"}
+          {saved ? t("saved_to_library") : t("save_to_hook_library")}
         </Button>
       </div>
     </li>

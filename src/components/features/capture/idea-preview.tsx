@@ -19,7 +19,9 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import type { AiTaskOutput } from "@/lib/ai"
 import { GOAL_CATEGORIES } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import type { Database, FunnelStage, GoalCategory, HookCategory, ID, InsertRow, PlatformId } from "@/lib/types"
+import { captureMessages } from "./capture-messages"
 
 /** The AI's structured idea, as an editable form model. */
 export interface IdeaDraft {
@@ -105,14 +107,15 @@ export function IdeaPreviewFields({
   titleError?: string
 }) {
   const id = useId()
+  const t = useT(captureMessages)
   const field = (name: string) => `${id}-${name}`
   const goalHint = draft.goal_id
     ? undefined
-    : `Suggested: a ${GOAL_CATEGORIES[draft.goal_category]?.label ?? "business"} goal — none is set up in Strategy yet.`
+    : t("goal_hint", { category: GOAL_CATEGORIES[draft.goal_category]?.label ?? t("goal_hint_fallback") })
 
   return (
     <div className="flex flex-col gap-4">
-      <FormField label="Title" htmlFor={field("title")} required error={titleError}>
+      <FormField label={t("title")} htmlFor={field("title")} required error={titleError}>
         <Input
           id={field("title")}
           value={draft.title}
@@ -123,41 +126,41 @@ export function IdeaPreviewFields({
       </FormField>
 
       <FormRow>
-        <FormField label="Core topic" htmlFor={field("topic")}>
+        <FormField label={t("core_topic")} htmlFor={field("topic")}>
           <Input
             id={field("topic")}
             value={draft.core_topic}
             maxLength={120}
-            placeholder="The topic in 2–6 words"
+            placeholder={t("core_topic_placeholder")}
             onChange={(event) => onChange({ core_topic: event.target.value })}
           />
         </FormField>
-        <FormField label="Funnel stage" htmlFor={field("funnel")}>
+        <FormField label={t("funnel_stage")} htmlFor={field("funnel")}>
           <FunnelSelect id={field("funnel")} allowNone value={draft.funnel_stage} onChange={(funnel_stage) => onChange({ funnel_stage })} />
         </FormField>
       </FormRow>
 
       <FormRow>
-        <FormField label="Pillar" htmlFor={field("pillar")}>
+        <FormField label={t("pillar")} htmlFor={field("pillar")}>
           <PillarSelect id={field("pillar")} allowNone value={draft.pillar_id} onChange={(pillar_id) => onChange({ pillar_id })} />
         </FormField>
-        <FormField label="Persona" htmlFor={field("persona")}>
+        <FormField label={t("persona")} htmlFor={field("persona")}>
           <PersonaSelect id={field("persona")} allowNone value={draft.persona_id} onChange={(persona_id) => onChange({ persona_id })} />
         </FormField>
       </FormRow>
 
       <div className="grid min-w-0 gap-4 sm:grid-cols-[minmax(0,1fr)_11rem]">
-        <FormField label="Hook" htmlFor={field("hook")}>
+        <FormField label={t("hook")} htmlFor={field("hook")}>
           <Textarea
             id={field("hook")}
             rows={2}
             className="min-h-14"
             value={draft.hook}
-            placeholder="The opening line that stops the scroll"
+            placeholder={t("hook_placeholder")}
             onChange={(event) => onChange({ hook: event.target.value })}
           />
         </FormField>
-        <FormField label="Hook type" htmlFor={field("hook-type")}>
+        <FormField label={t("hook_type")} htmlFor={field("hook-type")}>
           <HookCategorySelect
             id={field("hook-type")}
             allowNone
@@ -168,23 +171,23 @@ export function IdeaPreviewFields({
       </div>
 
       <FormRow>
-        <FormField label="Format" htmlFor={field("format")}>
+        <FormField label={t("format")} htmlFor={field("format")}>
           <FormatSelect id={field("format")} allowNone value={draft.format_id} onChange={(format_id) => onChange({ format_id })} />
         </FormField>
-        <FormField label="Angle" htmlFor={field("angle")}>
+        <FormField label={t("angle")} htmlFor={field("angle")}>
           <AngleSelect id={field("angle")} allowNone value={draft.angle_id} onChange={(angle_id) => onChange({ angle_id })} />
         </FormField>
       </FormRow>
 
-      <FormField label="Platforms">
-        <PlatformToggleGroup value={draft.platforms} onChange={(platforms) => onChange({ platforms })} aria-label="Platforms" />
+      <FormField label={t("platforms")}>
+        <PlatformToggleGroup value={draft.platforms} onChange={(platforms) => onChange({ platforms })} aria-label={t("platforms")} />
       </FormField>
 
       <FormRow>
-        <FormField label="Goal" htmlFor={field("goal")} description={goalHint}>
+        <FormField label={t("goal")} htmlFor={field("goal")} description={goalHint}>
           <GoalSelect id={field("goal")} allowNone value={draft.goal_id} onChange={(goal_id) => onChange({ goal_id })} />
         </FormField>
-        <FormField label="Audience problem" htmlFor={field("problem")}>
+        <FormField label={t("audience_problem")} htmlFor={field("problem")}>
           <ProblemSelect
             id={field("problem")}
             allowNone
@@ -195,7 +198,7 @@ export function IdeaPreviewFields({
         </FormField>
       </FormRow>
 
-      <FormField label="Description" htmlFor={field("description")}>
+      <FormField label={t("description")} htmlFor={field("description")}>
         <Textarea
           id={field("description")}
           rows={3}
@@ -204,7 +207,7 @@ export function IdeaPreviewFields({
         />
       </FormField>
 
-      <FormField label="Why it matters" htmlFor={field("why")}>
+      <FormField label={t("why_it_matters")} htmlFor={field("why")}>
         <Textarea
           id={field("why")}
           rows={2}
@@ -214,15 +217,15 @@ export function IdeaPreviewFields({
         />
       </FormField>
 
-      <FormField label="Talking points">
+      <FormField label={t("talking_points")}>
         <ListEditor
           variant="lines"
           value={draft.talking_points}
           onChange={(talking_points) => onChange({ talking_points })}
-          addLabel="Add talking point"
-          placeholder="A concrete point in your voice"
+          addLabel={t("add_talking_point")}
+          placeholder={t("talking_point_placeholder")}
           maxItems={8}
-          aria-label="Talking points"
+          aria-label={t("talking_points")}
         />
       </FormField>
     </div>

@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 
 export interface ConfirmOptions {
   title: React.ReactNode
@@ -38,10 +40,11 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel,
-  cancelLabel = "Cancel",
+  cancelLabel,
   destructive = true,
   onConfirm,
 }: ConfirmDialogProps) {
+  const c = useT(commonMessages)
   const [pending, setPending] = useState(false)
 
   async function handleConfirm() {
@@ -50,7 +53,7 @@ export function ConfirmDialog({
       await onConfirm()
       onOpenChange(false)
     } catch (error) {
-      toast.error("Something went wrong", { description: error instanceof Error ? error.message : String(error) })
+      toast.error(c("error_title"), { description: error instanceof Error ? error.message : String(error) })
     } finally {
       setPending(false)
     }
@@ -64,7 +67,7 @@ export function ConfirmDialog({
           {description ? <AlertDialogDescription>{description}</AlertDialogDescription> : null}
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>{cancelLabel}</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>{cancelLabel ?? c("cancel")}</AlertDialogCancel>
           <Button
             type="button"
             variant={destructive ? "destructive" : "default"}
@@ -72,7 +75,7 @@ export function ConfirmDialog({
             onClick={() => void handleConfirm()}
           >
             {pending ? <Spinner /> : null}
-            {confirmLabel ?? (destructive ? "Delete" : "Confirm")}
+            {confirmLabel ?? (destructive ? c("delete") : c("confirm"))}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

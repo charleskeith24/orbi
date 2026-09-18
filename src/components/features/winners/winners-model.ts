@@ -5,8 +5,10 @@
  */
 import type { TieredRow } from "@/lib/analytics"
 import { PLATFORMS, WINNER_METRIC_MAP } from "@/lib/constants"
+import { translate, translator, type UiLang } from "@/lib/i18n/core"
 import type { AppSettings, Database, PerformanceTier, WinnerMetric } from "@/lib/types"
-import { countBy, formatNumber, formatPercent, matchesQuery, pluralize } from "@/lib/utils"
+import { countBy, formatNumber, formatPercent, matchesQuery } from "@/lib/utils"
+import { winnerRuleMessages } from "./messages"
 
 /* --------------------------------- Period --------------------------------- */
 
@@ -19,6 +21,11 @@ export const PERIOD_OPTIONS: { value: WinnerPeriod; label: string }[] = [
   { value: "365", label: "Last 12 months" },
   { value: "all", label: "All time" },
 ]
+
+/** PERIOD_OPTIONS with labels in `lang`. */
+export function periodOptions(lang: UiLang = "en"): { value: WinnerPeriod; label: string }[] {
+  return PERIOD_OPTIONS.map((o) => ({ ...o, label: translate(winnerRuleMessages, lang, `period_${o.value}`) }))
+}
 
 /** RangeOptions for getWinners / resolveRange ({} = all time). */
 export function periodRange(period: WinnerPeriod): { days?: number } {
@@ -76,6 +83,11 @@ export const TIER_FILTERS: { value: TierFilter; label: string }[] = [
   { value: "pinned", label: "Pinned" },
 ]
 
+/** TIER_FILTERS with labels in `lang`. */
+export function tierFilters(lang: UiLang = "en"): { value: TierFilter; label: string }[] {
+  return TIER_FILTERS.map((o) => ({ ...o, label: translate(winnerRuleMessages, lang, `tier_${o.value}`) }))
+}
+
 /** Facet value for posts without a pillar. */
 export const NO_PILLAR = "none"
 
@@ -109,6 +121,11 @@ export const SORT_OPTIONS: { value: WinnerSort; label: string }[] = [
   { value: "views", label: "Most views" },
   { value: "recent", label: "Newest first" },
 ]
+
+/** SORT_OPTIONS with labels in `lang`. */
+export function sortOptions(lang: UiLang = "en"): { value: WinnerSort; label: string }[] {
+  return SORT_OPTIONS.map((o) => ({ ...o, label: translate(winnerRuleMessages, lang, `sort_${o.value}`) }))
+}
 
 function byRatio(a: WinnerEntry, b: WinnerEntry): number {
   return (b.row.ratio ?? -1) - (a.row.ratio ?? -1) || b.row.views - a.row.views || a.row.id.localeCompare(b.row.id)
@@ -194,13 +211,12 @@ export function minComparisonPosts(settings: Pick<AppSettings, "winner_window" |
 }
 
 /** "Compared with the average views of the last 20 posts on the same platform". */
-export function detectionBasis(settings: Pick<AppSettings, "winner_metric" | "winner_window">): string {
+export function detectionBasis(settings: Pick<AppSettings, "winner_metric" | "winner_window">, lang: UiLang = "en"): string {
+  const t = translator(winnerRuleMessages, lang)
   const size = windowSize(settings)
-  const posts = size === 1 ? "the previous post" : `the last ${size} posts`
-  if (settings.winner_metric === "composite") {
-    return `Compared with ${posts} on the same platform, blending views, engagement rate, shares, saves and leads`
-  }
-  return `Compared with the average ${winnerMetricNoun(settings.winner_metric)} of ${posts} on the same platform`
+  const posts = size === 1 ? t("basis_previous_post") : t("basis_last_posts", { count: size })
+  if (settings.winner_metric === "composite") return t("basis_composite", { posts })
+  return t("basis_metric", { metric: winnerMetricNoun(settings.winner_metric), posts })
 }
 
 export function thresholdSteps(settings: RuleSettings): { tier: PerformanceTier; label: string }[] {
@@ -218,21 +234,26 @@ export function formatWinnerValue(metric: WinnerMetric, value: number | null): s
   return formatNumber(value)
 }
 
-/** One sentence on how a post's tier was computed (value vs baseline, sample size) — or why it has none. */
-export function tierExplanation(row: TieredRow, settings: RuleSettings): string {
+/** One sentence on how a post's tier was computed (value vs baseline, sample size) — or why it has none. In `lang` (default English). */
+export function tierExplanation(row: TieredRow, settings: RuleSettings, lang: UiLang = "en"): string {
+  const t = translator(winnerRuleMessages, lang)
   const platform = PLATFORMS[row.platform].label
-  if (!row.metric) return `No analytics logged yet, so it can't be compared with your ${platform} baseline.`
+  if (!row.metric) return t("explain_no_metrics", { platform })
+  const count = formatNumber(row.sampleSize)
   if (row.ratio === null) {
     const min = minComparisonPosts(settings)
-    if (row.sampleSize < min) {
-      return `Only ${pluralize(row.sampleSize, `earlier measured ${platform} post`)} to compare with — tiers start after ${min}.`
-    }
-    return `Your ${platform} baseline is 0, so no multiple can be computed.`
+    if (row.sampleSize < min) return t.plural("explain_few", row.sampleSize, { count, platform, min })
+    return t("explain_zero", { platform })
   }
-  const posts = pluralize(row.sampleSize, `${platform} post`)
   if (settings.winner_metric === "composite") {
-    return `Performance index ${formatWinnerValue("composite", row.value)} vs 1.00 — the blended average of your previous ${posts}.`
+    return t.plural("explain_composite", row.sampleSize, { count, platform, value: formatWinnerValue("composite", row.value) })
   }
   const metric = settings.winner_metric
-  return `${formatWinnerValue(metric, row.value)} ${winnerMetricNoun(metric)} vs an average of ${formatWinnerValue(metric, row.baseline)} across your previous ${posts}.`
+  return t.plural("explain_metric", row.sampleSize, {
+    count,
+    platform,
+    value: formatWinnerValue(metric, row.value),
+    metric: winnerMetricNoun(metric),
+    baseline: formatWinnerValue(metric, row.baseline),
+  })
 }

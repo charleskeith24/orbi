@@ -3,22 +3,27 @@
 import { Plus, Sparkles } from "lucide-react"
 import { SectionCard } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import type { PillarPreset } from "./pillar-actions"
 import { PillarIconTile } from "./pillar-icons"
+import { pillarMessages } from "./pillar-messages"
 
 /** Recommended pillars (spec §6) that aren't in the workspace yet, one click to add. */
 export function RecommendedPillars({ presets, onAdd }: { presets: PillarPreset[]; onAdd: (presets: PillarPreset[]) => void }) {
+  const t = useT(pillarMessages)
+  const c = useT(commonMessages)
   if (!presets.length) return null
   return (
     <SectionCard
       icon={Sparkles}
-      title="Recommended pillars"
-      description="Most personal brands balance these themes. Add the ones you're missing — rename or retarget them anytime."
+      title={t("recommended_title")}
+      description={t("recommended_description")}
       action={
         presets.length > 1 ? (
           <Button type="button" size="sm" variant="outline" onClick={() => onAdd(presets)}>
             <Plus aria-hidden />
-            Add all {presets.length}
+            {t("add_all", { count: presets.length })}
           </Button>
         ) : null
       }
@@ -31,15 +36,15 @@ export function RecommendedPillars({ presets, onAdd }: { presets: PillarPreset[]
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">
                 {preset.name}
-                <span className="num font-normal text-muted-foreground"> · {preset.target_percentage}% target</span>
+                <span className="num font-normal text-muted-foreground"> · {t("pct_target", { pct: preset.target_percentage })}</span>
               </p>
               <p className="truncate text-xs text-muted-foreground">
                 {preset.description} — {preset.examples.slice(0, 3).join(", ")}
               </p>
             </div>
-            <Button type="button" size="sm" variant="ghost" onClick={() => onAdd([preset])} aria-label={`Add the ${preset.name} pillar`}>
+            <Button type="button" size="sm" variant="ghost" onClick={() => onAdd([preset])} aria-label={t("add_preset", { name: preset.name })}>
               <Plus aria-hidden />
-              Add
+              {c("add")}
             </Button>
           </li>
         ))}

@@ -5,24 +5,25 @@ import Link from "next/link"
 import { PageSection, SectionCard, StatusPill } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { OPERATING_RHYTHM, SYSTEM_PRINCIPLES } from "@/lib/constants"
+import { useT, useUiLang } from "@/lib/i18n"
 import { uiActions } from "@/lib/store"
+import { systemKnowledgeMessages, systemMessages } from "./system-messages"
 import type { PrincipleMetric, Tone } from "./system-model"
 import type { LoopStep, RhythmKey } from "./system-rhythm"
 
-const TONE_LABEL: Record<Tone, string> = {
-  good: "Strong",
-  warning: "Needs attention",
-  serious: "At risk",
-  critical: "Critical",
-  neutral: "No data yet",
-}
 
 /** The ten principles (spec §50), each with the live metric that shows the system enforcing it. */
 export function PrinciplesList({ metrics }: { metrics: PrincipleMetric[] }) {
+  const t = useT(systemMessages)
+  const tk = useT(systemKnowledgeMessages)
+  const lang = useUiLang()
+  // English comes straight from SYSTEM_PRINCIPLES; Taglish by position.
+  const principleText = (i: number, key: "title" | "description", english: string) =>
+    lang === "en" || i >= 10 ? english : tk(`principle_${(i + 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10}_${key}`)
   return (
     <SectionCard
-      title="The 10 principles"
-      description="The rules the system is built on — and how well your workspace follows each one right now."
+      title={t("principles_title")}
+      description={t("principles_description")}
       contentClassName="p-0"
     >
       <ol className="divide-y">
@@ -33,8 +34,8 @@ export function PrinciplesList({ metrics }: { metrics: PrincipleMetric[] }) {
             <li key={principle.title} className="grid gap-x-4 gap-y-2 px-4 py-3 md:grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)] md:items-start">
               <span className="text-xs leading-5 font-medium text-muted-foreground num">{String(i + 1).padStart(2, "0")}</span>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-pretty">{principle.title}</p>
-                <p className="text-xs text-pretty text-muted-foreground">{principle.description}</p>
+                <p className="text-sm font-medium text-pretty">{principleText(i, "title", principle.title)}</p>
+                <p className="text-xs text-pretty text-muted-foreground">{principleText(i, "description", principle.description)}</p>
               </div>
               <div className="flex min-w-0 flex-col gap-1 md:items-end md:text-right">
                 <p className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 md:justify-end">
@@ -43,7 +44,7 @@ export function PrinciplesList({ metrics }: { metrics: PrincipleMetric[] }) {
                 </p>
                 <p className="text-xs text-pretty text-muted-foreground">{metric.detail}</p>
                 <div className="flex flex-wrap items-center gap-2 md:justify-end">
-                  <StatusPill tone={metric.tone}>{TONE_LABEL[metric.tone]}</StatusPill>
+                  <StatusPill tone={metric.tone}>{t(`tone_${metric.tone satisfies Tone}`)}</StatusPill>
                   <Link href={metric.href} className="inline-flex items-center gap-0.5 text-xs font-medium underline-offset-2 hover:underline">
                     {metric.hrefLabel}
                     <ChevronRight className="size-3.5" aria-hidden />
@@ -63,8 +64,11 @@ const RHYTHM_KEYS: RhythmKey[] = ["daily", "weekly", "monthly"]
 
 /** Operating rhythm (spec §52): daily / weekly / monthly habits, each linked to where it happens, with live evidence. */
 export function OperatingRhythm({ evidence }: { evidence: Record<RhythmKey, string[]> }) {
+  const t = useT(systemMessages)
+  const tk = useT(systemKnowledgeMessages)
+  const lang = useUiLang()
   return (
-    <PageSection title="Operating rhythm" description="The habits that keep the flywheel turning — each one links to where it happens.">
+    <PageSection title={t("rhythm_title")} description={t("rhythm_description")}>
       <div className="grid min-w-0 gap-4 lg:grid-cols-3">
         {RHYTHM_KEYS.map((key) => {
           const rhythm = OPERATING_RHYTHM[key]
@@ -85,7 +89,9 @@ export function OperatingRhythm({ evidence }: { evidence: Record<RhythmKey, stri
                           <span className="text-sm font-medium">{step.label}</span>
                           <ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-hover/step:translate-x-0.5" aria-hidden />
                         </span>
-                        <span className="block text-xs text-pretty text-muted-foreground">{step.description}</span>
+                        <span className="block text-xs text-pretty text-muted-foreground">
+                          {lang === "en" || i >= 5 ? step.description : tk(`rhythm_${key}_${(i + 1) as 1 | 2 | 3 | 4 | 5}`)}
+                        </span>
                         {evidence[key][i] ? <span className="mt-0.5 block text-xs font-medium text-foreground/85">{evidence[key][i]}</span> : null}
                       </span>
                     </Link>
@@ -100,18 +106,20 @@ export function OperatingRhythm({ evidence }: { evidence: Record<RhythmKey, stri
   )
 }
 
+// Sent to the Content Strategist as the question, so it stays English (the AI follows Brand HQ's language).
 const STRATEGIST_PROMPT = "Based on my last 30 days of results, what should change in my content strategy next month?"
 
 /** The core loop (spec §1): Strategy → … → New strategy, each step linked to its module. */
 export function CoreLoop({ steps }: { steps: LoopStep[] }) {
+  const t = useT(systemMessages)
   return (
     <SectionCard
-      title="The core loop"
-      description="Every module serves one step. What you learn at the end becomes the next strategy."
+      title={t("loop_title")}
+      description={t("loop_description")}
       action={
         <Button type="button" variant="outline" size="sm" onClick={() => uiActions.askStrategist(STRATEGIST_PROMPT)}>
           <MessagesSquare aria-hidden />
-          Ask the Strategist
+          {t("ask_strategist")}
         </Button>
       }
     >
@@ -131,7 +139,7 @@ export function CoreLoop({ steps }: { steps: LoopStep[] }) {
             ) : (
               <span className="ml-2 inline-flex items-center gap-1 text-xs text-muted-foreground">
                 <RotateCcw className="size-4 text-brand" aria-hidden />
-                repeat
+                {t("repeat")}
               </span>
             )}
           </li>

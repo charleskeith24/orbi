@@ -5,6 +5,7 @@
  */
 import { addDays, addWeeks, differenceInCalendarDays, endOfDay, format, startOfDay, subDays } from "date-fns"
 import { FUNNEL_STAGE_IDS, FUNNEL_STAGES, HOOK_CATEGORIES, PLATFORMS } from "@/lib/constants"
+import { translate, type UiLang } from "@/lib/i18n/core"
 import type {
   AppSettings,
   CategoricalColor,
@@ -23,6 +24,7 @@ import type {
   PlatformId,
 } from "@/lib/types"
 import { average, ratio as percentOf, uniq } from "@/lib/utils"
+import { aggregateMessages } from "./messages"
 import { sharedPerformanceRows, type PerformanceRow } from "./metrics"
 import { sharedTieredRows, type TierInfo, type TieredRow } from "./performance"
 import {
@@ -166,6 +168,8 @@ export interface AggregateOptions extends RangeOptions {
   /** Used for tier ratios; defaults to the workspace settings row. */
   settings?: AppSettings
   platform?: PlatformId
+  /** Language of generated row labels such as "No pillar" (default English). */
+  lang?: UiLang
 }
 
 /** Tiered published rows inside the window (all time when no `days`/`start` is given). */
@@ -225,7 +229,7 @@ function byAvgViewsDesc(a: GroupAggregate, b: GroupAggregate): number {
 }
 
 /** Per pillar: every active pillar (in sort order, zero rows included), pillars with posts, then "No pillar". */
-export function groupByPillar(db: Database, rows: TieredRow[]): PillarAggregate[] {
+export function groupByPillar(db: Database, rows: TieredRow[], lang: UiLang = "en"): PillarAggregate[] {
   const groups = new Map(aggregateGroups(rows, (r) => r.pillarId).map((g) => [g.key, g]))
   const pillars = [...db.content_pillars].sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
   const known = new Set(pillars.map((p) => p.id))
@@ -236,7 +240,7 @@ export function groupByPillar(db: Database, rows: TieredRow[]): PillarAggregate[
     out.push({ ...(g ?? aggregateRows([], pillar.id)), pillar, label: pillar.name, color: pillar.color })
   }
   const orphans = rows.filter((r) => !r.pillarId || !known.has(r.pillarId))
-  if (orphans.length) out.push({ ...aggregateRows(orphans, NO_KEY), pillar: null, label: "No pillar", color: null })
+  if (orphans.length) out.push({ ...aggregateRows(orphans, NO_KEY), pillar: null, label: translate(aggregateMessages, lang, "no_pillar"), color: null })
   return out
 }
 
@@ -249,20 +253,24 @@ export function groupByPlatform(rows: TieredRow[]): PlatformAggregate[] {
 }
 
 /** Per content format (plus "No format"), sorted by total views desc. */
-export function groupByFormat(db: Database, rows: TieredRow[]): FormatAggregate[] {
+export function groupByFormat(db: Database, rows: TieredRow[], lang: UiLang = "en"): FormatAggregate[] {
   const formats = new Map(db.content_formats.map((f) => [f.id, f]))
   return aggregateGroups(rows, (r) => (r.formatId && formats.has(r.formatId) ? r.formatId : NO_KEY)).map((g) => {
     const format = formats.get(g.key) ?? null
-    return { ...g, format, label: format?.name ?? "No format" }
+    return { ...g, format, label: format?.name ?? translate(aggregateMessages, lang, "no_format") }
   })
 }
 
 /** Per hook style (spec §13), sorted by average views desc. */
-export function groupByHookCategory(rows: TieredRow[]): HookCategoryAggregate[] {
+export function groupByHookCategory(rows: TieredRow[], lang: UiLang = "en"): HookCategoryAggregate[] {
   return aggregateGroups(rows, (r) => r.hookCategory ?? NO_KEY)
     .map((g) => {
       const category = g.key === NO_KEY ? null : (g.key as HookCategory)
-      return { ...g, category, label: category ? (HOOK_CATEGORIES[category]?.label ?? category) : "No hook style" }
+      return {
+        ...g,
+        category,
+        label: category ? (HOOK_CATEGORIES[category]?.label ?? category) : translate(aggregateMessages, lang, "no_hook_style"),
+      }
     })
     .sort(byAvgViewsDesc)
 }
@@ -290,7 +298,7 @@ export function groupByAngle(db: Database, rows: TieredRow[]): AngleAggregate[] 
 }
 
 /** TOFU, MOFU, BOFU (always present, in funnel order) then "Unassigned" when any post lacks a stage. */
-export function groupByFunnel(rows: TieredRow[]): FunnelAggregate[] {
+export function groupByFunnel(rows: TieredRow[], lang: UiLang = "en"): FunnelAggregate[] {
   const groups = new Map(aggregateGroups(rows, (r) => r.funnelStage ?? NO_KEY).map((g) => [g.key, g]))
   const out: FunnelAggregate[] = FUNNEL_STAGE_IDS.map((stage) => ({
     ...(groups.get(stage) ?? aggregateRows([], stage)),
@@ -298,7 +306,7 @@ export function groupByFunnel(rows: TieredRow[]): FunnelAggregate[] {
     label: FUNNEL_STAGES[stage].label,
   }))
   const none = groups.get(NO_KEY)
-  if (none) out.push({ ...none, stage: null, label: "Unassigned" })
+  if (none) out.push({ ...none, stage: null, label: translate(aggregateMessages, lang, "unassigned") })
   return out
 }
 
@@ -353,7 +361,7 @@ export function groupByTopic(db: Database, rows: TieredRow[]): TopicAggregate[] 
 
 /** Dashboard table (Pillar | Posts | Avg Views | Engagement | Leads). */
 export function pillarPerformance(db: Database, now: Date, options: AggregateOptions = {}): PillarAggregate[] {
-  return groupByPillar(db, scopedRows(db, now, options))
+  return groupByPillar(db, scopedRows(db, now, options), options.lang)
 }
 
 export function platformPerformance(db: Database, now: Date, options: AggregateOptions = {}): PlatformAggregate[] {
@@ -361,12 +369,12 @@ export function platformPerformance(db: Database, now: Date, options: AggregateO
 }
 
 export function formatPerformance(db: Database, now: Date, options: AggregateOptions = {}): FormatAggregate[] {
-  return groupByFormat(db, scopedRows(db, now, options))
+  return groupByFormat(db, scopedRows(db, now, options), options.lang)
 }
 
 /** Which hook styles earn the highest views / retention / engagement / leads (spec §13). */
 export function hookCategoryPerformance(db: Database, now: Date, options: AggregateOptions = {}): HookCategoryAggregate[] {
-  return groupByHookCategory(scopedRows(db, now, options))
+  return groupByHookCategory(scopedRows(db, now, options), options.lang)
 }
 
 export function hookPerformance(db: Database, now: Date, options: AggregateOptions = {}): HookAggregate[] {
@@ -378,7 +386,7 @@ export function anglePerformance(db: Database, now: Date, options: AggregateOpti
 }
 
 export function funnelPerformance(db: Database, now: Date, options: AggregateOptions = {}): FunnelAggregate[] {
-  return groupByFunnel(scopedRows(db, now, options))
+  return groupByFunnel(scopedRows(db, now, options), options.lang)
 }
 
 /** By idea core topic, falling back to tag names, then pillar name. */

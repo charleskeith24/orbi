@@ -8,10 +8,13 @@ import { toast } from "sonner"
 import { AiNotice, PageContainer, PageHeader, ProviderBadge } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { useAiStatus, useAiTask } from "@/lib/ai"
+import { useT, useUiLang } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { createIdea, dataActions, useDb, useLookup, useSettings } from "@/lib/store"
 import type { ContentIdea } from "@/lib/types"
 import { uid } from "@/lib/utils"
 import type { DraftLookups } from "./generated-idea-card"
+import { generatorMessages } from "./generator-messages"
 import { GeneratorEmptyState } from "./generator-empty"
 import { GeneratorBriefForm } from "./generator-form"
 import {
@@ -33,6 +36,7 @@ import {
 import { GeneratorResults, type PendingJob } from "./generator-results"
 import { generatorActions, useGeneratorStore } from "./generator-store"
 import { LabAiError } from "./lab-ai-error"
+import { labMessages } from "./messages"
 import { RecentGenerations } from "./recent-generations"
 import { useGeneratorUrl } from "./use-generator-url"
 import { useNow } from "./use-now"
@@ -48,6 +52,19 @@ function isNarrowScreen(): boolean {
 
 const selectableKeys = (batch: GeneratedBatch) => batch.drafts.filter((d) => !d.saved_idea_id && d.title.trim()).map((d) => d.key)
 
+/** `parseBriefParams` reports ignored link parts in English; show them in the UI language. */
+const IGNORED_KEYS: Record<string, keyof (typeof generatorMessages)["en"]> = {
+  "content pillar": "ignored_content_pillar",
+  persona: "ignored_persona",
+  "audience problem": "ignored_audience_problem",
+  platform: "ignored_platform",
+  goal: "ignored_goal",
+  "funnel stage": "ignored_funnel_stage",
+  angle: "ignored_angle",
+  format: "ignored_format",
+  "number of ideas": "ignored_count",
+}
+
 /**
  * Content Idea Generator (spec §11): a brief — pillar, audience, platform, goal, topic, funnel stage,
  * angle, problem, format, count — becomes strategic ideas via `generate_ideas`. Prefilled from the URL
@@ -56,6 +73,10 @@ const selectableKeys = (batch: GeneratedBatch) => batch.drafts.filter((d) => !d.
  */
 export function IdeaGeneratorView() {
   const router = useRouter()
+  const t = useT(generatorMessages)
+  const l = useT(labMessages)
+  const c = useT(commonMessages)
+  const lang = useUiLang()
   const db = useDb()
   const settings = useSettings()
   const status = useAiStatus()
@@ -96,7 +117,7 @@ export function IdeaGeneratorView() {
   const visible = useMemo(() => batches.filter((b) => !hidden.includes(b.id)), [batches, hidden])
   const visibleIds = useMemo(() => new Set(visible.map((b) => b.generationId ?? b.id)), [visible])
   const selected = useMemo(() => new Set(selectedKeys), [selectedKeys])
-  const examples = useMemo(() => exampleBriefs(db, now, settings), [db, now, settings])
+  const examples = useMemo(() => exampleBriefs(db, now, settings, undefined, lang), [db, now, settings, lang])
   const recent = useMemo(() => recentGenerations(db.ai_generations, db), [db])
   const ideaTitles = useMemo(() => {
     const map = new Map<string, ContentIdea>()
@@ -174,10 +195,10 @@ export function IdeaGeneratorView() {
     setSelectedKeys((keys) => keys.filter((key) => !savedKeys.has(key)))
     const first = created[0].idea
     const many = created.length > 1
-    toast.success(many ? `Saved ${created.length} ideas to the Idea Bank` : "Saved to the Idea Bank", {
-      description: many ? "They're in your Inbox, marked as from the Idea Generator." : first.title,
+    toast.success(many ? t("saved_many", { count: created.length }) : t("saved_single"), {
+      description: many ? t("saved_many_description") : first.title,
       action: {
-        label: many ? "View ideas" : "Open",
+        label: many ? t("view_ideas") : c("open"),
         onClick: () => router.push(many ? "/ideas?source=ai_generator&sort=created" : `/ideas?open=${first.id}`),
       },
     })
@@ -218,9 +239,9 @@ export function IdeaGeneratorView() {
     generatorActions.hideBatch(batch.id)
     const keys = new Set(batch.drafts.map((d) => d.key))
     setSelectedKeys((current) => current.filter((k) => !keys.has(k)))
-    toast.success("Batch dismissed", {
-      description: "It stays in Recent generations.",
-      action: { label: "Undo", onClick: () => generatorActions.showBatch(batch.id) },
+    toast.success(t("batch_dismissed"), {
+      description: t("batch_dismissed_description"),
+      action: { label: l("undo"), onClick: () => generatorActions.showBatch(batch.id) },
     })
   }
 
@@ -228,9 +249,9 @@ export function IdeaGeneratorView() {
     const previous = useGeneratorStore.getState().hidden
     generatorActions.hideAll()
     setSelectedKeys([])
-    toast.success("Results cleared", {
-      description: "Bring any batch back from Recent generations.",
-      action: { label: "Undo", onClick: () => generatorActions.setHidden(previous) },
+    toast.success(t("results_cleared"), {
+      description: t("results_cleared_description"),
+      action: { label: l("undo"), onClick: () => generatorActions.setHidden(previous) },
     })
   }
 
@@ -267,7 +288,7 @@ export function IdeaGeneratorView() {
     url.write(generation.brief)
     generatorActions.setLastBrief(generation.brief)
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
-    toast.success("Brief loaded", { description: "Adjust it if you like, then generate." })
+    toast.success(t("brief_loaded"), { description: t("brief_loaded_description") })
   }
 
   function runExample(example: ExampleBrief) {
@@ -288,7 +309,7 @@ export function IdeaGeneratorView() {
     <PageContainer>
       <PageHeader
         title="Idea Generator"
-        description="Strategic ideas built from your Brand HQ, audience problems, pillars and winners — not generic prompts."
+        description={t("description")}
         actions={
           <>
             <ProviderBadge provider={status.configured ? status.provider : "offline"} model={status.configured ? status.model : undefined} />
@@ -305,9 +326,9 @@ export function IdeaGeneratorView() {
       {ignored.length ? (
         <div role="status" className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">
           <span className="min-w-0 flex-1 text-pretty">
-            Part of this link ({ignored.join(", ")}) no longer matches your workspace, so the rest of the brief was applied.
+            {t("ignored", { parts: ignored.map((part) => (IGNORED_KEYS[part] ? t(IGNORED_KEYS[part]) : part)).join(", ") })}
           </span>
-          <Button type="button" variant="ghost" size="icon-xs" aria-label="Dismiss" onClick={() => setIgnored([])}>
+          <Button type="button" variant="ghost" size="icon-xs" aria-label={l("dismiss")} onClick={() => setIgnored([])}>
             <X aria-hidden />
           </Button>
         </div>
@@ -324,9 +345,7 @@ export function IdeaGeneratorView() {
             onReset={resetBrief}
             footer={
               <AiNotice>
-                {status.configured
-                  ? "AI output is a first draft — edit any idea until it sounds like you before saving."
-                  : "Offline templates build ideas from your Problem Bank, questions, stories and pillars. Set ANTHROPIC_API_KEY on the server to use Claude."}
+                {status.configured ? t("notice_configured") : t("notice_offline")}
               </AiNotice>
             }
           />

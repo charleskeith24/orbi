@@ -3,8 +3,10 @@
  * Pure and deterministic — the same selection and coverage always produce the same ranked list.
  */
 import { GOAL_CATEGORIES } from "@/lib/constants"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type { FunnelStage, GoalCategory, ID } from "@/lib/types"
 import { GOAL_FUNNEL } from "./funnel-utils"
+import { matrixMessages } from "./matrix-messages"
 
 export interface MatrixPillar {
   id: ID
@@ -157,7 +159,9 @@ interface Candidate {
 export function generateCombinations(
   selection: MatrixSelection,
   coverage: MatrixCoverage,
-  limit = MATRIX_LIMIT
+  limit = MATRIX_LIMIT,
+  /** Language of `reasons` (working titles stay English — they become idea titles). */
+  lang: UiLang = "en"
 ): MatrixCombo[] {
   const { pillars, formats, problems, goals, stages } = selection
   if (!comboCount(selection) || limit <= 0) return []
@@ -230,7 +234,7 @@ export function generateCombinations(
       stage,
       score: Math.round(c.score * 100) / 100,
       title: workingTitle(key, pillar.name, problem.text, stage.id),
-      reasons: reasonsFor({ pillar, format, problem, goal, stage }, factors),
+      reasons: reasonsFor({ pillar, format, problem, goal, stage }, factors, lang),
     }
   })
 }
@@ -286,25 +290,25 @@ export function workingTitle(key: string, pillarName: string, problemText: strin
 
 /* --------------------------------- Reasons --------------------------------- */
 
-const article = (word: string) => (/^[aeiou]/i.test(word) ? "an" : "a")
-
 /** Notes in a fixed explanatory order (strategic gap → audience need → coverage → fit), max three. */
 function reasonsFor(
   c: Pick<MatrixCombo, "pillar" | "format" | "problem" | "goal" | "stage">,
-  x: Factors
+  x: Factors,
+  lang: UiLang
 ): string[] {
+  const t = translator(matrixMessages, lang)
   const notes: string[] = []
-  if (x.duplicate < 0) notes.push("Similar content already exists — find a new angle")
+  if (x.duplicate < 0) notes.push(t("reason_duplicate"))
   if (c.pillar.need > 0.1 && c.pillar.deviation !== null && c.pillar.deviation < 0) {
-    notes.push(`${c.pillar.name} is ${Math.round(Math.abs(c.pillar.deviation))} pts under target`)
+    notes.push(t("reason_pillar_under", { pillar: c.pillar.name, pts: Math.round(Math.abs(c.pillar.deviation)) }))
   }
-  if (x.untapped > 0) notes.push(c.problem.ideaCount ? "Problem only exists as ideas so far" : "Untapped problem — no content yet")
-  if (clampSeverity(c.problem.severity) >= 4) notes.push(`Severity ${clampSeverity(c.problem.severity)}/5 problem`)
-  if (x.formatGap > 0) notes.push(`No ${c.format.name} in ${c.pillar.name} yet`)
-  if (c.stage.need > 0.1) notes.push(`${c.stage.label} is under its funnel target`)
+  if (x.untapped > 0) notes.push(c.problem.ideaCount ? t("reason_ideas_only") : t("reason_untapped"))
+  if (clampSeverity(c.problem.severity) >= 4) notes.push(t("reason_severity", { severity: clampSeverity(c.problem.severity) }))
+  if (x.formatGap > 0) notes.push(t("reason_format_gap", { format: c.format.name, pillar: c.pillar.name }))
+  if (c.stage.need > 0.1) notes.push(t("reason_stage_under", { stage: c.stage.label }))
   if (x.goalFit > 0) {
     const label = GOAL_CATEGORIES[c.goal.category]?.label ?? c.goal.category
-    notes.push(`${c.stage.label} suits ${article(label)} ${label} goal`)
+    notes.push(t(/^[aeiou]/i.test(label) ? "reason_goal_fit_an" : "reason_goal_fit_a", { stage: c.stage.label, goal: label }))
   }
   return notes.slice(0, 3)
 }

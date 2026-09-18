@@ -5,23 +5,26 @@ import { useId } from "react"
 import { FormField, ListEditor } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { useT } from "@/lib/i18n"
 import type { PlatformId } from "@/lib/types"
 import { cn, formatNumber } from "@/lib/utils"
 import type { SaveState } from "./brief-autosave"
+import { briefMessages } from "./brief-messages"
 
 /** Autosave status next to the tab title. */
 export function SaveIndicator({ state }: { state: SaveState }) {
+  const t = useT(briefMessages)
   return (
     <span aria-live="polite" className="inline-flex items-center gap-1 text-xs text-muted-foreground">
       {state === "saving" ? (
-        "Saving…"
+        t("saving")
       ) : state === "saved" ? (
         <>
           <CircleCheck className="size-3.5 text-good-fg" aria-hidden />
-          Saved
+          {t("saved")}
         </>
       ) : (
-        "Autosaves as you type"
+        t("autosaves")
       )}
     </span>
   )
@@ -43,21 +46,22 @@ export function SuggestionBox({
   onDismiss: () => void
   list?: boolean
 }) {
+  const t = useT(briefMessages)
   const id = useId()
   return (
     <div className="flex flex-col gap-2 rounded-md border border-brand/25 bg-brand-soft p-2.5">
       <div className="flex min-w-0 items-center gap-2">
         <Sparkles className="size-3.5 shrink-0 text-brand" aria-hidden />
         <label htmlFor={id} className="min-w-0 truncate text-xs font-medium">
-          Suggested {label.toLowerCase()}
+          {t("suggested", { label: label.toLowerCase() })}
         </label>
         <div className="ml-auto flex shrink-0 items-center gap-1">
           <Button type="button" variant="ghost" size="xs" onClick={onDismiss}>
-            Dismiss
+            {t("dismiss")}
           </Button>
           <Button type="button" size="xs" onClick={onApply}>
             <Check aria-hidden />
-            Apply
+            {t("apply")}
           </Button>
         </div>
       </div>
@@ -67,7 +71,7 @@ export function SuggestionBox({
         onChange={(event) => onChange(event.target.value)}
         className="min-h-12 bg-background/80 dark:bg-input/40"
       />
-      {list ? <p className="text-[11px] text-muted-foreground">One item per line.</p> : null}
+      {list ? <p className="text-[11px] text-muted-foreground">{t("one_per_line")}</p> : null}
     </div>
   )
 }
@@ -151,6 +155,7 @@ const CAPTION_LIMITS: Partial<Record<PlatformId, number>> = {
 
 /** "142 / 2,200 characters" — warns (icon + text) past the platform limit. */
 export function CaptionCounter({ text, platform, className }: { text: string; platform: PlatformId; className?: string }) {
+  const t = useT(briefMessages)
   const limit = CAPTION_LIMITS[platform]
   const length = [...text].length
   const over = limit !== undefined && length > limit
@@ -159,8 +164,8 @@ export function CaptionCounter({ text, platform, className }: { text: string; pl
     <p className={cn("flex items-center gap-1 text-xs text-muted-foreground num", over && "font-medium text-warning-fg", className)}>
       {over ? <TriangleAlert className="size-3.5 shrink-0" aria-hidden /> : null}
       {formatNumber(length)}
-      {limit ? ` / ${formatNumber(limit)}` : ""} characters
-      {over ? " — over the platform limit" : ""}
+      {limit ? ` / ${formatNumber(limit)}` : ""} {t("characters")}
+      {over ? ` — ${t("over_limit")}` : ""}
     </p>
   )
 }

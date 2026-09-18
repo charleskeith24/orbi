@@ -4,23 +4,28 @@ import { Award, Hash, MessageSquareQuote } from "lucide-react"
 import Link from "next/link"
 import { ColorDot, FormatCategoryIcon, PlatformIcon, SectionCard } from "@/components/common"
 import type { ReportHighlight, WeeklyReport } from "@/lib/analytics"
+import { useT } from "@/lib/i18n"
 import { useLookup } from "@/lib/store"
 import type { PlatformId } from "@/lib/types"
-import { cn } from "@/lib/utils"
-import { countLabel, formatHighlightMetric, rankedByLabel } from "./report-format"
+import { cn, formatNumber } from "@/lib/utils"
+import { reportMessages } from "./messages"
+import { formatHighlightMetric, rankedByLabel } from "./report-format"
+import { weeklyReportMessages } from "./weekly-messages"
 
 type HighlightField = "bestPlatform" | "bestPillar" | "bestTopic" | "bestFormat" | "bestHook"
 
-const ROWS: { field: HighlightField; label: string }[] = [
-  { field: "bestPlatform", label: "Platform" },
-  { field: "bestPillar", label: "Pillar" },
-  { field: "bestTopic", label: "Topic" },
-  { field: "bestFormat", label: "Format" },
-  { field: "bestHook", label: "Hook style" },
+const ROWS: { field: HighlightField; label: "row_platform" | "row_pillar" | "row_topic" | "row_format" | "row_hook" }[] = [
+  { field: "bestPlatform", label: "row_platform" },
+  { field: "bestPillar", label: "row_pillar" },
+  { field: "bestTopic", label: "row_topic" },
+  { field: "bestFormat", label: "row_format" },
+  { field: "bestHook", label: "row_hook" },
 ]
 
 /** Best platform, pillar, topic, format and hook style of the week (measured posts, winner metric). */
 export function BestOfWeekCard({ report, className }: { report: WeeklyReport; className?: string }) {
+  const t = useT(weeklyReportMessages)
+  const r = useT(reportMessages)
   const pillars = useLookup("content_pillars")
   const formats = useLookup("content_formats")
 
@@ -42,8 +47,8 @@ export function BestOfWeekCard({ report, className }: { report: WeeklyReport; cl
 
   return (
     <SectionCard
-      title="Best of the week"
-      description={`Top measured group by ${rankedByLabel(report.rankedBy)}`}
+      title={t("best_of_week")}
+      description={t("top_group_by", { metric: rankedByLabel(report.rankedBy) })}
       icon={Award}
       className={cn("print:break-inside-avoid", className)}
     >
@@ -52,7 +57,7 @@ export function BestOfWeekCard({ report, className }: { report: WeeklyReport; cl
           const h = report[field]
           return (
             <div key={field} className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-baseline gap-3 py-2 first:pt-0 last:pb-0">
-              <dt className="text-xs text-muted-foreground">{label}</dt>
+              <dt className="text-xs text-muted-foreground">{t(label)}</dt>
               <dd className="min-w-0">
                 {h ? (
                   <>
@@ -72,11 +77,11 @@ export function BestOfWeekCard({ report, className }: { report: WeeklyReport; cl
                       )}
                     </span>
                     <span className="block truncate text-xs text-muted-foreground num">
-                      {formatHighlightMetric(h)} · {countLabel(h.posts, "post")}
+                      {formatHighlightMetric(h)} · {r.plural("posts", h.posts, { count: formatNumber(h.posts) })}
                     </span>
                   </>
                 ) : (
-                  <span className="text-sm text-muted-foreground">Not enough data</span>
+                  <span className="text-sm text-muted-foreground">{t("not_enough_data")}</span>
                 )}
               </dd>
             </div>

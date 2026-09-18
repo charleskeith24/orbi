@@ -4,7 +4,6 @@ import {
   type ClientRect,
   type CollisionDetection,
   type KeyboardCoordinateGetter,
-  type ScreenReaderInstructions,
 } from "@dnd-kit/core"
 
 /** Pointer drags target the day under the cursor; keyboard drags the target the item overlaps most. */
@@ -51,8 +50,3 @@ export const directionalCoordinates: KeyboardCoordinateGetter = (event, { contex
 }
 
 export const KEYBOARD_CODES = { start: ["Space"], cancel: ["Escape"], end: ["Space", "Enter"] }
-
-export const screenReaderInstructions: ScreenReaderInstructions = {
-  draggable:
-    "Press Space to pick up this item. Use the arrow keys to move it between days, then press Space or Enter to drop it, or Escape to cancel. Press Enter instead of Space to open the item's actions.",
-}

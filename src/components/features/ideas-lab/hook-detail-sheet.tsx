@@ -17,12 +17,16 @@ import { Button } from "@/components/ui/button"
 import { formatMultiple, type GroupAggregate } from "@/lib/analytics"
 import { HOOK_CATEGORIES } from "@/lib/constants"
 import { formatDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions, useLookup } from "@/lib/store"
 import type { ContentIdea, ContentItem, Hook } from "@/lib/types"
 import { formatNumber, formatPercent } from "@/lib/utils"
-import { countBlanks, formatHookMetric, HOOK_SOURCES, type HookStats } from "./hook-model"
+import { hookMessages } from "./hook-messages"
+import { countBlanks, formatHookMetric, type HookStats } from "./hook-model"
 import { FavoriteButton, HookMenu } from "./hook-row"
 import { HookText } from "./hook-text"
+import { labMessages } from "./messages"
 
 const LIST_LIMIT = 8
 
@@ -46,6 +50,8 @@ export function HookDetailSheet({
   onDuplicate: (hook: Hook) => void
   onDelete: (hook: Hook) => void
 }) {
+  const t = useT(hookMessages)
+  const c = useT(commonMessages)
   if (!hook) return null
   const template = countBlanks(hook.text) > 0
   return (
@@ -53,8 +59,12 @@ export function HookDetailSheet({
       open={open}
       onOpenChange={onOpenChange}
       width="md"
-      title={<HookText text={hook.text || "Untitled hook"} />}
-      description={`${HOOK_CATEGORIES[hook.category]?.label ?? "Custom"} hook · ${HOOK_SOURCES[hook.source]?.label ?? hook.source}${template ? " · Template" : ""} · added ${formatDate(hook.created_at, "MMM d, yyyy")}`}
+      title={<HookText text={hook.text || t("untitled_hook")} />}
+      description={t(template ? "sheet_description_template" : "sheet_description", {
+        category: HOOK_CATEGORIES[hook.category]?.label ?? "Custom",
+        source: t(`source_${hook.source}`),
+        date: formatDate(hook.created_at, "MMM d, yyyy"),
+      })}
       actions={
         <>
           <FavoriteButton hook={hook} className="size-7" />
@@ -65,11 +75,11 @@ export function HookDetailSheet({
         <>
           <Button type="button" variant="ghost" size="sm" className="mr-auto text-destructive hover:text-destructive" onClick={() => onDelete(hook)}>
             <Trash2 aria-hidden />
-            Delete
+            {c("delete")}
           </Button>
           <Button type="button" size="sm" onClick={() => onUse(hook)}>
             <Lightbulb aria-hidden />
-            Use hook
+            {t("use_hook")}
           </Button>
         </>
       }
@@ -91,6 +101,8 @@ export function MiniStat({ label, value, sub }: { label: string; value: string; 
 
 function HookSheetBody({ hook, stats, overall }: { hook: Hook; stats: HookStats; overall: GroupAggregate }) {
   const id = useId()
+  const t = useT(hookMessages)
+  const l = useT(labMessages)
   const items = useLookup("content_items")
   const ideas = useLookup("content_ideas")
   const linkedItems = useMemo(() => stats.itemIds.map((itemId) => items.get(itemId)).filter((item): item is ContentItem => Boolean(item)), [stats.itemIds, items])
@@ -101,14 +113,14 @@ function HookSheetBody({ hook, stats, overall }: { hook: Hook; stats: HookStats;
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <section className="flex min-w-0 flex-col gap-4">
-        <FormField label="Hook" description="Use ___ for the parts you fill in each time. Click to edit.">
+        <FormField label={t("hook")} description={t("hook_help")}>
           <InlineText
             value={hook.text}
             multiline
             required
             maxLength={300}
-            placeholder="Write the hook…"
-            aria-label="Hook text"
+            placeholder={t("write_hook")}
+            aria-label={t("hook_text")}
             onSave={(text) => {
               const clean = text.replace(/\s+/g, " ").trim()
               dataActions.update("hooks", hook.id, { text: clean, is_template: countBlanks(clean) > 0 })
@@ -116,7 +128,7 @@ function HookSheetBody({ hook, stats, overall }: { hook: Hook; stats: HookStats;
           />
         </FormField>
         <FormRow>
-          <FormField label="Hook style" htmlFor={`${id}-style`}>
+          <FormField label={t("hook_style")} htmlFor={`${id}-style`}>
             <HookCategorySelect
               id={`${id}-style`}
               value={hook.category}
@@ -125,17 +137,17 @@ function HookSheetBody({ hook, stats, overall }: { hook: Hook; stats: HookStats;
               }}
             />
           </FormField>
-          <FormField label="Content Pillar" htmlFor={`${id}-pillar`}>
+          <FormField label={t("content_pillar")} htmlFor={`${id}-pillar`}>
             <PillarSelect id={`${id}-pillar`} allowNone value={hook.pillar_id} onChange={(pillar_id) => dataActions.update("hooks", hook.id, { pillar_id })} />
           </FormField>
         </FormRow>
-        <FormField label="Notes">
+        <FormField label={t("notes")}>
           <InlineText
             value={hook.notes}
             multiline
             maxLength={1000}
-            placeholder="Why it works, when to use it…"
-            aria-label="Notes"
+            placeholder={t("notes_placeholder_sheet")}
+            aria-label={t("notes")}
             onSave={(notes) => dataActions.update("hooks", hook.id, { notes })}
           />
         </FormField>
@@ -143,35 +155,39 @@ function HookSheetBody({ hook, stats, overall }: { hook: Hook; stats: HookStats;
 
       <section aria-labelledby={`${id}-performance`} className="flex min-w-0 flex-col gap-3">
         <h3 id={`${id}-performance`} className="text-sm font-medium">
-          Performance
+          {l("performance")}
         </h3>
         {performance && performance.measured > 0 ? (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <MiniStat label="Posts" value={formatNumber(performance.posts)} sub={`${formatNumber(performance.measured)} with analytics`} />
+            <MiniStat label={l("posts")} value={formatNumber(performance.posts)} sub={l("with_analytics", { count: formatNumber(performance.measured) })} />
             <MiniStat
-              label="Avg views"
+              label={l("avg_views")}
               value={formatHookMetric(performance.avgViews, "views")}
-              sub={overall.avgViews && performance.avgViews ? `${formatMultiple(performance.avgViews / overall.avgViews)} your average` : undefined}
+              sub={
+                overall.avgViews && performance.avgViews
+                  ? l("vs_average", { multiple: formatMultiple(performance.avgViews / overall.avgViews) })
+                  : undefined
+              }
             />
             <MiniStat
-              label="Engagement"
+              label={l("engagement")}
               value={formatHookMetric(performance.engagementRate, "engagement")}
-              sub={overall.engagementRate !== null ? `Average ${formatPercent(overall.engagementRate)}` : undefined}
+              sub={overall.engagementRate !== null ? l("average_rate", { rate: formatPercent(overall.engagementRate) }) : undefined}
             />
-            <MiniStat label="Leads / post" value={formatHookMetric(performance.leadsPerPost, "leads")} />
-            <MiniStat label="Retention" value={formatHookMetric(performance.avgRetention, "retention")} />
-            <MiniStat label="Winners" value={formatNumber(performance.winners)} sub="Winner or Breakout" />
+            <MiniStat label={l("leads_per_post")} value={formatHookMetric(performance.leadsPerPost, "leads")} />
+            <MiniStat label={l("retention")} value={formatHookMetric(performance.avgRetention, "retention")} />
+            <MiniStat label={l("winners")} value={formatNumber(performance.winners)} sub={l("winner_or_breakout")} />
           </div>
         ) : (
           <p className="rounded-lg border border-dashed px-3 py-3 text-sm text-pretty text-muted-foreground">
-            No published posts with analytics use this hook yet. Pick it in a content brief, publish, and log analytics to see how it performs.
+            {t("no_performance")}
           </p>
         )}
       </section>
 
       <section aria-labelledby={`${id}-used`} className="flex min-w-0 flex-col gap-2">
         <h3 id={`${id}-used`} className="text-sm font-medium">
-          Used in
+          {l("used_in")}
         </h3>
         {linkedItems.length || linkedIdeas.length ? (
           <ul className="flex min-w-0 flex-col divide-y rounded-lg border">
@@ -182,7 +198,7 @@ function HookSheetBody({ hook, stats, overall }: { hook: Hook; stats: HookStats;
                   className="flex min-w-0 items-center gap-2 px-3 py-2 text-sm outline-none hover:bg-muted/50 focus-visible:bg-muted/50"
                 >
                   <PlatformIcon platform={item.platform} className="size-3.5 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate">{item.title || "Untitled content"}</span>
+                  <span className="min-w-0 flex-1 truncate">{item.title || l("untitled_content")}</span>
                   <StageBadge stage={item.stage} />
                 </Link>
               </li>
@@ -194,15 +210,15 @@ function HookSheetBody({ hook, stats, overall }: { hook: Hook; stats: HookStats;
                   className="flex min-w-0 items-center gap-2 px-3 py-2 text-sm outline-none hover:bg-muted/50 focus-visible:bg-muted/50"
                 >
                   <Lightbulb className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                  <span className="min-w-0 flex-1 truncate">{idea.title || "Untitled idea"}</span>
-                  <span className="text-xs text-muted-foreground">Idea</span>
+                  <span className="min-w-0 flex-1 truncate">{idea.title || l("untitled_idea")}</span>
+                  <span className="text-xs text-muted-foreground">{l("idea")}</span>
                 </Link>
               </li>
             ))}
-            {hidden ? <li className="px-3 py-2 text-xs text-muted-foreground">and {formatNumber(hidden)} more</li> : null}
+            {hidden ? <li className="px-3 py-2 text-xs text-muted-foreground">{l("and_more", { count: formatNumber(hidden) })}</li> : null}
           </ul>
         ) : (
-          <p className="text-sm text-pretty text-muted-foreground">Not used yet — “Use hook” turns it into an idea in one step.</p>
+          <p className="text-sm text-pretty text-muted-foreground">{t("not_used")}</p>
         )}
       </section>
     </div>

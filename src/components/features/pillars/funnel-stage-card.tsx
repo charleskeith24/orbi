@@ -3,13 +3,17 @@
 import Link from "next/link"
 import { SeriesKey } from "@/components/charts"
 import { FunnelBadge, Meter, PlatformIcon, Token } from "@/components/common"
+import { funnelGoalMessages } from "@/components/common/messages"
 import type { FunnelAggregate, FunnelMixRow } from "@/lib/analytics"
 import { FUNNEL_STAGES } from "@/lib/constants"
 import { contentItemDate, formatShortDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import type { FunnelStage } from "@/lib/types"
-import { formatCompact, formatNumber, formatPercent, pluralize } from "@/lib/utils"
+import { formatCompact, formatNumber, formatPercent } from "@/lib/utils"
+import { funnelMessages } from "./funnel-messages"
 import { FUNNEL_COLORS, type StageContent } from "./funnel-utils"
 import { MixStatusPill } from "./mix-status"
+import { pillarMessages } from "./pillar-messages"
 
 /** One funnel stage: its job, examples, share vs target, published performance and recent pieces. */
 export function FunnelStageCard({
@@ -32,6 +36,9 @@ export function FunnelStageCard({
   scaleMax: number
   windowLabel: string
 }) {
+  const t = useT(funnelMessages)
+  const p = useT(pillarMessages)
+  const goal = useT(funnelGoalMessages)
   const meta = FUNNEL_STAGES[stage]
   const actual = mix?.actualPct ?? 0
 
@@ -44,37 +51,37 @@ export function FunnelStageCard({
             <h3 className="text-sm leading-5 font-semibold">{meta.name}</h3>
             <FunnelBadge stage={stage} />
           </div>
-          <p className="mt-0.5 text-xs text-muted-foreground">{meta.goal}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{goal(stage)}</p>
         </div>
         <MixStatusPill status={mix?.status} deviation={mix?.deviation ?? 0} enoughData={enoughData} className="shrink-0" />
       </header>
 
       <div className="flex flex-col gap-2">
         <p className="text-xs text-muted-foreground">
-          <span className="num text-base leading-none font-semibold text-foreground">{Math.round(actual)}%</span> actual
+          <span className="num text-base leading-none font-semibold text-foreground">{Math.round(actual)}%</span> {p("actual_word")}
           <span aria-hidden> · </span>
-          target <span className="num font-medium text-foreground">{target}%</span>
+          {p("target_word")} <span className="num font-medium text-foreground">{target}%</span>
           <span aria-hidden> · </span>
-          {pluralize(mix?.count ?? 0, "item")}
+          {p.plural("items", mix?.count ?? 0, { count: formatNumber(mix?.count ?? 0) })}
         </p>
         <Meter
           value={actual}
           max={scaleMax}
           target={target}
           color={FUNNEL_COLORS[stage]}
-          aria-label={`${meta.label} share of content`}
-          valueText={`${Math.round(actual)}% actual, target ${target}%`}
+          aria-label={p("share_aria", { name: meta.label })}
+          valueText={p("actual_value", { actual: Math.round(actual), target })}
         />
       </div>
 
-      <dl className="grid grid-cols-4 gap-3 border-t pt-3" aria-label={`Published performance, ${windowLabel}`}>
-        <MiniStat label="Posts" value={formatNumber(perf?.posts ?? 0)} />
-        <MiniStat label="Avg views" value={formatCompact(perf?.avgViews ?? null)} />
-        <MiniStat label="Engagement" value={formatPercent(perf?.engagementRate ?? null)} />
-        <MiniStat label="Leads" value={formatNumber(perf?.leads ?? 0)} />
+      <dl className="grid grid-cols-4 gap-3 border-t pt-3" aria-label={p("performance_aria", { window: windowLabel })}>
+        <MiniStat label={p("posts")} value={formatNumber(perf?.posts ?? 0)} />
+        <MiniStat label={p("avg_views")} value={formatCompact(perf?.avgViews ?? null)} />
+        <MiniStat label={p("engagement")} value={formatPercent(perf?.engagementRate ?? null)} />
+        <MiniStat label={p("leads")} value={formatNumber(perf?.leads ?? 0)} />
       </dl>
 
-      <div className="flex min-w-0 flex-wrap gap-1" aria-label={`${meta.label} examples`}>
+      <div className="flex min-w-0 flex-wrap gap-1" aria-label={t("examples_aria", { label: meta.label })}>
         {meta.examples.map((example) => (
           <Token key={example} className="font-normal text-foreground/85">
             {example}
@@ -84,8 +91,8 @@ export function FunnelStageCard({
 
       <div className="mt-auto flex flex-col gap-1 border-t pt-3">
         <div className="flex items-center justify-between gap-2 text-xs">
-          <span className="font-medium text-muted-foreground">Recently published</span>
-          <span className="num text-muted-foreground">{formatNumber(content.inProduction)} in production</span>
+          <span className="font-medium text-muted-foreground">{t("recently_published")}</span>
+          <span className="num text-muted-foreground">{t("in_production", { count: formatNumber(content.inProduction) })}</span>
         </div>
         {content.recent.length ? (
           <ul className="-mx-2 flex flex-col">
@@ -96,14 +103,14 @@ export function FunnelStageCard({
                   className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1 outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50"
                 >
                   <PlatformIcon platform={item.platform} label className="size-3.5 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate text-sm">{item.title || "Untitled content"}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm">{item.title || p("untitled_content")}</span>
                   <span className="num shrink-0 text-xs text-muted-foreground">{formatShortDate(contentItemDate(item))}</span>
                 </Link>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="py-1 text-xs text-muted-foreground">Nothing published at this stage yet.</p>
+          <p className="py-1 text-xs text-muted-foreground">{t("nothing_published")}</p>
         )}
       </div>
     </article>

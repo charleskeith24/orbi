@@ -8,9 +8,12 @@ import { EmptyChart } from "@/components/charts"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { PIPELINE_STAGE_MAP, PLATFORM_IDS, PLATFORMS, PUBLISHED_STAGES } from "@/lib/constants"
 import { contentItemDate, parseDate, startOfWeek, toISODate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { useSettings } from "@/lib/store"
 import type { CategoricalColor, ContentCampaign, ContentItem, PlatformId } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { campaignDetailMessages } from "./messages"
 
 const LANE_HEIGHT = 34
 /** Same-day marks in one lane stack around the lane centre. */
@@ -95,7 +98,8 @@ function buildTimeline(campaign: ContentCampaign, items: ContentItem[], now: Dat
 }
 
 function TimelineMark({ mark, color }: { mark: Mark; color: CategoricalColor }) {
-  const title = mark.item.title || "Untitled content"
+  const t = useT(campaignDetailMessages)
+  const title = mark.item.title || t("untitled_content")
   const stage = PIPELINE_STAGE_MAP[mark.item.stage]?.label ?? mark.item.stage
   const when = format(mark.date, "EEE, MMM d")
   return (
@@ -103,7 +107,7 @@ function TimelineMark({ mark, color }: { mark: Mark; color: CategoricalColor }) 
       <TooltipTrigger asChild>
         <Link
           href={`/studio/${mark.item.id}`}
-          aria-label={`${title} — ${PLATFORMS[mark.item.platform].label}, ${stage}, ${when}`}
+          aria-label={t("mark_aria", { title, platform: PLATFORMS[mark.item.platform].label, stage, when })}
           className="absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-offset-1 ring-offset-card transition-transform outline-none hover:scale-125 focus-visible:scale-125 focus-visible:ring-2 focus-visible:ring-ring"
           style={{
             left: `${mark.left}%`,
@@ -130,16 +134,16 @@ function TimelineMark({ mark, color }: { mark: Mark; color: CategoricalColor }) 
  */
 export function CampaignTimeline({ campaign, items, now }: { campaign: ContentCampaign; items: ContentItem[]; now: Date }) {
   const settings = useSettings()
+  const t = useT(campaignDetailMessages)
+  const c = useT(commonMessages)
   const model = useMemo(() => buildTimeline(campaign, items, now, settings.week_starts_on), [campaign, items, now, settings.week_starts_on])
 
-  if (!model) return <EmptyChart message="Set start and end dates to see the campaign timeline." height={140} />
+  if (!model) return <EmptyChart message={t("timeline_no_dates")} height={140} />
   if (!model.lanes.some((l) => l.marks.length)) {
     return (
       <EmptyChart
         message={
-          items.length
-            ? "None of this campaign’s pieces has a date yet — schedule them or set due dates to place them here."
-            : "No content in this campaign yet. Pieces appear here on their publish or due dates."
+          items.length ? t("timeline_undated") : t("timeline_empty")
         }
         height={140}
       />
@@ -168,7 +172,7 @@ export function CampaignTimeline({ campaign, items, now }: { campaign: ContentCa
                   className="absolute top-0.5 z-10 -translate-x-1/2 rounded-sm bg-card px-1 text-[11px] font-medium text-foreground"
                   style={{ left: `${model.today}%` }}
                 >
-                  Today
+                  {c("today")}
                 </span>
               ) : null}
             </div>
@@ -203,7 +207,10 @@ export function CampaignTimeline({ campaign, items, now }: { campaign: ContentCa
                 <div
                   key={lane.platform}
                   role="list"
-                  aria-label={`${PLATFORMS[lane.platform].label}: ${pluralize(lane.marks.length, "piece")}`}
+                  aria-label={t("lane_aria", {
+                    platform: PLATFORMS[lane.platform].label,
+                    pieces: t.plural("pieces", lane.marks.length, { count: formatNumber(lane.marks.length) }),
+                  })}
                   className="relative border-b border-border/60 last:border-b-0"
                   style={{ height: LANE_HEIGHT }}
                 >
@@ -222,21 +229,23 @@ export function CampaignTimeline({ campaign, items, now }: { campaign: ContentCa
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
           <span aria-hidden className="size-2.5 rounded-full" style={{ backgroundColor: catVar(color) }} />
-          Published
+          {t("legend_published")}
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span aria-hidden className="size-2.5 rounded-full border-2 bg-card" style={{ borderColor: catVar(color) }} />
-          Planned
+          {t("legend_planned")}
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span aria-hidden className="h-3 w-px bg-foreground/60" />
-          Today
+          {c("today")}
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span aria-hidden className="h-2.5 w-4 rounded-[2px] bg-muted dark:bg-muted/50" />
-          Campaign window
+          {t("legend_window")}
         </span>
-        {model.undated ? <span className="sm:ml-auto">{pluralize(model.undated, "piece")} without a date not shown</span> : null}
+        {model.undated ? (
+          <span className="sm:ml-auto">{t.plural("undated_not_shown", model.undated, { count: formatNumber(model.undated) })}</span>
+        ) : null}
       </div>
     </div>
   )

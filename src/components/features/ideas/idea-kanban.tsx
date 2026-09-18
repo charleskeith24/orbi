@@ -24,13 +24,15 @@ import { memo, useMemo, useState } from "react"
 import { IDEA_STATUS_ICONS } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { IDEA_STATUS_MAP } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import type { ContentIdea, ID, IdeaStatus } from "@/lib/types"
-import { cn, formatNumber, pluralize } from "@/lib/utils"
+import { cn, formatNumber } from "@/lib/utils"
 import { useIdeaActions } from "./idea-actions"
 import { IdeaActionsMenu } from "./idea-actions-menu"
 import { IdeaCard } from "./idea-card"
 import { ALL_STATUSES, compareIdeas, type IdeaSort } from "./idea-model"
 import type { IdeaLookups } from "./idea-table"
+import { ideaBankMessages } from "./messages"
 
 const DROP_PREFIX = "status:"
 const droppableId = (status: IdeaStatus) => `${DROP_PREFIX}${status}`
@@ -40,17 +42,15 @@ function statusFromDroppable(id: UniqueIdentifier | null | undefined): IdeaStatu
   return ALL_STATUSES.includes(status) ? status : null
 }
 
-const statusLabel = (status: IdeaStatus | null | undefined) => (status ? (IDEA_STATUS_MAP[status]?.label ?? status) : "no status")
-
-/** One line per column explaining what belongs there (shown when it's empty). */
-const EMPTY_HINTS: Record<IdeaStatus, string> = {
-  inbox: "Captured ideas land here first.",
-  researching: "Ideas you're collecting examples, data or angles for.",
-  validated: "Ideas with a confirmed audience problem.",
-  selected: "Ideas chosen for an upcoming slot.",
-  converted: "Drop an idea here to turn it into content.",
-  archived: "Parked or rejected ideas.",
-}
+/** One line per column explaining what belongs there (shown when it's empty): `hint_<status>`. */
+const EMPTY_HINTS = {
+  inbox: "hint_inbox",
+  researching: "hint_researching",
+  validated: "hint_validated",
+  selected: "hint_selected",
+  converted: "hint_converted",
+  archived: "hint_archived",
+} as const satisfies Record<IdeaStatus, keyof (typeof ideaBankMessages)["en"]>
 
 /**
  * Pointer drags target the column under the cursor. Keyboard drags (no pointer) centre the card on the
@@ -90,11 +90,6 @@ const columnKeyboardCoordinates: KeyboardCoordinateGetter = (event, { context })
 
 const KEYBOARD_CODES = { start: ["Space"], cancel: ["Escape"], end: ["Space", "Enter", "Tab"] }
 
-const screenReaderInstructions: ScreenReaderInstructions = {
-  draggable:
-    "Press Space to pick up this idea. Use the left and right arrow keys to choose a status, then press Space or Enter to drop it, or Escape to cancel.",
-}
-
 // `relative` keeps absolutely positioned descendants (sr-only text) inside the board's scroll container.
 const FRAME = "relative snap-start rounded-lg border transition-[background-color,border-color] duration-150"
 
@@ -117,6 +112,7 @@ interface KanbanProps {
  */
 export function IdeaKanban({ ideas, visibleStatuses, sort, lookups, now, onOpen, onVisibleStatusesChange }: KanbanProps) {
   const actions = useIdeaActions()
+  const t = useT(ideaBankMessages)
   const [activeId, setActiveId] = useState<ID | null>(null)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -133,21 +129,23 @@ export function IdeaKanban({ ideas, visibleStatuses, sort, lookups, now, onOpen,
   }, [ideas, sort])
   const activeIdea = activeId ? byId.get(activeId) : undefined
 
+  const screenReaderInstructions = useMemo<ScreenReaderInstructions>(() => ({ draggable: t("sr_instructions") }), [t])
   const announcements = useMemo<Announcements>(() => {
-    const title = (id: UniqueIdentifier) => `“${byId.get(String(id))?.title.trim() || "Untitled idea"}”`
-    const from = (id: UniqueIdentifier) => byId.get(String(id))?.status
+    const statusLabel = (status: IdeaStatus | null | undefined) => (status ? (IDEA_STATUS_MAP[status]?.label ?? status) : t("no_status"))
+    const title = (id: UniqueIdentifier) => `“${byId.get(String(id))?.title.trim() || t("untitled_idea")}”`
+    const from = (id: UniqueIdentifier) => statusLabel(byId.get(String(id))?.status)
     return {
-      onDragStart: ({ active }) => `Picked up ${title(active.id)} from ${statusLabel(from(active.id))}.`,
-      onDragOver: ({ over }) => (over ? `Over ${statusLabel(statusFromDroppable(over.id))}.` : "Not over a status."),
+      onDragStart: ({ active }) => t("sr_pick", { title: title(active.id), status: from(active.id) }),
+      onDragOver: ({ over }) => (over ? t("sr_over", { status: statusLabel(statusFromDroppable(over.id)) }) : t("sr_not_over")),
       onDragEnd: ({ active, over }) => {
         const to = statusFromDroppable(over?.id)
-        return to && to !== from(active.id)
-          ? `Dropped ${title(active.id)} in ${statusLabel(to)}.`
-          : `${title(active.id)} stays in ${statusLabel(from(active.id))}.`
+        return to && to !== byId.get(String(active.id))?.status
+          ? t("sr_drop", { title: title(active.id), status: statusLabel(to) })
+          : t("sr_stay", { title: title(active.id), status: from(active.id) })
       },
-      onDragCancel: ({ active }) => `Move cancelled. ${title(active.id)} stays in ${statusLabel(from(active.id))}.`,
+      onDragCancel: ({ active }) => t("sr_cancel", { title: title(active.id), status: from(active.id) }),
     }
-  }, [byId])
+  }, [byId, t])
 
   function handleDragEnd({ active, over }: DragEndEvent) {
     setActiveId(null)
@@ -173,7 +171,7 @@ export function IdeaKanban({ ideas, visibleStatuses, sort, lookups, now, onOpen,
     >
       <div
         role="region"
-        aria-label="Idea Kanban"
+        aria-label={t("board_label")}
         className="relative flex h-[calc(100svh-18rem)] min-h-[26rem] snap-x gap-2.5 overflow-x-auto overscroll-x-contain pb-2"
       >
         {ALL_STATUSES.map((status) => (
@@ -232,6 +230,7 @@ const KanbanColumn = memo(function KanbanColumn({
   onExpand,
   onCollapse,
 }: ColumnProps) {
+  const t = useT(ideaBankMessages)
   const meta = IDEA_STATUS_MAP[status]
   const Icon = IDEA_STATUS_ICONS[status]
   const { setNodeRef, isOver } = useDroppable({ id: droppableId(status), data: { status } })
@@ -240,12 +239,12 @@ const KanbanColumn = memo(function KanbanColumn({
 
   if (!expanded) {
     return (
-      <section ref={setNodeRef} aria-label={`${meta.label} (hidden by the status filter)`} className={cn(FRAME, "flex h-full w-11 shrink-0 flex-col", surface)}>
+      <section ref={setNodeRef} aria-label={t("column_hidden", { status: meta.label })} className={cn(FRAME, "flex h-full w-11 shrink-0 flex-col", surface)}>
         <button
           type="button"
           onClick={() => onExpand(status)}
-          aria-label={`Show ${meta.label}: ${pluralize(count, "idea")}`}
-          title={`Show ${meta.label}`}
+          aria-label={t.plural("show_column", count, { status: meta.label, count: formatNumber(count) })}
+          title={t("show_column_title", { status: meta.label })}
           className="flex h-full w-full flex-col items-center gap-2 rounded-lg py-2.5 outline-none hover:bg-muted/70 focus-visible:ring-3 focus-visible:ring-ring/50 dark:hover:bg-muted/40"
         >
           <ChevronsRight className="size-3.5 text-muted-foreground" aria-hidden />
@@ -272,8 +271,8 @@ const KanbanColumn = memo(function KanbanColumn({
             variant="ghost"
             size="icon-xs"
             className="ml-auto text-muted-foreground"
-            aria-label={`Hide ${meta.label}`}
-            title="Hide column"
+            aria-label={t("hide_column", { status: meta.label })}
+            title={t("hide_column_title")}
             onClick={() => onCollapse(status)}
           >
             <ChevronsLeft aria-hidden />
@@ -297,7 +296,7 @@ const KanbanColumn = memo(function KanbanColumn({
               dragging && "border-brand/40"
             )}
           >
-            {dragging ? `Drop here to move to ${meta.label}` : EMPTY_HINTS[status]}
+            {dragging ? t("drop_here", { status: meta.label }) : t(EMPTY_HINTS[status])}
           </div>
         ) : null}
       </div>
@@ -316,11 +315,12 @@ const KanbanCard = memo(function KanbanCard({
   now: Date
   onOpen: (id: ID) => void
 }) {
+  const t = useT(ideaBankMessages)
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } = useDraggable({
     id: idea.id,
     data: { status: idea.status },
   })
-  const title = idea.title.trim() || "Untitled idea"
+  const title = idea.title.trim() || t("untitled_idea")
 
   return (
     <div
@@ -345,7 +345,7 @@ const KanbanCard = memo(function KanbanCard({
             size="icon-xs"
             {...attributes}
             onKeyDown={(event) => listeners?.onKeyDown?.(event)}
-            aria-label={`Move “${title}” to another status`}
+            aria-label={t("move_card", { title })}
             className="cursor-grab touch-none text-muted-foreground opacity-0 transition-opacity group-hover/idea:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
           >
             <GripVertical aria-hidden />

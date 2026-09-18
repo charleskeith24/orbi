@@ -2,10 +2,12 @@
 
 import { IDEA_STATUS_ICONS, PlatformIcon, StatusPill } from "@/components/common"
 import { IDEA_STATUS_MAP, PLATFORMS } from "@/lib/constants"
-import { formatDate, formatRelativeDay } from "@/lib/dates"
+import { daysBetween, formatDate, formatRelativeDay } from "@/lib/dates"
 import { priorityFromScore } from "@/lib/scoring"
+import { useT, useUiLang, type Translator, type UiLang } from "@/lib/i18n"
 import type { IdeaStatus, ISODateTime, PlatformId, Priority } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { ideaBankMessages } from "./messages"
 
 /** Short status labels for dense rows (the full label stays in the tooltip). */
 export const SHORT_STATUS_LABEL: Record<IdeaStatus, string> = {
@@ -35,24 +37,25 @@ export function IdeaStatusChip({ status, className }: { status: IdeaStatus; clas
 
 /** Idea Score 0–100 as a number with a hairline bar; "—" when the idea hasn't been scored. */
 export function IdeaScoreBadge({ score, className }: { score: number | null; className?: string }) {
+  const t = useT(ideaBankMessages)
   if (score === null) {
     return (
-      <span title="Not scored yet" className={cn("text-xs text-muted-foreground", className)}>
-        —<span className="sr-only">Not scored</span>
+      <span title={t("not_scored_title")} className={cn("text-xs text-muted-foreground", className)}>
+        —<span className="sr-only">{t("not_scored")}</span>
       </span>
     )
   }
   const band = priorityFromScore(score)
   return (
     <span
-      title={`Idea Score ${score} / 100 · ${SCORE_BAND_LABEL[band]}`}
+      title={t("score_title", { score, band: SCORE_BAND_LABEL[band] })}
       className={cn("inline-flex items-center gap-1.5 text-xs", className)}
     >
       <span aria-hidden className="relative h-1 w-5 overflow-hidden rounded-full bg-muted dark:bg-input/60">
         <span className="absolute inset-y-0 left-0 rounded-full bg-foreground/55" style={{ width: `${Math.max(0, Math.min(100, score))}%` }} />
       </span>
       <span className="font-medium text-foreground num">{score}</span>
-      <span className="sr-only">Idea Score out of 100</span>
+      <span className="sr-only">{t("score_out_of")}</span>
     </span>
   )
 }
@@ -74,11 +77,25 @@ export function PlatformIcons({ platforms, max = 3, className }: { platforms: Pl
   )
 }
 
+/** `formatRelativeDay` in the UI language ("Kahapon", "3 araw na nakaraan"); dates past two weeks stay "Aug 20". */
+function relativeDay(value: ISODateTime, now: Date, t: Translator<(typeof ideaBankMessages)["en"]>, lang: UiLang): string {
+  const diff = lang === "en" ? null : daysBetween(now, value)
+  if (diff === null) return formatRelativeDay(value, now)
+  if (diff === 0) return t("day_today")
+  if (diff === 1) return t("day_tomorrow")
+  if (diff === -1) return t("day_yesterday")
+  if (diff > 1 && diff <= 14) return t("day_in_days", { count: diff })
+  if (diff < -1 && diff >= -14) return t("day_days_ago", { count: -diff })
+  return formatRelativeDay(value, now)
+}
+
 /** "Today", "3 days ago", "Aug 20" with the full date on hover. */
 export function CapturedDate({ value, now, className }: { value: ISODateTime; now: Date; className?: string }) {
+  const t = useT(ideaBankMessages)
+  const lang = useUiLang()
   return (
-    <span title={`Captured ${formatDate(value, "MMM d, yyyy · h:mm a")}`} className={cn("text-xs whitespace-nowrap text-muted-foreground", className)}>
-      {formatRelativeDay(value, now)}
+    <span title={t("captured_on", { date: formatDate(value, "MMM d, yyyy · h:mm a") })} className={cn("text-xs whitespace-nowrap text-muted-foreground", className)}>
+      {relativeDay(value, now, t, lang)}
     </span>
   )
 }

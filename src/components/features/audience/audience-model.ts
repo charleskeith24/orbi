@@ -4,7 +4,8 @@
  */
 import { endOfDay, startOfDay, subDays } from "date-fns"
 import { CATEGORICAL_COLORS, PLATFORMS, PROBLEM_CATEGORY_MAP, PUBLISHED_STAGES } from "@/lib/constants"
-import { contentItemDate } from "@/lib/dates"
+import { contentItemDate, formatRelativeDay, type DateInput } from "@/lib/dates"
+import type { UiLang } from "@/lib/i18n/core"
 import type {
   AudiencePersona,
   AudienceProblem,
@@ -45,6 +46,15 @@ export function countByPersona(rows: { persona_id: ID | null }[]): Map<string, n
     out.set(key, (out.get(key) ?? 0) + 1)
   }
   return out
+}
+
+/**
+ * `formatRelativeDay` in the UI language: "Today", "in 3 days", "5 days ago" or a short date beyond two weeks
+ * (the date stays "Sep 8" in both languages). `lower` lowercases the single-word labels (Today → today, Kahapon → kahapon).
+ */
+export function relativeDayLabel(value: DateInput, now: Date, lang: UiLang = "en", lower = false): string {
+  const label = formatRelativeDay(value, now, lang)
+  return lower && /^[A-Z][a-z]+$/.test(label) ? label.toLowerCase() : label
 }
 
 /* -------------------------------- Personas -------------------------------- */

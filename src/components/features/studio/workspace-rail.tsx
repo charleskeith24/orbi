@@ -8,13 +8,15 @@ import { ColorDot, IdeaStatusBadge, SectionCard, StatusPill, Token } from "@/com
 import { ItemDealLink } from "@/components/features/money/item-deal-link"
 import { Button } from "@/components/ui/button"
 import { providerLabel } from "@/lib/ai"
+import { useT } from "@/lib/i18n"
 import { LANGUAGE_MAP, STORY_TYPE_MAP, TONE_MAP } from "@/lib/constants"
 import { parseDate } from "@/lib/dates"
 import { useBrand, useRow, useTable } from "@/lib/store"
 import type { ContentItem, ID } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { workspaceMessages } from "./messages"
 import { useStudioStore } from "./studio-store"
-import { AI_TASK_LABELS, relatedStories } from "./studio-utils"
+import { relatedStories } from "./studio-utils"
 
 const ROW_LINK =
   "flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 -mx-2 text-sm outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50"
@@ -32,8 +34,9 @@ export function WorkspaceRail({
   onUseStory?: (storyId: ID) => void
   className?: string
 }) {
+  const t = useT(workspaceMessages)
   return (
-    <aside aria-label="Context" className={cn("grid min-w-0 content-start gap-4 md:grid-cols-2 xl:grid-cols-1", className)}>
+    <aside aria-label={t("context")} className={cn("grid min-w-0 content-start gap-4 md:grid-cols-2 xl:grid-cols-1", className)}>
       <BrandVoiceCard />
       <ConnectionsCard item={item} />
       <RelatedStoriesCard item={item} onUseStory={onUseStory} />
@@ -52,6 +55,7 @@ function VoiceRow({ label, children }: { label: string; children: React.ReactNod
 }
 
 function BrandVoiceCard() {
+  const t = useT(workspaceMessages)
   const brand = useBrand()
   const tones = brand.tones.map((t) => TONE_MAP[t]?.label ?? t)
   const hasVoice = Boolean(
@@ -59,27 +63,27 @@ function BrandVoiceCard() {
   )
   return (
     <SectionCard
-      title="Brand voice"
+      title={t("brand_voice")}
       icon={Mic}
       action={
         <Button type="button" variant="ghost" size="xs" asChild>
-          <Link href="/strategy">Brand HQ</Link>
+          <Link href="/strategy">{t("brand_hq")}</Link>
         </Button>
       }
       contentClassName="flex flex-col gap-3"
     >
       {hasVoice ? (
         <>
-          <VoiceRow label="Language & tone">
+          <VoiceRow label={t("language_tone")}>
             {[LANGUAGE_MAP[brand.language]?.label, tones.join(", ")].filter(Boolean).join(" · ")}
           </VoiceRow>
           {brand.cta_style ? (
-            <VoiceRow label="CTA style">
+            <VoiceRow label={t("cta_style")}>
               <span className="line-clamp-3">{brand.cta_style}</span>
             </VoiceRow>
           ) : null}
           {brand.phrases_used.length ? (
-            <VoiceRow label="Phrases you use">
+            <VoiceRow label={t("phrases_used")}>
               <span className="flex flex-wrap gap-1">
                 {brand.phrases_used.slice(0, 6).map((phrase) => (
                   <Token key={phrase} className="h-auto min-h-5 py-0.5 whitespace-normal">
@@ -90,7 +94,7 @@ function BrandVoiceCard() {
             </VoiceRow>
           ) : null}
           {brand.phrases_avoid.length ? (
-            <VoiceRow label="Avoid">
+            <VoiceRow label={t("avoid")}>
               <span className="flex flex-wrap gap-1">
                 {brand.phrases_avoid.slice(0, 6).map((phrase) => (
                   <Token key={phrase} className="h-auto min-h-5 py-0.5 font-normal whitespace-normal text-muted-foreground line-through decoration-muted-foreground/60">
@@ -101,19 +105,19 @@ function BrandVoiceCard() {
             </VoiceRow>
           ) : null}
           {brand.always_do ? (
-            <VoiceRow label="Always">
+            <VoiceRow label={t("always")}>
               <span className="line-clamp-2">{brand.always_do}</span>
             </VoiceRow>
           ) : null}
           {brand.never_do ? (
-            <VoiceRow label="Never">
+            <VoiceRow label={t("never")}>
               <span className="line-clamp-2">{brand.never_do}</span>
             </VoiceRow>
           ) : null}
         </>
       ) : (
         <p className="text-xs text-pretty text-muted-foreground">
-          Set your tone, phrases and CTA style in Brand HQ — every brief, script and score uses them.
+          {t("voice_empty")}
         </p>
       )}
     </SectionCard>
@@ -121,6 +125,7 @@ function BrandVoiceCard() {
 }
 
 function ConnectionsCard({ item }: { item: ContentItem }) {
+  const t = useT(workspaceMessages)
   const idea = useRow("content_ideas", item.idea_id)
   const parent = useRow("content_items", item.parent_id)
   const campaign = useRow("content_campaigns", item.campaign_id)
@@ -128,7 +133,7 @@ function ConnectionsCard({ item }: { item: ContentItem }) {
   const others = Boolean(parent || campaign || series)
 
   return (
-    <SectionCard title="Linked" icon={Link2} contentClassName="flex flex-col gap-3">
+    <SectionCard title={t("linked")} icon={Link2} contentClassName="flex flex-col gap-3">
       {idea ? (
         <Link
           href={`/ideas?open=${idea.id}`}
@@ -136,24 +141,24 @@ function ConnectionsCard({ item }: { item: ContentItem }) {
         >
           <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
             <Lightbulb className="size-3.5 shrink-0" aria-hidden />
-            <span className="truncate">Idea</span>
-            {idea.score !== null ? <span className="ml-auto shrink-0 num">Idea Score {idea.score}</span> : null}
+            <span className="truncate">{t("idea")}</span>
+            {idea.score !== null ? <span className="ml-auto shrink-0 num">{t("idea_score", { score: idea.score })}</span> : null}
           </span>
-          <span className="line-clamp-2 text-sm font-medium">{idea.title || "Untitled idea"}</span>
+          <span className="line-clamp-2 text-sm font-medium">{idea.title || t("untitled_idea")}</span>
           {idea.why_it_matters ? <span className="line-clamp-2 text-xs text-muted-foreground">{idea.why_it_matters}</span> : null}
           <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
             <IdeaStatusBadge status={idea.status} />
             {idea.talking_points.length ? (
               <span>
-                {idea.talking_points.length} talking point{idea.talking_points.length === 1 ? "" : "s"}
-                {idea.cta ? " · CTA ready" : ""}
+                {t.plural("talking_points", idea.talking_points.length)}
+                {idea.cta ? ` · ${t("cta_ready")}` : ""}
               </span>
             ) : null}
           </span>
         </Link>
       ) : (
         <p className="text-xs text-pretty text-muted-foreground">
-          Not made from an idea. Content converted from the Idea Bank keeps its research, talking points and CTA here.
+          {t("no_idea")}
         </p>
       )}
       {others ? (
@@ -162,8 +167,8 @@ function ConnectionsCard({ item }: { item: ContentItem }) {
             <li>
               <Link href={`/studio/${parent.id}`} className={ROW_LINK}>
                 <GitFork className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                <span className="shrink-0 text-xs text-muted-foreground">Source</span>
-                <span className="min-w-0 flex-1 truncate">{parent.title || "Untitled content"}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">{t("source")}</span>
+                <span className="min-w-0 flex-1 truncate">{parent.title || t("untitled_content")}</span>
               </Link>
             </li>
           ) : null}
@@ -171,9 +176,9 @@ function ConnectionsCard({ item }: { item: ContentItem }) {
             <li>
               <Link href={`/campaigns/${campaign.id}`} className={ROW_LINK}>
                 <Megaphone className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                <span className="shrink-0 text-xs text-muted-foreground">Campaign</span>
+                <span className="shrink-0 text-xs text-muted-foreground">{t("campaign")}</span>
                 <ColorDot color={campaign.color} shape="square" />
-                <span className="min-w-0 flex-1 truncate">{campaign.name || "Untitled campaign"}</span>
+                <span className="min-w-0 flex-1 truncate">{campaign.name || t("untitled_campaign")}</span>
               </Link>
             </li>
           ) : null}
@@ -181,8 +186,8 @@ function ConnectionsCard({ item }: { item: ContentItem }) {
             <li>
               <Link href={`/series?open=${series.id}`} className={ROW_LINK}>
                 <Repeat className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                <span className="shrink-0 text-xs text-muted-foreground">Series</span>
-                <span className="min-w-0 flex-1 truncate">{series.name || "Untitled series"}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">{t("series")}</span>
+                <span className="min-w-0 flex-1 truncate">{series.name || t("untitled_series")}</span>
               </Link>
             </li>
           ) : null}
@@ -194,6 +199,7 @@ function ConnectionsCard({ item }: { item: ContentItem }) {
 }
 
 function RelatedStoriesCard({ item, onUseStory }: { item: ContentItem; onUseStory?: (storyId: ID) => void }) {
+  const t = useT(workspaceMessages)
   const stories = useTable("stories")
   const briefs = useTable("content_briefs")
   const chosen = useStudioStore((s) => s.stories[item.id] ?? null)
@@ -202,12 +208,12 @@ function RelatedStoriesCard({ item, onUseStory }: { item: ContentItem; onUseStor
 
   return (
     <SectionCard
-      title="Related stories"
+      title={t("related_stories")}
       icon={BookOpen}
-      description="Real proof from your Story Vault"
+      description={t("related_stories_description")}
       action={
         <Button type="button" variant="ghost" size="xs" asChild>
-          <Link href="/stories">Story Vault</Link>
+          <Link href="/stories">{t("story_vault")}</Link>
         </Button>
       }
     >
@@ -219,7 +225,7 @@ function RelatedStoriesCard({ item, onUseStory }: { item: ContentItem; onUseStor
                 href={`/stories?open=${story.id}`}
                 className="line-clamp-2 rounded-sm text-sm font-medium outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
               >
-                {story.title || "Untitled story"}
+                {story.title || t("untitled_story")}
               </Link>
               {story.lesson || story.result ? (
                 <p className="line-clamp-2 text-xs text-muted-foreground">{story.lesson || story.result}</p>
@@ -232,11 +238,11 @@ function RelatedStoriesCard({ item, onUseStory }: { item: ContentItem; onUseStor
                   chosen === story.id ? (
                     <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-good-fg">
                       <Check className="size-3.5" aria-hidden />
-                      In script
+                      {t("in_script")}
                     </span>
                   ) : (
                     <Button type="button" variant="ghost" size="xs" className="-mr-2 shrink-0" onClick={() => onUseStory(story.id)}>
-                      Use in script
+                      {t("use_in_script")}
                     </Button>
                   )
                 ) : null}
@@ -246,9 +252,7 @@ function RelatedStoriesCard({ item, onUseStory }: { item: ContentItem; onUseStor
         </ul>
       ) : (
         <p className="text-xs text-pretty text-muted-foreground">
-          {stories.length
-            ? "No story shares this piece's keywords yet. Add the experience behind it to the Story Vault so drafts can use your real proof."
-            : "Your Story Vault is empty. Log experiences, lessons and wins so AI drafts can use your real proof."}
+          {stories.length ? t("stories_no_match") : t("stories_empty")}
         </p>
       )}
     </SectionCard>
@@ -256,6 +260,7 @@ function RelatedStoriesCard({ item, onUseStory }: { item: ContentItem; onUseStor
 }
 
 function AiActivityCard({ item, now }: { item: ContentItem; now: Date }) {
+  const t = useT(workspaceMessages)
   const generations = useTable("ai_generations")
   const rows = useMemo(
     () =>
@@ -267,30 +272,32 @@ function AiActivityCard({ item, now }: { item: ContentItem; now: Date }) {
   )
 
   return (
-    <SectionCard title="Recent AI activity" icon={Sparkles}>
+    <SectionCard title={t("ai_activity")} icon={Sparkles}>
       {rows.length ? (
         <ul className="flex flex-col gap-2.5">
           {rows.map((g) => {
             const at = parseDate(g.created_at)
             const Icon = g.provider === "offline" ? Cpu : Sparkles
+            const taskKey = `task_${g.task}`
+            const taskLabel = taskKey in workspaceMessages.en ? t(taskKey as keyof typeof workspaceMessages.en) : g.task.replace(/_/g, " ")
             return (
               <li key={g.id} className="flex min-w-0 items-start gap-2">
                 <Icon className={cn("mt-0.5 size-3.5 shrink-0", g.provider === "offline" ? "text-muted-foreground" : "text-brand")} aria-hidden />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm">{AI_TASK_LABELS[g.task] ?? g.task.replace(/_/g, " ")}</p>
+                  <p className="truncate text-sm">{taskLabel}</p>
                   <p className="truncate text-xs text-muted-foreground">
                     {providerLabel(g.provider, g.model)}
-                    {at ? ` · ${now.getTime() - at.getTime() < 60_000 ? "just now" : formatDistanceStrict(at, now, { addSuffix: true })}` : ""}
+                    {at ? ` · ${now.getTime() - at.getTime() < 60_000 ? t("just_now") : formatDistanceStrict(at, now, { addSuffix: true })}` : ""}
                   </p>
                 </div>
-                {g.status === "error" ? <StatusPill tone="critical">Failed</StatusPill> : null}
+                {g.status === "error" ? <StatusPill tone="critical">{t("failed")}</StatusPill> : null}
               </li>
             )
           })}
         </ul>
       ) : (
         <p className="text-xs text-pretty text-muted-foreground">
-          Briefs, scripts, hooks and scores generated for this piece show up here, with the engine that wrote them.
+          {t("ai_activity_empty")}
         </p>
       )}
     </SectionCard>

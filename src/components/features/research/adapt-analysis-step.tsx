@@ -5,6 +5,8 @@ import { AiButton, EmptyState, ProviderBadge } from "@/components/common"
 import { AiErrorNotice } from "@/components/features/stories/ai-error"
 import { Button } from "@/components/ui/button"
 import { formatDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
+import { adaptMessages } from "./adapt-messages"
 import type { AdaptAnalysis } from "./adapt-model"
 import { AnalysisEditor } from "./analysis-editor"
 import type { AnalysisFields } from "./research-model"
@@ -34,50 +36,52 @@ export function AdaptAnalysisStep({
   /** Library references only: store an unsaved analysis on the reference. */
   onSaveToReference?: () => void
 }) {
+  const t = useT(adaptMessages)
   return (
     <StepCard
       step={2}
       state={state}
-      title="Analysis"
-      description="Why it works — hook, structure, angle, psychology and the patterns to borrow. Edit anything before you adapt it."
+      title={t("analysis")}
+      description={t("analysis_description")}
       action={
         analysis ? (
-          <AiButton type="button" size="sm" variant="ghost" pending={pending} pendingLabel="Analyzing…" disabled={!canAnalyze} onClick={onAnalyze}>
-            Re-analyze
+          <AiButton type="button" size="sm" variant="ghost" pending={pending} pendingLabel={t("analyzing")} disabled={!canAnalyze} onClick={onAnalyze}>
+            {t("reanalyze")}
           </AiButton>
         ) : null
       }
     >
       {state === "locked" ? (
-        <p>Add a reference in step 1 first.</p>
+        <p>{t("locked_step1")}</p>
       ) : analysis ? (
         <div className="flex min-w-0 flex-col gap-4">
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <ProviderBadge provider={analysis.provider} model={analysis.model ?? undefined} />
             <span>
-              {onSaveToReference && !analysis.unsaved ? "Saved on the reference · " : ""}analyzed {formatDate(analysis.analyzedAt)}
+              {onSaveToReference && !analysis.unsaved ? t("saved_on_reference") : ""}
+              {t("analyzed_on", { date: formatDate(analysis.analyzedAt) })}
             </span>
             {onSaveToReference && analysis.unsaved ? (
               <Button type="button" size="xs" variant="outline" className="ml-auto" onClick={onSaveToReference}>
                 <Check aria-hidden />
-                Save to reference
+                {t("save_to_reference")}
               </Button>
             ) : null}
           </div>
-          {error ? <AiErrorNotice message={error} onRetry={onAnalyze} /> : null}
+          {error ? <AiErrorNotice message={error} retryLabel={t("retry")} onRetry={onAnalyze} /> : null}
           <AnalysisEditor value={analysis.fields} onChange={onChange} disabled={pending} />
         </div>
       ) : (
         <div className="flex min-w-0 flex-col gap-3">
-          {error ? <AiErrorNotice message={error} onRetry={onAnalyze} /> : null}
+          {error ? <AiErrorNotice message={error} retryLabel={t("retry")} onRetry={onAnalyze} /> : null}
           <EmptyState
             compact
             icon={ScanSearch}
-            title="Analyze the reference"
-            description="The AI explains why it works — it describes the reference, it never rewrites it."
+            title={t("analyze_title")}
+            description={t("analyze_description")}
             action={
-              <AiButton type="button" size="sm" variant="default" pending={pending} pendingLabel="Analyzing…" disabled={!canAnalyze} onClick={onAnalyze}>
-                Analyze reference
+              <AiButton type="button" size="sm" variant="default" pending={pending} pendingLabel={t("analyzing")} disabled={!canAnalyze} onClick={onAnalyze}>
+                {t("analyze_reference")}
               </AiButton>
             }
             className="rounded-lg border border-dashed"

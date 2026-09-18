@@ -7,8 +7,10 @@ import type { StatusTone } from "@/components/common"
 import { campaignPerformance, type CampaignPerformance } from "@/lib/analytics"
 import { CATEGORICAL_COLORS } from "@/lib/constants"
 import { parseDate, toISODate } from "@/lib/dates"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type { AppSettings, CampaignStatus, CategoricalColor, ContentCampaign, Database, ISODate } from "@/lib/types"
-import { clamp, pluralize } from "@/lib/utils"
+import { clamp, formatNumber } from "@/lib/utils"
+import { campaignMessages } from "./messages"
 
 export type CampaignPhase = "upcoming" | "running" | "ended" | "undated"
 
@@ -49,25 +51,31 @@ export function campaignWindow(campaign: Pick<ContentCampaign, "start_date" | "e
   }
 }
 
-/** "Day 15 of 43 · 29 days left", "Starts in 21 days", "Ended Aug 6". */
-export function timeLabel(win: CampaignWindow): string {
+/** "Day 15 of 43 · 29 days left", "Starts in 21 days", "Ended Aug 6" — in `lang` (default English). */
+export function timeLabel(win: CampaignWindow, lang: UiLang = "en"): string {
+  const t = translator(campaignMessages, lang)
   switch (win.phase) {
-    case "upcoming":
-      return win.daysToStart === 1 ? "Starts tomorrow" : `Starts in ${pluralize(win.daysToStart ?? 0, "day")}`
-    case "running":
-      return win.daysLeft === 1 ? `Day ${win.dayIndex} of ${win.totalDays} · last day` : `Day ${win.dayIndex} of ${win.totalDays} · ${pluralize(win.daysLeft ?? 0, "day")} left`
+    case "upcoming": {
+      const days = win.daysToStart ?? 0
+      return win.daysToStart === 1 ? t("starts_tomorrow") : t.plural("starts_in", days, { count: formatNumber(days) })
+    }
+    case "running": {
+      const days = win.daysLeft ?? 0
+      const vars = { day: win.dayIndex ?? "", total: win.totalDays ?? "" }
+      return win.daysLeft === 1 ? t("day_last", vars) : t.plural("day_left", days, { ...vars, count: formatNumber(days) })
+    }
     case "ended":
-      return win.end ? `Ended ${format(win.end, "MMM d")}` : "Ended"
+      return win.end ? t("ended_on", { date: format(win.end, "MMM d") }) : t("ended")
     default:
-      return "No dates set"
+      return t("no_dates_set")
   }
 }
 
 /** "Aug 28 – Oct 9, 2026"; spans years as "Dec 1, 2026 – Jan 15, 2027". */
-export function dateRangeLabel(campaign: Pick<ContentCampaign, "start_date" | "end_date">): string {
+export function dateRangeLabel(campaign: Pick<ContentCampaign, "start_date" | "end_date">, lang: UiLang = "en"): string {
   const start = parseDate(campaign.start_date)
   const end = parseDate(campaign.end_date)
-  if (!start || !end) return "No dates"
+  if (!start || !end) return translator(campaignMessages, lang)("no_dates")
   if (start.getFullYear() !== end.getFullYear()) return `${format(start, "MMM d, yyyy")} – ${format(end, "MMM d, yyyy")}`
   return `${format(start, "MMM d")} – ${format(end, "MMM d, yyyy")}`
 }
@@ -80,31 +88,33 @@ export interface CampaignPace {
   expected: number | null
 }
 
-/** Published pieces vs an even pace toward `target_posts` across the window. */
+/** Published pieces vs an even pace toward `target_posts` across the window. Labels are in `lang` (default English). */
 export function campaignPace(
   status: CampaignStatus,
   published: number,
   target: number | null,
-  win: CampaignWindow
+  win: CampaignWindow,
+  lang: UiLang = "en"
 ): CampaignPace | null {
   if (!target) return null
-  const ofTarget = `${published} of ${target} published`
-  if (published >= target) return { tone: "good", label: "Target met", detail: ofTarget, expected: null }
-  if (status === "paused") return { tone: "warning", label: "Paused", detail: ofTarget, expected: null }
+  const t = translator(campaignMessages, lang)
+  const ofTarget = t("pace_published_of", { published, target })
+  if (published >= target) return { tone: "good", label: t("pace_target_met"), detail: ofTarget, expected: null }
+  if (status === "paused") return { tone: "warning", label: t("pace_paused"), detail: ofTarget, expected: null }
   if (status === "completed" || win.phase === "ended") {
     const pct = (published / target) * 100
     return pct >= 75
-      ? { tone: "warning", label: "Short of target", detail: ofTarget, expected: null }
-      : { tone: "serious", label: "Missed target", detail: ofTarget, expected: null }
+      ? { tone: "warning", label: t("pace_short"), detail: ofTarget, expected: null }
+      : { tone: "serious", label: t("pace_missed"), detail: ofTarget, expected: null }
   }
   if (win.phase !== "running" || win.elapsedPct === null) {
-    return { tone: "neutral", label: "Not started", detail: `${pluralize(target, "piece")} planned`, expected: null }
+    return { tone: "neutral", label: t("pace_not_started"), detail: t.plural("pace_pieces_planned", target, { count: formatNumber(target) }), expected: null }
   }
   const expected = Math.max(1, Math.round((target * win.elapsedPct) / 100))
-  const detail = `${published} published · ${expected} expected by today`
-  if (published >= expected * 0.9) return { tone: "good", label: "On pace", detail, expected }
-  if (published >= expected * 0.6) return { tone: "warning", label: "Behind pace", detail, expected }
-  return { tone: "serious", label: "Well behind pace", detail, expected }
+  const detail = t("pace_expected", { published, expected })
+  if (published >= expected * 0.9) return { tone: "good", label: t("pace_on"), detail, expected }
+  if (published >= expected * 0.6) return { tone: "warning", label: t("pace_behind"), detail, expected }
+  return { tone: "serious", label: t("pace_well_behind"), detail, expected }
 }
 
 /** First categorical colour no other campaign uses (fixed order), else the next in sequence. */
@@ -127,11 +137,11 @@ export interface CampaignSummary {
   pace: CampaignPace | null
 }
 
-export function summarizeCampaign(db: Database, campaign: ContentCampaign, now: Date, settings: AppSettings): CampaignSummary | null {
+export function summarizeCampaign(db: Database, campaign: ContentCampaign, now: Date, settings: AppSettings, lang: UiLang = "en"): CampaignSummary | null {
   const perf = campaignPerformance(db, campaign.id, now, settings)
   if (!perf) return null
   const win = campaignWindow(campaign, now)
-  return { campaign, perf, window: win, pace: campaignPace(campaign.status, perf.published, perf.targetPosts, win) }
+  return { campaign, perf, window: win, pace: campaignPace(campaign.status, perf.published, perf.targetPosts, win, lang) }
 }
 
 /** Active first, then planning, paused, completed; newest start first within a status. */

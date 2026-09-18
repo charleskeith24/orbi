@@ -3,204 +3,174 @@
  * API key or server callback is configured for this workspace, so every adapter reports
  * "not_configured" and `connect()` explains what is required instead of pretending to connect.
  */
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type { PlatformId } from "@/lib/types"
+import { registryMessages } from "./registry-messages"
 import {
   INTEGRATION_AUTH_LABELS,
+  INTEGRATION_CATEGORIES,
   type IntegrationAdapter,
   type IntegrationAuth,
   type IntegrationCapability,
   type IntegrationCategory,
+  type IntegrationConnectResult,
   type IntegrationId,
+  type IntegrationStatus,
 } from "./types"
+
+type RegistryKey = keyof (typeof registryMessages)["en"] & string
+const EN = registryMessages.en
 
 interface IntegrationSpec {
   id: IntegrationId
   name: string
   category: IntegrationCategory
-  description: string
   capabilities: IntegrationCapability[]
   auth: IntegrationAuth
   platform: PlatformId | null
-  requirements: string[]
-  manualPath: string
+  /** Message keys, in order; the English text becomes the adapter's `requirements`. */
+  requirements: RegistryKey[]
 }
+
+const descriptionKey = (id: IntegrationId) => `${id}_description` as RegistryKey
+const manualKey = (id: IntegrationId) => `${id}_manual` as RegistryKey
 
 /** An adapter whose credentials don't exist yet: status "not_configured", connect() reports why. */
 export function createUnconfiguredAdapter(spec: IntegrationSpec): IntegrationAdapter {
-  const requirements = Object.freeze([...spec.requirements])
+  const requirements = Object.freeze(spec.requirements.map((key) => EN[key]))
   return Object.freeze({
     id: spec.id,
     name: spec.name,
     category: spec.category,
-    description: spec.description,
+    description: EN[descriptionKey(spec.id)],
     capabilities: Object.freeze([...spec.capabilities]),
     auth: spec.auth,
     platform: spec.platform,
     requirements,
-    manualPath: spec.manualPath,
+    manualPath: EN[manualKey(spec.id)],
     status: () => "not_configured" as const,
     async connect() {
       return {
         ok: false,
         status: "not_configured" as const,
-        message: `${spec.name} can't be connected yet — it requires ${INTEGRATION_AUTH_LABELS[spec.auth]} that haven't been configured for this workspace.`,
+        message: connectMessage(spec.name, spec.auth, "en"),
         requirements: [...requirements],
       }
     },
   })
 }
 
-const CALLBACK = "An OAuth redirect URL registered for your deployment"
-const SERVER_ROUTE = "A server-side route that stores tokens and calls the API (keys never reach the browser)"
+function connectMessage(name: string, auth: IntegrationAuth, lang: UiLang): string {
+  const t = translator(registryMessages, lang)
+  return t("connect_message", { name, auth: lang === "en" ? INTEGRATION_AUTH_LABELS[auth] : t(`auth_${auth}`) })
+}
+
+const CALLBACK: RegistryKey = "req_callback"
+const SERVER_ROUTE: RegistryKey = "req_server_route"
 
 const SPECS: IntegrationSpec[] = [
   {
     id: "meta",
     name: "Meta · Facebook Pages",
     category: "social",
-    description: "Page posts with reach, reactions, comments and shares.",
     capabilities: ["import_analytics", "import_posts", "publish"],
     auth: "oauth2",
     platform: "facebook",
-    requirements: [
-      "A Meta developer app (App ID and App Secret)",
-      "App Review approval for Page insights permissions",
-      "A Facebook Page you manage",
-      CALLBACK,
-    ],
-    manualPath: "Export post insights from Meta Business Suite and import the CSV.",
+    requirements: ["meta_req_app", "meta_req_review", "meta_req_page", CALLBACK],
   },
   {
     id: "instagram",
     name: "Instagram",
     category: "social",
-    description: "Reels and posts with reach, saves and shares for professional accounts.",
     capabilities: ["import_analytics", "import_posts", "publish"],
     auth: "oauth2",
     platform: "instagram",
-    requirements: [
-      "An Instagram professional (Business or Creator) account",
-      "A Meta developer app with Instagram permissions approved in App Review",
-      CALLBACK,
-    ],
-    manualPath: "Export insights from Meta Business Suite and import the CSV.",
+    requirements: ["instagram_req_account", "instagram_req_app", CALLBACK],
   },
   {
     id: "tiktok",
     name: "TikTok",
     category: "social",
-    description: "Video views, likes, comments and shares.",
     capabilities: ["import_analytics", "publish"],
     auth: "oauth2",
     platform: "tiktok",
-    requirements: [
-      "A TikTok for Developers app (client key and secret)",
-      "Approved scopes for reading videos (and content posting to publish)",
-      CALLBACK,
-    ],
-    manualPath: "Download your post analytics from TikTok and import the CSV.",
+    requirements: ["tiktok_req_app", "tiktok_req_scopes", CALLBACK],
   },
   {
     id: "youtube",
     name: "YouTube",
     category: "social",
-    description: "Views, watch time and average percentage viewed per video.",
     capabilities: ["import_analytics", "import_posts", "publish"],
     auth: "oauth2",
     platform: "youtube",
-    requirements: [
-      "A Google Cloud project with the YouTube Data and YouTube Analytics APIs enabled",
-      "An OAuth client (client ID and secret) with a consent screen",
-      CALLBACK,
-    ],
-    manualPath: "Export a table from YouTube Studio analytics and import the CSV.",
+    requirements: ["youtube_req_project", "youtube_req_client", CALLBACK],
   },
   {
     id: "linkedin",
     name: "LinkedIn",
     category: "social",
-    description: "Post impressions, reactions, comments and follower growth.",
     capabilities: ["import_analytics", "publish"],
     auth: "oauth2",
     platform: "linkedin",
-    requirements: [
-      "A LinkedIn developer app verified by a Company Page",
-      "Approved access to LinkedIn's post analytics products",
-      CALLBACK,
-    ],
-    manualPath: "Export post analytics from LinkedIn and import the CSV.",
+    requirements: ["linkedin_req_app", "linkedin_req_access", CALLBACK],
   },
   {
     id: "metricool",
     name: "Metricool",
     category: "analytics",
-    description: "Cross-platform analytics and scheduling from one account.",
     capabilities: ["import_analytics", "schedule"],
     auth: "api_key",
     platform: null,
-    requirements: ["A Metricool plan that includes API access", "Your Metricool API token and brand ID", SERVER_ROUTE],
-    manualPath: "Export a Metricool report as CSV and import it.",
+    requirements: ["metricool_req_plan", "metricool_req_token", SERVER_ROUTE],
   },
   {
     id: "social_analytics",
     name: "Social analytics API",
     category: "analytics",
-    description: "Any analytics provider with a REST API — an aggregator or data warehouse you already use.",
     capabilities: ["import_analytics"],
     auth: "api_key",
     platform: null,
-    requirements: ["The provider's API credentials", "A mapping from its fields to this workspace's metrics", SERVER_ROUTE],
-    manualPath: "Export from your analytics tool as CSV — the column mapper reads most formats.",
+    requirements: ["social_analytics_req_credentials", "social_analytics_req_mapping", SERVER_ROUTE],
   },
   {
     id: "buffer",
     name: "Buffer",
     category: "scheduling",
-    description: "Send approved posts to your Buffer queue.",
     capabilities: ["schedule", "publish"],
     auth: "oauth2",
     platform: null,
-    requirements: ["Buffer API access (developer app credentials)", CALLBACK],
-    manualPath: "Copy the caption from Content Studio into Buffer, then log the post here.",
+    requirements: ["buffer_req_access", CALLBACK],
   },
   {
     id: "later",
     name: "Later",
     category: "scheduling",
-    description: "Visual planning and scheduling for Instagram, TikTok and more.",
     capabilities: ["schedule", "publish"],
     auth: "oauth2",
     platform: null,
-    requirements: ["Later API partner access", "OAuth app credentials (client ID and secret)", CALLBACK],
-    manualPath: "Schedule in Later, then log the post here once it's live.",
+    requirements: ["later_req_partner", "later_req_credentials", CALLBACK],
   },
   {
     id: "google_drive",
     name: "Google Drive",
     category: "assets",
-    description: "Attach raw footage, thumbnails and final exports to content items.",
     capabilities: ["assets"],
     auth: "oauth2",
     platform: null,
-    requirements: [
-      "A Google Cloud project with the Drive API enabled",
-      "An OAuth client (client ID and secret) with a consent screen",
-      CALLBACK,
-    ],
-    manualPath: "Paste Drive links into the brief's reference or production notes.",
+    requirements: ["google_drive_req_project", "google_drive_req_client", CALLBACK],
   },
   {
     id: "canva",
     name: "Canva",
     category: "assets",
-    description: "Start designs from a brief and bring finished exports back.",
     capabilities: ["design", "assets"],
     auth: "oauth2",
     platform: null,
-    requirements: ["A Canva Connect integration (client ID and secret)", CALLBACK],
-    manualPath: "Design in Canva and paste the share link into the brief.",
+    requirements: ["canva_req_integration", CALLBACK],
   },
 ]
+
+const REQUIREMENT_KEYS = new Map(SPECS.map((spec) => [spec.id, spec.requirements]))
 
 export const INTEGRATIONS: readonly IntegrationAdapter[] = Object.freeze(SPECS.map(createUnconfiguredAdapter))
 
@@ -214,4 +184,39 @@ export function integrationsIn(category: IntegrationCategory): IntegrationAdapte
 
 export function connectedCount(): number {
   return INTEGRATIONS.filter((adapter) => adapter.status() === "connected").length
+}
+
+/* ------------------------------ Display text ------------------------------ */
+
+/** An adapter's description, requirements and manual path in the UI language (English = the adapter's own text). */
+export function integrationText(
+  adapter: IntegrationAdapter,
+  lang: UiLang
+): { description: string; requirements: readonly string[]; manualPath: string } {
+  const keys = REQUIREMENT_KEYS.get(adapter.id)
+  if (lang === "en" || !keys) return { description: adapter.description, requirements: adapter.requirements, manualPath: adapter.manualPath }
+  const t = translator(registryMessages, lang)
+  return { description: t(descriptionKey(adapter.id)), requirements: keys.map((key) => t(key)), manualPath: t(manualKey(adapter.id)) }
+}
+
+/** `connect()`'s outcome in the UI language: the "not configured" explanation is rebuilt; anything else is shown as returned. */
+export function localizeConnectResult(adapter: IntegrationAdapter, result: IntegrationConnectResult, lang: UiLang): IntegrationConnectResult {
+  if (lang === "en" || result.status !== "not_configured") return result
+  return { ...result, message: connectMessage(adapter.name, adapter.auth, lang), requirements: [...integrationText(adapter, lang).requirements] }
+}
+
+/** Category, capability, status and auth labels (the English constants live in `types.ts`). */
+export function integrationLabels(lang: UiLang) {
+  const t = translator(registryMessages, lang)
+  return {
+    category: (id: IntegrationCategory) => {
+      const category = INTEGRATION_CATEGORIES.find((c) => c.id === id)
+      return lang === "en" && category
+        ? { label: category.label, description: category.description }
+        : { label: t(`category_${id}_label`), description: t(`category_${id}_description`) }
+    },
+    capability: (capability: IntegrationCapability) => t(`capability_${capability}`),
+    status: (status: IntegrationStatus) => t(`status_${status}`),
+    auth: (auth: IntegrationAuth) => t(`auth_${auth}`),
+  }
 }

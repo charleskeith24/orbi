@@ -1,7 +1,11 @@
 import { toast } from "sonner"
+import { translate } from "@/lib/i18n/core"
+import { getUiLang } from "@/lib/i18n/ui-lang"
+import { storyFormMessages } from "./messages"
 
 /** Copy text with a toast (Clipboard API, falling back to a hidden textarea). */
-export async function copyText(text: string, successMessage = "Copied to clipboard"): Promise<boolean> {
+export async function copyText(text: string, successMessage?: string): Promise<boolean> {
+  const lang = getUiLang()
   let ok = false
   try {
     if (navigator.clipboard?.writeText) {
@@ -26,7 +30,10 @@ export async function copyText(text: string, successMessage = "Copied to clipboa
       ok = false
     }
   }
-  if (ok) toast.success(successMessage)
-  else toast.error("Couldn't copy", { description: "Select the text and copy it manually." })
+  if (ok) toast.success(successMessage ?? translate(storyFormMessages, lang, "copied"))
+  else
+    toast.error(translate(storyFormMessages, lang, "copy_failed"), {
+      description: translate(storyFormMessages, lang, "copy_failed_description"),
+    })
   return ok
 }

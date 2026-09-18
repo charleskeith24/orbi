@@ -2,7 +2,10 @@
 
 import { CircleCheck, TriangleAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { cn, pluralize } from "@/lib/utils"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
+import { cn, formatNumber } from "@/lib/utils"
+import { brandHqMessages } from "./brand-messages"
 
 /**
  * Form footer: "Unsaved changes · Discard · Save changes". Sticks to the bottom of the viewport while
@@ -12,7 +15,7 @@ export function SaveBar({
   dirty,
   changes,
   errorCount,
-  savedLabel = "All changes saved",
+  savedLabel,
   onDiscard,
   onShowErrors,
   className,
@@ -28,10 +31,13 @@ export function SaveBar({
   className?: string
 }) {
   const invalid = errorCount > 0
+  const t = useT(brandHqMessages)
+  const c = useT(commonMessages)
+  const fixText = t.plural("fix_fields", errorCount, { count: formatNumber(errorCount) })
   return (
     <div
       role="region"
-      aria-label="Save changes"
+      aria-label={t("save_bar_label")}
       className={cn(
         "z-20 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border px-3 py-2",
         dirty ? "sticky bottom-3 bg-card shadow-md shadow-black/5 dark:shadow-black/40" : "bg-muted/30",
@@ -42,7 +48,7 @@ export function SaveBar({
         {!dirty ? (
           <>
             <CircleCheck className="size-3.5 shrink-0 text-good-fg" aria-hidden />
-            <span className="truncate">{savedLabel}</span>
+            <span className="truncate">{savedLabel ?? t("all_saved")}</span>
           </>
         ) : invalid ? (
           <>
@@ -53,28 +59,28 @@ export function SaveBar({
                 onClick={onShowErrors}
                 className="rounded-sm font-medium text-foreground underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
               >
-                Fix {pluralize(errorCount, "field")} to save
+                {fixText}
               </button>
             ) : (
-              <span>Fix {pluralize(errorCount, "field")} to save</span>
+              <span>{fixText}</span>
             )}
           </>
         ) : (
           <>
             <span className="size-2 shrink-0 rounded-full bg-brand" aria-hidden />
-            <span className="font-medium text-foreground">Unsaved changes</span>
-            <span className="num">· {pluralize(changes, "field")}</span>
+            <span className="font-medium text-foreground">{t("unsaved")}</span>
+            <span className="num">{t.plural("fields", changes, { count: formatNumber(changes) })}</span>
           </>
         )}
       </div>
       <div className="flex items-center gap-2">
         {dirty ? (
           <Button type="button" variant="outline" size="sm" onClick={onDiscard}>
-            Discard
+            {c("discard")}
           </Button>
         ) : null}
         <Button type="submit" size="sm" disabled={!dirty || invalid}>
-          Save changes
+          {c("save_changes")}
         </Button>
       </div>
     </div>

@@ -3,15 +3,14 @@
  * name validation. Pure — no React, no store access.
  */
 import { anglePerformance, type AngleAggregate } from "@/lib/analytics"
+import { translate, type UiLang } from "@/lib/i18n/core"
 import type { ContentAngle, Database, ID } from "@/lib/types"
 import { matchesQuery } from "@/lib/utils"
+import { angleMessages } from "./angle-messages"
 import { nameKey } from "./generator-model"
 
 /** Angle names travel into the AI's Brand Context (40 characters max there). */
 export const ANGLE_NAME_MAX = 40
-
-export const DEFAULT_ANGLE_NOTE =
-  "Default angles can be edited but not deleted — they're the shared vocabulary the Idea Generator, its offline templates and your angle analytics are built on. Custom angles can be deleted anytime."
 
 export interface AngleStats {
   ideaIds: ID[]
@@ -39,11 +38,8 @@ export function angleStats(db: Database, now: Date): Map<ID, AngleStats> {
 export type AngleKind = "all" | "default" | "custom"
 export type AngleSort = "performance" | "uses" | "az"
 
-export const ANGLE_SORTS: { id: AngleSort; label: string }[] = [
-  { id: "performance", label: "Best performing" },
-  { id: "uses", label: "Most used" },
-  { id: "az", label: "A–Z" },
-]
+/** Sort options in menu order (labels: `sort_<id>` in `labMessages`). */
+export const ANGLE_SORTS: AngleSort[] = ["performance", "uses", "az"]
 
 export function filterAngles(angles: readonly ContentAngle[], filters: { q: string; kind: AngleKind }): ContentAngle[] {
   return angles.filter(
@@ -80,12 +76,12 @@ export function anglesToRotate(angles: readonly ContentAngle[], stats: Map<ID, A
 }
 
 /** Required, at most 40 characters, unique (ignoring case and punctuation). */
-export function validateAngleName(name: string, angles: readonly ContentAngle[], selfId?: ID): string | null {
+export function validateAngleName(name: string, angles: readonly ContentAngle[], selfId?: ID, lang: UiLang = "en"): string | null {
   const clean = name.replace(/\s+/g, " ").trim()
-  if (!clean) return "Give the angle a name."
-  if (clean.length > ANGLE_NAME_MAX) return `Keep the name under ${ANGLE_NAME_MAX} characters.`
+  if (!clean) return translate(angleMessages, lang, "name_required")
+  if (clean.length > ANGLE_NAME_MAX) return translate(angleMessages, lang, "name_too_long", { max: ANGLE_NAME_MAX })
   const key = nameKey(clean)
-  if (angles.some((angle) => angle.id !== selfId && nameKey(angle.name) === key)) return "An angle with this name already exists."
+  if (angles.some((angle) => angle.id !== selfId && nameKey(angle.name) === key)) return translate(angleMessages, lang, "name_taken")
   return null
 }
 

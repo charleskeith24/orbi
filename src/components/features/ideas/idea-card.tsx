@@ -2,9 +2,11 @@
 
 import { memo } from "react"
 import { FormatLabel, FunnelBadge, PillarBadge, PriorityBadge } from "@/components/common"
+import { useT } from "@/lib/i18n"
 import type { ContentFormat, ContentIdea, ContentPillar, ID } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { CapturedDate, IdeaScoreBadge, IdeaStatusChip, PlatformIcons } from "./idea-badges"
+import { ideaBankMessages } from "./messages"
 
 export interface IdeaCardProps {
   idea: ContentIdea
@@ -34,7 +36,8 @@ export const IdeaCard = memo(function IdeaCard({
   actions,
   className,
 }: IdeaCardProps) {
-  const title = idea.title.trim() || "Untitled idea"
+  const t = useT(ideaBankMessages)
+  const title = idea.title.trim() || t("untitled_idea")
   return (
     <article
       className={cn(

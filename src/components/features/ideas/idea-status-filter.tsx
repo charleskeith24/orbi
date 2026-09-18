@@ -8,10 +8,13 @@ import { Command, CommandGroup, CommandItem, CommandList, CommandSeparator } fro
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
 import { IDEA_STATUSES } from "@/lib/constants"
+import { translate, type UiLang } from "@/lib/i18n/core"
+import { useT, useUiLang } from "@/lib/i18n"
 import type { IdeaStatus } from "@/lib/types"
 import { cn, formatNumber } from "@/lib/utils"
 import { SHORT_STATUS_LABEL } from "./idea-badges"
 import { ACTIVE_STATUSES, ALL_STATUSES, sameSet } from "./idea-model"
+import { ideaBankMessages } from "./messages"
 
 function RadioIndicator({ checked }: { checked: boolean }) {
   return (
@@ -31,10 +34,12 @@ const Count = ({ value }: { value: number }) => (
   <span className="ml-auto pl-2 text-xs text-muted-foreground num">{formatNumber(value)}</span>
 )
 
-export function statusFilterSummary(value: IdeaStatus[]): string {
-  if (sameSet(value, ACTIVE_STATUSES)) return "Active"
-  if (sameSet(value, ALL_STATUSES)) return "All"
-  return value.length <= 2 ? value.map((s) => SHORT_STATUS_LABEL[s]).join(", ") : `${value.length} statuses`
+export function statusFilterSummary(value: IdeaStatus[], lang: UiLang = "en"): string {
+  if (sameSet(value, ACTIVE_STATUSES)) return translate(ideaBankMessages, lang, "status_active")
+  if (sameSet(value, ALL_STATUSES)) return translate(ideaBankMessages, lang, "status_all")
+  return value.length <= 2
+    ? value.map((s) => SHORT_STATUS_LABEL[s]).join(", ")
+    : translate(ideaBankMessages, lang, "status_count", { count: value.length })
 }
 
 /**
@@ -50,10 +55,12 @@ export function IdeaStatusFilter({
   counts: Record<IdeaStatus, number>
   onChange: (next: IdeaStatus[]) => void
 }) {
+  const t = useT(ideaBankMessages)
+  const lang = useUiLang()
   const [open, setOpen] = useState(false)
   const isActive = sameSet(value, ACTIVE_STATUSES)
   const isAll = sameSet(value, ALL_STATUSES)
-  const summary = statusFilterSummary(value)
+  const summary = statusFilterSummary(value, lang)
   const total = (statuses: IdeaStatus[]) => statuses.reduce((acc, s) => acc + (counts[s] ?? 0), 0)
 
   function toggle(status: IdeaStatus) {
@@ -67,7 +74,7 @@ export function IdeaStatusFilter({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" size="sm" aria-label={`Status: ${summary}`} className="max-w-full">
+        <Button type="button" variant="outline" size="sm" aria-label={t("status_label", { summary })} className="max-w-full">
           <CircleDashed className="text-muted-foreground" aria-hidden />
           Status
           <Separator orientation="vertical" className="mx-0.5 data-vertical:h-3.5" />
@@ -76,24 +83,24 @@ export function IdeaStatusFilter({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 gap-0 p-0">
         <Command>
-          <CommandList>
-            <CommandGroup heading="Show">
+          <CommandList label={t("status_list")}>
+            <CommandGroup heading={t("status_show")}>
               <CommandItem value="active" aria-checked={isActive} onSelect={() => onChange(ACTIVE_STATUSES)} className="[&>svg:last-child]:hidden">
                 <RadioIndicator checked={isActive} />
                 <span className="flex min-w-0 flex-col">
-                  <span>Active</span>
-                  <span className="text-xs text-muted-foreground">Hides converted and archived</span>
+                  <span>{t("status_active")}</span>
+                  <span className="text-xs text-muted-foreground">{t("status_active_description")}</span>
                 </span>
                 <Count value={total(ACTIVE_STATUSES)} />
               </CommandItem>
               <CommandItem value="all" aria-checked={isAll} onSelect={() => onChange(ALL_STATUSES)} className="[&>svg:last-child]:hidden">
                 <RadioIndicator checked={isAll} />
-                All statuses
+                {t("status_all_statuses")}
                 <Count value={total(ALL_STATUSES)} />
               </CommandItem>
             </CommandGroup>
             <CommandSeparator />
-            <CommandGroup heading="Statuses">
+            <CommandGroup heading={t("status_statuses")}>
               {IDEA_STATUSES.map((status) => {
                 const Icon = IDEA_STATUS_ICONS[status.id]
                 const checked = value.includes(status.id)

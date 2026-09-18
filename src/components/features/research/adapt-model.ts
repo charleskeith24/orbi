@@ -1,9 +1,11 @@
 import { saveDraftScript } from "@/components/features/stories/angle-model"
 import { upperFirst } from "@/components/features/stories/story-model"
 import type { AiTaskInput } from "@/lib/ai"
+import { translate, translator, type UiLang } from "@/lib/i18n/core"
 import { convertIdeaToContent, createIdea, dataActions } from "@/lib/store"
 import type { AiProviderId, ContentIdea, ContentItem, ID, InsertRow, PlatformId, ResearchItem, ResearchType, Story } from "@/lib/types"
 import { truncate } from "@/lib/utils"
+import { adaptMessages } from "./adapt-messages"
 import { adaptAnalysisInput, hookCategoryForAngle, referenceSummary, statusAfterAnalysis, toReferenceAnalysis, type AnalysisFields } from "./research-model"
 
 export interface PastedReference {
@@ -73,15 +75,15 @@ export function referenceInfo(item: ResearchItem): ReferenceInfo {
   }
 }
 
-/** Library title for a pasted reference: its own title, else its first line. */
-export function pastedTitle(pasted: PastedReference): string {
+/** Library title for a pasted reference: its own title, else its first line (else "Pasted reference" in `lang`). */
+export function pastedTitle(pasted: PastedReference, lang: UiLang = "en"): string {
   const own = pasted.title.replace(/\s+/g, " ").trim()
   if (own) return own
   const firstLine = pasted.content
     .split("\n")
     .map((line) => line.trim())
     .find(Boolean)
-  return firstLine ? truncate(firstLine, 80) : "Pasted reference"
+  return firstLine ? truncate(firstLine, 80) : translate(adaptMessages, lang, "pasted_reference")
 }
 
 /** adapt_reference input. `story_ids` only steers which Story Vault stories the Brand Context carries. */
@@ -105,8 +107,16 @@ export function buildAdaptInput(
   }
 }
 
-export function originalIdeaValues(original: OriginalDraft, ref: ReferenceInfo, targets: AdaptTargets, analysis: AnalysisFields): InsertRow<"content_ideas"> {
-  const credit = [`“${truncate(ref.title.trim() || "a reference", 120)}”`, ref.creator.trim() ? `(${truncate(ref.creator.trim(), 60)})` : ""]
+/** The idea saved from an original; its `inspiration` credit is written in `lang` (the UI language at save time). */
+export function originalIdeaValues(
+  original: OriginalDraft,
+  ref: ReferenceInfo,
+  targets: AdaptTargets,
+  analysis: AnalysisFields,
+  lang: UiLang = "en"
+): InsertRow<"content_ideas"> {
+  const t = translator(adaptMessages, lang)
+  const credit = [`“${truncate(ref.title.trim() || t("a_reference"), 120)}”`, ref.creator.trim() ? `(${truncate(ref.creator.trim(), 60)})` : ""]
     .filter(Boolean)
     .join(" ")
   return {
@@ -121,14 +131,20 @@ export function originalIdeaValues(original: OriginalDraft, ref: ReferenceInfo, 
     format_id: targets.formatId,
     core_topic: upperFirst(ref.topic),
     why_it_matters: targets.topic.trim(),
-    inspiration: truncate(`Inspired by ${credit} — structure only. ${original.originality_note.trim()}`, 1000),
+    inspiration: truncate(t("inspired_by", { credit, note: original.originality_note.trim() }), 1000),
     source: "research",
     source_ref_id: ref.id,
   }
 }
 
-export function saveOriginalAsIdea(original: OriginalDraft, ref: ReferenceInfo, targets: AdaptTargets, analysis: AnalysisFields): ContentIdea {
-  return createIdea(originalIdeaValues(original, ref, targets, analysis))
+export function saveOriginalAsIdea(
+  original: OriginalDraft,
+  ref: ReferenceInfo,
+  targets: AdaptTargets,
+  analysis: AnalysisFields,
+  lang: UiLang = "en"
+): ContentIdea {
+  return createIdea(originalIdeaValues(original, ref, targets, analysis, lang))
 }
 
 /** Original → idea (reusing the saved one) → one content item with the draft as its first script. */
@@ -137,10 +153,11 @@ export function createContentFromOriginal(
   ref: ReferenceInfo,
   targets: AdaptTargets,
   analysis: AnalysisFields,
-  existingIdeaId: ID | null
+  existingIdeaId: ID | null,
+  lang: UiLang = "en"
 ): { idea: ContentIdea; item: ContentItem } {
   const existing = existingIdeaId ? dataActions.getDb().content_ideas.find((i) => i.id === existingIdeaId) : undefined
-  const idea = existing ?? saveOriginalAsIdea(original, ref, targets, analysis)
+  const idea = existing ?? saveOriginalAsIdea(original, ref, targets, analysis, lang)
   const [item] = convertIdeaToContent(idea.id, { platforms: [targets.platform], stage: original.draft.trim() ? "scripting" : "brief" })
   if (!item) throw new Error("The content item couldn't be created.")
   saveDraftScript(item.id, original.draft, original.edited ? "manual" : original.provider)
@@ -164,9 +181,15 @@ export function markReferenceAdapted(item: ResearchItem, analysis: AdaptAnalysis
 }
 
 /** Save a pasted reference (text + analysis) to the Research Library. */
-export function savePastedReference(pasted: PastedReference, analysis: AdaptAnalysis | null, adapted: boolean, pillarId: ID | null): ResearchItem {
+export function savePastedReference(
+  pasted: PastedReference,
+  analysis: AdaptAnalysis | null,
+  adapted: boolean,
+  pillarId: ID | null,
+  lang: UiLang = "en"
+): ResearchItem {
   return dataActions.insert("research_items", {
-    title: pastedTitle(pasted),
+    title: pastedTitle(pasted, lang),
     type: pasted.type,
     platform: pasted.platform,
     url: pasted.url.trim(),

@@ -4,9 +4,12 @@ import { CircleHelp, Trophy } from "lucide-react"
 import { PageSection, StatusPill } from "@/components/common"
 import { ChartFrame, ColumnChart } from "@/components/charts"
 import { EXPERIMENT_MIN_LIFT, EXPERIMENT_MIN_N, type ExperimentResults } from "@/lib/analytics"
+import { useT, useUiLang } from "@/lib/i18n"
 import type { ContentExperiment } from "@/lib/types"
 import { formatDelta } from "@/lib/utils"
+import { experimentSheetMessages } from "./detail-messages"
 import { formatMetricValue, metricLabel, winnerLabel } from "./experiment-model"
+import { experimentsMessages } from "./messages"
 
 function MiniStat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
@@ -19,6 +22,8 @@ function MiniStat({ label, value, hint }: { label: string; value: string; hint?:
 }
 
 function Verdict({ experiment, results }: { experiment: ContentExperiment; results: ExperimentResults }) {
+  const t = useT(experimentSheetMessages)
+  const lang = useUiLang()
   const { a, b, suggestedWinner, reason } = results
   const thin = a.n < EXPERIMENT_MIN_N || b.n < EXPERIMENT_MIN_N
   const declared = experiment.winner
@@ -29,24 +34,21 @@ function Verdict({ experiment, results }: { experiment: ContentExperiment; resul
       <div className="flex flex-wrap items-center gap-2">
         {suggestedWinner === "inconclusive" ? (
           <StatusPill tone="warning" icon={CircleHelp}>
-            {thin ? "Inconclusive — not enough data" : "Inconclusive — too close to call"}
+            {thin ? t("inconclusive_thin") : t("inconclusive_close")}
           </StatusPill>
         ) : (
           <StatusPill tone="good" icon={Trophy}>
-            Data suggests {winnerLabel(experiment, suggestedWinner)}
+            {t("data_suggests", { winner: winnerLabel(experiment, suggestedWinner, lang) })}
           </StatusPill>
         )}
       </div>
       <p className="text-xs text-pretty text-muted-foreground">
         {reason}.{" "}
-        {thin
-          ? "Link more published posts to each variant, or log analytics for the ones already linked."
-          : `A winner is suggested only with at least ${EXPERIMENT_MIN_N} measured posts per variant and a lift of ${EXPERIMENT_MIN_LIFT}% or more.`}
+        {thin ? t("thin_hint") : t("rule_hint", { min: EXPERIMENT_MIN_N, lift: EXPERIMENT_MIN_LIFT })}
       </p>
       {disagrees ? (
         <p className="text-xs text-pretty text-warning-fg">
-          You recorded {winnerLabel(experiment, declared)} as the winner, but the current data points to variant{" "}
-          {suggestedWinner.toUpperCase()}.
+          {t("disagrees", { winner: winnerLabel(experiment, declared, lang), letter: suggestedWinner.toUpperCase() })}
         </p>
       ) : null}
     </div>
@@ -55,52 +57,59 @@ function Verdict({ experiment, results }: { experiment: ContentExperiment; resul
 
 /** Per-variant n and mean, lift, the suggested winner and a two-column comparison (with a table view). */
 export function ExperimentResultsPanel({ experiment, results }: { experiment: ContentExperiment; results: ExperimentResults }) {
+  const t = useT(experimentSheetMessages)
+  const tx = useT(experimentsMessages)
   const metric = experiment.metric
   const label = metricLabel(metric)
   const { a, b, lift, suggestedWinner } = results
   const format = (value: number | null) => formatMetricValue(metric, value)
   const comparable = a.n > 0 && b.n > 0
+  const lower = label.toLowerCase()
+  const variantA = tx("variant", { letter: "A" })
+  const variantB = tx("variant", { letter: "B" })
 
   return (
     <PageSection
       id="experiment-results"
-      title="Results"
-      description={`Mean ${label.toLowerCase()} per variant, from each linked post's latest analytics snapshot.`}
+      title={t("results")}
+      description={t("results_description", { metric: lower })}
     >
       <Verdict experiment={experiment} results={results} />
       <div className="grid grid-cols-3 gap-2">
-        <MiniStat label="Variant A" value={format(a.mean)} hint={`n = ${a.n} of ${a.items.length}`} />
-        <MiniStat label="Variant B" value={format(b.mean)} hint={`n = ${b.n} of ${b.items.length}`} />
-        <MiniStat label="Lift (B vs A)" value={lift === null ? "—" : formatDelta(lift)} hint={lift === null ? "Needs both means" : undefined} />
+        <MiniStat label={variantA} value={format(a.mean)} hint={t("n_of", { n: a.n, total: a.items.length })} />
+        <MiniStat label={variantB} value={format(b.mean)} hint={t("n_of", { n: b.n, total: b.items.length })} />
+        <MiniStat label={t("lift")} value={lift === null ? "—" : formatDelta(lift)} hint={lift === null ? t("needs_both") : undefined} />
       </div>
       {comparable ? (
         <ChartFrame
-          title={`Mean ${label.toLowerCase()}`}
-          description={suggestedWinner === "inconclusive" ? "No winner suggested yet." : `Variant ${suggestedWinner.toUpperCase()} highlighted as the suggested winner.`}
+          title={t("mean_metric", { metric: lower })}
+          description={
+            suggestedWinner === "inconclusive" ? t("no_winner_yet") : t("highlighted", { letter: suggestedWinner.toUpperCase() })
+          }
           table={{
-            columns: ["Variant", "Posts linked", "Measured (n)", `Mean ${label.toLowerCase()}`],
+            columns: [t("col_variant"), t("col_linked"), t("col_measured"), t("mean_metric", { metric: lower })],
             rows: [
-              [`A · ${experiment.variant_a || "Variant A"}`, a.items.length, a.n, format(a.mean)],
-              [`B · ${experiment.variant_b || "Variant B"}`, b.items.length, b.n, format(b.mean)],
+              [`A · ${experiment.variant_a || variantA}`, a.items.length, a.n, format(a.mean)],
+              [`B · ${experiment.variant_b || variantB}`, b.items.length, b.n, format(b.mean)],
             ],
           }}
         >
           <ColumnChart
             height={180}
             labels="all"
-            valueLabel={`Mean ${label.toLowerCase()}`}
+            valueLabel={t("mean_metric", { metric: lower })}
             valueFormatter={(value) => formatMetricValue(metric, value)}
             highlight={suggestedWinner === "inconclusive" ? undefined : suggestedWinner}
-            aria-label={`Mean ${label.toLowerCase()} by variant`}
+            aria-label={t("chart_aria", { metric: lower })}
             data={[
-              { id: "a", label: "Variant A", value: a.mean ?? 0 },
-              { id: "b", label: "Variant B", value: b.mean ?? 0 },
+              { id: "a", label: variantA, value: a.mean ?? 0 },
+              { id: "b", label: variantB, value: b.mean ?? 0 },
             ]}
           />
         </ChartFrame>
       ) : (
         <p className="rounded-lg border border-dashed px-3 py-4 text-center text-xs text-pretty text-muted-foreground">
-          The comparison chart appears once both variants have at least one measured post.
+          {t("chart_empty")}
         </p>
       )}
     </PageSection>

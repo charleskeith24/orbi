@@ -3,7 +3,9 @@
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
+import { reportMessages } from "./messages"
 import type { PeriodOption } from "./report-periods"
 
 /** Previous / pick / next for a report period (weeks or months). */
@@ -24,6 +26,7 @@ export function PeriodNav({
   onChange: (value: string) => void
   className?: string
 }) {
+  const t = useT(reportMessages)
   const selected = options.find((o) => o.value === value)
   return (
     <div className={cn("flex min-w-0 items-center gap-1", className)}>
@@ -31,14 +34,14 @@ export function PeriodNav({
         type="button"
         variant="outline"
         size="icon-sm"
-        aria-label={`Previous ${unit}`}
+        aria-label={t(`prev_${unit}`)}
         disabled={!prev}
         onClick={() => prev && onChange(prev)}
       >
         <ChevronLeft aria-hidden />
       </Button>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger size="sm" aria-label={`Choose ${unit}`} className="w-48 min-w-0 justify-between sm:w-52">
+        <SelectTrigger size="sm" aria-label={t(`choose_${unit}`)} className="w-48 min-w-0 justify-between sm:w-52">
           <SelectValue>
             <span className="truncate num">{selected?.label ?? value}</span>
           </SelectValue>
@@ -56,7 +59,7 @@ export function PeriodNav({
         type="button"
         variant="outline"
         size="icon-sm"
-        aria-label={`Next ${unit}`}
+        aria-label={t(`next_${unit}`)}
         disabled={!next}
         onClick={() => next && onChange(next)}
       >

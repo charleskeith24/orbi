@@ -1,6 +1,10 @@
+"use client"
+
 import { ordinalColor, seriesColor, type ChartColor } from "@/components/charts/colors"
 import { EmptyChart } from "@/components/charts/empty-chart"
+import { chartMessages } from "@/components/charts/messages"
 import { defaultValueFormatter, formatShare } from "@/components/charts/utils"
+import { useT } from "@/lib/i18n"
 import { cn, sum } from "@/lib/utils"
 
 export interface FunnelStageDatum {
@@ -29,11 +33,12 @@ export function FunnelBars({
   stages,
   valueFormatter = defaultValueFormatter,
   showShare = true,
-  emptyMessage = "No stages to show yet.",
+  emptyMessage,
   className,
   "aria-label": ariaLabel,
 }: FunnelBarsProps) {
-  if (!stages.length) return <EmptyChart message={emptyMessage} height={120} className={className} />
+  const t = useT(chartMessages)
+  if (!stages.length) return <EmptyChart message={emptyMessage ?? t("no_stages")} height={120} className={className} />
 
   const max = Math.max(0, ...stages.map((s) => s.value))
   const total = sum(stages.map((s) => Math.max(0, s.value)))

@@ -4,7 +4,9 @@ import { ArrowRight, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import { useId, useState } from "react"
 import { Delta, SectionCard } from "@/components/common"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
+import { systemMessages } from "./system-messages"
 import type { FlywheelStep, FlywheelSummary } from "./system-model"
 
 /* Geometry in viewBox units. The HTML labels share the same coordinate space (percent of W / H). */
@@ -41,12 +43,13 @@ function labelPlacement(deg: number): { style: React.CSSProperties; align: "star
 }
 
 function StepValue({ step }: { step: FlywheelStep }) {
+  const t = useT(systemMessages)
   return (
     <>
       <span className="text-sm leading-5 font-semibold num">
         {step.value} <span className="text-xs font-normal text-muted-foreground">{step.unit}</span>
       </span>
-      {step.delta !== null ? <Delta value={step.delta} /> : <span className="text-xs text-muted-foreground">all time</span>}
+      {step.delta !== null ? <Delta value={step.delta} /> : <span className="text-xs text-muted-foreground">{t("all_time")}</span>}
     </>
   )
 }
@@ -55,6 +58,7 @@ function Wheel({ summary }: { summary: FlywheelSummary }) {
   const markerId = `fw-arrow-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`
   const [active, setActive] = useState<number | null>(null)
   const n = summary.steps.length
+  const t = useT(systemMessages)
 
   return (
     <div className="relative mx-auto aspect-[132/108] w-full max-w-[46rem]">
@@ -110,18 +114,18 @@ function Wheel({ summary }: { summary: FlywheelSummary }) {
 
       <div className="pointer-events-none absolute top-1/2 left-1/2 flex w-[34%] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 text-center">
         <RefreshCw className="size-5 text-brand" aria-hidden />
-        <p className="text-sm leading-5 font-semibold text-balance">Personal Brand Flywheel</p>
+        <p className="text-sm leading-5 font-semibold text-balance">{t("flywheel_title")}</p>
         {summary.measured ? (
           <p className="text-xs text-muted-foreground">
             <span className="font-medium text-foreground num">
-              {summary.growing} of {summary.measured}
+              {t("growing_count", { growing: summary.growing, measured: summary.measured })}
             </span>{" "}
-            steps growing
+            {t("growing_suffix")}
           </p>
         ) : (
-          <p className="text-xs text-pretty text-muted-foreground">Not enough history to compare yet</p>
+          <p className="text-xs text-pretty text-muted-foreground">{t("no_history")}</p>
         )}
-        <p className="text-[11px] text-muted-foreground">Last 30 days vs the 30 before</p>
+        <p className="text-[11px] text-muted-foreground">{t("period_compare")}</p>
       </div>
 
       <ol className="contents">
@@ -144,7 +148,7 @@ function Wheel({ summary }: { summary: FlywheelSummary }) {
                 )}
               >
                 <span className="text-xs font-medium">
-                  <span className="sr-only">Step {i + 1}: </span>
+                  <span className="sr-only">{t("step_sr", { n: i + 1 })}</span>
                   {step.label}
                 </span>
                 <StepValue step={step} />
@@ -159,6 +163,7 @@ function Wheel({ summary }: { summary: FlywheelSummary }) {
 
 /** Narrow containers: the same cycle as a numbered list. */
 function StepList({ summary }: { summary: FlywheelSummary }) {
+  const t = useT(systemMessages)
   return (
     <ol className="flex flex-col">
       {summary.steps.map((step, i) => (
@@ -185,7 +190,7 @@ function StepList({ summary }: { summary: FlywheelSummary }) {
         <span className="flex size-6 shrink-0 items-center justify-center">
           <RefreshCw className="size-4 text-brand" aria-hidden />
         </span>
-        Feeds the next cycle — back to Expertise.
+        {t("next_cycle")}
       </li>
     </ol>
   )
@@ -195,21 +200,22 @@ function StepList({ summary }: { summary: FlywheelSummary }) {
 export function FlywheelCard({ summary }: { summary: FlywheelSummary }) {
   const weak = summary.weakest
   const strong = summary.strongest
+  const t = useT(systemMessages)
   return (
     <SectionCard
-      title="Personal Brand Flywheel"
-      description="Expertise becomes content, content earns attention, attention turns into trust, authority, community and opportunity — which gives you new experiences and more to say."
+      title={t("flywheel_title")}
+      description={t("flywheel_description")}
       footer={
         weak || strong ? (
           <p className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
             {strong ? (
               <span>
-                Strongest: <span className="font-medium text-foreground">{strong.label}</span> <Delta value={strong.delta} />
+                {t("strongest")} <span className="font-medium text-foreground">{strong.label}</span> <Delta value={strong.delta} />
               </span>
             ) : null}
             {weak ? (
               <span className="flex min-w-0 flex-wrap items-center gap-x-1.5">
-                Weakest link: <span className="font-medium text-foreground">{weak.label}</span> <Delta value={weak.delta} />
+                {t("weakest")} <span className="font-medium text-foreground">{weak.label}</span> <Delta value={weak.delta} />
                 <span aria-hidden>—</span>
                 <Link href={weak.tip.href} className="inline-flex items-center gap-1 font-medium text-foreground underline-offset-2 hover:underline">
                   {weak.tip.text}

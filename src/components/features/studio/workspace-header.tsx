@@ -5,15 +5,18 @@ import { ChartNoAxesColumn, GitFork, Send } from "lucide-react"
 import Link from "next/link"
 import { ContentThumbnail, InlineText } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/i18n"
 import { PLATFORMS, PUBLISHED_STAGES, REPURPOSE_TYPES } from "@/lib/constants"
 import { parseDate } from "@/lib/dates"
 import { dataActions, moveItemToStage, uiActions, useRow } from "@/lib/store"
 import type { ContentItem } from "@/lib/types"
+import { workspaceMessages } from "./messages"
 import { PropertyBar, publishedToast } from "./workspace-chips"
 import { WorkspaceMenu } from "./workspace-menu"
 
 /** Title (click to edit), provenance line, the next pipeline action and the property chips. */
 export function WorkspaceHeader({ item, now, onDeleting }: { item: ContentItem; now: Date; onDeleting: () => void }) {
+  const t = useT(workspaceMessages)
   const format = useRow("content_formats", item.format_id)
   const parent = useRow("content_items", item.parent_id)
   const live = PUBLISHED_STAGES.includes(item.stage)
@@ -33,10 +36,10 @@ export function WorkspaceHeader({ item, now, onDeleting }: { item: ContentItem; 
             <InlineText
               as="h1"
               value={item.title}
-              placeholder="Untitled content"
+              placeholder={t("untitled_content")}
               required
               maxLength={300}
-              aria-label="Title"
+              aria-label={t("title")}
               onSave={(title) => dataActions.update("content_items", item.id, { title })}
             />
             <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
@@ -53,7 +56,9 @@ export function WorkspaceHeader({ item, now, onDeleting }: { item: ContentItem; 
                   >
                     <GitFork className="size-3 shrink-0" aria-hidden />
                     <span className="max-w-72 truncate">
-                      {item.repurpose_type ? `${REPURPOSE_TYPES[item.repurpose_type].label} of ` : "Repurposed from "}“{parent.title || "Untitled"}”
+                      {item.repurpose_type
+                        ? t("repurposed_type", { type: REPURPOSE_TYPES[item.repurpose_type].label, title: parent.title || t("untitled") })
+                        : t("repurposed_from", { title: parent.title || t("untitled") })}
                     </span>
                   </Link>
                 </>
@@ -62,7 +67,9 @@ export function WorkspaceHeader({ item, now, onDeleting }: { item: ContentItem; 
                 <>
                   <span aria-hidden>·</span>
                   <span title={updated.toLocaleString()}>
-                    Edited {now.getTime() - updated.getTime() < 60_000 ? "just now" : formatDistanceStrict(updated, now, { addSuffix: true })}
+                    {t("edited", {
+                      when: now.getTime() - updated.getTime() < 60_000 ? t("just_now") : formatDistanceStrict(updated, now, { addSuffix: true }),
+                    })}
                   </span>
                 </>
               ) : null}
@@ -73,12 +80,12 @@ export function WorkspaceHeader({ item, now, onDeleting }: { item: ContentItem; 
           {live ? (
             <Button type="button" size="sm" onClick={() => uiActions.openDialog({ type: "add-metrics", itemId: item.id })}>
               <ChartNoAxesColumn aria-hidden />
-              Add analytics
+              {t("add_analytics")}
             </Button>
           ) : (
             <Button type="button" size="sm" onClick={markPublished}>
               <Send aria-hidden />
-              Mark published
+              {t("mark_published")}
             </Button>
           )}
           <WorkspaceMenu item={item} onDeleting={onDeleting} />

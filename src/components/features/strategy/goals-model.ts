@@ -4,6 +4,7 @@
  */
 import { goalProgress, inRange, isPublishedItem, publishedAtOf, trailingDays, type GoalProgress } from "@/lib/analytics"
 import { GOAL_CATEGORIES, GOAL_CATEGORY_IDS, GOAL_METRIC_MAP, GOAL_PERIODS } from "@/lib/constants"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type {
   AppSettings,
   BrandProfile,
@@ -18,6 +19,7 @@ import type {
 } from "@/lib/types"
 import { formatNumber } from "@/lib/utils"
 import { cleanList } from "./brand-model"
+import { goalFormMessages } from "./goals-messages"
 
 export type GoalRole = "primary" | "secondary"
 
@@ -224,11 +226,12 @@ export function goalFormValues(goal: ContentGoal): GoalFormValues {
   }
 }
 
-export function validateGoal(values: GoalFormValues): GoalFormErrors {
+export function validateGoal(values: GoalFormValues, lang: UiLang = "en"): GoalFormErrors {
+  const t = translator(goalFormMessages, lang)
   const errors: GoalFormErrors = {}
-  if (!values.name.trim()) errors.name = "Give the goal a name."
+  if (!values.name.trim()) errors.name = t("error_name")
   if (values.target_value !== null && (!Number.isFinite(values.target_value) || values.target_value < 1)) {
-    errors.target_value = "The target must be at least 1."
+    errors.target_value = t("error_target")
   }
   return errors
 }

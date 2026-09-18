@@ -12,6 +12,9 @@ import {
   startOfDay,
   startOfWeek as dfStartOfWeek,
 } from "date-fns"
+// The pure i18n core only — never the "@/lib/i18n" React barrel.
+import { translate, type UiLang } from "@/lib/i18n/core"
+import { relativeDayMessages } from "@/lib/i18n/messages/dates"
 import type { ContentItem, ISODate, ISODateTime } from "@/lib/types"
 
 export type DateInput = Date | ISODate | ISODateTime | null | undefined
@@ -69,16 +72,20 @@ export function formatTime(value: DateInput): string {
   return formatDate(value, "h:mm a")
 }
 
-/** "Today", "Tomorrow", "Yesterday", "in 3 days", "5 days ago", or a short date beyond two weeks. */
-export function formatRelativeDay(value: DateInput, now: Date = new Date()): string {
+/**
+ * "Today", "Tomorrow", "Yesterday", "in 3 days", "5 days ago", or a short date beyond two weeks.
+ * `lang: "tl"` gives "Ngayon", "Bukas", "Kahapon", "sa 3 araw", "5 araw ang nakalipas"; the short date
+ * stays date-fns "MMM d" in both languages.
+ */
+export function formatRelativeDay(value: DateInput, now: Date = new Date(), lang: UiLang = "en"): string {
   const d = parseDate(value)
   if (!d) return "—"
   const diff = differenceInCalendarDays(d, now)
-  if (diff === 0) return "Today"
-  if (diff === 1) return "Tomorrow"
-  if (diff === -1) return "Yesterday"
-  if (diff > 1 && diff <= 14) return `in ${diff} days`
-  if (diff < -1 && diff >= -14) return `${-diff} days ago`
+  if (diff === 0) return translate(relativeDayMessages, lang, "today")
+  if (diff === 1) return translate(relativeDayMessages, lang, "tomorrow")
+  if (diff === -1) return translate(relativeDayMessages, lang, "yesterday")
+  if (diff > 1 && diff <= 14) return translate(relativeDayMessages, lang, "in_days", { count: diff })
+  if (diff < -1 && diff >= -14) return translate(relativeDayMessages, lang, "days_ago", { count: -diff })
   return format(d, "MMM d")
 }
 

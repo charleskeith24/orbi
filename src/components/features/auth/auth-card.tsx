@@ -1,4 +1,8 @@
+"use client"
+
 import type { LucideIcon } from "lucide-react"
+import { useScreenT } from "@/components/app-shell/device-ui-lang"
+import { authMessages } from "@/components/features/auth/messages"
 
 /** Card frame shared by the sign-in and sign-up forms. */
 export function AuthCard({
@@ -51,12 +55,25 @@ export function AuthNotice({
 }
 
 /** Thin "or" divider that sits on the card surface. */
-export function AuthDivider({ label = "or" }: { label?: string }) {
+export function AuthDivider({ label }: { label?: string }) {
+  const t = useScreenT(authMessages)
   return (
     <div className="flex items-center gap-3 text-xs text-muted-foreground" role="separator">
       <span className="h-px flex-1 bg-border" />
-      {label}
+      {label ?? t("or")}
       <span className="h-px flex-1 bg-border" />
     </div>
+  )
+}
+
+/** "We sent a link to {email}. …" with the address emphasized. */
+export function EmailSentence({ template, email }: { template: string; email: string }) {
+  const [before, after = ""] = template.split("{email}")
+  return (
+    <>
+      {before}
+      <span className="font-medium text-foreground">{email}</span>
+      {after}
+    </>
   )
 }

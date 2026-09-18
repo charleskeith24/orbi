@@ -9,10 +9,12 @@ import { AiButton, AiNotice, EmptyState, useConfirm } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { buildRepurposeInput, useAiTask } from "@/lib/ai"
 import { computeTiers, isPublishedItem, isWinnerTier, latestMetricsByItem } from "@/lib/analytics"
+import { useT, useUiLang } from "@/lib/i18n"
 import { REPURPOSE_TYPE_IDS, REPURPOSE_TYPES } from "@/lib/constants"
 import { createRepurposedItem, dataActions, useBrand, useDataStore, useDb, useSettings } from "@/lib/store"
 import type { ContentItem, ContentRepurpose, ID, RepurposeType } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { repurposeMessages } from "./messages"
 import { DraftSkeleton, draftIssues, RepurposeDraftCard, type RepurposeDraft } from "./repurpose-draft-card"
 import { RepurposeErrorNotice } from "./repurpose-error"
 import {
@@ -47,16 +49,17 @@ const labelOf = (type: RepurposeType) => REPURPOSE_TYPES[type].label
 
 /** Repurposing Engine (spec §23): turn one piece into platform-native assets. */
 export function RepurposePanel({ itemId, onCreated }: RepurposePanelProps) {
+  const t = useT(repurposeMessages)
   const item = useDb().content_items.find((i) => i.id === itemId)
   if (!item) {
     return (
       <EmptyState
         icon={SearchX}
-        title="Content not found"
-        description="This content item doesn’t exist anymore, so there is nothing to repurpose."
+        title={t("not_found_title")}
+        description={t("not_found_description")}
         action={
           <Button asChild size="sm" variant="outline">
-            <Link href="/studio">Open Content Studio</Link>
+            <Link href="/studio">{t("open_studio")}</Link>
           </Button>
         }
       />
@@ -66,6 +69,8 @@ export function RepurposePanel({ itemId, onCreated }: RepurposePanelProps) {
 }
 
 function RepurposeWorkbench({ item, onCreated }: { item: ContentItem; onCreated?: (itemIds: ID[]) => void }) {
+  const t = useT(repurposeMessages)
+  const lang = useUiLang()
   const db = useDb()
   const settings = useSettings()
   const brand = useBrand()
@@ -110,7 +115,7 @@ function RepurposeWorkbench({ item, onCreated }: { item: ContentItem; onCreated?
 
   const openDrafts = drafts.filter((d) => !d.createdItemId)
   const readyDrafts = openDrafts.filter((d) => {
-    const issues = draftIssues(d)
+    const issues = draftIssues(d, lang)
     return !issues.title && !issues.body
   })
   const pendingNew = inFlight.filter((t) => !drafts.some((d) => d.type === t))
@@ -170,9 +175,9 @@ function RepurposeWorkbench({ item, onCreated }: { item: ContentItem; onCreated?
     if (
       edited.length &&
       !(await confirm({
-        title: edited.length > 1 ? "Replace edited drafts?" : "Replace your edited draft?",
-        description: `${edited.map((d) => labelOf(d.type)).join(", ")} will be regenerated and your edits lost.`,
-        confirmLabel: "Regenerate",
+        title: edited.length > 1 ? t("replace_edited_multiple") : t("replace_edited_single"),
+        description: t("regenerate_description", { types: edited.map((d) => labelOf(d.type)).join(", ") }),
+        confirmLabel: t("regenerate"),
         destructive: false,
       }))
     ) {
@@ -187,7 +192,7 @@ function RepurposeWorkbench({ item, onCreated }: { item: ContentItem; onCreated?
 
   /** Create the item (+ script + content_repurposing row); returns its id or null. */
   function createFrom(draft: RepurposeDraft): ID | null {
-    const issues = draftIssues(draft)
+    const issues = draftIssues(draft, lang)
     if (issues.title || issues.body) return null
     try {
       const sections = draft.sections.map((s) => ({ ...s, content: s.content.trim() }))
@@ -207,7 +212,7 @@ function RepurposeWorkbench({ item, onCreated }: { item: ContentItem; onCreated?
       }
       return created.id
     } catch (error) {
-      toast.error("Couldn’t create the content item", { description: error instanceof Error ? error.message : String(error) })
+      toast.error(t("create_failed"), { description: error instanceof Error ? error.message : String(error) })
       return null
     }
   }
@@ -226,9 +231,9 @@ function RepurposeWorkbench({ item, onCreated }: { item: ContentItem; onCreated?
     const id = createFrom(draft)
     if (!id) return
     markCreated([{ type: draft.type, id }])
-    toast.success("Content item created", {
-      description: `${draft.title.trim()} · starts in Scripting with this draft as its script`,
-      action: { label: "Open", onClick: () => router.push(`/studio/${id}`) },
+    toast.success(t("item_created"), {
+      description: t("item_created_description", { title: draft.title.trim() }),
+      action: { label: t("open"), onClick: () => router.push(`/studio/${id}`) },
     })
     onCreated?.([id])
   }
@@ -242,16 +247,14 @@ function RepurposeWorkbench({ item, onCreated }: { item: ContentItem; onCreated?
     if (!created.length) return
     markCreated(created)
     const skipped = openDrafts.length - created.length
-    toast.success(`${pluralize(created.length, "content item")} created`, {
-      description: skipped
-        ? `${pluralize(skipped, "draft")} skipped — add a title and some copy first.`
-        : "Each starts in Scripting with its draft as the script.",
+    toast.success(t.plural("items_created", created.length, { count: formatNumber(created.length) }), {
+      description: skipped ? t.plural("drafts_skipped", skipped, { count: formatNumber(skipped) }) : t("each_starts"),
     })
     onCreated?.(created.map((c) => c.id))
   }
 
   function onSaveSuggestion(draft: RepurposeDraft) {
-    if (draftIssues(draft).title) return
+    if (draftIssues(draft, lang).title) return
     const fresh = useDataStore.getState().db
     const rowId = draft.origin.kind === "suggestion" ? draft.origin.rowId : null
     const existing =
@@ -262,8 +265,8 @@ function RepurposeWorkbench({ item, onCreated }: { item: ContentItem; onCreated?
     else dataActions.insert("content_repurposing", { source_item_id: item.id, target_item_id: null, type: draft.type, ...values })
     setDrafts((list) => list.filter((d) => d.type !== draft.type))
     deselect([draft.type])
-    toast.success("Saved as suggestion", {
-      description: `${labelOf(draft.type)} — find it on its tile and as a dashed branch in the Content Tree.`,
+    toast.success(t("saved_suggestion"), {
+      description: t("saved_suggestion_description", { type: labelOf(draft.type) }),
     })
   }
 
@@ -271,10 +274,10 @@ function RepurposeWorkbench({ item, onCreated }: { item: ContentItem; onCreated?
     const index = drafts.findIndex((d) => d.type === draft.type)
     setDrafts((list) => list.filter((d) => d.type !== draft.type))
     if (draft.createdItemId) return
-    toast("Draft discarded", {
+    toast(t("draft_discarded"), {
       description: labelOf(draft.type),
       action: {
-        label: "Undo",
+        label: t("undo"),
         onClick: () =>
           setDrafts((list) => (list.some((d) => d.type === draft.type) ? list : [...list.slice(0, index), draft, ...list.slice(index)])),
       },
@@ -286,9 +289,9 @@ function RepurposeWorkbench({ item, onCreated }: { item: ContentItem; onCreated?
     if (
       existing?.edited &&
       !(await confirm({
-        title: "Replace your edited draft?",
-        description: `Your ${labelOf(row.type)} draft will be replaced by the saved suggestion.`,
-        confirmLabel: "Replace",
+        title: t("replace_edited_single"),
+        description: t("review_replace_description", { type: labelOf(row.type) }),
+        confirmLabel: t("replace"),
         destructive: false,
       }))
     ) {
@@ -311,9 +314,9 @@ function RepurposeWorkbench({ item, onCreated }: { item: ContentItem; onCreated?
   function onDismiss(row: ContentRepurpose) {
     const previous = row.status
     dataActions.update("content_repurposing", row.id, { status: "dismissed" })
-    toast.success("Suggestion dismissed", {
+    toast.success(t("suggestion_dismissed"), {
       description: row.title || labelOf(row.type),
-      action: { label: "Undo", onClick: () => dataActions.update("content_repurposing", row.id, { status: previous }) },
+      action: { label: t("undo"), onClick: () => dataActions.update("content_repurposing", row.id, { status: previous }) },
     })
   }
 
@@ -327,24 +330,30 @@ function RepurposeWorkbench({ item, onCreated }: { item: ContentItem; onCreated?
         <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
           <div className="min-w-0 flex-1 basis-64">
             <h3 id={`${headingId}-formats`} className="text-sm leading-6 font-medium">
-              Repurpose into
+              {t("repurpose_into")}
             </h3>
             <p className="text-xs text-pretty text-muted-foreground">
-              One good idea should produce multiple assets, each native to its platform.
+              {t("repurpose_intro")}
               {createdTypes || suggestedTypes
-                ? ` ${[createdTypes ? `${createdTypes} created` : "", suggestedTypes ? `${suggestedTypes} suggested` : ""].filter(Boolean).join(" · ")}.`
+                ? ` ${[
+                    createdTypes ? t("created_count", { count: createdTypes }) : "",
+                    suggestedTypes ? t("suggested_count", { count: suggestedTypes }) : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}.`
                 : ""}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             <Button type="button" variant="ghost" size="sm" onClick={() => setSelected(new Set(recommended))} disabled={!recommended.length || sameSelection || ai.isPending}>
-              Select recommended
+              {t("select_recommended")}
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={() => setSelected(new Set())} disabled={!selected.size || ai.isPending}>
-              Clear
+              {t("clear")}
             </Button>
             <AiButton type="button" variant="default" size="sm" pending={ai.isPending} disabled={!selected.size} onClick={() => void onGenerate()}>
-              Generate selected{selected.size ? ` (${selected.size})` : ""}
+              {t("generate_selected")}
+              {selected.size ? ` (${selected.size})` : ""}
             </AiButton>
           </div>
         </div>
@@ -358,7 +367,7 @@ function RepurposeWorkbench({ item, onCreated }: { item: ContentItem; onCreated?
           onReview={(row) => void onReview(row)}
           onDismiss={onDismiss}
         />
-        {!selected.size ? <p className="text-xs text-muted-foreground">Pick at least one format to generate drafts.</p> : null}
+        {!selected.size ? <p className="text-xs text-muted-foreground">{t("pick_format")}</p> : null}
         <RepurposeErrorNotice error={ai.error} pending={ai.isPending} onRetry={() => void generate(lastTargets.current)} />
       </section>
 
@@ -367,17 +376,17 @@ function RepurposeWorkbench({ item, onCreated }: { item: ContentItem; onCreated?
           <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
             <div className="min-w-0 flex-1 basis-64">
               <h3 id={`${headingId}-drafts`} className="flex items-center gap-1.5 text-sm leading-6 font-medium">
-                Drafts
+                {t("drafts")}
                 <span className="font-normal text-muted-foreground num">{openDrafts.length + pendingNew.length}</span>
               </h3>
               <p className="text-xs text-pretty text-muted-foreground">
-                Edit until they sound like you — nothing reaches the Pipeline until you create it.
+                {t("drafts_intro")}
               </p>
             </div>
             {openDrafts.length > 1 ? (
               <Button type="button" variant="outline" size="sm" onClick={onCreateAll} disabled={!readyDrafts.length || ai.isPending}>
                 <Plus aria-hidden />
-                Create all ({readyDrafts.length})
+                {t("create_all", { count: readyDrafts.length })}
               </Button>
             ) : null}
           </div>
@@ -402,7 +411,7 @@ function RepurposeWorkbench({ item, onCreated }: { item: ContentItem; onCreated?
       ) : null}
 
       <p className="sr-only" aria-live="polite">
-        {ai.isPending ? `Generating ${pluralize(inFlight.length, "draft")}…` : ""}
+        {ai.isPending ? t.plural("generating", inFlight.length, { count: formatNumber(inFlight.length) }) : ""}
       </p>
       {confirmDialog}
     </div>

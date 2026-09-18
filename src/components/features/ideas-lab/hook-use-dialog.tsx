@@ -8,8 +8,10 @@ import { CopyButton, FormField, PillarSelect } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { HOOK_CATEGORIES } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import { createIdea } from "@/lib/store"
 import type { Hook, ID } from "@/lib/types"
+import { hookMessages } from "./hook-messages"
 import { countBlanks, fillBlanks } from "./hook-model"
 import { HookText } from "./hook-text"
 import { LabDialog, LabDialogBody, LabDialogFooter, LabDialogHeader } from "./lab-dialog"
@@ -25,6 +27,7 @@ export function HookUseDialog({ hook, open, onOpenChange }: { hook: Hook | null;
 
 function HookUseForm({ hook, onClose }: { hook: Hook; onClose: () => void }) {
   const router = useRouter()
+  const t = useT(hookMessages)
   const id = useId()
   const blanks = countBlanks(hook.text)
   const [values, setValues] = useState<string[]>(() => Array.from({ length: blanks }, () => ""))
@@ -40,13 +43,13 @@ function HookUseForm({ hook, onClose }: { hook: Hook; onClose: () => void }) {
     event.preventDefault()
     const clean = ideaTitle.replace(/\s+/g, " ").trim()
     if (!clean) {
-      setError("Give the idea a title.")
+      setError(t("title_error"))
       return
     }
     const idea = createIdea({ title: clean, hook: filled, hook_category: hook.category, pillar_id: pillarId, source: "manual", status: "inbox" })
-    toast.success("Idea created in your Inbox", {
+    toast.success(t("idea_created"), {
       description: clean,
-      action: { label: "Open", onClick: () => router.push(`/ideas?open=${idea.id}`) },
+      action: { label: t("open"), onClick: () => router.push(`/ideas?open=${idea.id}`) },
     })
     onClose()
   }
@@ -54,12 +57,12 @@ function HookUseForm({ hook, onClose }: { hook: Hook; onClose: () => void }) {
   return (
     <form noValidate onSubmit={create} className="flex min-h-0 flex-1 flex-col">
       <LabDialogHeader
-        title="Use this hook"
-        description={blanks ? "Fill in the blanks, then copy it or start an idea with it." : "Copy it, or start an idea with it."}
+        title={t("use_title")}
+        description={blanks ? t("use_description_blanks") : t("use_description_plain")}
       />
       <LabDialogBody className="flex flex-col gap-4">
         <div className="rounded-lg border bg-muted/30 px-3 py-3 dark:bg-muted/15">
-          <p className="text-xs text-muted-foreground">{HOOK_CATEGORIES[hook.category]?.label ?? "Custom"} hook</p>
+          <p className="text-xs text-muted-foreground">{t("category_hook", { category: HOOK_CATEGORIES[hook.category]?.label ?? "Custom" })}</p>
           <p className="mt-1 text-base leading-snug font-medium">
             <HookText text={filled} />
           </p>
@@ -67,14 +70,14 @@ function HookUseForm({ hook, onClose }: { hook: Hook; onClose: () => void }) {
         {blanks ? (
           <div className="grid min-w-0 gap-3 sm:grid-cols-2">
             {values.map((value, index) => (
-              <FormField key={index} label={blanks === 1 ? "Fill the blank" : `Blank ${index + 1}`} htmlFor={`${id}-blank-${index}`}>
+              <FormField key={index} label={blanks === 1 ? t("fill_blank") : t("blank_n", { n: index + 1 })} htmlFor={`${id}-blank-${index}`}>
                 <Input
                   id={`${id}-blank-${index}`}
                   autoFocus={index === 0}
                   value={value}
                   maxLength={120}
                   autoComplete="off"
-                  placeholder={index === 0 ? "e.g. retargeting" : "…"}
+                  placeholder={index === 0 ? t("blank_placeholder") : "…"}
                   onChange={(event) => setValues((current) => current.map((v, i) => (i === index ? event.target.value : v)))}
                 />
               </FormField>
@@ -82,18 +85,18 @@ function HookUseForm({ hook, onClose }: { hook: Hook; onClose: () => void }) {
           </div>
         ) : null}
         <FormField
-          label="Idea title"
+          label={t("idea_title")}
           htmlFor={`${id}-title`}
           required
           error={error ?? undefined}
-          description="The idea lands in your Idea Bank inbox with this hook."
+          description={t("idea_title_help")}
         >
           <Input
             id={`${id}-title`}
             autoFocus={!blanks}
             value={ideaTitle}
             maxLength={200}
-            placeholder="What's the idea about?"
+            placeholder={t("idea_title_placeholder")}
             aria-invalid={Boolean(error) || undefined}
             onChange={(event) => {
               setTitle(event.target.value)
@@ -101,15 +104,15 @@ function HookUseForm({ hook, onClose }: { hook: Hook; onClose: () => void }) {
             }}
           />
         </FormField>
-        <FormField label="Content Pillar" htmlFor={`${id}-pillar`}>
+        <FormField label={t("content_pillar")} htmlFor={`${id}-pillar`}>
           <PillarSelect id={`${id}-pillar`} allowNone value={pillarId} onChange={setPillarId} />
         </FormField>
       </LabDialogBody>
-      <LabDialogFooter status={remaining ? `${remaining} ${remaining === 1 ? "blank" : "blanks"} still empty` : undefined}>
-        <CopyButton text={filled} label="Copy hook" variant="outline" size="default" successMessage="Hook copied" />
+      <LabDialogFooter status={remaining ? t.plural("blanks_left", remaining) : undefined}>
+        <CopyButton text={filled} label={t("copy_hook")} variant="outline" size="default" successMessage={t("hook_copied")} />
         <Button type="submit">
           <Lightbulb aria-hidden />
-          Create idea
+          {t("create_idea")}
         </Button>
       </LabDialogFooter>
     </form>

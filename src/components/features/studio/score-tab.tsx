@@ -18,16 +18,16 @@ import {
 } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { useAiTask } from "@/lib/ai"
+import { useT } from "@/lib/i18n"
 import { QUALITY_DIMENSIONS, QUALITY_RATINGS, SCRIPT_FORMATS } from "@/lib/constants"
 import { formatDateTime } from "@/lib/dates"
 import { dataActions, useTable } from "@/lib/store"
 import type { ContentItem, ContentQualityScore, QualityRating, ScriptFormat } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { scoreMessages } from "./performance-messages"
 import { AiErrorNotice } from "./studio-ai"
 import { draftKey, useStudioStore } from "./studio-store"
 import { alignSections, currentScripts, defaultScriptFormat, sameSections, wordsIn } from "./studio-utils"
-
-const DISCLAIMER = "A quality evaluation — not a prediction of virality."
 
 const RATING_TONE: Record<QualityRating, "good" | "warning" | "serious"> = {
   high_potential: "good",
@@ -43,6 +43,7 @@ function dimensionTone(value: number, max: number): MeterTone {
 
 /** Content Score (spec §28) of the current script: six dimensions, strengths and concrete improvements. */
 export function ScoreTab({ item, onOpenScript }: { item: ContentItem; onOpenScript: () => void }) {
+  const t = useT(scoreMessages)
   const scripts = useTable("content_scripts")
   const formatRows = useTable("content_formats")
   const activeFormat = useStudioStore((s) => s.formats[item.id])
@@ -63,7 +64,7 @@ export function ScoreTab({ item, onOpenScript }: { item: ContentItem; onOpenScri
     if (!script) return
     const text = (script.body || script.sections.map((s) => s.content).filter(Boolean).join("\n\n")).trim()
     if (!text) {
-      toast.error("This script is empty", { description: "Write or generate the script before scoring it." })
+      toast.error(t("script_empty"), { description: t("script_empty_description") })
       return
     }
     const result = await ai.run(
@@ -95,8 +96,8 @@ export function ScoreTab({ item, onOpenScript }: { item: ContentItem; onOpenScri
     }
     setPreviousTotal(score?.total ?? null)
     dataActions.update("content_items", item.id, { quality_score: next })
-    toast.success(`Content Score ${next.total}/100 · ${QUALITY_RATINGS[next.rating].label}`, {
-      description: "Saved to this piece. " + DISCLAIMER,
+    toast.success(t("scored_toast", { total: next.total, rating: QUALITY_RATINGS[next.rating].label }), {
+      description: t("scored_description", { disclaimer: t("disclaimer") }),
     })
   }
 
@@ -104,12 +105,12 @@ export function ScoreTab({ item, onOpenScript }: { item: ContentItem; onOpenScri
     return (
       <EmptyState
         icon={Gauge}
-        title="Write or generate a script first"
-        description="The Content Score evaluates the current script — hook, relevance, value, clarity, authenticity and CTA — and tells you exactly what to improve."
+        title={t("empty_title")}
+        description={t("empty_description")}
         action={
           <Button type="button" size="sm" onClick={onOpenScript}>
             <FilePen aria-hidden />
-            Open Script
+            {t("open_script")}
           </Button>
         }
       />
@@ -119,52 +120,52 @@ export function ScoreTab({ item, onOpenScript }: { item: ContentItem; onOpenScri
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <SectionCard
-        title="Content Score"
-        description={DISCLAIMER}
+        title={t("content_score")}
+        description={t("disclaimer")}
         action={
-          <AiButton type="button" size="sm" variant={score ? "outline" : "default"} pending={ai.isPending} pendingLabel="Scoring…" disabled={!script} onClick={() => void run()}>
-            {score ? "Re-score" : "Score this script"}
+          <AiButton type="button" size="sm" variant={score ? "outline" : "default"} pending={ai.isPending} pendingLabel={t("scoring_pending")} disabled={!script} onClick={() => void run()}>
+            {score ? t("rescore") : t("score_script")}
           </AiButton>
         }
         contentClassName="flex flex-col gap-4"
       >
         <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-4">
-          <ScoreRing value={score?.total ?? null} size={96} strokeWidth={6} label="Content Score" tone={score ? RATING_TONE[score.rating] : "neutral"} />
+          <ScoreRing value={score?.total ?? null} size={96} strokeWidth={6} label={t("content_score")} tone={score ? RATING_TONE[score.rating] : "neutral"} />
           <div className="flex min-w-0 flex-1 basis-64 flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               {score ? (
                 <StatusPill tone={RATING_TONE[score.rating]}>{QUALITY_RATINGS[score.rating].label}</StatusPill>
               ) : (
-                <StatusPill tone="neutral">Not scored yet</StatusPill>
+                <StatusPill tone="neutral">{t("not_scored")}</StatusPill>
               )}
-              {stale ? <StatusPill tone="warning">Stale — the script changed after scoring</StatusPill> : null}
+              {stale ? <StatusPill tone="warning">{t("stale")}</StatusPill> : null}
               {score && previousTotal !== null && previousTotal !== score.total ? (
                 <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                  <Delta value={score.total - previousTotal} suffix=" pts" /> since the last score
+                  <Delta value={score.total - previousTotal} suffix=" pts" /> {t("since_last")}
                 </span>
               ) : null}
             </div>
             {score ? (
               <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                 <span className="text-sm font-semibold text-foreground num">{score.total}/100</span>
-                <span>Scored {formatDateTime(score.evaluated_at)}</span>
+                <span>{t("scored_on", { date: formatDateTime(score.evaluated_at) })}</span>
                 <ProviderBadge provider={score.provider} />
               </p>
             ) : (
               <p className="text-sm text-pretty text-muted-foreground">
-                Scores the six dimensions below against your brand, audience and pillar, with concrete edits for each weak spot.
+                {t("intro")}
               </p>
             )}
             {script ? (
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span>Scoring</span>
+                <span>{t("scoring")}</span>
                 {formatOptions.length > 1 ? (
                   <OptionSelect
                     value={script.format}
                     onChange={(next) => next && setChosen(next)}
                     options={formatOptions}
                     size="sm"
-                    aria-label="Script to score"
+                    aria-label={t("script_to_score")}
                     className="w-auto max-w-60"
                   />
                 ) : (
@@ -172,10 +173,10 @@ export function ScoreTab({ item, onOpenScript }: { item: ContentItem; onOpenScri
                     {SCRIPT_FORMATS[script.format].label} · v{script.version}
                   </span>
                 )}
-                <span className="num">{pluralize(wordsIn(script.sections), "word")}</span>
+                <span className="num">{t.plural("words", wordsIn(script.sections), { count: formatNumber(wordsIn(script.sections)) })}</span>
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">The scored script no longer exists — write a new one to re-score.</p>
+              <p className="text-xs text-muted-foreground">{t("script_gone")}</p>
             )}
           </div>
         </div>
@@ -183,17 +184,19 @@ export function ScoreTab({ item, onOpenScript }: { item: ContentItem; onOpenScri
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border bg-muted/40 px-3 py-2 text-xs">
             <Info className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
             <span className="min-w-0 flex-1 text-pretty">
-              You have unsaved edits in the Script tab. Scoring uses the saved version {script?.version} — save your edits to include them.
+              {t("unsaved_edits", { version: script?.version ?? "" })}
             </span>
             <Button type="button" variant="outline" size="xs" onClick={onOpenScript}>
-              Open Script
+              {t("open_script")}
             </Button>
           </div>
         ) : null}
         <AiErrorNotice error={ai.error} onRetry={() => void run()} />
       </SectionCard>
 
-      <SectionCard title="Dimensions" description={score ? "Each dimension out of 20 (CTA out of 10), normalised to a total out of 100." : "What the score looks at."} contentClassName="flex flex-col divide-y px-0 pt-1 pb-1">
+      <SectionCard
+        title={t("dimensions")}
+        description={score ? t("dimensions_scored") : t("dimensions_empty")} contentClassName="flex flex-col divide-y px-0 pt-1 pb-1">
         {QUALITY_DIMENSIONS.map((d) => {
           const value = score ? score[d.key] : null
           return (
@@ -204,7 +207,7 @@ export function ScoreTab({ item, onOpenScript }: { item: ContentItem; onOpenScri
               </div>
               {value !== null ? (
                 <div className="flex items-center gap-3">
-                  <Meter value={value} max={d.max} tone={dimensionTone(value, d.max)} aria-label={`${d.label} ${value} of ${d.max}`} className="flex-1" />
+                  <Meter value={value} max={d.max} tone={dimensionTone(value, d.max)} aria-label={t("dimension_aria", { label: d.label, value, max: d.max })} className="flex-1" />
                   <span className="w-12 shrink-0 text-right text-sm font-medium num">
                     {value}
                     <span className="text-xs font-normal text-muted-foreground">/{d.max}</span>
@@ -220,7 +223,7 @@ export function ScoreTab({ item, onOpenScript }: { item: ContentItem; onOpenScri
 
       {score ? (
         <div className="grid min-w-0 items-start gap-4 lg:grid-cols-2">
-          <SectionCard title="Strengths" icon={CircleCheck} description="Keep these when you edit.">
+          <SectionCard title={t("strengths")} icon={CircleCheck} description={t("strengths_description")}>
             {score.strengths.length ? (
               <ul className="flex flex-col gap-2">
                 {score.strengths.map((s) => (
@@ -231,10 +234,10 @@ export function ScoreTab({ item, onOpenScript }: { item: ContentItem; onOpenScri
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-muted-foreground">No standout strengths yet.</p>
+              <p className="text-xs text-muted-foreground">{t("no_strengths")}</p>
             )}
           </SectionCard>
-          <SectionCard title="Improvements" icon={Lightbulb} description="Concrete edits, most important first.">
+          <SectionCard title={t("improvements")} icon={Lightbulb} description={t("improvements_description")}>
             {score.improvements.length ? (
               <ol className="flex flex-col gap-2.5">
                 {score.improvements.map((s, index) => (
@@ -245,11 +248,11 @@ export function ScoreTab({ item, onOpenScript }: { item: ContentItem; onOpenScri
                 ))}
               </ol>
             ) : (
-              <p className="text-xs text-muted-foreground">Nothing to fix — ship it.</p>
+              <p className="text-xs text-muted-foreground">{t("no_improvements")}</p>
             )}
             <Button type="button" variant="outline" size="sm" className="mt-3" onClick={onOpenScript}>
               <FilePen aria-hidden />
-              Edit the script
+              {t("edit_script")}
             </Button>
           </SectionCard>
         </div>

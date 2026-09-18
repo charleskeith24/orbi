@@ -4,7 +4,9 @@ import { Lightbulb } from "lucide-react"
 import Link from "next/link"
 import { EmptyState, IdeaStatusBadge, PlatformIcon, StageBadge } from "@/components/common"
 import { PLATFORMS } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import { formatNumber } from "@/lib/utils"
+import { storyFormMessages } from "./messages"
 import type { SourceUsage } from "./story-model"
 
 /** Ideas citing a story or reference (`source_ref_id`) and the content made from them, with links. */
@@ -17,6 +19,7 @@ export function SourceUsageList({
   noun: "story" | "reference"
   emptyAction?: React.ReactNode
 }) {
+  const t = useT(storyFormMessages)
   const ideas = usage?.ideas ?? []
   const items = usage?.items ?? []
   if (!ideas.length) {
@@ -24,8 +27,8 @@ export function SourceUsageList({
       <EmptyState
         compact
         icon={Lightbulb}
-        title="Not used yet"
-        description={`Ideas you create from this ${noun} show up here, together with the content made from them.`}
+        title={t("usage_empty_title")}
+        description={t(noun === "story" ? "usage_empty_story" : "usage_empty_reference")}
         action={emptyAction}
         className="rounded-lg border border-dashed"
       />
@@ -35,7 +38,7 @@ export function SourceUsageList({
   const sortedItems = [...items].sort((a, b) => b.updated_at.localeCompare(a.updated_at))
   return (
     <div className="flex min-w-0 flex-col gap-5">
-      <UsageGroup title="Ideas" count={ideas.length}>
+      <UsageGroup title={t("usage_ideas")} count={ideas.length}>
         <ul className="divide-y rounded-lg border">
           {sortedIdeas.map((idea) => (
             <li key={idea.id} className="flex min-w-0 items-center gap-2 px-3 py-2">
@@ -44,14 +47,14 @@ export function SourceUsageList({
                 title={idea.title}
                 className="min-w-0 flex-1 truncate text-sm outline-none hover:underline focus-visible:underline"
               >
-                {idea.title || "Untitled idea"}
+                {idea.title || t("untitled_idea")}
               </Link>
               <IdeaStatusBadge status={idea.status} />
             </li>
           ))}
         </ul>
       </UsageGroup>
-      <UsageGroup title="Content" count={items.length}>
+      <UsageGroup title={t("usage_content")} count={items.length}>
         {sortedItems.length ? (
           <ul className="divide-y rounded-lg border">
             {sortedItems.map((item) => (
@@ -62,14 +65,14 @@ export function SourceUsageList({
                   title={item.title}
                   className="min-w-0 flex-1 truncate text-sm outline-none hover:underline focus-visible:underline"
                 >
-                  {item.title || "Untitled content"}
+                  {item.title || t("untitled_content")}
                 </Link>
                 <StageBadge stage={item.stage} />
               </li>
             ))}
           </ul>
         ) : (
-          <p className="rounded-lg border border-dashed px-3 py-2.5 text-xs text-muted-foreground">None of these ideas has become content yet.</p>
+          <p className="rounded-lg border border-dashed px-3 py-2.5 text-xs text-muted-foreground">{t("usage_no_content")}</p>
         )}
       </UsageGroup>
     </div>

@@ -7,9 +7,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { toISODate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions, useTable } from "@/lib/store"
 import type { AudienceQuestion, ID, ISODate, PlatformId } from "@/lib/types"
 import { findDuplicateQuestion } from "./audience-model"
+import { audienceMessages } from "./messages"
+import { questionMessages } from "./question-messages"
 import type { QuestionDefaults } from "./question-quick-add"
 
 /** Add a question with every field. ⌘/Ctrl+Enter submits from the question box. */
@@ -43,6 +47,9 @@ function QuestionForm({
   onCreated: (question: AudienceQuestion) => void
 }) {
   const id = useId()
+  const t = useT(questionMessages)
+  const a = useT(audienceMessages)
+  const c = useT(commonMessages)
   const questions = useTable("audience_questions")
   const [today] = useState(() => toISODate(new Date()))
   const [question, setQuestion] = useState("")
@@ -57,12 +64,8 @@ function QuestionForm({
 
   const clean = question.replace(/\s+/g, " ").trim()
   const duplicate = useMemo(() => findDuplicateQuestion(questions, clean), [questions, clean])
-  const error = duplicate
-    ? "Already in the Question Bank — use +1 on it instead."
-    : touched && !clean
-      ? "Write down what they asked."
-      : null
-  const frequencyError = frequency === null || frequency < 1 ? "Enter how many times it was asked (at least 1)." : null
+  const error = duplicate ? t("duplicate") : touched && !clean ? t("what_they_asked") : null
+  const frequencyError = frequency === null || frequency < 1 ? t("frequency_error") : null
 
   function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -85,17 +88,17 @@ function QuestionForm({
   return (
     <form onSubmit={submit} noValidate className="flex min-w-0 flex-col gap-4">
       <DialogHeader>
-        <DialogTitle>Add a question</DialogTitle>
-        <DialogDescription>What your audience asked, where, and how often. Repeated questions rise to the top.</DialogDescription>
+        <DialogTitle>{t("add_title")}</DialogTitle>
+        <DialogDescription>{t("add_description")}</DialogDescription>
       </DialogHeader>
-      <FormField label="Question" htmlFor={`${id}-question`} required error={error}>
+      <FormField label={t("question")} htmlFor={`${id}-question`} required error={error}>
         <Textarea
           id={`${id}-question`}
           autoFocus
           rows={2}
           maxLength={300}
           value={question}
-          placeholder="e.g. How much should I spend on ads in my first month?"
+          placeholder={t("question_placeholder")}
           aria-invalid={Boolean(error) || undefined}
           onChange={(event) => {
             setQuestion(event.target.value)
@@ -109,29 +112,29 @@ function QuestionForm({
           }}
         />
       </FormField>
-      <FormField label="Topic" htmlFor={`${id}-topic`}>
+      <FormField label={t("topic")} htmlFor={`${id}-topic`}>
         <Input
           id={`${id}-topic`}
           value={topic}
           maxLength={80}
-          placeholder="e.g. Scaling, Pricing, Hiring"
+          placeholder={t("topics_placeholder")}
           onChange={(event) => setTopic(event.target.value)}
         />
       </FormField>
       <FormRow>
-        <FormField label="Who asked" htmlFor={`${id}-source`}>
+        <FormField label={t("who_asked")} htmlFor={`${id}-source`}>
           <Input
             id={`${id}-source`}
             value={source}
             maxLength={120}
-            placeholder="A name, or e.g. TikTok comments"
+            placeholder={t("who_asked_placeholder")}
             onChange={(event) => setSource(event.target.value)}
           />
         </FormField>
-        <FormField label="Platform" htmlFor={`${id}-platform`}>
+        <FormField label={a("platform")} htmlFor={`${id}-platform`}>
           <PlatformSelect id={`${id}-platform`} allowNone value={platform} onChange={setPlatform} />
         </FormField>
-        <FormField label="Times asked" htmlFor={`${id}-frequency`} error={frequencyError}>
+        <FormField label={t("times_asked")} htmlFor={`${id}-frequency`} error={frequencyError}>
           <NumberField
             id={`${id}-frequency`}
             integer
@@ -141,22 +144,22 @@ function QuestionForm({
             aria-invalid={Boolean(frequencyError) || undefined}
           />
         </FormField>
-        <FormField label="Last asked" htmlFor={`${id}-last`}>
+        <FormField label={t("last_asked")} htmlFor={`${id}-last`}>
           <DatePicker id={`${id}-last`} value={lastAsked} onChange={setLastAsked} maxDate={today} clearable={false} />
         </FormField>
-        <FormField label="Persona" htmlFor={`${id}-persona`}>
+        <FormField label={a("persona")} htmlFor={`${id}-persona`}>
           <PersonaSelect id={`${id}-persona`} allowNone value={personaId} onChange={setPersonaId} />
         </FormField>
-        <FormField label="Pillar" htmlFor={`${id}-pillar`}>
+        <FormField label={a("pillar")} htmlFor={`${id}-pillar`}>
           <PillarSelect id={`${id}-pillar`} allowNone value={pillarId} onChange={setPillarId} />
         </FormField>
       </FormRow>
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={!clean || Boolean(duplicate) || Boolean(frequencyError)}>
-          Add question
+          {t("add_question")}
         </Button>
       </DialogFooter>
     </form>

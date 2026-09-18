@@ -4,10 +4,13 @@ import { Trophy } from "lucide-react"
 import { EmptyState, SectionCard, ViewToggle } from "@/components/common"
 import { BarList, ChartFrame } from "@/components/charts"
 import { formatMultiple, type GroupAggregate, type HookCategoryAggregate } from "@/lib/analytics"
+import { useT } from "@/lib/i18n"
 import type { Hook, ID } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { hookMessages } from "./hook-messages"
 import { formatHookMetric, HOOK_METRICS, hookMetricValue, type HookMetric, type HookStats } from "./hook-model"
 import { HookText } from "./hook-text"
+import { labMessages } from "./messages"
 
 /** "Which hook styles work best" — hookCategoryPerformance ranked by the chosen metric, with a table twin. */
 export function HookStylesCard({
@@ -23,6 +26,8 @@ export function HookStylesCard({
   onMetricChange: (metric: HookMetric) => void
   className?: string
 }) {
+  const t = useT(hookMessages)
+  const l = useT(labMessages)
   const measured = styles.filter((style) => style.category && style.measured > 0)
   const items = measured.flatMap((style) => {
     const value = hookMetricValue(style, metric)
@@ -32,21 +37,24 @@ export function HookStylesCard({
         id: style.key,
         label: style.label,
         value,
-        secondary: `${pluralize(style.measured, "post")}${style.winners ? ` · ${pluralize(style.winners, "winner")}` : ""}`,
+        secondary: `${l.plural("posts_count", style.measured, { count: formatNumber(style.measured) })}${
+          style.winners ? ` · ${t.plural("winners", style.winners, { count: formatNumber(style.winners) })}` : ""
+        }`,
       },
     ]
   })
   const best = measured.filter((style) => style.measured >= 2 && style.avgViews !== null).sort((a, b) => (b.avgViews ?? 0) - (a.avgViews ?? 0))[0]
   const lift = best?.avgViews && overall.avgViews ? best.avgViews / overall.avgViews : null
-  const meta = HOOK_METRICS.find((m) => m.id === metric)
+  const metricLabel = l(`metric_${metric}`)
+  const [footerBefore, footerAfter] = t("styles_footer", { multiple: lift ? formatMultiple(lift) : "" }).split("{style}")
 
   return (
     <ChartFrame
       className={className}
-      title="Which hook styles work best"
-      description={`${meta?.description ?? ""} · published posts with analytics, all time`}
+      title={t("styles_title")}
+      description={l("analytics_scope", { description: l(`metric_${metric}_description`) })}
       table={{
-        columns: ["Hook style", "Posts", "Avg views", "Retention", "Engagement", "Leads / post"],
+        columns: [t("col_hook_style"), l("posts"), l("avg_views"), l("retention"), l("engagement"), l("leads_per_post")],
         rows: measured.map((style) => [
           style.label,
           style.measured,
@@ -59,7 +67,9 @@ export function HookStylesCard({
       footer={
         best && lift && lift >= 1.1 ? (
           <p className="text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">{best.label}</span> hooks average {formatMultiple(lift)} your overall views.
+            {footerBefore}
+            <span className="font-medium text-foreground">{best.label}</span>
+            {footerAfter}
           </p>
         ) : undefined
       }
@@ -69,19 +79,15 @@ export function HookStylesCard({
           <ViewToggle
             value={metric}
             onChange={onMetricChange}
-            options={HOOK_METRICS.map((m) => ({ value: m.id, label: m.label }))}
-            aria-label="Rank hook styles by"
+            options={HOOK_METRICS.map((m) => ({ value: m, label: l(`metric_${m}`) }))}
+            aria-label={t("rank_by")}
           />
         </div>
         <BarList
           items={items}
           valueFormatter={(value) => formatHookMetric(value, metric)}
-          emptyMessage={
-            metric === "retention"
-              ? "No retention logged yet — add it when you log analytics for video posts."
-              : "Log analytics on published posts to see which hook styles win."
-          }
-          aria-label={`Hook styles ranked by ${meta?.label.toLowerCase() ?? "views"}`}
+          emptyMessage={metric === "retention" ? t("retention_empty") : t("styles_empty")}
+          aria-label={t("ranked_by", { metric: metricLabel.toLowerCase() })}
         />
       </div>
     </ChartFrame>
@@ -102,6 +108,8 @@ export function TopHooksCard({
   onOpen: (id: ID) => void
   className?: string
 }) {
+  const t = useT(hookMessages)
+  const l = useT(labMessages)
   const top = hooks
     .flatMap((hook) => {
       const performance = stats.get(hook.id)?.performance
@@ -113,8 +121,8 @@ export function TopHooksCard({
   return (
     <SectionCard
       className={className}
-      title="Your best-performing hooks"
-      description="Average views of published posts that used each hook"
+      title={t("top_title")}
+      description={t("top_description")}
       icon={Trophy}
       contentClassName="px-2 pt-2 pb-2"
     >
@@ -131,13 +139,16 @@ export function TopHooksCard({
                 <span className="min-w-0 flex-1">
                   <HookText text={hook.text} className="line-clamp-2 text-sm leading-snug" />
                   <span className="mt-0.5 block text-xs text-muted-foreground">
-                    {pluralize(performance.measured, "post")} · {formatHookMetric(performance.engagementRate, "engagement")} engagement
+                    {l.plural("posts_count", performance.measured, { count: formatNumber(performance.measured) })} ·{" "}
+                    {t("top_engagement", { rate: formatHookMetric(performance.engagementRate, "engagement") })}
                   </span>
                 </span>
                 <span className="shrink-0 text-right">
                   <span className="block text-sm font-medium num">{formatHookMetric(performance.avgViews, "views")}</span>
                   <span className="block text-xs text-muted-foreground">
-                    {overall.avgViews && performance.avgViews ? `${formatMultiple(performance.avgViews / overall.avgViews)} avg` : "avg views"}
+                    {overall.avgViews && performance.avgViews
+                      ? t("top_vs_average", { multiple: formatMultiple(performance.avgViews / overall.avgViews) })
+                      : t("top_avg_views")}
                   </span>
                 </span>
               </button>
@@ -148,8 +159,8 @@ export function TopHooksCard({
         <EmptyState
           compact
           icon={Trophy}
-          title="No hook performance yet"
-          description="Pick hooks from the library in a content brief, publish, and log analytics — the best lines rise to the top here."
+          title={t("top_empty_title")}
+          description={t("top_empty_description")}
         />
       )}
     </SectionCard>

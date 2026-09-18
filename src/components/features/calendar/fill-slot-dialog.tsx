@@ -23,10 +23,13 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PLATFORM_IDS, PLATFORMS } from "@/lib/constants"
 import { combineDateTime, formatDate, parseDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { convertIdeaToContent, scheduleItem, useBrand, useLookup, useTable } from "@/lib/store"
 import type { ContentIdea, ContentItem, ContentPillar, IdeaStatus, PlatformId } from "@/lib/types"
-import { cn, matchesQuery, pluralize, truncate } from "@/lib/utils"
-import { DEFAULT_SLOT_TIME, formatSlotTime, TRAY_GROUPS, trayGroupOf, type DaySlot, type TrayGroupId } from "./calendar-model"
+import { cn, formatNumber, matchesQuery, truncate } from "@/lib/utils"
+import { DEFAULT_SLOT_TIME, formatSlotTime, trayGroupOf, type DaySlot, type TrayGroupId } from "./calendar-model"
+import { calendarDialogMessages, calendarMessages } from "./messages"
 import { useNow } from "./use-now"
 
 export interface FillTarget {
@@ -66,6 +69,8 @@ export function FillSlotDialog({
 }
 
 function FillSlotForm({ target, onClose }: { target: FillTarget; onClose: () => void }) {
+  const t = useT(calendarDialogMessages)
+  const c = useT(commonMessages)
   const router = useRouter()
   const now = useNow()
   const brand = useBrand()
@@ -130,11 +135,11 @@ function FillSlotForm({ target, onClose }: { target: FillTarget; onClose: () => 
   const item = itemId ? items.find((i) => i.id === itemId) : undefined
   const ideaPlatforms = platforms ?? (wanted.length ? wanted : idea?.platforms.length ? idea.platforms : platformChoices.slice(0, 1))
   const at = time ? parseDate(combineDateTime(day, time)) : null
-  const timeError = !at ? "Pick a time." : at.getTime() <= now.getTime() ? "That time has already passed — pick a later one." : null
-  const selectionError = tab === "idea" ? (idea ? (ideaPlatforms.length ? null : "Pick at least one platform.") : "Pick an idea.") : item ? null : "Pick a piece of content."
+  const timeError = !at ? t("pick_time") : at.getTime() <= now.getTime() ? t("time_passed") : null
+  const selectionError = tab === "idea" ? (idea ? (ideaPlatforms.length ? null : t("pick_platform")) : t("pick_idea")) : item ? null : t("pick_content")
   const canSubmit = !timeError && !selectionError
   const when = at ? formatDate(at, "EEE, MMM d · h:mm a") : ""
-  const label = slot.label.trim() || pillar?.name || "Posting slot"
+  const label = slot.label.trim() || pillar?.name || t("posting_slot")
 
   function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -142,15 +147,15 @@ function FillSlotForm({ target, onClose }: { target: FillTarget; onClose: () => 
     if (tab === "idea" && idea) {
       const created = convertIdeaToContent(idea.id, { platforms: ideaPlatforms, scheduled_at: at.toISOString() })
       const first = created[0]
-      toast.success(`${pluralize(created.length, "post")} scheduled for ${when}`, {
+      toast.success(t.plural("posts_scheduled", created.length, { count: formatNumber(created.length), when }), {
         description: truncate(idea.title, 90),
-        action: first ? { label: "Open", onClick: () => router.push(`/studio/${first.id}`) } : undefined,
+        action: first ? { label: c("open"), onClick: () => router.push(`/studio/${first.id}`) } : undefined,
       })
     } else if (tab === "item" && item) {
       scheduleItem(item.id, at.toISOString())
-      toast.success(`Scheduled for ${when}`, {
+      toast.success(t("scheduled_for", { when }), {
         description: truncate(item.title, 90),
-        action: { label: "Open", onClick: () => router.push(`/studio/${item.id}`) },
+        action: { label: c("open"), onClick: () => router.push(`/studio/${item.id}`) },
       })
     }
     onClose()
@@ -159,9 +164,9 @@ function FillSlotForm({ target, onClose }: { target: FillTarget; onClose: () => 
   return (
     <form className="grid min-w-0 gap-4" onSubmit={submit}>
       <DialogHeader>
-        <DialogTitle>Fill slot</DialogTitle>
+        <DialogTitle>{t("fill_title")}</DialogTitle>
         <DialogDescription>
-          {formatDate(day, "EEEE, MMM d")} · {formatSlotTime(slot.time) ?? "Any time"} · {label}
+          {formatDate(day, "EEEE, MMM d")} · {formatSlotTime(slot.time) ?? t("any_time")} · {label}
         </DialogDescription>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           {pillar ? (
@@ -174,7 +179,7 @@ function FillSlotForm({ target, onClose }: { target: FillTarget; onClose: () => 
             {wanted.map((p) => (
               <PlatformIcon key={p} platform={p} className="size-3.5" />
             ))}
-            {wanted.length ? `Needs ${wanted.map((p) => PLATFORMS[p].label).join(" + ")}` : "Any platform"}
+            {wanted.length ? t("needs", { platforms: wanted.map((p) => PLATFORMS[p].label).join(" + ") }) : t("any_platform")}
           </span>
         </div>
       </DialogHeader>
@@ -184,17 +189,17 @@ function FillSlotForm({ target, onClose }: { target: FillTarget; onClose: () => 
           <TabsList>
             <TabsTrigger value="idea">
               <Lightbulb aria-hidden />
-              From an idea
+              {t("tab_idea")}
             </TabsTrigger>
             <TabsTrigger value="item">
               <PackageCheck aria-hidden />
-              Unscheduled content
+              {t("tab_content")}
             </TabsTrigger>
           </TabsList>
           <SearchInput
             value={query}
             onChange={setQuery}
-            placeholder={tab === "idea" ? "Search ideas…" : "Search content…"}
+            placeholder={tab === "idea" ? t("search_ideas") : t("search_content")}
             className="sm:ml-auto sm:w-48"
           />
         </div>
@@ -204,12 +209,12 @@ function FillSlotForm({ target, onClose }: { target: FillTarget; onClose: () => 
             <div className="flex items-center gap-2">
               <Switch id="fill-match-pillar" size="sm" checked={matchPillar} onCheckedChange={setMatchPillar} />
               <Label htmlFor="fill-match-pillar" className="text-xs font-normal text-muted-foreground">
-                Only {pillar.name} ideas
+                {t("only_pillar", { pillar: pillar.name })}
               </Label>
             </div>
           ) : null}
           {ideaRows.length ? (
-            <OptionList label="Ideas">
+            <OptionList label={t("ideas")}>
               {ideaRows.slice(0, MAX_ROWS).map((row) => (
                 <IdeaOption
                   key={row.id}
@@ -224,18 +229,18 @@ function FillSlotForm({ target, onClose }: { target: FillTarget; onClose: () => 
             <EmptyState
               compact
               icon={Lightbulb}
-              title={matchPillar && pillar ? `No open ${pillar.name} ideas` : "No open ideas"}
-              description="Ideas that are in the inbox, researching, validated or selected can fill a slot."
+              title={matchPillar && pillar ? t("no_open_pillar_ideas", { pillar: pillar.name }) : t("no_open_ideas")}
+              description={t("open_ideas_hint")}
               action={
                 matchPillar && pillar ? (
                   <Button type="button" size="sm" variant="outline" onClick={() => setMatchPillar(false)}>
-                    Show all pillars
+                    {t("show_all_pillars")}
                   </Button>
                 ) : undefined
               }
               secondaryAction={
                 <Button asChild size="sm" variant="ghost">
-                  <Link href={pillar ? `/ideas/generator?pillar=${pillar.id}&run=1` : "/ideas/generator"}>Generate ideas</Link>
+                  <Link href={pillar ? `/ideas/generator?pillar=${pillar.id}&run=1` : "/ideas/generator"}>{t("generate_ideas")}</Link>
                 </Button>
               }
               className="rounded-lg border border-dashed"
@@ -245,7 +250,7 @@ function FillSlotForm({ target, onClose }: { target: FillTarget; onClose: () => 
 
         <TabsContent value="item" className="grid min-w-0 gap-2">
           {itemRows.length ? (
-            <OptionList label="Unscheduled content">
+            <OptionList label={t("tab_content")}>
               {itemRows.slice(0, MAX_ROWS).map(({ item: row, group }) => (
                 <ItemOption
                   key={row.id}
@@ -262,11 +267,11 @@ function FillSlotForm({ target, onClose }: { target: FillTarget; onClose: () => 
             <EmptyState
               compact
               icon={PackageCheck}
-              title="Nothing unscheduled"
-              description="Everything in production already has a publish date or deadline."
+              title={t("nothing_unscheduled")}
+              description={t("nothing_unscheduled_hint")}
               action={
                 <Button asChild size="sm" variant="outline">
-                  <Link href="/pipeline">Open Pipeline</Link>
+                  <Link href="/pipeline">{t("open_pipeline")}</Link>
                 </Button>
               }
               className="rounded-lg border border-dashed"
@@ -277,15 +282,15 @@ function FillSlotForm({ target, onClose }: { target: FillTarget; onClose: () => 
 
       <div className="grid min-w-0 gap-3 rounded-lg border bg-muted/30 p-3 sm:grid-cols-[minmax(0,1fr)_auto]">
         {tab === "idea" ? (
-          <FormField label="Platforms" description="One content item per platform, each with a brief.">
+          <FormField label={t("platforms")} description={t("platforms_hint")}>
             <PlatformToggleGroup value={ideaPlatforms} onChange={setPlatforms} platforms={platformChoices} size="xs" />
           </FormField>
         ) : (
-          <FormField label="Selected">
-            <p className="min-w-0 truncate text-sm text-muted-foreground">{item ? item.title : "Pick a piece of content above"}</p>
+          <FormField label={t("selected")}>
+            <p className="min-w-0 truncate text-sm text-muted-foreground">{item ? item.title : t("pick_content_above")}</p>
           </FormField>
         )}
-        <FormField label="Publish time" htmlFor="fill-slot-time" error={timeError}>
+        <FormField label={t("publish_time")} htmlFor="fill-slot-time" error={timeError}>
           <TimeInput id="fill-slot-time" value={time} onChange={setTime} />
         </FormField>
       </div>
@@ -293,10 +298,10 @@ function FillSlotForm({ target, onClose }: { target: FillTarget; onClose: () => 
       <DialogFooter className="items-center">
         {selectionError && !timeError ? <p className="mr-auto text-xs text-muted-foreground">{selectionError}</p> : null}
         <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={!canSubmit}>
-          {tab === "idea" && ideaPlatforms.length > 1 ? `Schedule ${ideaPlatforms.length} posts` : "Schedule"}
+          {tab === "idea" && ideaPlatforms.length > 1 ? t("schedule_posts", { count: ideaPlatforms.length }) : t("schedule")}
         </Button>
       </DialogFooter>
     </form>
@@ -315,9 +320,10 @@ const OPTION_CLASS =
   "flex w-full min-w-0 flex-col gap-1 px-3 py-2 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
 
 function IdeaOption({ idea, pillar, selected, onSelect }: { idea: ContentIdea; pillar: ContentPillar | null; selected: boolean; onSelect: () => void }) {
+  const t = useT(calendarDialogMessages)
   return (
     <button type="button" aria-pressed={selected} onClick={onSelect} className={cn(OPTION_CLASS, selected && "bg-brand-soft hover:bg-brand-soft")}>
-      <span className="line-clamp-1 text-sm font-medium">{idea.title.trim() || "Untitled idea"}</span>
+      <span className="line-clamp-1 text-sm font-medium">{idea.title.trim() || t("untitled_idea")}</span>
       {idea.hook ? <span className="line-clamp-1 text-xs text-muted-foreground">{idea.hook}</span> : null}
       <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
         <IdeaStatusBadge status={idea.status} />
@@ -327,7 +333,7 @@ function IdeaOption({ idea, pillar, selected, onSelect }: { idea: ContentIdea; p
             {pillar.name}
           </span>
         ) : null}
-        {idea.score !== null ? <span className="num">Idea Score {Math.round(idea.score)}</span> : null}
+        {idea.score !== null ? <span className="num">{t("idea_score", { score: Math.round(idea.score) })}</span> : null}
         {idea.platforms.length ? (
           <span className="inline-flex items-center gap-1">
             {idea.platforms.map((p) => (
@@ -355,15 +361,17 @@ function ItemOption({
   selected: boolean
   onSelect: () => void
 }) {
+  const t = useT(calendarDialogMessages)
+  const tc = useT(calendarMessages)
   return (
     <button type="button" aria-pressed={selected} onClick={onSelect} className={cn(OPTION_CLASS, selected && "bg-brand-soft hover:bg-brand-soft")}>
-      <span className="line-clamp-1 text-sm font-medium">{item.title.trim() || "Untitled content"}</span>
+      <span className="line-clamp-1 text-sm font-medium">{item.title.trim() || t("untitled_content")}</span>
       <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
         <StageBadge stage={item.stage} />
         <span className="inline-flex items-center gap-1.5">
           <PlatformIcon platform={item.platform} className="size-3.5" />
           {PLATFORMS[item.platform].label}
-          {offPlatform ? <span className="text-muted-foreground/80">· not this slot&apos;s platform</span> : null}
+          {offPlatform ? <span className="text-muted-foreground/80">{t("off_platform")}</span> : null}
         </span>
         {pillar ? (
           <span className="inline-flex items-center gap-1.5">
@@ -371,7 +379,7 @@ function ItemOption({
             {pillar.name}
           </span>
         ) : null}
-        <span>{TRAY_GROUPS.find((g) => g.id === group)?.label}</span>
+        <span>{tc(`group_${group}`)}</span>
       </span>
     </button>
   )

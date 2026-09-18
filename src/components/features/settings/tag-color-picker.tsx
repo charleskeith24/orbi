@@ -3,8 +3,10 @@
 import { Check } from "lucide-react"
 import { catVar } from "@/components/common"
 import { CATEGORICAL_COLOR_LABELS, CATEGORICAL_COLORS } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import type { TagColor } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { tagsMessages } from "./tags-messages"
 
 const TAG_COLORS: TagColor[] = ["gray", ...CATEGORICAL_COLORS]
 const LABELS: Record<TagColor, string> = { gray: "Gray", ...CATEGORICAL_COLOR_LABELS }
@@ -13,12 +15,14 @@ const LABELS: Record<TagColor, string> = { gray: "Gray", ...CATEGORICAL_COLOR_LA
 export function TagColorPicker({
   value,
   onChange,
-  "aria-label": ariaLabel = "Tag colour",
+  "aria-label": ariaLabel,
 }: {
   value: TagColor
   onChange: (color: TagColor) => void
+  /** Defaults to "Tag colour". */
   "aria-label"?: string
 }) {
+  const t = useT(tagsMessages)
   function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     const steps: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }
     const step = steps[event.key]
@@ -30,7 +34,7 @@ export function TagColorPicker({
   }
 
   return (
-    <div role="radiogroup" aria-label={ariaLabel} onKeyDown={onKeyDown} className="flex flex-wrap items-center gap-2">
+    <div role="radiogroup" aria-label={ariaLabel ?? t("colour_aria")} onKeyDown={onKeyDown} className="flex flex-wrap items-center gap-2">
       {TAG_COLORS.map((color) => {
         const selected = color === value
         return (

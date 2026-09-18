@@ -6,7 +6,7 @@ import { toast } from "sonner"
 import { AiButton, PageContainer, PageHeader } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { positioningStatement, useAiTask } from "@/lib/ai"
-import { formatRelativeDay } from "@/lib/dates"
+import { useT, useUiLang } from "@/lib/i18n"
 import { uiActions, updateBrand, useBrand, useDb } from "@/lib/store"
 import {
   BRAND_SECTIONS,
@@ -24,6 +24,7 @@ import {
   type BrandFormValues,
   type SetBrandValue,
 } from "./brand-model"
+import { brandHqMessages } from "./brand-messages"
 import { BrandSectionNav, CompletenessCard } from "./brand-nav"
 import { IdentitySection, PositioningSection } from "./brand-sections"
 import { CommunicationSection, ExpertiseSection, PersonalitySection, RulesSection } from "./brand-style-sections"
@@ -31,6 +32,7 @@ import { BrandVoicePreview } from "./brand-voice-preview"
 import { NicheSection } from "./niche-section"
 import { StatementSection } from "./positioning-builder"
 import { PositioningSuggestions, type SuggestionField, type SuggestionValues } from "./positioning-suggestions"
+import { relativeDayInline } from "./relative-day"
 import { SaveBar } from "./save-bar"
 import { StrategyTabs } from "./strategy-tabs"
 import { useNow } from "./use-now"
@@ -43,6 +45,7 @@ function ignoreRail(el: HTMLElement): boolean {
   return el.id === "voice" && window.matchMedia("(min-width: 80rem)").matches
 }
 
+// Sent to the Content Strategist as the question, so it stays English (the AI follows Brand HQ's language).
 const STRATEGIST_PROMPT =
   "Review my Brand HQ. Is my positioning specific enough, and what would make my point of view more distinctive?"
 
@@ -52,13 +55,15 @@ export function BrandHqView() {
   const db = useDb()
   const now = useNow()
   const formRef = useRef<HTMLFormElement>(null)
+  const lang = useUiLang()
+  const t = useT(brandHqMessages)
 
   const saved = useMemo(() => brandFormValues(brand), [brand])
   const [edits, setEdits] = useState<Partial<BrandFormValues>>({})
   const values = useMemo(() => ({ ...saved, ...edits }) as BrandFormValues, [saved, edits])
   const changed = useMemo(() => changedFields(values, saved), [values, saved])
   const dirty = changed.length > 0
-  const errors = useMemo(() => validateBrand(values), [values])
+  const errors = useMemo(() => validateBrand(values, lang), [values, lang])
   const errorFields = Object.keys(errors) as BrandField[]
   const completeness = useMemo(() => brandCompleteness(values), [values])
   const dirtySections = useMemo(() => new Set(changed.map(sectionOf)), [changed])
@@ -75,12 +80,12 @@ export function BrandHqView() {
     }
     updateBrand(brandPatch(values))
     setEdits({})
-    toast.success("Brand HQ saved", { description: "Every AI generation now uses your updated brand." })
+    toast.success(t("saved_toast"), { description: t("saved_toast_description") })
   }
 
   function discard() {
     setEdits({})
-    toast("Changes discarded")
+    toast(t("discarded_toast"))
   }
 
   // ⌘S / Ctrl+S saves; unsaved edits survive an accidental reload prompt.
@@ -142,12 +147,12 @@ export function BrandHqView() {
         positioning_result: parts.result,
         positioning_method: parts.method,
       }))
-      toast.success("Positioning statement applied", { description: "Check the statement builder, then save." })
+      toast.success(t("statement_applied"), { description: t("statement_applied_description") })
       return
     }
     set(field, value)
-    toast.success(field === "known_for" ? "“Known for” applied" : "Point of view applied", {
-      description: "Review it, then save your changes.",
+    toast.success(field === "known_for" ? t("known_for_applied") : t("point_of_view_applied"), {
+      description: t("applied_description"),
     })
   }
 
@@ -160,8 +165,7 @@ export function BrandHqView() {
     point_of_view: values.point_of_view,
   }
 
-  const updated = formatRelativeDay(brand.updated_at, now)
-  const savedLabel = `All changes saved · updated ${["Today", "Yesterday"].includes(updated) ? updated.toLowerCase() : updated}`
+  const savedLabel = t("saved_label", { when: relativeDayInline(brand.updated_at, now, lang) })
   const sectionProps = { values, set, errors: dirty ? errors : {} }
 
   return (
@@ -169,11 +173,11 @@ export function BrandHqView() {
       <PageHeader
         title="Brand HQ"
         icon={Compass}
-        description="The strategic foundation every AI generation reads — who you are, who you help and how you sound."
+        description={t("description")}
         actions={
           <Button type="button" variant="outline" size="sm" onClick={() => uiActions.askStrategist(STRATEGIST_PROMPT)}>
             <MessagesSquare aria-hidden />
-            Review with Strategist
+            {t("review_with_strategist")}
           </Button>
         }
       >
@@ -181,7 +185,7 @@ export function BrandHqView() {
       </PageHeader>
 
       <div className="grid min-w-0 gap-6 lg:grid-cols-[11rem_minmax(0,1fr)] xl:grid-cols-[11rem_minmax(0,1fr)_19rem]">
-        <aside aria-label="Brand HQ progress" className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-16 lg:self-start">
+        <aside aria-label={t("progress_label")} className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-16 lg:self-start">
           <CompletenessCard completeness={completeness} onNext={(item) => focusControl(fieldId(item.field))} />
           <BrandSectionNav active={active} completeness={completeness} dirtySections={dirtySections} onJump={scrollToSection} />
         </aside>
@@ -193,7 +197,7 @@ export function BrandHqView() {
             {...sectionProps}
             action={
               <AiButton type="button" size="sm" pending={ai.isPending} onClick={() => void suggest()}>
-                Suggest with AI
+                {t("suggest")}
               </AiButton>
             }
             suggestions={
@@ -229,7 +233,7 @@ export function BrandHqView() {
         </form>
 
         <aside
-          aria-label="Brand Voice preview"
+          aria-label={t("voice_label")}
           className="min-w-0 scrollbar-thin lg:col-start-2 xl:sticky xl:top-16 xl:col-start-3 xl:row-start-1 xl:max-h-[calc(100svh-5rem)] xl:self-start xl:overflow-y-auto"
         >
           <BrandVoicePreview values={values} dirty={dirty} now={now} />

@@ -3,8 +3,10 @@
 import { CircleCheck, Scale, TriangleAlert } from "lucide-react"
 import { Meter, NumberField } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { useT, useUiLang } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { normalizeTo100, sumValues, TARGET_TOTAL, targetTotalError } from "./pillar-math"
+import { pillarMessages } from "./pillar-messages"
 
 export interface TargetRow {
   id: string
@@ -31,8 +33,10 @@ export function TargetsEditor({
   idPrefix: string
   className?: string
 }) {
+  const t = useT(pillarMessages)
+  const lang = useUiLang()
   const total = sumValues(rows.map((r) => values[r.id]))
-  const error = targetTotalError(total)
+  const error = targetTotalError(total, lang)
 
   function normalize() {
     const next = normalizeTo100(rows.map((r) => values[r.id]))
@@ -61,7 +65,7 @@ export function TargetsEditor({
                 className="w-24 shrink-0"
                 value={values[row.id] ?? null}
                 onChange={(value) => onChange({ ...values, [row.id]: value })}
-                aria-label={`${row.label} target`}
+                aria-label={t("row_target", { label: row.label })}
               />
             </li>
           )
@@ -71,13 +75,13 @@ export function TargetsEditor({
       <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 px-3 py-2.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="flex items-baseline gap-2 text-sm">
-            <span className="text-muted-foreground">Running total</span>
+            <span className="text-muted-foreground">{t("running_total")}</span>
             <span className="num font-semibold">{total}%</span>
-            <span className="text-xs text-muted-foreground">of {TARGET_TOTAL}%</span>
+            <span className="text-xs text-muted-foreground">{t("of_total", { total: TARGET_TOTAL })}</span>
           </p>
           <Button type="button" variant="outline" size="sm" onClick={normalize} disabled={!error || !rows.length}>
             <Scale aria-hidden />
-            Normalize to 100
+            {t("normalize")}
           </Button>
         </div>
         <Meter
@@ -85,8 +89,8 @@ export function TargetsEditor({
           max={TARGET_TOTAL}
           tone={error ? (total > TARGET_TOTAL ? "serious" : "warning") : "good"}
           size="sm"
-          aria-label="Target total"
-          valueText={`${total}% of ${TARGET_TOTAL}%`}
+          aria-label={t("target_total_aria")}
+          valueText={t("total_value", { total, max: TARGET_TOTAL })}
         />
         <p
           role={error ? "alert" : undefined}
@@ -94,7 +98,7 @@ export function TargetsEditor({
           className={cn("flex items-center gap-1.5 text-xs", error ? "text-warning-fg" : "text-good-fg")}
         >
           {error ? <TriangleAlert className="size-3.5 shrink-0" aria-hidden /> : <CircleCheck className="size-3.5 shrink-0" aria-hidden />}
-          {error ?? "Adds up to 100% — ready to save."}
+          {error ?? t("total_ok")}
         </p>
       </div>
     </div>

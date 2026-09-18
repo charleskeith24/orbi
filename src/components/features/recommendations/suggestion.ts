@@ -4,7 +4,9 @@
  */
 import type { AiTaskOutput } from "@/lib/ai"
 import type { ContentRecommendation, RecommendationFactor, RecommendationReasons } from "@/lib/analytics"
+import { translate, type UiLang } from "@/lib/i18n/core"
 import type { ContentAngle, ContentFormat, ContentIdea, ContentItem, ID, PlatformId } from "@/lib/types"
+import { whatToPostMessages } from "./messages"
 
 export interface Suggestion {
   /** `${kind}:${id}` — stable across the engine and AI lists. */
@@ -43,6 +45,7 @@ export interface SuggestionLookups {
   items: Map<ID, ContentItem>
 }
 
+/** English labels; translated UI uses `factor_<key>` in `whatToPostMessages`. */
 export const FACTOR_LABELS: Record<RecommendationFactor, string> = {
   pillarGap: "Pillar gap",
   slot: "Today's slot",
@@ -55,14 +58,14 @@ export const FACTOR_LABELS: Record<RecommendationFactor, string> = {
 
 const suggestionKey = (kind: Suggestion["kind"], id: ID) => `${kind}:${id}`
 
-export function fromRecommendation(rec: ContentRecommendation, lookups: SuggestionLookups): Suggestion {
+export function fromRecommendation(rec: ContentRecommendation, lookups: SuggestionLookups, lang: UiLang = "en"): Suggestion {
   const item = rec.kind === "item" ? lookups.items.get(rec.id) : undefined
   return {
     key: suggestionKey(rec.kind, rec.id),
     kind: rec.kind,
     id: rec.id,
     ideaId: rec.kind === "idea" ? rec.id : (item?.idea_id ?? null),
-    title: rec.title.trim() || "Untitled",
+    title: rec.title.trim() || translate(whatToPostMessages, lang, "untitled"),
     pillarId: rec.pillarId,
     platform: rec.platform,
     formatId: rec.formatId,
@@ -95,7 +98,12 @@ function byName<T extends { id: ID; name: string }>(rows: Map<ID, T>, name: stri
  * AI pick + alternatives → suggestions, keeping the engine's score and signals for each candidate.
  * Picks that don't map to an idea or item that still exists are dropped; titles stay the row's own.
  */
-export function fromAiOutput(output: AiTaskOutput<"what_to_post">, engine: Suggestion[], lookups: SuggestionLookups): Suggestion[] {
+export function fromAiOutput(
+  output: AiTaskOutput<"what_to_post">,
+  engine: Suggestion[],
+  lookups: SuggestionLookups,
+  lang: UiLang = "en"
+): Suggestion[] {
   const byKey = new Map(engine.map((s) => [s.key, s]))
   const seen = new Set<string>()
   const out: Suggestion[] = []
@@ -117,7 +125,7 @@ export function fromAiOutput(output: AiTaskOutput<"what_to_post">, engine: Sugge
       kind,
       id,
       ideaId: idea?.id ?? item?.idea_id ?? null,
-      title: (idea?.title ?? item?.title ?? pick.title).trim() || "Untitled",
+      title: (idea?.title ?? item?.title ?? pick.title).trim() || translate(whatToPostMessages, lang, "untitled"),
       pillarId: pick.pillar_id ?? base?.pillarId ?? null,
       platform: pick.platform,
       formatId: format?.id ?? base?.formatId ?? null,

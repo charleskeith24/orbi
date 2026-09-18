@@ -7,6 +7,7 @@ import { differenceInCalendarDays, format } from "date-fns"
 import type { TodayContent } from "@/lib/analytics"
 import { BUFFER_STAGES, OPERATING_RHYTHM, PUBLISHED_STAGES } from "@/lib/constants"
 import { combineDateTime, parseDate, toISODate } from "@/lib/dates"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type {
   ContentBrief,
   ContentItem,
@@ -19,7 +20,8 @@ import type {
   ISODateTime,
   PostingSlot,
 } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { overdueMessages, rhythmMessages } from "./messages"
 
 /* ----------------------------- Today's content ----------------------------- */
 
@@ -52,15 +54,16 @@ export function slotTime(time: string | null | undefined): string | null {
 /* --------------------------------- Overdue --------------------------------- */
 
 /** Why it's late: "Missed 9:00 AM" (earlier today), "2 days late" (publish time), "Due 3 days ago" (deadline). */
-export function overdueLabel(item: Pick<ContentItem, "scheduled_at" | "due_date">, now: Date): string {
+export function overdueLabel(item: Pick<ContentItem, "scheduled_at" | "due_date">, now: Date, lang: UiLang = "en"): string {
+  const t = translator(overdueMessages, lang)
   const scheduled = parseDate(item.scheduled_at)
   if (scheduled && scheduled < now) {
     const days = differenceInCalendarDays(now, scheduled)
-    return days === 0 ? `Missed ${format(scheduled, "h:mm a")}` : `${pluralize(days, "day")} late`
+    return days === 0 ? t("missed_at", { time: format(scheduled, "h:mm a") }) : t.plural("days_late", days, { count: formatNumber(days) })
   }
   const due = parseDate(item.due_date)
   const days = due ? differenceInCalendarDays(now, due) : 0
-  return days > 0 ? `Due ${pluralize(days, "day")} ago` : "Overdue"
+  return days > 0 ? t.plural("due_ago", days, { count: formatNumber(days) }) : t("overdue")
 }
 
 export interface ReschedulePatch {
@@ -89,6 +92,7 @@ export function reschedulePatch(item: ContentItem, day: ISODate, now: Date): Res
 
 export interface PostCopy {
   text: string
+  /** Which kind of text it is (English identifier; the button label is translated where it renders). */
   label: "Copy caption" | "Copy script"
 }
 
@@ -124,7 +128,7 @@ const RHYTHM_KEYS: RhythmKey[] = ["capture", "create", "review", "publish", "eng
 /**
  * Capture · Create · Review · Publish · Engage (spec §52), each checked from today's data:
  * ideas captured today; a piece created, scripted or moved forward today; nothing left in review;
- * something published today; every engagement task done.
+ * something published today; every engagement task done. Details are in `lang` (default English).
  */
 export function dailyRhythm({
   db,
@@ -132,13 +136,17 @@ export function dailyRhythm({
   now,
   log,
   tasks,
+  lang = "en",
 }: {
   db: Pick<Database, "content_items" | "content_scripts">
   today: Pick<TodayContent, "ideasCapturedToday" | "toReview" | "publishedToday" | "scheduledToday">
   now: Date
   log: EngagementLog | null
   tasks: EngagementTaskConfig[]
+  lang?: UiLang
 }): RhythmStep[] {
+  const t = translator(rhythmMessages, lang)
+  const n = (count: number) => ({ count: formatNumber(count) })
   const day = toISODate(now)
   const onDay = (value: string | null | undefined) => {
     const date = parseDate(value)
@@ -160,24 +168,24 @@ export function dailyRhythm({
   const replies = log ? log.comments_replied + log.dms_replied + log.creator_comments : 0
 
   const checks: Record<RhythmKey, { done: boolean; detail: string }> = {
-    capture: { done: captured > 0, detail: captured ? `${pluralize(captured, "idea")} captured` : "No ideas yet" },
+    capture: { done: captured > 0, detail: captured ? t.plural("ideas_captured", captured, n(captured)) : t("no_ideas") },
     create: {
       done: worked.size > 0,
-      detail: worked.size ? `${pluralize(worked.size, "piece")} moved forward` : "Nothing moved yet",
+      detail: worked.size ? t.plural("moved", worked.size, n(worked.size)) : t("nothing_moved"),
     },
-    review: { done: waiting === 0, detail: waiting ? `${pluralize(waiting, "item")} waiting` : "Queue clear" },
+    review: { done: waiting === 0, detail: waiting ? t.plural("waiting", waiting, n(waiting)) : t("queue_clear") },
     publish: {
       done: published > 0,
-      detail: published ? `${pluralize(published, "post")} out` : goingOut ? `${goingOut} going out today` : "Nothing out yet",
+      detail: published ? t.plural("out", published, n(published)) : goingOut ? t("going_out", { count: goingOut }) : t("nothing_out"),
     },
     engage: tasks.length
-      ? { done: tasksDone === tasks.length, detail: `${tasksDone} of ${tasks.length} tasks` }
-      : { done: replies > 0, detail: replies ? pluralize(replies, "reply", "replies") : "No tasks set" },
+      ? { done: tasksDone === tasks.length, detail: t("tasks", { done: tasksDone, total: tasks.length }) }
+      : { done: replies > 0, detail: replies ? t.plural("replies", replies, n(replies)) : t("no_tasks") },
   }
   return RHYTHM_KEYS.map((key, index) => ({
     key,
     label: OPERATING_RHYTHM.daily.steps[index]?.label ?? key,
-    description: OPERATING_RHYTHM.daily.steps[index]?.description ?? "",
+    description: lang === "en" ? (OPERATING_RHYTHM.daily.steps[index]?.description ?? "") : t(`desc_${key}`),
     ...checks[key],
   }))
 }

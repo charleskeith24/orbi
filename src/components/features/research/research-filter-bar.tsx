@@ -14,14 +14,11 @@ import {
   type ViewOption,
 } from "@/components/common"
 import { PLATFORM_IDS, PLATFORMS, RESEARCH_STATUSES, RESEARCH_TYPES } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
 import type { ContentPillar, ID, ResearchItem } from "@/lib/types"
 import { RESEARCH_STATUS_ICONS, RESEARCH_TYPE_ICONS } from "./research-badges"
+import { researchMessages } from "./messages"
 import { hasResearchFilters, NONE, type ResearchFilters, type ResearchUrlState, type ResearchView } from "./research-model"
-
-const VIEW_OPTIONS: ViewOption<ResearchView>[] = [
-  { value: "table", label: "Table", icon: Table2 },
-  { value: "cards", label: "Cards", icon: LayoutGrid },
-]
 
 function countBy(items: readonly ResearchItem[], key: (item: ResearchItem) => string): Map<string, number> {
   const counts = new Map<string, number>()
@@ -48,6 +45,14 @@ export function ResearchFilterBar({
   onChange: (patch: Partial<ResearchUrlState>) => void
   onReset: () => void
 }) {
+  const t = useT(researchMessages)
+  const viewOptions = useMemo<ViewOption<ResearchView>[]>(
+    () => [
+      { value: "table", label: t("view_table"), icon: Table2 },
+      { value: "cards", label: t("view_cards"), icon: LayoutGrid },
+    ],
+    [t]
+  )
   const typeOptions = useMemo<FacetOption[]>(() => {
     const counts = countBy(items, (i) => i.type)
     return RESEARCH_TYPES.map((type) => {
@@ -72,27 +77,27 @@ export function ResearchFilterBar({
       count: counts.get(p) ?? 0,
       icon: <PlatformIcon platform={p} className="size-3.5 text-muted-foreground" />,
     }))
-    if (counts.has(NONE)) options.push({ value: NONE, label: "No platform", count: counts.get(NONE) ?? 0 })
+    if (counts.has(NONE)) options.push({ value: NONE, label: t("no_platform"), count: counts.get(NONE) ?? 0 })
     return options
-  }, [items, filters.platforms])
+  }, [items, filters.platforms, t])
 
   const pillarOptions = useMemo<FacetOption[]>(() => {
     const counts = countBy(items, (i) => i.pillar_id ?? NONE)
     const options: FacetOption[] = [...pillars.values()]
       .filter((p) => p.is_active || counts.has(p.id))
       .sort((a, b) => a.sort_order - b.sort_order)
-      .map((p) => ({ value: p.id, label: p.name || "Untitled pillar", count: counts.get(p.id) ?? 0, icon: <ColorDot color={p.color} /> }))
-    if (counts.has(NONE)) options.push({ value: NONE, label: "No pillar", count: counts.get(NONE) ?? 0 })
+      .map((p) => ({ value: p.id, label: p.name || t("untitled_pillar"), count: counts.get(p.id) ?? 0, icon: <ColorDot color={p.color} /> }))
+    if (counts.has(NONE)) options.push({ value: NONE, label: t("no_pillar"), count: counts.get(NONE) ?? 0 })
     return options
-  }, [items, pillars])
+  }, [items, pillars, t])
 
   return (
-    <FilterBar actions={<ViewToggle value={view} onChange={(next) => onChange({ view: next })} options={VIEW_OPTIONS} aria-label="Research view" />}>
-      <SearchInput value={filters.q} onChange={(q) => onChange({ q })} placeholder="Search references…" />
-      <FacetFilter title="Type" options={typeOptions} value={filters.types} onChange={(value) => onChange({ type: value.join(",") })} />
-      <FacetFilter title="Status" options={statusOptions} value={filters.statuses} onChange={(value) => onChange({ status: value.join(",") })} />
-      <FacetFilter title="Platform" options={platformOptions} value={filters.platforms} onChange={(value) => onChange({ platform: value.join(",") })} />
-      <FacetFilter title="Pillar" options={pillarOptions} value={filters.pillars} onChange={(value) => onChange({ pillar: value.join(",") })} />
+    <FilterBar actions={<ViewToggle value={view} onChange={(next) => onChange({ view: next })} options={viewOptions} aria-label={t("view_aria")} />}>
+      <SearchInput value={filters.q} onChange={(q) => onChange({ q })} placeholder={t("search_placeholder")} />
+      <FacetFilter title={t("type")} options={typeOptions} value={filters.types} onChange={(value) => onChange({ type: value.join(",") })} />
+      <FacetFilter title={t("status")} options={statusOptions} value={filters.statuses} onChange={(value) => onChange({ status: value.join(",") })} />
+      <FacetFilter title={t("platform")} options={platformOptions} value={filters.platforms} onChange={(value) => onChange({ platform: value.join(",") })} />
+      <FacetFilter title={t("pillar")} options={pillarOptions} value={filters.pillars} onChange={(value) => onChange({ pillar: value.join(",") })} />
       <ResetFiltersButton show={hasResearchFilters(filters)} onClick={onReset} />
     </FilterBar>
   )

@@ -21,9 +21,10 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PLATFORM_IDS, PLATFORMS } from "@/lib/constants"
 import { toISODate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import { useTable } from "@/lib/store"
 import type { AudienceQuestion, ID, PlatformId } from "@/lib/types"
-import { formatNumber, formatPercent, matchesQuery, pluralize, sum, truncate } from "@/lib/utils"
+import { formatNumber, formatPercent, matchesQuery, sum, truncate } from "@/lib/utils"
 import {
   isQuestionView,
   NONE,
@@ -34,20 +35,22 @@ import {
   type QuestionView,
 } from "./audience-model"
 import { AnswerDialog } from "./answer-dialog"
+import { audienceMessages } from "./messages"
 import { MissingLinkNotice } from "./missing-link-notice"
 import { useQuestionActions } from "./question-actions"
 import { QuestionFormDialog } from "./question-form-dialog"
+import { questionMessages } from "./question-messages"
 import { QuestionQuickAdd, type QuestionDefaults } from "./question-quick-add"
 import { QuestionSheet } from "./question-sheet"
 import { QuestionTable } from "./question-table"
 import { useUrlState } from "./use-url-state"
 
 const URL_KEYS = ["open", "tab", "q", "persona", "pillar", "platform", "new"] as const
-const VIEW_TABS: { value: QuestionView; label: string }[] = [
-  { value: "open", label: "Open" },
-  { value: "answered", label: "Answered" },
-  { value: "dismissed", label: "Dismissed" },
-  { value: "all", label: "All" },
+const VIEW_TABS: { value: QuestionView; label: "view_open" | "view_answered" | "view_dismissed" | "view_all" }[] = [
+  { value: "open", label: "view_open" },
+  { value: "answered", label: "view_answered" },
+  { value: "dismissed", label: "view_dismissed" },
+  { value: "all", label: "view_all" },
 ]
 const PLATFORM_SET = new Set<string>(PLATFORM_IDS)
 
@@ -61,6 +64,8 @@ function TabCount({ value }: { value: number }) {
  * `?persona=`, `?pillar=`, `?platform=` (comma lists), `?new=1` (add dialog), `?open=<questionId>`.
  */
 export function QuestionBankView() {
+  const t = useT(questionMessages)
+  const a = useT(audienceMessages)
   const [url, update] = useUrlState(URL_KEYS)
   const questions = useTable("audience_questions")
   const personas = useTable("audience_personas")
@@ -137,11 +142,11 @@ export function QuestionBankView() {
     const persona: FacetOption[] = [
       ...sortPersonas(personas).map((p) => ({
         value: p.id,
-        label: p.name || "Untitled persona",
+        label: p.name || a("untitled_persona"),
         count: count((q) => q.persona_id === p.id),
         icon: <ColorDot color={p.color} />,
       })),
-      { value: NONE, label: "No persona", count: count((q) => !q.persona_id) },
+      { value: NONE, label: a("no_persona"), count: count((q) => !q.persona_id) },
     ]
     const pillar: FacetOption[] = [
       ...pillars
@@ -149,11 +154,11 @@ export function QuestionBankView() {
         .sort((a, b) => a.sort_order - b.sort_order)
         .map((p) => ({
           value: p.id,
-          label: p.name || "Untitled pillar",
+          label: p.name || a("untitled_pillar"),
           count: count((q) => q.pillar_id === p.id),
           icon: <ColorDot color={p.color} />,
         })),
-      { value: NONE, label: "No pillar", count: count((q) => !q.pillar_id) },
+      { value: NONE, label: a("no_pillar"), count: count((q) => !q.pillar_id) },
     ]
     const platform: FacetOption[] = [
       ...PLATFORM_IDS.map((id) => ({
@@ -162,10 +167,10 @@ export function QuestionBankView() {
         count: count((q) => q.platform === id),
         icon: <PlatformIcon platform={id} className="size-3.5 text-muted-foreground" />,
       })),
-      { value: NONE, label: "No platform", count: count((q) => !q.platform) },
+      { value: NONE, label: a("no_platform"), count: count((q) => !q.platform) },
     ]
     return { persona, pillar, platform }
-  }, [questions, personas, pillars])
+  }, [questions, personas, pillars, a])
 
   const setOpen = useCallback((id: ID | null) => update({ open: id ?? "" }), [update])
   const actions = useQuestionActions({
@@ -193,27 +198,30 @@ export function QuestionBankView() {
 
   function onCreated(question: AudienceQuestion) {
     update({ new: "" })
-    toast.success("Question added to the bank", {
+    toast.success(t("added"), {
       description: truncate(question.question, 80),
-      action: { label: "Open", onClick: () => setOpen(question.id) },
+      action: { label: a("open"), onClick: () => setOpen(question.id) },
     })
   }
 
-  const viewLabel = VIEW_TABS.find((t) => t.value === view)?.label.toLowerCase() ?? ""
+  const viewTab = VIEW_TABS.find((tab) => tab.value === view)
+  const viewLabel = viewTab ? t(viewTab.label).toLowerCase() : ""
   const empty =
     view !== "all" && viewCounts.all > 0 ? (
       <EmptyState
         compact
         icon={view === "open" ? CircleCheck : SearchX}
-        title={view === "open" && !filtering ? "No open questions" : `No ${viewLabel} questions${filtering ? " match" : ""}`}
+        title={
+          view === "open" && !filtering ? t("no_open") : t(filtering ? "no_view_match" : "no_view", { view: viewLabel })
+        }
         description={
           view === "open" && !filtering
-            ? "Everything your audience asked has an answer or was dismissed. Log new questions above as they come in."
-            : `${pluralize(viewCounts.all, "question")} ${viewCounts.all === 1 ? "matches" : "match"} in other tabs.`
+            ? t("no_open_description")
+            : t.plural("other_tabs", viewCounts.all, { count: formatNumber(viewCounts.all) })
         }
         action={
           <Button type="button" size="sm" variant="outline" onClick={() => update({ tab: "all" })}>
-            Show all questions
+            {t("show_all")}
           </Button>
         }
       />
@@ -221,11 +229,11 @@ export function QuestionBankView() {
       <EmptyState
         compact
         icon={SearchX}
-        title="No questions match"
-        description="Try a different search or fewer filters."
+        title={t("no_match")}
+        description={a("no_matches_description")}
         action={
           <Button type="button" size="sm" variant="outline" onClick={resetFilters}>
-            Reset filters
+            {a("reset_filters")}
           </Button>
         }
       />
@@ -235,11 +243,11 @@ export function QuestionBankView() {
     <PageContainer>
       <PageHeader
         title="Question Bank"
-        description="Questions your audience keeps asking — counted, prioritised by repeats and turned into content that answers them."
+        description={t("description")}
         actions={
           <Button type="button" size="sm" onClick={() => update({ new: "1" })}>
             <Plus aria-hidden />
-            Add question
+            {t("add_question")}
           </Button>
         }
       />
@@ -250,31 +258,36 @@ export function QuestionBankView() {
         <>
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatTile
-              label="Open questions"
+              label={t("open_questions")}
               icon={MessageCircleQuestion}
               value={formatNumber(stats.open)}
-              sublabel={`${formatNumber(stats.highOpen)} asked 5+ times`}
+              sublabel={t("asked_five", { count: formatNumber(stats.highOpen) })}
             />
             <StatTile
-              label="Asked in the last 7 days"
+              label={t("asked_week")}
               value={formatNumber(stats.recent)}
-              sublabel={`${formatNumber(stats.asks)} asks logged in total`}
+              sublabel={t("asks_total", { count: formatNumber(stats.asks) })}
             />
-            <StatTile label="Turned into ideas" icon={Lightbulb} value={formatNumber(stats.ideas)} sublabel={`${shareOf(stats.ideas)} of questions`} />
             <StatTile
-              label="Answered"
+              label={t("turned_into_ideas")}
+              icon={Lightbulb}
+              value={formatNumber(stats.ideas)}
+              sublabel={t("share_of_questions", { pct: shareOf(stats.ideas) })}
+            />
+            <StatTile
+              label={t("answered")}
               icon={CircleCheck}
               value={formatNumber(stats.answered)}
-              sublabel={`${shareOf(stats.answered)} have content`}
+              sublabel={t("share_with_content", { pct: shareOf(stats.answered) })}
             />
           </div>
 
           <Tabs value={view} onValueChange={(next) => update({ tab: next === "open" ? "" : next })} className="min-w-0 gap-3">
             <div className="-mx-4 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
-              <TabsList variant="line" aria-label="Question status">
+              <TabsList variant="line" aria-label={t("status_aria")}>
                 {VIEW_TABS.map((tab) => (
                   <TabsTrigger key={tab.value} value={tab.value} className="flex-none">
-                    {tab.label} <TabCount value={viewCounts[tab.value]} />
+                    {t(tab.label)} <TabCount value={viewCounts[tab.value]} />
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -286,15 +299,18 @@ export function QuestionBankView() {
               actions={
                 <span className="text-xs text-muted-foreground num" aria-live="polite">
                   {visible.length === questions.length
-                    ? pluralize(questions.length, "question")
-                    : `${formatNumber(visible.length)} of ${pluralize(questions.length, "question")}`}
+                    ? t.plural("questions_count", questions.length, { count: formatNumber(questions.length) })
+                    : a("shown_of", {
+                        shown: formatNumber(visible.length),
+                        total: t.plural("questions_count", questions.length, { count: formatNumber(questions.length) }),
+                      })}
                 </span>
               }
             >
-              <SearchInput value={url.q} onChange={(q) => update({ q })} placeholder="Search questions…" />
-              <FacetFilter title="Persona" options={facets.persona} value={personaFilter} onChange={(v) => update({ persona: v.join(",") })} />
-              <FacetFilter title="Pillar" options={facets.pillar} value={pillarFilter} onChange={(v) => update({ pillar: v.join(",") })} />
-              <FacetFilter title="Platform" options={facets.platform} value={platformFilter} onChange={(v) => update({ platform: v.join(",") })} />
+              <SearchInput value={url.q} onChange={(q) => update({ q })} placeholder={t("search_placeholder")} />
+              <FacetFilter title={a("persona")} options={facets.persona} value={personaFilter} onChange={(v) => update({ persona: v.join(",") })} />
+              <FacetFilter title={a("pillar")} options={facets.pillar} value={pillarFilter} onChange={(v) => update({ pillar: v.join(",") })} />
+              <FacetFilter title={a("platform")} options={facets.platform} value={platformFilter} onChange={(v) => update({ platform: v.join(",") })} />
               <ResetFiltersButton show={filtering} onClick={resetFilters} />
             </FilterBar>
 
@@ -306,12 +322,12 @@ export function QuestionBankView() {
       ) : (
         <EmptyState
           icon={MessageCircleQuestion}
-          title="Your Question Bank is empty"
-          description="Log the questions people ask in comments and DMs. The ones asked again and again are your best content ideas."
+          title={t("empty_title")}
+          description={t("empty_description")}
           action={
             <Button type="button" size="sm" onClick={() => update({ new: "1" })}>
               <Plus aria-hidden />
-              Add question
+              {t("add_question")}
             </Button>
           }
         />

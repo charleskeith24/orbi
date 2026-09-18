@@ -19,9 +19,12 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { PIPELINE_STAGE_MAP } from "@/lib/constants"
 import { toISODate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { convertIdeaToContent, useBrand, useTable } from "@/lib/store"
 import type { ContentIdea, ContentItem, ISODate, PipelineStage, PlatformId } from "@/lib/types"
-import { pluralize, truncate } from "@/lib/utils"
+import { formatNumber, truncate } from "@/lib/utils"
+import { ideaConvertMessages } from "./idea-detail-messages"
 
 const START_STAGES: PipelineStage[] = ["selected", "brief", "scripting", "ready_for_production"]
 const STAGE_OPTIONS: SelectOption<PipelineStage>[] = START_STAGES.map((id) => ({
@@ -31,10 +34,10 @@ const STAGE_OPTIONS: SelectOption<PipelineStage>[] = START_STAGES.map((id) => ({
 }))
 
 const DUE_SHORTCUTS = [
-  { label: "Tomorrow", days: 1 },
-  { label: "In 3 days", days: 3 },
-  { label: "Next week", days: 7 },
-]
+  { label: "tomorrow", days: 1 },
+  { label: "in_3_days", days: 3 },
+  { label: "next_week", days: 7 },
+] as const
 
 /**
  * Idea → content: one content item per platform, each with a Content Brief pre-filled from the
@@ -51,6 +54,7 @@ export function IdeaConvertDialog({
   onOpenChange: (open: boolean) => void
   onConverted?: (items: ContentItem[]) => void
 }) {
+  const t = useT(ideaConvertMessages)
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -66,7 +70,7 @@ export function IdeaConvertDialog({
           />
         ) : (
           <DialogHeader>
-            <DialogTitle>Convert to content</DialogTitle>
+            <DialogTitle>{t("title_convert")}</DialogTitle>
           </DialogHeader>
         )}
       </DialogContent>
@@ -84,6 +88,8 @@ function ConvertForm({
   onConverted: (items: ContentItem[]) => void
 }) {
   const router = useRouter()
+  const t = useT(ideaConvertMessages)
+  const c = useT(commonMessages)
   const brand = useBrand()
   const items = useTable("content_items")
   const ids = useId()
@@ -96,8 +102,8 @@ function ConvertForm({
   const [today] = useState(() => new Date())
   const todayIso = toISODate(today)
 
-  const platformError = platforms.length ? null : "Pick at least one platform."
-  const titleError = idea.title.trim() ? null : "Give the idea a title before converting it."
+  const platformError = platforms.length ? null : t("platform_error")
+  const titleError = idea.title.trim() ? null : t("title_error")
   const invalid = Boolean(platformError || titleError)
 
   function submit(event: React.FormEvent) {
@@ -107,13 +113,13 @@ function ConvertForm({
     try {
       created = convertIdeaToContent(idea.id, { platforms, stage, due_date: due })
     } catch (error) {
-      toast.error("Couldn't convert this idea", { description: error instanceof Error ? error.message : String(error) })
+      toast.error(t("failed"), { description: error instanceof Error ? error.message : String(error) })
       return
     }
     const first = created[0]
-    toast.success(`Created ${pluralize(created.length, "content piece")}`, {
+    toast.success(t.plural("created", created.length, { count: formatNumber(created.length) }), {
       description: `${truncate(idea.title, 80)} · ${PIPELINE_STAGE_MAP[stage].label}`,
-      action: first ? { label: "Open in Studio", onClick: () => router.push(`/studio/${first.id}`) } : undefined,
+      action: first ? { label: t("open_in_studio"), onClick: () => router.push(`/studio/${first.id}`) } : undefined,
     })
     onConverted(created)
   }
@@ -121,38 +127,35 @@ function ConvertForm({
   return (
     <form onSubmit={submit} className="grid min-w-0 gap-4">
       <DialogHeader>
-        <DialogTitle>{existing ? "Create more content" : "Convert to content"}</DialogTitle>
-        <DialogDescription className="text-pretty">
-          “{truncate(idea.title || "Untitled idea", 90)}” becomes one content item per platform, each with a Content Brief
-          pre-filled from this idea.
-        </DialogDescription>
+        <DialogTitle>{existing ? t("title_more") : t("title_convert")}</DialogTitle>
+        <DialogDescription className="text-pretty">{t("description", { title: truncate(idea.title || t("untitled_idea"), 90) })}</DialogDescription>
       </DialogHeader>
 
       <FormField
-        label="Platforms"
+        label={t("platforms")}
         required
         error={platformError}
-        description={platforms.length ? `${pluralize(platforms.length, "content item")} will be created.` : undefined}
+        description={platforms.length ? t.plural("will_create", platforms.length, { count: formatNumber(platforms.length) }) : undefined}
       >
-        <PlatformToggleGroup value={platforms} onChange={setPlatforms} aria-label="Platforms to create content for" />
+        <PlatformToggleGroup value={platforms} onChange={setPlatforms} aria-label={t("platforms_label")} />
       </FormField>
 
       <FormRow>
-        <FormField label="Start in" htmlFor={`${ids}-stage`}>
+        <FormField label={t("start_in")} htmlFor={`${ids}-stage`}>
           <OptionSelect
             id={`${ids}-stage`}
             options={STAGE_OPTIONS}
             value={stage}
             onChange={(next) => next && setStage(next)}
-            aria-label="Starting pipeline stage"
+            aria-label={t("stage_label")}
           />
         </FormField>
-        <FormField label="Due date" htmlFor={`${ids}-due`}>
-          <DatePicker id={`${ids}-due`} value={due} onChange={setDue} placeholder="No due date" minDate={todayIso} />
+        <FormField label={t("due_date")} htmlFor={`${ids}-due`}>
+          <DatePicker id={`${ids}-due`} value={due} onChange={setDue} placeholder={t("no_due_date")} minDate={todayIso} />
         </FormField>
       </FormRow>
 
-      <div className="-mt-2 flex flex-wrap items-center gap-1.5" role="group" aria-label="Due date shortcuts">
+      <div className="-mt-2 flex flex-wrap items-center gap-1.5" role="group" aria-label={t("shortcuts_label")}>
         {DUE_SHORTCUTS.map((shortcut) => {
           const value = toISODate(addDays(today, shortcut.days))
           return (
@@ -163,7 +166,7 @@ function ConvertForm({
               onClick={() => setDue(due === value ? null : value)}
               className={chipVariants({ size: "xs", selected: due === value })}
             >
-              {shortcut.label}
+              {t(shortcut.label)}
             </button>
           )
         })}
@@ -171,18 +174,18 @@ function ConvertForm({
 
       {existing ? (
         <p className="text-xs text-pretty text-muted-foreground">
-          This idea already has {pluralize(existing, "content piece")} — converting again adds more.
+          {t.plural("existing", existing, { count: formatNumber(existing) })}
         </p>
       ) : null}
       {titleError ? <p className="text-xs text-destructive">{titleError}</p> : null}
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={invalid}>
           <FilePlus2 aria-hidden />
-          Create {pluralize(Math.max(platforms.length, 1), "content piece")}
+          {t.plural("submit", Math.max(platforms.length, 1), { count: formatNumber(Math.max(platforms.length, 1)) })}
         </Button>
       </DialogFooter>
     </form>

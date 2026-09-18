@@ -5,10 +5,13 @@ import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui"
 import { useState } from "react"
 import { chipVariants, Token } from "@/components/common/chip"
 import { ColorDot } from "@/components/common/color"
+import { multiSelectMessages } from "@/components/common/messages"
 import type { ControlSize, IconComponent } from "@/components/common/types"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import type { CategoricalColor, TagColor } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -48,11 +51,11 @@ export function MultiSelect({
   options,
   value,
   onChange,
-  placeholder = "Select…",
+  placeholder,
   searchable = true,
   max,
   maxChips = 3,
-  emptyText = "No matches",
+  emptyText,
   size = "default",
   disabled,
   id,
@@ -77,6 +80,8 @@ export function MultiSelect({
   "aria-label"?: string
   "aria-invalid"?: boolean
 }) {
+  const t = useT(multiSelectMessages)
+  const c = useT(commonMessages)
   const [open, setOpen] = useState(false)
   // Count only values that still exist as options (a deleted entity must not hold a slot).
   const selected = options.filter((o) => value.includes(o.value))
@@ -116,16 +121,16 @@ export function MultiSelect({
               ) : null}
             </span>
           ) : (
-            <span className="min-w-0 flex-1 truncate pl-1 text-muted-foreground">{placeholder}</span>
+            <span className="min-w-0 flex-1 truncate pl-1 text-muted-foreground">{placeholder ?? c("select")}</span>
           )}
           <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" aria-hidden />
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-(--radix-popover-trigger-width) min-w-60 gap-0 p-0">
         <Command filter={keywordFilter}>
-          {searchable ? <CommandInput placeholder="Search…" /> : null}
-          <CommandList>
-            <CommandEmpty>{emptyText}</CommandEmpty>
+          {searchable ? <CommandInput placeholder={t("search_placeholder")} /> : null}
+          <CommandList label={t("options_label")}>
+            <CommandEmpty>{emptyText ?? c("no_results")}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => {
                 const checked = value.includes(option.value)
@@ -149,12 +154,11 @@ export function MultiSelect({
           {value.length || max ? (
             <div className="flex items-center justify-between gap-2 border-t px-2.5 py-1.5 text-xs text-muted-foreground">
               <span className="num">
-                {selected.length}
-                {max ? ` / ${max}` : ""} selected
+                {max ? t("selected_of_max", { count: selected.length, max }) : t("selected", { count: selected.length })}
               </span>
               {value.length ? (
                 <Button type="button" variant="ghost" size="xs" onClick={() => onChange([])}>
-                  Clear
+                  {c("clear")}
                 </Button>
               ) : null}
             </div>

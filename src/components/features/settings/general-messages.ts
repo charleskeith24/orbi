@@ -1,6 +1,6 @@
 import { defineMessages } from "@/lib/i18n/core"
 
-/** Settings → General: the "Language & display" section and the save toast. */
+/** Settings → General: every section (display, posting rhythm, workspace, content mix) and the save toast. */
 export const generalMessages = defineMessages({
   en: {
     display_title: "Language & display",
@@ -15,6 +15,51 @@ export const generalMessages = defineMessages({
     currency_label: "Currency",
     currency_description: "The default currency for brand deals, income and rate cards. Amounts you already logged keep their own currency.",
     saved: "General settings saved",
+
+    // Posting rhythm
+    rhythm_title: "Posting rhythm",
+    rhythm_description: "The cadence every weekly number is measured against.",
+    weekly_label: "Weekly post target",
+    weekly_description:
+      "Posts you aim to publish each week across all platforms. Drives posting progress, the Content Buffer and the Weekly Planner.",
+    weekly_suffix: "posts / week",
+    plan_posts: "Your {platforms} plan {frequency} posts a week{gap}.",
+    plan_platforms_one: "{count} active platform strategy",
+    plan_platforms_other: "{count} active platform strategies",
+    plan_gap_more: " — {count} more than this target",
+    plan_gap_fewer: " — {count} fewer than this target",
+    plan_slots: "The Posting Schedule has {slots} a week.",
+    slots_one: "{count} slot",
+    slots_other: "{count} slots",
+    week_start_label: "Week starts on",
+    week_start_description: "Weekly posting progress, reports, the calendar and the planner all use this boundary.",
+
+    // Workspace
+    workspace_title: "Workspace",
+    workspace_description: "Defaults for new work.",
+    timezone_label: "Timezone",
+    timezone_description: "Given to the AI as your local context. Calendar dates follow this device's clock.",
+    device_zone: "This device is set to {zone}.",
+    use_it: "Use it",
+    owner_label: "Default owner",
+    owner_description: "Assigned to new content items. Change it per item in Content Studio or on the Pipeline.",
+    owner_placeholder: "e.g. Maria",
+    used_on_content: "Used on content:",
+
+    // Content mix
+    mix_title: "Content mix",
+    mix_description: "How strictly the pillar and funnel mix are checked.",
+    tolerance_label: "Mix tolerance",
+    tolerance_description:
+      "How far a pillar's share of the last 30 days may drift from its target before the dashboard flags an unbalanced mix. The funnel mix uses the same tolerance.",
+    tolerance_suffix: "pts",
+    mix_not_enough: "Not enough content in the last 30 days to check the mix yet.",
+    pillars_flagged_one: "{count} pillar flagged right now",
+    pillars_flagged_other: "{count} pillars flagged right now",
+    pillars_balanced: "Pillar mix balanced within ±{tolerance} pts",
+    funnel_flagged_one: "{count} funnel stage flagged",
+    funnel_flagged_other: "{count} funnel stages flagged",
+    funnel_balanced: "Funnel mix balanced",
   },
   tl: {
     display_title: "Language at display",
@@ -29,5 +74,47 @@ export const generalMessages = defineMessages({
     currency_label: "Currency",
     currency_description: "Default na currency para sa brand deals, income at rate cards. Hindi magbabago ang currency ng mga na-log mo na.",
     saved: "Na-save ang General settings",
+
+    rhythm_title: "Posting rhythm",
+    rhythm_description: "Ang pace na sinusukat ng bawat weekly number.",
+    weekly_label: "Weekly post target",
+    weekly_description:
+      "Bilang ng posts na target mo kada linggo sa lahat ng platforms. Ginagamit sa posting progress, Content Buffer at Weekly Planner.",
+    weekly_suffix: "posts / linggo",
+    plan_posts: "Ang {platforms} mo ay nagpaplano ng {frequency} posts kada linggo{gap}.",
+    plan_platforms_one: "{count} active na platform strategy",
+    plan_platforms_other: "{count} active na platform strategies",
+    plan_gap_more: " — lampas ng {count} sa target na ito",
+    plan_gap_fewer: " — kulang ng {count} sa target na ito",
+    plan_slots: "Ang Posting Schedule ay may {slots} kada linggo.",
+    slots_one: "{count} slot",
+    slots_other: "{count} slots",
+    week_start_label: "Simula ng linggo",
+    week_start_description: "Ginagamit ng weekly posting progress, reports, calendar at planner ang boundary na ito.",
+
+    workspace_title: "Workspace",
+    workspace_description: "Mga default para sa bagong work.",
+    timezone_label: "Timezone",
+    timezone_description: "Ibinibigay sa AI bilang local context mo. Ang mga date sa calendar ay sumusunod sa orasan ng device na ito.",
+    device_zone: "Naka-set ang device na ito sa {zone}.",
+    use_it: "Gamitin",
+    owner_label: "Default owner",
+    owner_description: "Naka-assign sa mga bagong content item. Palitan per item sa Content Studio o sa Pipeline.",
+    owner_placeholder: "hal. Maria",
+    used_on_content: "Ginamit sa content:",
+
+    mix_title: "Content mix",
+    mix_description: "Gaano strikto ang pag-check sa pillar at funnel mix.",
+    tolerance_label: "Mix tolerance",
+    tolerance_description:
+      "Gaano layo ang share ng isang pillar sa huling 30 araw mula sa target nito bago i-flag ng dashboard na unbalanced ang mix. Parehong tolerance ang ginagamit ng funnel mix.",
+    tolerance_suffix: "pts",
+    mix_not_enough: "Hindi pa sapat ang content sa huling 30 araw para i-check ang mix.",
+    pillars_flagged_one: "{count} pillar na naka-flag ngayon",
+    pillars_flagged_other: "{count} pillars na naka-flag ngayon",
+    pillars_balanced: "Balanced ang pillar mix, within ±{tolerance} pts",
+    funnel_flagged_one: "{count} funnel stage na naka-flag",
+    funnel_flagged_other: "{count} funnel stages na naka-flag",
+    funnel_balanced: "Balanced ang funnel mix",
   },
 })

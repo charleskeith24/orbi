@@ -3,11 +3,14 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { formatDate } from "@/lib/dates"
+import { translator } from "@/lib/i18n/core"
+import { getUiLang } from "@/lib/i18n/ui-lang"
 import { dataActions, scheduleItem, unscheduleItem } from "@/lib/store"
 import type { ContentItem, ISODate, ISODateTime } from "@/lib/types"
 import { truncate } from "@/lib/utils"
 import type { DaySlot } from "./calendar-model"
 import { FillSlotDialog, type FillTarget } from "./fill-slot-dialog"
+import { calendarMessages } from "./messages"
 import { DueDateDialog, ScheduleDialog } from "./schedule-item-dialog"
 
 export interface CalendarActions {
@@ -30,7 +33,10 @@ export function useCalendarActions(): CalendarActions {
   return actions
 }
 
-const titleOf = (item: ContentItem) => `“${truncate(item.title.trim() || "Untitled content", 60)}”`
+/** Calendar strings in the current UI language (for toasts built in handlers). */
+const tr = () => translator(calendarMessages, getUiLang())
+
+const titleOf = (item: ContentItem) => `“${truncate(item.title.trim() || tr()("untitled_content"), 60)}”`
 
 /** The latest row (a rendered item can be a render behind the store). */
 const fresh = (item: ContentItem) => dataActions.getDb().content_items.find((row) => row.id === item.id) ?? item
@@ -39,10 +45,10 @@ const fresh = (item: ContentItem) => dataActions.getDb().content_items.find((row
 function undoFor(item: ContentItem) {
   const before = { scheduled_at: item.scheduled_at, stage: item.stage, due_date: item.due_date }
   return {
-    label: "Undo",
+    label: tr()("undo"),
     onClick: () => {
       dataActions.update("content_items", item.id, before)
-      toast.success("Change undone")
+      toast.success(tr()("change_undone"))
     },
   }
 }
@@ -66,7 +72,8 @@ export function CalendarActionsProvider({ children }: { children: React.ReactNod
     const iso = at instanceof Date ? at.toISOString() : at
     const undo = undoFor(row)
     scheduleItem(row.id, iso)
-    toast.success(`${row.scheduled_at ? "Rescheduled" : "Scheduled"} ${titleOf(row)}`, {
+    const t = tr()
+    toast.success(t(row.scheduled_at ? "toast_rescheduled" : "toast_scheduled", { title: titleOf(row) }), {
       description: formatDate(iso, "EEEE, MMM d · h:mm a"),
       action: undo,
     })
@@ -76,8 +83,9 @@ export function CalendarActionsProvider({ children }: { children: React.ReactNod
     const row = fresh(item)
     const undo = undoFor(row)
     unscheduleItem(row.id)
-    toast.success(`Unscheduled ${titleOf(row)}`, {
-      description: row.stage === "scheduled" ? "Moved back to Ready to Post." : "It no longer has a publish time.",
+    const t = tr()
+    toast.success(t("toast_unscheduled", { title: titleOf(row) }), {
+      description: row.stage === "scheduled" ? t("toast_back_to_ready") : t("toast_no_publish_time"),
       action: undo,
     })
   }, [])
@@ -86,8 +94,9 @@ export function CalendarActionsProvider({ children }: { children: React.ReactNod
     const row = fresh(item)
     const undo = undoFor(row)
     dataActions.update("content_items", row.id, { due_date: due })
-    toast.success(due ? `Due date moved for ${titleOf(row)}` : `Due date cleared for ${titleOf(row)}`, {
-      description: due ? `Due ${formatDate(due, "EEEE, MMM d")}` : undefined,
+    const t = tr()
+    toast.success(t(due ? "toast_due_moved" : "toast_due_cleared", { title: titleOf(row) }), {
+      description: due ? t("toast_due_on", { date: formatDate(due, "EEEE, MMM d") }) : undefined,
       action: undo,
     })
   }, [])

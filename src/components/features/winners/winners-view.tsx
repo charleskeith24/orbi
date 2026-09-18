@@ -21,8 +21,10 @@ import {
 import { Button } from "@/components/ui/button"
 import { getWinners, inRange, resolveRange, tieredRows } from "@/lib/analytics"
 import { PLATFORM_IDS, PLATFORMS } from "@/lib/constants"
+import { useT, useUiLang } from "@/lib/i18n"
 import { uiActions, useDb, useSettings } from "@/lib/store"
-import { formatNumber, formatPercent, pluralize, truncate } from "@/lib/utils"
+import { formatNumber, formatPercent, truncate } from "@/lib/utils"
+import { winnersMessages } from "./messages"
 import { WinnerCard } from "./winner-card"
 import { WinnerDetailSheet } from "./winner-detail-sheet"
 import { DetectionRule } from "./winner-rule"
@@ -34,16 +36,18 @@ import {
   matchesTierFilter,
   minComparisonPosts,
   NO_PILLAR,
-  PERIOD_OPTIONS,
+  periodOptions,
   periodRange,
-  SORT_OPTIONS,
+  sortOptions,
   sortWinners,
-  TIER_FILTERS,
+  tierFilters,
   type WinnerPeriod,
   type WinnerSort,
 } from "./winners-model"
 
 export function WinnersView() {
+  const t = useT(winnersMessages)
+  const lang = useUiLang()
   const router = useRouter()
   const searchParams = useSearchParams()
   const db = useDb()
@@ -84,9 +88,10 @@ export function WinnersView() {
     [router]
   )
 
-  const tierOptions: FacetOption[] = TIER_FILTERS.map((t) => ({
-    ...t,
-    count: library.filter((e) => matchesTierFilter(e, [t.value])).length,
+  const periods = periodOptions(lang)
+  const tierOptions: FacetOption[] = tierFilters(lang).map((option) => ({
+    ...option,
+    count: library.filter((e) => matchesTierFilter(e, [option.value])).length,
   }))
   const platformOptions: FacetOption[] = PLATFORM_IDS.filter(
     (p) => platforms.includes(p) || library.some((e) => e.row.platform === p)
@@ -101,12 +106,12 @@ export function WinnersView() {
     .filter((p) => pillars.includes(p.id) || library.some((e) => e.row.pillarId === p.id))
     .map((p) => ({
       value: p.id,
-      label: p.name || "Untitled pillar",
+      label: p.name || t("untitled_pillar"),
       count: library.filter((e) => e.row.pillarId === p.id).length,
       icon: <ColorDot color={p.color} />,
     }))
   const unassigned = library.filter((e) => !e.row.pillarId).length
-  if (unassigned || pillars.includes(NO_PILLAR)) pillarOptions.push({ value: NO_PILLAR, label: "No pillar", count: unassigned })
+  if (unassigned || pillars.includes(NO_PILLAR)) pillarOptions.push({ value: NO_PILLAR, label: t("no_pillar"), count: unassigned })
 
   const filtering = Boolean(query || tiers.length || platforms.length || pillars.length || period !== "all")
   const resetFilters = () => {
@@ -118,9 +123,9 @@ export function WinnersView() {
   }
 
   const breakdown = [
-    stats.breakouts ? pluralize(stats.breakouts, "breakout") : "",
-    stats.winners ? pluralize(stats.winners, "winner") : "",
-    stats.pinnedOnly ? `${formatNumber(stats.pinnedOnly)} pinned` : "",
+    stats.breakouts ? t.plural("breakouts", stats.breakouts, { count: formatNumber(stats.breakouts) }) : "",
+    stats.winners ? t.plural("winners", stats.winners, { count: formatNumber(stats.winners) }) : "",
+    stats.pinnedOnly ? t("pinned_count", { count: formatNumber(stats.pinnedOnly) }) : "",
   ]
     .filter(Boolean)
     .join(" · ")
@@ -128,7 +133,7 @@ export function WinnersView() {
   const addAnalytics = (
     <Button type="button" size="sm" variant="outline" onClick={() => uiActions.openDialog({ type: "add-metrics" })}>
       <ChartColumn aria-hidden />
-      Add analytics
+      {t("add_analytics")}
     </Button>
   )
 
@@ -136,7 +141,7 @@ export function WinnersView() {
     <PageContainer>
       <PageHeader
         title="Winning Content Library"
-        description="Your best posts, detected from your own analytics. Study why they worked, then replicate and repurpose them."
+        description={t("description")}
         actions={addAnalytics}
       >
         <DetectionRule settings={settings} />
@@ -145,28 +150,24 @@ export function WinnersView() {
       {allTimeCount ? (
         <>
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatTile label="In the library" value={formatNumber(stats.total)} sublabel={breakdown || "Nothing in this period"} />
+            <StatTile label={t("in_library")} value={formatNumber(stats.total)} sublabel={breakdown || t("nothing_period")} />
             <StatTile
-              label="Win rate"
+              label={t("win_rate")}
               value={stats.winRate === null ? "—" : formatPercent(stats.winRate, 0)}
-              sublabel={stats.measured ? `of ${pluralize(stats.measured, "measured post")}` : "No measured posts in this period"}
+              sublabel={
+                stats.measured ? t.plural("of_measured", stats.measured, { count: formatNumber(stats.measured) }) : t("no_measured_period")
+              }
             />
             <StatTile
-              label="Best multiple"
+              label={t("best_multiple")}
               value={stats.best ? formatRatio(stats.best.row.ratio) : "—"}
-              sublabel={stats.best ? truncate(stats.best.row.item.title || "Untitled content", 44) : "No tiered posts in this period"}
+              sublabel={stats.best ? truncate(stats.best.row.item.title || t("untitled_content"), 44) : t("no_tiered_period")}
               href={stats.best ? `/winners?open=${stats.best.row.id}` : undefined}
             />
             <StatTile
-              label="Not yet repurposed"
+              label={t("not_repurposed_stat")}
               value={formatNumber(stats.notRepurposed)}
-              sublabel={
-                !stats.total
-                  ? "Nothing in this period"
-                  : stats.notRepurposed
-                    ? "Your safest repurposing candidates"
-                    : "Every winner has a repurposed version"
-              }
+              sublabel={!stats.total ? t("nothing_period") : stats.notRepurposed ? t("safest") : t("every_repurposed")}
             />
           </div>
 
@@ -175,29 +176,31 @@ export function WinnersView() {
               actions={
                 <>
                   <span className="text-xs text-muted-foreground num">
-                    {filtered.length === library.length ? pluralize(library.length, "post") : `${filtered.length} of ${library.length}`}
+                    {filtered.length === library.length
+                      ? t.plural("posts", library.length, { count: formatNumber(library.length) })
+                      : t("shown_of", { shown: filtered.length, total: library.length })}
                   </span>
                   <OptionSelect<WinnerSort>
                     value={sort}
                     onChange={(next) => setSort(next ?? "ratio")}
-                    options={SORT_OPTIONS}
+                    options={sortOptions(lang)}
                     size="sm"
-                    aria-label="Sort winners"
+                    aria-label={t("sort_aria")}
                     className="w-40"
                   />
                 </>
               }
             >
-              <SearchInput value={query} onChange={setQuery} placeholder="Search winners…" />
-              <FacetFilter title="Tier" options={tierOptions} value={tiers} onChange={setTiers} />
-              <FacetFilter title="Platform" options={platformOptions} value={platforms} onChange={setPlatforms} />
-              <FacetFilter title="Pillar" options={pillarOptions} value={pillars} onChange={setPillars} />
+              <SearchInput value={query} onChange={setQuery} placeholder={t("search_placeholder")} />
+              <FacetFilter title={t("facet_tier")} options={tierOptions} value={tiers} onChange={setTiers} />
+              <FacetFilter title={t("facet_platform")} options={platformOptions} value={platforms} onChange={setPlatforms} />
+              <FacetFilter title={t("facet_pillar")} options={pillarOptions} value={pillars} onChange={setPillars} />
               <OptionSelect<WinnerPeriod>
                 value={period}
                 onChange={(next) => setPeriod(next ?? "all")}
-                options={PERIOD_OPTIONS}
+                options={periods}
                 size="sm"
-                aria-label="Published in"
+                aria-label={t("period_aria")}
                 className="w-36"
               />
               <ResetFiltersButton show={filtering} onClick={resetFilters} />
@@ -212,15 +215,18 @@ export function WinnersView() {
             ) : (
               <EmptyState
                 icon={Trophy}
-                title={library.length ? "No winners match" : "No winners in this period"}
+                title={library.length ? t("no_match") : t("no_period")}
                 description={
                   library.length
-                    ? "Try a different search, tier, platform or pillar."
-                    : `${pluralize(allTimeCount, "post")} made the library outside ${PERIOD_OPTIONS.find((p) => p.value === period)?.label.toLowerCase() ?? "this period"}.`
+                    ? t("no_match_description")
+                    : t.plural("outside_period", allTimeCount, {
+                        count: formatNumber(allTimeCount),
+                        period: periods.find((p) => p.value === period)?.label.toLowerCase() ?? t("this_period"),
+                      })
                 }
                 action={
                   <Button type="button" size="sm" variant="outline" onClick={resetFilters}>
-                    {library.length ? "Reset filters" : "Show all time"}
+                    {library.length ? t("reset_filters") : t("show_all_time")}
                   </Button>
                 }
               />
@@ -230,29 +236,29 @@ export function WinnersView() {
       ) : (
         <EmptyState
           icon={Trophy}
-          title="No winners yet"
+          title={t("no_winners")}
           description={
             allRows.length
-              ? `A post becomes a winner at ${settings.tier_winner}× the average of your earlier posts on the same platform — tiers start once a platform has ${minComparisonPosts(settings)} earlier posts with analytics. Pinned posts always show here.`
-              : `Winners appear after you publish and log analytics for about ${minComparisonPosts(settings) + 1} posts per platform — each post is compared with your own earlier posts, never with anyone else's.`
+              ? t("no_winners_rows", { multiple: settings.tier_winner, min: minComparisonPosts(settings) })
+              : t("no_winners_empty", { count: minComparisonPosts(settings) + 1 })
           }
           action={
             allRows.length ? (
               <Button type="button" size="sm" onClick={() => uiActions.openDialog({ type: "add-metrics" })}>
                 <ChartColumn aria-hidden />
-                Add analytics
+                {t("add_analytics")}
               </Button>
             ) : (
               <Button type="button" size="sm" onClick={() => uiActions.openDialog({ type: "log-post" })}>
                 <Plus aria-hidden />
-                Log a published post
+                {t("log_published")}
               </Button>
             )
           }
           secondaryAction={
             allRows.length ? (
               <Button asChild size="sm" variant="outline">
-                <Link href="/analytics/posts">Open Post Performance</Link>
+                <Link href="/analytics/posts">{t("open_post_performance")}</Link>
               </Button>
             ) : undefined
           }

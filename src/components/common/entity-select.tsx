@@ -4,6 +4,7 @@ import { Target } from "lucide-react"
 import { useMemo } from "react"
 import { ColorDot } from "@/components/common/color"
 import { formatCategoryIcon } from "@/components/common/entity-badges"
+import { selectMessages } from "@/components/common/messages"
 import { PlatformIcon } from "@/components/common/platform-icon"
 import { IDEA_STATUS_ICONS, PriorityIcon, StageIcon } from "@/components/common/status-badges"
 import type { ControlSize } from "@/components/common/types"
@@ -31,6 +32,8 @@ import {
   PLATFORMS,
   PRIORITIES,
 } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { useTable } from "@/lib/store"
 import type { FunnelStage, HookCategory, ID, IdeaStatus, PipelineStage, PlatformId, Priority } from "@/lib/types"
 import { cn, truncate } from "@/lib/utils"
@@ -67,9 +70,9 @@ export function OptionSelect<T extends string>({
   value,
   onChange,
   allowNone = false,
-  noneLabel = "None",
-  placeholder = "Select…",
-  emptyText = "Nothing to choose from yet",
+  noneLabel,
+  placeholder,
+  emptyText,
   className,
   disabled,
   id,
@@ -77,6 +80,8 @@ export function OptionSelect<T extends string>({
   "aria-label": ariaLabel,
   "aria-invalid": ariaInvalid,
 }: BaseSelectProps<T> & { options: SelectOption<T>[]; emptyText?: string }) {
+  const t = useT(selectMessages)
+  const c = useT(commonMessages)
   const known = value !== null && options.some((o) => o.value === value)
   const selectValue = value === null ? (allowNone ? NONE : "") : known ? value : ""
 
@@ -107,7 +112,7 @@ export function OptionSelect<T extends string>({
         aria-invalid={ariaInvalid}
         className={cn("w-full min-w-0 *:data-[slot=select-value]:min-w-0", className)}
       >
-        <SelectValue placeholder={placeholder} />
+        <SelectValue placeholder={placeholder ?? c("select")} />
       </SelectTrigger>
       <SelectContent
         position="popper"
@@ -116,7 +121,7 @@ export function OptionSelect<T extends string>({
       >
         {allowNone ? (
           <SelectItem value={NONE}>
-            <span className="truncate text-muted-foreground">{noneLabel}</span>
+            <span className="truncate text-muted-foreground">{noneLabel ?? c("none")}</span>
           </SelectItem>
         ) : null}
         {allowNone && options.length ? <SelectSeparator /> : null}
@@ -132,7 +137,7 @@ export function OptionSelect<T extends string>({
             group.options.map((option) => <OptionItem key={option.value} option={option} />)
           )
         )}
-        {!options.length ? <div className="px-2 py-2 text-xs text-muted-foreground">{emptyText}</div> : null}
+        {!options.length ? <div className="px-2 py-2 text-xs text-muted-foreground">{emptyText ?? t("nothing_to_choose")}</div> : null}
       </SelectContent>
     </Select>
   )
@@ -157,84 +162,88 @@ function keepCurrent<T extends { id: ID }>(rows: T[], keep: (row: T) => boolean,
 }
 
 export function PillarSelect(props: EntitySelectProps) {
+  const t = useT(selectMessages)
   const pillars = useTable("content_pillars")
   const options = useMemo(
     () =>
       keepCurrent(pillars, (p) => p.is_active, props.value)
         .sort((a, b) => a.sort_order - b.sort_order)
-        .map((p) => ({ value: p.id, label: p.name || "Untitled pillar", icon: <ColorDot color={p.color} /> })),
-    [pillars, props.value]
+        .map((p) => ({ value: p.id, label: p.name || t("untitled_pillar"), icon: <ColorDot color={p.color} /> })),
+    [pillars, props.value, t]
   )
   return (
     <OptionSelect
       {...props}
       options={options}
-      placeholder={props.placeholder ?? "Select pillar"}
-      noneLabel={props.noneLabel ?? "No pillar"}
-      emptyText="No pillars yet — add them in Content Pillars."
+      placeholder={props.placeholder ?? t("select_pillar")}
+      noneLabel={props.noneLabel ?? t("no_pillar")}
+      emptyText={t("empty_pillars")}
     />
   )
 }
 
 export function PersonaSelect(props: EntitySelectProps) {
+  const t = useT(selectMessages)
   const personas = useTable("audience_personas")
   const options = useMemo(
     () =>
       [...personas]
         .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.name.localeCompare(b.name))
-        .map((p) => ({ value: p.id, label: p.name || "Untitled persona", icon: <ColorDot color={p.color} /> })),
-    [personas]
+        .map((p) => ({ value: p.id, label: p.name || t("untitled_persona"), icon: <ColorDot color={p.color} /> })),
+    [personas, t]
   )
   return (
     <OptionSelect
       {...props}
       options={options}
-      placeholder={props.placeholder ?? "Select persona"}
-      noneLabel={props.noneLabel ?? "No persona"}
-      emptyText="No personas yet — add them in Audience HQ."
+      placeholder={props.placeholder ?? t("select_persona")}
+      noneLabel={props.noneLabel ?? t("no_persona")}
+      emptyText={t("empty_personas")}
     />
   )
 }
 
 /** Audience problems, optionally limited to one persona (`personaId`). */
 export function ProblemSelect({ personaId, ...props }: EntitySelectProps & { personaId?: ID | null }) {
+  const t = useT(selectMessages)
   const problems = useTable("audience_problems")
   const options = useMemo(
     () =>
       keepCurrent(problems, (p) => !personaId || p.persona_id === personaId, props.value)
         .sort((a, b) => b.severity - a.severity || a.problem.localeCompare(b.problem))
-        .map((p) => ({ value: p.id, label: truncate(p.problem || "Untitled problem", 90) })),
-    [problems, personaId, props.value]
+        .map((p) => ({ value: p.id, label: truncate(p.problem || t("untitled_problem"), 90) })),
+    [problems, personaId, props.value, t]
   )
   return (
     <OptionSelect
       {...props}
       options={options}
-      placeholder={props.placeholder ?? "Select problem"}
-      noneLabel={props.noneLabel ?? "No problem"}
-      emptyText={personaId ? "No problems for this persona yet." : "The Problem Bank is empty."}
+      placeholder={props.placeholder ?? t("select_problem")}
+      noneLabel={props.noneLabel ?? t("no_problem")}
+      emptyText={personaId ? t("empty_problems_persona") : t("empty_problems")}
     />
   )
 }
 
 export function GoalSelect(props: EntitySelectProps) {
+  const t = useT(selectMessages)
   const goals = useTable("content_goals")
   const options = useMemo(
     () =>
       keepCurrent(goals, (g) => g.is_active, props.value).map((g) => ({
         value: g.id,
-        label: g.name || GOAL_CATEGORIES[g.category]?.label || "Untitled goal",
+        label: g.name || GOAL_CATEGORIES[g.category]?.label || t("untitled_goal"),
         icon: <Target className="text-muted-foreground" aria-hidden />,
       })),
-    [goals, props.value]
+    [goals, props.value, t]
   )
   return (
     <OptionSelect
       {...props}
       options={options}
-      placeholder={props.placeholder ?? "Select goal"}
-      noneLabel={props.noneLabel ?? "No goal"}
-      emptyText="No goals yet — set them in Strategy → Goals."
+      placeholder={props.placeholder ?? t("select_goal")}
+      noneLabel={props.noneLabel ?? t("no_goal")}
+      emptyText={t("empty_goals")}
     />
   )
 }
@@ -242,6 +251,7 @@ export function GoalSelect(props: EntitySelectProps) {
 const FORMAT_CATEGORY_ORDER = FORMAT_CATEGORIES.map((c) => c.id)
 
 export function FormatSelect(props: EntitySelectProps) {
+  const t = useT(selectMessages)
   const formats = useTable("content_formats")
   const options = useMemo(
     () =>
@@ -256,45 +266,47 @@ export function FormatSelect(props: EntitySelectProps) {
           const Icon = formatCategoryIcon(f.category)
           return {
             value: f.id,
-            label: f.name || "Untitled format",
+            label: f.name || t("untitled_format"),
             icon: <Icon className="text-muted-foreground" aria-hidden />,
             group: FORMAT_CATEGORY_MAP[f.category]?.label,
           }
         }),
-    [formats]
+    [formats, t]
   )
   return (
     <OptionSelect
       {...props}
       options={options}
-      placeholder={props.placeholder ?? "Select format"}
-      noneLabel={props.noneLabel ?? "No format"}
-      emptyText="No formats in the library yet."
+      placeholder={props.placeholder ?? t("select_format")}
+      noneLabel={props.noneLabel ?? t("no_format")}
+      emptyText={t("empty_formats")}
     />
   )
 }
 
 export function AngleSelect(props: EntitySelectProps) {
+  const t = useT(selectMessages)
   const angles = useTable("angles")
   const options = useMemo(
     () =>
       [...angles]
         .sort((a, b) => a.name.localeCompare(b.name))
-        .map((a) => ({ value: a.id, label: a.name || "Untitled angle" })),
-    [angles]
+        .map((a) => ({ value: a.id, label: a.name || t("untitled_angle") })),
+    [angles, t]
   )
   return (
     <OptionSelect
       {...props}
       options={options}
-      placeholder={props.placeholder ?? "Select angle"}
-      noneLabel={props.noneLabel ?? "No angle"}
-      emptyText="The Angle Library is empty."
+      placeholder={props.placeholder ?? t("select_angle")}
+      noneLabel={props.noneLabel ?? t("no_angle")}
+      emptyText={t("empty_angles")}
     />
   )
 }
 
 export function CampaignSelect(props: EntitySelectProps) {
+  const t = useT(selectMessages)
   const campaigns = useTable("content_campaigns")
   const options = useMemo(
     () =>
@@ -302,44 +314,46 @@ export function CampaignSelect(props: EntitySelectProps) {
         .sort((a, b) => a.start_date.localeCompare(b.start_date))
         .map((c) => ({
           value: c.id,
-          label: c.name || "Untitled campaign",
+          label: c.name || t("untitled_campaign"),
           icon: <ColorDot color={c.color} shape="square" />,
         })),
-    [campaigns, props.value]
+    [campaigns, props.value, t]
   )
   return (
     <OptionSelect
       {...props}
       options={options}
-      placeholder={props.placeholder ?? "Select campaign"}
-      noneLabel={props.noneLabel ?? "No campaign"}
-      emptyText="No active campaigns."
+      placeholder={props.placeholder ?? t("select_campaign")}
+      noneLabel={props.noneLabel ?? t("no_campaign")}
+      emptyText={t("empty_campaigns")}
     />
   )
 }
 
 export function SeriesSelect(props: EntitySelectProps) {
+  const t = useT(selectMessages)
   const series = useTable("content_series")
   const options = useMemo(
     () =>
       keepCurrent(series, (s) => s.is_active, props.value)
         .sort((a, b) => a.name.localeCompare(b.name))
-        .map((s) => ({ value: s.id, label: s.name || "Untitled series" })),
-    [series, props.value]
+        .map((s) => ({ value: s.id, label: s.name || t("untitled_series") })),
+    [series, props.value, t]
   )
   return (
     <OptionSelect
       {...props}
       options={options}
-      placeholder={props.placeholder ?? "Select series"}
-      noneLabel={props.noneLabel ?? "No series"}
-      emptyText="No active series."
+      placeholder={props.placeholder ?? t("select_series")}
+      noneLabel={props.noneLabel ?? t("no_series")}
+      emptyText={t("empty_series")}
     />
   )
 }
 
 /** Hooks from the Hook Library, favourites first, grouped by category. */
 export function HookSelect(props: EntitySelectProps) {
+  const t = useT(selectMessages)
   const hooks = useTable("hooks")
   const options = useMemo(
     () =>
@@ -352,18 +366,18 @@ export function HookSelect(props: EntitySelectProps) {
         )
         .map((h) => ({
           value: h.id,
-          label: truncate(h.text || "Untitled hook", 90),
+          label: truncate(h.text || t("untitled_hook"), 90),
           group: HOOK_CATEGORIES[h.category]?.label,
         })),
-    [hooks]
+    [hooks, t]
   )
   return (
     <OptionSelect
       {...props}
       options={options}
-      placeholder={props.placeholder ?? "Select hook"}
-      noneLabel={props.noneLabel ?? "No hook"}
-      emptyText="The Hook Library is empty."
+      placeholder={props.placeholder ?? t("select_hook")}
+      noneLabel={props.noneLabel ?? t("no_hook")}
+      emptyText={t("empty_hooks")}
     />
   )
 }
@@ -371,6 +385,7 @@ export function HookSelect(props: EntitySelectProps) {
 /* ------------------------------- Enum selects ----------------------------- */
 
 export function PlatformSelect({ platforms = PLATFORM_IDS, ...props }: BaseSelectProps<PlatformId> & { platforms?: PlatformId[] }) {
+  const t = useT(selectMessages)
   const options = useMemo(
     () =>
       platforms.map((p) => ({
@@ -384,8 +399,8 @@ export function PlatformSelect({ platforms = PLATFORM_IDS, ...props }: BaseSelec
     <OptionSelect
       {...props}
       options={options}
-      placeholder={props.placeholder ?? "Select platform"}
-      noneLabel={props.noneLabel ?? "No platform"}
+      placeholder={props.placeholder ?? t("select_platform")}
+      noneLabel={props.noneLabel ?? t("no_platform")}
     />
   )
 }
@@ -397,7 +412,8 @@ const STAGE_OPTIONS: SelectOption<PipelineStage>[] = PIPELINE_STAGES.map((s) => 
 }))
 
 export function StageSelect(props: BaseSelectProps<PipelineStage>) {
-  return <OptionSelect {...props} options={STAGE_OPTIONS} placeholder={props.placeholder ?? "Select stage"} />
+  const t = useT(selectMessages)
+  return <OptionSelect {...props} options={STAGE_OPTIONS} placeholder={props.placeholder ?? t("select_stage")} />
 }
 
 const PRIORITY_OPTIONS: SelectOption<Priority>[] = PRIORITIES.map((p) => ({
@@ -407,7 +423,8 @@ const PRIORITY_OPTIONS: SelectOption<Priority>[] = PRIORITIES.map((p) => ({
 }))
 
 export function PrioritySelect(props: BaseSelectProps<Priority>) {
-  return <OptionSelect {...props} options={PRIORITY_OPTIONS} placeholder={props.placeholder ?? "Priority"} />
+  const t = useT(selectMessages)
+  return <OptionSelect {...props} options={PRIORITY_OPTIONS} placeholder={props.placeholder ?? t("priority")} />
 }
 
 const FUNNEL_OPTIONS: SelectOption<FunnelStage>[] = FUNNEL_STAGE_IDS.map((id) => ({
@@ -416,12 +433,13 @@ const FUNNEL_OPTIONS: SelectOption<FunnelStage>[] = FUNNEL_STAGE_IDS.map((id) =>
 }))
 
 export function FunnelSelect(props: BaseSelectProps<FunnelStage>) {
+  const t = useT(selectMessages)
   return (
     <OptionSelect
       {...props}
       options={FUNNEL_OPTIONS}
-      placeholder={props.placeholder ?? "Funnel stage"}
-      noneLabel={props.noneLabel ?? "No funnel stage"}
+      placeholder={props.placeholder ?? t("funnel_stage")}
+      noneLabel={props.noneLabel ?? t("no_funnel_stage")}
     />
   )
 }
@@ -432,12 +450,13 @@ const HOOK_CATEGORY_OPTIONS: SelectOption<HookCategory>[] = HOOK_CATEGORY_IDS.ma
 }))
 
 export function HookCategorySelect(props: BaseSelectProps<HookCategory>) {
+  const t = useT(selectMessages)
   return (
     <OptionSelect
       {...props}
       options={HOOK_CATEGORY_OPTIONS}
-      placeholder={props.placeholder ?? "Hook type"}
-      noneLabel={props.noneLabel ?? "No hook type"}
+      placeholder={props.placeholder ?? t("hook_type")}
+      noneLabel={props.noneLabel ?? t("no_hook_type")}
     />
   )
 }
@@ -448,5 +467,6 @@ const IDEA_STATUS_OPTIONS: SelectOption<IdeaStatus>[] = IDEA_STATUSES.map((s) =>
 })
 
 export function IdeaStatusSelect(props: BaseSelectProps<IdeaStatus>) {
-  return <OptionSelect {...props} options={IDEA_STATUS_OPTIONS} placeholder={props.placeholder ?? "Status"} />
+  const t = useT(selectMessages)
+  return <OptionSelect {...props} options={IDEA_STATUS_OPTIONS} placeholder={props.placeholder ?? t("status")} />
 }

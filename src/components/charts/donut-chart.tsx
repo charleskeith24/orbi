@@ -3,9 +3,11 @@
 import { Pie, PieChart, Sector, type PieSectorShapeProps, type TooltipContentProps } from "recharts"
 import { CHART_SURFACE, seriesColor, type ChartColor } from "@/components/charts/colors"
 import { EmptyChart } from "@/components/charts/empty-chart"
+import { chartMessages } from "@/components/charts/messages"
 import { ChartTooltipCard, SeriesKey } from "@/components/charts/primitives"
 import { defaultValueFormatter, foldToOther, formatShare, type ChartPart } from "@/components/charts/utils"
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart"
+import { useT } from "@/lib/i18n"
 import { cn, sum } from "@/lib/utils"
 
 export interface DonutSegment {
@@ -40,18 +42,21 @@ export function DonutChart({
   centerValue,
   size = 168,
   valueFormatter = defaultValueFormatter,
-  valueLabel = "Value",
+  valueLabel: valueLabelProp,
   showLegend = true,
-  emptyMessage = "Nothing to show yet.",
+  emptyMessage,
   className,
   "aria-label": ariaLabel,
 }: DonutChartProps) {
+  const t = useT(chartMessages)
+  const valueLabel = valueLabelProp ?? t("value")
   const total = sum(segments.map((s) => Math.max(0, s.value)))
-  if (!(total > 0)) return <EmptyChart message={emptyMessage} height={size} className={className} />
+  if (!(total > 0)) return <EmptyChart message={emptyMessage ?? t("nothing_to_show")} height={size} className={className} />
 
   const parts: ChartPart[] = foldToOther(
     segments.filter((s) => s.value > 0),
-    MAX_SEGMENTS
+    MAX_SEGMENTS,
+    t("other")
   )
   const config: ChartConfig = Object.fromEntries(parts.map((p) => [p.id, { label: p.label }]))
 
@@ -64,7 +69,7 @@ export function DonutChart({
         title={part.label}
         rows={[
           { key: "value", label: valueLabel, value: valueFormatter(part.value), color: part.color },
-          { key: "share", label: "of total", value: formatShare(part.value, total) },
+          { key: "share", label: t("of_total"), value: formatShare(part.value, total) },
         ]}
       />
     )

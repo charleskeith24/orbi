@@ -10,10 +10,12 @@ import { ContentTree } from "@/components/features/repurpose/content-tree"
 import { RepurposePanel } from "@/components/features/repurpose/repurpose-panel"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useT } from "@/lib/i18n"
 import { PUBLISHED_STAGES } from "@/lib/constants"
 import { useRow } from "@/lib/store"
 import type { ContentItem, ID } from "@/lib/types"
 import { BriefTab } from "./brief-tab"
+import { workspaceMessages } from "./messages"
 import { PerformanceTab } from "./performance-tab"
 import { ScoreTab } from "./score-tab"
 import { ScriptTab } from "./script-tab"
@@ -24,13 +26,13 @@ import { WorkspaceHeader } from "./workspace-header"
 import { WorkspaceRail } from "./workspace-rail"
 import { SaveShortcutProvider } from "./workspace-save"
 
-const TABS: { value: WorkspaceTab; label: string; icon: typeof GitBranch }[] = [
-  { value: "brief", label: "Brief", icon: FileText },
-  { value: "script", label: "Script", icon: PenLine },
-  { value: "score", label: "Score", icon: Gauge },
-  { value: "repurpose", label: "Repurpose", icon: Repeat2 },
-  { value: "tree", label: "Tree", icon: GitBranch },
-  { value: "performance", label: "Performance", icon: ChartNoAxesColumn },
+const TABS: { value: WorkspaceTab; icon: typeof GitBranch }[] = [
+  { value: "brief", icon: FileText },
+  { value: "script", icon: PenLine },
+  { value: "score", icon: Gauge },
+  { value: "repurpose", icon: Repeat2 },
+  { value: "tree", icon: GitBranch },
+  { value: "performance", icon: ChartNoAxesColumn },
 ]
 
 /** Shallow URL update — Next keeps `useSearchParams` in sync with the History API. */
@@ -49,17 +51,18 @@ export function ContentWorkspace({ itemId }: { itemId: string }) {
 }
 
 function WorkspaceNotFound() {
+  const t = useT(workspaceMessages)
   return (
     <PageContainer>
       <EmptyState
         icon={FileQuestion}
-        title="Content not found"
-        description="This piece may have been deleted, or the link is out of date. Everything in production is in the Content Studio and on the Pipeline."
+        title={t("not_found_title")}
+        description={t("not_found_description")}
         action={
           <Button size="sm" asChild>
             <Link href="/studio">
               <ArrowLeft aria-hidden />
-              Back to Content Studio
+              {t("back_to_studio")}
             </Link>
           </Button>
         }
@@ -67,7 +70,7 @@ function WorkspaceNotFound() {
           <Button size="sm" variant="outline" asChild>
             <Link href="/pipeline">
               <SquareKanban aria-hidden />
-              Open Pipeline
+              {t("open_pipeline")}
             </Link>
           </Button>
         }
@@ -81,6 +84,7 @@ function WorkspaceNotFound() {
  * context rail. ⌘/Ctrl+S saves the active tab.
  */
 function Workspace({ item, onDeleting }: { item: ContentItem; onDeleting: () => void }) {
+  const t = useT(workspaceMessages)
   const now = useNow()
   const searchParams = useSearchParams()
   const live = PUBLISHED_STAGES.includes(item.stage)
@@ -103,7 +107,7 @@ function Workspace({ item, onDeleting }: { item: ContentItem; onDeleting: () => 
   const saveActiveTab = useEffectEvent(() => {
     const handler = handlers.current.get(tab)
     if (handler) handler()
-    else toast.success("Everything is saved", { description: "Changes on this tab save automatically." })
+    else toast.success(t("all_saved"), { description: t("all_saved_description") })
   })
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -119,9 +123,9 @@ function Workspace({ item, onDeleting }: { item: ContentItem; onDeleting: () => 
     (storyId: ID) => {
       studioActions.setStory(item.id, storyId)
       setTabParam("script")
-      toast.success("Story selected for the script", { description: "Generate with AI to weave it in as proof." })
+      toast.success(t("story_selected"), { description: t("story_selected_description") })
     },
-    [item.id]
+    [item.id, t]
   )
 
   return (
@@ -138,15 +142,15 @@ function Workspace({ item, onDeleting }: { item: ContentItem; onDeleting: () => 
             className="min-w-0 gap-5"
           >
             <div className="-mx-4 overflow-x-auto px-4 shadow-[inset_0_-1px_0_var(--border)] scrollbar-thin md:mx-0 md:px-0">
-              <TabsList variant="line" aria-label="Workspace sections" className="h-10 gap-5 p-0">
-                {TABS.map(({ value, label, icon: Icon }) => (
+              <TabsList variant="line" aria-label={t("sections_label")} className="h-10 gap-5 p-0">
+                {TABS.map(({ value, icon: Icon }) => (
                   <TabsTrigger key={value} value={value} className="flex-none px-0.5 group-data-horizontal/tabs:after:bottom-0">
                     <Icon aria-hidden />
-                    {label}
+                    {t(`tab_${value}`)}
                     {value === "script" && draftFormats ? (
                       <>
                         <span aria-hidden className="size-1.5 rounded-full bg-warning" />
-                        <span className="sr-only">(unsaved changes)</span>
+                        <span className="sr-only">{t("unsaved_changes")}</span>
                       </>
                     ) : null}
                     {value === "score" && score !== null ? <span className="text-xs font-normal text-muted-foreground num">{score}</span> : null}

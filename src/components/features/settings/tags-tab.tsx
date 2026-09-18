@@ -15,27 +15,22 @@ import {
 } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useT, type Translator } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions, useTable } from "@/lib/store"
 import type { ID, Tag, TaggableEntity } from "@/lib/types"
-import { formatNumber, matchesQuery, pluralize } from "@/lib/utils"
+import { formatNumber, matchesQuery } from "@/lib/utils"
 import { TagDialog } from "./tag-dialog"
 import { replaceSettingsUrl } from "./tabs"
+import { tagsMessages } from "./tags-messages"
 
-const ENTITY_NOUNS: Record<TaggableEntity, [string, string]> = {
-  content_ideas: ["idea", "ideas"],
-  content_items: ["content item", "content items"],
-  stories: ["story", "stories"],
-  hooks: ["hook", "hooks"],
-  research_items: ["research item", "research items"],
-  content_campaigns: ["campaign", "campaigns"],
-}
-const ENTITY_ORDER = Object.keys(ENTITY_NOUNS) as TaggableEntity[]
+const ENTITY_ORDER: TaggableEntity[] = ["content_ideas", "content_items", "stories", "hooks", "research_items", "content_campaigns"]
 
 type SortKey = "usage" | "name"
-const SORT_OPTIONS = [
-  { value: "usage" as const, label: "Most used" },
-  { value: "name" as const, label: "A–Z" },
-]
+type TagsT = Translator<(typeof tagsMessages)["en"]>
+
+/** "3 unused tags" — counts formatted like `pluralize`. */
+const countOf = (t: TagsT, key: Parameters<TagsT["plural"]>[0], count: number) => t.plural(key, count, { count: formatNumber(count) })
 
 interface TagRow {
   tag: Tag
@@ -43,9 +38,9 @@ interface TagRow {
   by: Partial<Record<TaggableEntity, number>>
 }
 
-function breakdown(row: TagRow): string {
+function breakdown(row: TagRow, t: TagsT): string {
   return ENTITY_ORDER.filter((e) => row.by[e])
-    .map((e) => pluralize(row.by[e] ?? 0, ENTITY_NOUNS[e][0], ENTITY_NOUNS[e][1]))
+    .map((e) => countOf(t, `entity_${e}`, row.by[e] ?? 0))
     .join(" · ")
 }
 
@@ -56,6 +51,12 @@ export function TagsTab({ openId }: { openId: string | null }) {
   const [query, setQuery] = useState("")
   const [sort, setSort] = useState<SortKey>("usage")
   const [creating, setCreating] = useState(false)
+  const t = useT(tagsMessages)
+  const c = useT(commonMessages)
+  const sortOptions = [
+    { value: "usage" as const, label: t("sort_usage") },
+    { value: "name" as const, label: t("sort_name") },
+  ]
 
   const rows = useMemo(() => {
     const byTag = new Map<ID, TagRow>(tags.map((tag) => [tag.id, { tag, total: 0, by: {} }]))
@@ -87,68 +88,68 @@ export function TagsTab({ openId }: { openId: string | null }) {
 
   async function remove(row: TagRow) {
     const ok = await confirm({
-      title: `Delete #${row.tag.name}?`,
-      description: row.total
-        ? `It's attached to ${breakdown(row)}. They keep everything else — only the tag is removed.`
-        : "Nothing uses this tag. This can't be undone.",
-      confirmLabel: "Delete tag",
+      title: t("delete_title", { name: row.tag.name }),
+      description: row.total ? t("delete_used", { breakdown: breakdown(row, t) }) : t("delete_unused"),
+      confirmLabel: t("delete_action"),
     })
     if (!ok) return
     if (openId === row.tag.id) replaceSettingsUrl("tags")
     dataActions.remove("tags", row.tag.id)
-    toast.success("Tag deleted", { description: `#${row.tag.name}` })
+    toast.success(t("deleted"), { description: `#${row.tag.name}` })
   }
 
   async function removeUnused() {
     if (!unused.length) return
     const names = unused.map((r) => `#${r.tag.name}`)
     const ok = await confirm({
-      title: `Delete ${pluralize(unused.length, "unused tag")}?`,
-      description: `${names.slice(0, 8).join(", ")}${names.length > 8 ? ` and ${names.length - 8} more` : ""}. None of them is attached to anything.`,
-      confirmLabel: "Delete unused tags",
+      title: countOf(t, "delete_unused_title", unused.length),
+      description: t("delete_unused_description", {
+        names: names.length > 8 ? t("names_more", { names: names.slice(0, 8).join(", "), count: names.length - 8 }) : names.join(", "),
+      }),
+      confirmLabel: t("delete_unused_action"),
     })
     if (!ok) return
     dataActions.remove(
       "tags",
       unused.map((r) => r.tag.id)
     )
-    toast.success(`Deleted ${pluralize(unused.length, "unused tag")}`)
+    toast.success(countOf(t, "deleted_unused", unused.length))
   }
 
   const columns: DataTableColumn<TagRow>[] = [
-    { id: "tag", header: "Tag", sortValue: (r) => r.tag.name, cell: (r) => <TagChip tag={r.tag} /> },
+    { id: "tag", header: t("col_tag"), sortValue: (r) => r.tag.name, cell: (r) => <TagChip tag={r.tag} /> },
     {
       id: "breakdown",
-      header: "Used on",
+      header: t("col_used_on"),
       hideBelow: "sm",
       cell: (r) =>
         r.total ? (
-          <span className="text-muted-foreground">{breakdown(r)}</span>
+          <span className="text-muted-foreground">{breakdown(r, t)}</span>
         ) : (
-          <span className="text-muted-foreground/80">Not used</span>
+          <span className="text-muted-foreground/80">{t("not_used")}</span>
         ),
     },
-    { id: "total", header: "Total", align: "right", width: 80, sortValue: (r) => r.total, cell: (r) => formatNumber(r.total) },
+    { id: "total", header: t("col_total"), align: "right", width: 80, sortValue: (r) => r.total, cell: (r) => formatNumber(r.total) },
     {
       id: "actions",
-      header: <span className="sr-only">Actions</span>,
+      header: <span className="sr-only">{t("col_actions")}</span>,
       align: "right",
       width: 52,
       cell: (r) => (
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
-            <Button type="button" variant="ghost" size="icon-sm" aria-label={`Actions for #${r.tag.name}`}>
+            <Button type="button" variant="ghost" size="icon-sm" aria-label={t("actions_for", { name: r.tag.name })}>
               <Ellipsis aria-hidden />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-40">
             <DropdownMenuItem onSelect={() => openEdit(r.tag.id)}>
               <Pencil aria-hidden />
-              Edit
+              {c("edit")}
             </DropdownMenuItem>
             <DropdownMenuItem variant="destructive" onSelect={() => void remove(r)}>
               <Trash2 aria-hidden />
-              Delete
+              {c("delete")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -159,7 +160,7 @@ export function TagsTab({ openId }: { openId: string | null }) {
   const newButton = (
     <Button type="button" size="sm" onClick={() => setCreating(true)}>
       <Plus aria-hidden />
-      New tag
+      {t("new_tag")}
     </Button>
   )
 
@@ -171,28 +172,28 @@ export function TagsTab({ openId }: { openId: string | null }) {
             actions={
               <>
                 <span className="text-xs text-muted-foreground num">
-                  {filtered.length === rows.length ? pluralize(rows.length, "tag") : `${filtered.length} of ${rows.length}`}
+                  {filtered.length === rows.length ? countOf(t, "count", rows.length) : t("filtered", { shown: filtered.length, total: rows.length })}
                 </span>
                 {unused.length ? (
                   <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={() => void removeUnused()}>
                     <Trash2 aria-hidden />
-                    Delete {pluralize(unused.length, "unused tag")}
+                    {countOf(t, "delete_unused_button", unused.length)}
                   </Button>
                 ) : null}
                 {newButton}
               </>
             }
           >
-            <SearchInput value={query} onChange={setQuery} placeholder="Search tags…" />
+            <SearchInput value={query} onChange={setQuery} placeholder={t("search")} />
             <OptionSelect
               size="sm"
-              options={SORT_OPTIONS}
+              options={sortOptions}
               value={sort}
               onChange={(next) => {
                 if (next) setSort(next)
               }}
               className="w-36"
-              aria-label="Sort tags"
+              aria-label={t("sort_aria")}
             />
           </FilterBar>
           <DataTable
@@ -200,18 +201,18 @@ export function TagsTab({ openId }: { openId: string | null }) {
             columns={columns}
             getRowId={(r) => r.tag.id}
             onRowClick={(r) => openEdit(r.tag.id)}
-            rowLabel={(r) => `Edit #${r.tag.name}`}
-            aria-label="Tags"
+            rowLabel={(r) => t("edit_row", { name: r.tag.name })}
+            aria-label={t("table_aria")}
             dense
             empty={
               <EmptyState
                 compact
                 icon={TagsIcon}
-                title="No tags match"
-                description="Try a different search."
+                title={t("no_match_title")}
+                description={t("no_match_description")}
                 action={
                   <Button type="button" size="sm" variant="outline" onClick={() => setQuery("")}>
-                    Clear search
+                    {t("clear_search")}
                   </Button>
                 }
               />
@@ -221,8 +222,8 @@ export function TagsTab({ openId }: { openId: string | null }) {
       ) : (
         <EmptyState
           icon={TagsIcon}
-          title="No tags yet"
-          description="Tags cut across pillars — a launch, a client, a recurring theme — so you can find everything about it in one search."
+          title={t("empty_title")}
+          description={t("empty_description")}
           action={newButton}
         />
       )}

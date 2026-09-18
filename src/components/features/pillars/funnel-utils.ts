@@ -1,7 +1,9 @@
 /** Funnel helpers: stage colours, goal → stage mapping, quick-assign suggestions and item ordering. */
 import { FUNNEL_STAGE_IDS, GOAL_CATEGORIES, PUBLISHED_STAGES } from "@/lib/constants"
 import { contentItemDate, parseDate } from "@/lib/dates"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type { CategoricalColor, ContentGoal, ContentIdea, ContentItem, FunnelStage, GoalCategory, ID } from "@/lib/types"
+import { funnelMessages } from "./funnel-messages"
 
 /** Stages have no colour field, so they take the first categorical slots in funnel order. */
 export const FUNNEL_COLORS: Record<FunnelStage, CategoricalColor> = { tofu: "blue", mofu: "orange", bofu: "aqua" }
@@ -25,12 +27,17 @@ export interface FunnelSuggestion {
 export function suggestFunnelStage(
   item: Pick<ContentItem, "idea_id" | "goal_id">,
   ideas: Map<ID, ContentIdea>,
-  goals: Map<ID, ContentGoal>
+  goals: Map<ID, ContentGoal>,
+  lang: UiLang = "en"
 ): FunnelSuggestion | null {
+  const t = translator(funnelMessages, lang)
   const idea = item.idea_id ? ideas.get(item.idea_id) : undefined
-  if (idea?.funnel_stage) return { stage: idea.funnel_stage, reason: "from its idea" }
+  if (idea?.funnel_stage) return { stage: idea.funnel_stage, reason: t("reason_idea") }
   const goal = item.goal_id ? goals.get(item.goal_id) : undefined
-  if (goal) return { stage: GOAL_FUNNEL[goal.category], reason: `${GOAL_CATEGORIES[goal.category]?.label ?? "Its"} goal` }
+  if (goal) {
+    const category = GOAL_CATEGORIES[goal.category]?.label
+    return { stage: GOAL_FUNNEL[goal.category], reason: category ? t("reason_goal", { category }) : t("reason_goal_unknown") }
+  }
   return null
 }
 

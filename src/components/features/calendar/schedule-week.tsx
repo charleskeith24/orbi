@@ -17,14 +17,19 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Switch } from "@/components/ui/switch"
 import { DAYS_OF_WEEK } from "@/lib/constants"
+import { useT, type Translator } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions, useLookup } from "@/lib/store"
 import type { ContentFormat, ContentPillar, ID, PostingSlot } from "@/lib/types"
-import { cn, pluralize } from "@/lib/utils"
+import { cn, formatNumber } from "@/lib/utils"
 import { formatSlotTime, weekdayOrder } from "./calendar-model"
+import { scheduleMessages } from "./schedule-messages"
 import { daySlots, insertionPlan, moveSlotUpdates, slotPosts } from "./schedule-model"
 
-const dayName = (day: number) => DAYS_OF_WEEK[day]?.label ?? "that day"
-const slotName = (slot: PostingSlot, pillar: ContentPillar | undefined) => slot.label.trim() || pillar?.name || "Untitled slot"
+type T = Translator<typeof scheduleMessages.en>
+
+const dayName = (day: number, t: T) => DAYS_OF_WEEK[day]?.label ?? t("that_day")
+const slotName = (slot: PostingSlot, pillar: ContentPillar | undefined, t: T) => slot.label.trim() || pillar?.name || t("untitled_slot")
 
 /** Copy of a slot for another (or the same) day, placed in time order. */
 function copySlot(slots: PostingSlot[], slot: PostingSlot, day: number): PostingSlot {
@@ -56,6 +61,7 @@ export function ScheduleWeek({
   onAdd: (day: number) => void
   onEdit: (slot: PostingSlot) => void
 }) {
+  const t = useT(scheduleMessages)
   const pillars = useLookup("content_pillars")
   const formats = useLookup("content_formats")
   const [confirm, confirmDialog] = useConfirm()
@@ -63,8 +69,8 @@ export function ScheduleWeek({
 
   function toggle(slot: PostingSlot, active: boolean) {
     dataActions.update("content_calendar", slot.id, { is_active: active })
-    toast.success(active ? "Slot active again" : "Slot paused", {
-      description: `${dayName(slot.day_of_week)} · ${slotName(slot, pillars.get(slot.pillar_id ?? ""))}`,
+    toast.success(active ? t("slot_active_again") : t("slot_paused"), {
+      description: `${dayName(slot.day_of_week, t)} · ${slotName(slot, pillars.get(slot.pillar_id ?? ""), t)}`,
     })
   }
 
@@ -75,35 +81,42 @@ export function ScheduleWeek({
 
   function duplicate(slot: PostingSlot, day: number) {
     const copy = copySlot(slots, slot, day)
-    toast.success(day === slot.day_of_week ? "Slot duplicated" : `Copied to ${dayName(day)}`, {
-      description: slotName(slot, pillars.get(slot.pillar_id ?? "")),
-      action: { label: "Undo", onClick: () => dataActions.remove("content_calendar", copy.id) },
+    toast.success(day === slot.day_of_week ? t("slot_duplicated") : t("copied_to", { day: dayName(day, t) }), {
+      description: slotName(slot, pillars.get(slot.pillar_id ?? ""), t),
+      action: { label: t("undo"), onClick: () => dataActions.remove("content_calendar", copy.id) },
     })
   }
 
   async function remove(slot: PostingSlot) {
-    const name = slotName(slot, pillars.get(slot.pillar_id ?? ""))
+    const name = slotName(slot, pillars.get(slot.pillar_id ?? ""), t)
     const ok = await confirm({
-      title: `Delete “${name}”?`,
-      description: `The ${dayName(slot.day_of_week)} slot disappears from the Calendar and the Weekly Planner. Scheduled content keeps its dates.`,
+      title: t("delete_title", { name }),
+      description: t("delete_description", { day: dayName(slot.day_of_week, t) }),
     })
     if (!ok) return
     dataActions.remove("content_calendar", slot.id)
-    toast.success("Posting slot deleted", {
-      description: `${dayName(slot.day_of_week)} · ${name}`,
-      action: { label: "Undo", onClick: () => dataActions.insert("content_calendar", slot) },
+    toast.success(t("slot_deleted"), {
+      description: `${dayName(slot.day_of_week, t)} · ${name}`,
+      action: { label: t("undo"), onClick: () => dataActions.insert("content_calendar", slot) },
     })
   }
 
   return (
     <SectionCard
-      title="Weekly slots"
-      description="Each slot is a recurring posting target: a theme, a pillar, a format and the platforms it goes out on."
+      title={t("week_title")}
+      description={t("week_description")}
       contentClassName="p-0"
       footer={
         <span>
-          The <Link href="/calendar?view=week" className="font-medium text-foreground underline-offset-4 hover:underline">Calendar</Link> shows these as lanes; the{" "}
-          <Link href="/calendar/planner" className="font-medium text-foreground underline-offset-4 hover:underline">Weekly Planner</Link> fills open slots first.
+          {t("footer_pre")}
+          <Link href="/calendar?view=week" className="font-medium text-foreground underline-offset-4 hover:underline">
+            Calendar
+          </Link>
+          {t("footer_mid")}
+          <Link href="/calendar/planner" className="font-medium text-foreground underline-offset-4 hover:underline">
+            Weekly Planner
+          </Link>
+          {t("footer_post")}
         </span>
       }
     >
@@ -115,9 +128,11 @@ export function ScheduleWeek({
             <li key={day} className="grid min-w-0 gap-2 px-4 py-3 md:grid-cols-[9.5rem_minmax(0,1fr)] md:gap-4">
               <div className="flex min-w-0 items-center justify-between gap-2 md:flex-col md:items-start md:justify-start md:gap-1">
                 <div className="min-w-0">
-                  <h3 className="text-sm font-medium">{dayName(day)}</h3>
+                  <h3 className="text-sm font-medium">{dayName(day, t)}</h3>
                   <p className="text-xs text-muted-foreground num">
-                    {list.length ? `${pluralize(list.length, "slot")} · ${pluralize(posts, "post")}` : "Rest day"}
+                    {list.length
+                      ? `${t.plural("slots", list.length, { count: formatNumber(list.length) })} · ${t.plural("posts", posts, { count: formatNumber(posts) })}`
+                      : t("rest_day")}
                   </p>
                 </div>
                 <Button
@@ -125,11 +140,11 @@ export function ScheduleWeek({
                   size="xs"
                   variant="ghost"
                   onClick={() => onAdd(day)}
-                  aria-label={`Add a slot on ${dayName(day)}`}
+                  aria-label={t("add_slot_on", { day: dayName(day, t) })}
                   className="-ml-2 text-muted-foreground max-md:ml-0"
                 >
                   <Plus aria-hidden />
-                  Add slot
+                  {t("add_slot")}
                 </Button>
               </div>
               <div className="flex min-w-0 flex-col gap-1.5">
@@ -153,7 +168,7 @@ export function ScheduleWeek({
                   ))
                 ) : (
                   <p className="flex min-h-9 items-center text-xs text-muted-foreground">
-                    No posting target on {dayName(day)}s. Rest days are fine — consistency beats volume.
+                    {t("no_target_on", { day: dayName(day, t) })}
                   </p>
                 )}
               </div>
@@ -193,7 +208,9 @@ function SlotRow({
   onCopy: (day: number) => void
   onDelete: () => void
 }) {
-  const name = slotName(slot, pillar)
+  const t = useT(scheduleMessages)
+  const c = useT(commonMessages)
+  const name = slotName(slot, pillar, t)
   const time = formatSlotTime(slot.time)
   return (
     <div
@@ -204,11 +221,11 @@ function SlotRow({
         highlighted && "border-brand/60 ring-2 ring-brand/30"
       )}
     >
-      <span className={cn("w-16 shrink-0 text-xs font-medium num", !slot.is_active && "text-muted-foreground")}>{time ?? "Any time"}</span>
+      <span className={cn("w-16 shrink-0 text-xs font-medium num", !slot.is_active && "text-muted-foreground")}>{time ?? t("any_time")}</span>
       <button
         type="button"
         onClick={onEdit}
-        aria-label={`Edit ${dayName(slot.day_of_week)} slot: ${name}`}
+        aria-label={t("edit_slot_aria", { day: dayName(slot.day_of_week, t), name })}
         className="flex min-w-0 flex-1 basis-48 flex-col items-start gap-0.5 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
       >
         <span className={cn("flex max-w-full min-w-0 items-center gap-1.5 text-sm font-medium", !slot.is_active && "text-muted-foreground")}>
@@ -218,12 +235,12 @@ function SlotRow({
             <span aria-hidden className="size-2 shrink-0 rounded-full border border-dashed border-muted-foreground" />
           )}
           <span className="truncate">{name}</span>
-          {!slot.is_active ? <span className="shrink-0 text-xs font-normal">· Paused</span> : null}
+          {!slot.is_active ? <span className="shrink-0 text-xs font-normal">{t("paused_tag")}</span> : null}
         </span>
         <span className="flex max-w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-          <span className="truncate">{pillar?.name ?? "No pillar"}</span>
+          <span className="truncate">{pillar?.name ?? t("no_pillar")}</span>
           <span aria-hidden>·</span>
-          <FormatLabel format={format ?? null} emptyLabel="No format" />
+          <FormatLabel format={format ?? null} emptyLabel={t("no_format")} />
           <span aria-hidden>·</span>
           {slot.platforms.length ? (
             <span className="inline-flex items-center gap-1">
@@ -232,7 +249,7 @@ function SlotRow({
               ))}
             </span>
           ) : (
-            <span>Any platform</span>
+            <span>{t("any_platform")}</span>
           )}
         </span>
       </button>
@@ -241,41 +258,41 @@ function SlotRow({
           size="sm"
           checked={slot.is_active}
           onCheckedChange={onToggle}
-          aria-label={`${slot.is_active ? "Pause" : "Activate"} ${name}`}
+          aria-label={t(slot.is_active ? "pause_named" : "activate_named", { name })}
           className="mr-1"
         />
-        <Button type="button" variant="ghost" size="icon-xs" aria-label={`Move ${name} earlier`} disabled={first} onClick={() => onMove(-1)}>
+        <Button type="button" variant="ghost" size="icon-xs" aria-label={t("move_earlier", { name })} disabled={first} onClick={() => onMove(-1)}>
           <ArrowUp aria-hidden />
         </Button>
-        <Button type="button" variant="ghost" size="icon-xs" aria-label={`Move ${name} later`} disabled={last} onClick={() => onMove(1)}>
+        <Button type="button" variant="ghost" size="icon-xs" aria-label={t("move_later", { name })} disabled={last} onClick={() => onMove(1)}>
           <ArrowDown aria-hidden />
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button type="button" variant="ghost" size="icon-xs" aria-label={`More actions for ${name}`} className="text-muted-foreground">
+            <Button type="button" variant="ghost" size="icon-xs" aria-label={t("more_actions", { name })} className="text-muted-foreground">
               <Ellipsis aria-hidden />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem onSelect={onEdit}>
               <Pencil aria-hidden />
-              Edit…
+              {t("edit_menu")}
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => onCopy(slot.day_of_week)}>
               <CopyPlus aria-hidden />
-              Duplicate
+              {t("duplicate")}
             </DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <Copy aria-hidden />
-                Copy to
+                {t("copy_to")}
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="w-40">
                 {days
                   .filter((d) => d !== slot.day_of_week)
                   .map((d) => (
                     <DropdownMenuItem key={d} onSelect={() => onCopy(d)}>
-                      {dayName(d)}
+                      {dayName(d, t)}
                     </DropdownMenuItem>
                   ))}
               </DropdownMenuSubContent>
@@ -283,7 +300,7 @@ function SlotRow({
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onSelect={onDelete}>
               <Trash aria-hidden />
-              Delete
+              {c("delete")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

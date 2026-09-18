@@ -3,14 +3,17 @@ import Link from "next/link"
 import { EmptyState, Meter, ScoreRing, SectionCard, TONE_ICON, TONE_TEXT, toneForScore } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import type { ContentHealth, HealthComponent } from "@/lib/analytics"
+import { useT, useUiLang } from "@/lib/i18n"
 import { uiActions } from "@/lib/store"
 import { cn } from "@/lib/utils"
+import { dashboardMessages } from "./messages"
 
 function formatPoints(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1)
 }
 
 function HealthRow({ component }: { component: HealthComponent }) {
+  const t = useT(dashboardMessages)
   const pct = component.max ? (component.score / component.max) * 100 : 0
   const tone = toneForScore(pct)
   const Icon = tone === "good" || tone === "neutral" ? null : TONE_ICON[tone]
@@ -31,7 +34,7 @@ function HealthRow({ component }: { component: HealthComponent }) {
         max={component.max}
         tone={tone}
         size="sm"
-        aria-label={`${component.label}: ${formatPoints(component.score)} of ${component.max} points`}
+        aria-label={t("health_row_aria", { label: component.label, score: formatPoints(component.score), max: component.max })}
       />
       <span className="line-clamp-2 text-xs text-pretty text-muted-foreground">{component.detail}</span>
     </Link>
@@ -43,18 +46,22 @@ function HealthRow({ component }: { component: HealthComponent }) {
  * published (`scored` false) a score would only measure an empty workspace, so none is shown.
  */
 export function HealthCard({ health, scored = true, className }: { health: ContentHealth; scored?: boolean; className?: string }) {
+  const t = useT(dashboardMessages)
+  const lang = useUiLang()
   if (!scored) {
-    const parts = health.components.map((c) => c.label.toLowerCase())
+    // Taglish keeps "Content Buffer" capitalised (§9); English lowercases every part as before.
+    const parts = health.components.map((c) => (lang === "en" || c.key !== "backlog" ? c.label.toLowerCase() : c.label))
+    const list = new Intl.ListFormat(lang === "en" ? "en" : "fil", { type: "conjunction" }).format(parts)
     return (
       <SectionCard title="Content Health Score" className={className}>
         <EmptyState
           compact
           icon={HeartPulse}
-          title="Not scored yet"
-          description={`Your score starts with your first published post. It weighs ${new Intl.ListFormat("en", { type: "conjunction" }).format(parts)}.`}
+          title={t("not_scored")}
+          description={t("not_scored_description", { parts: list })}
           action={
             <Button type="button" size="sm" variant="outline" onClick={() => uiActions.openDialog({ type: "log-post" })}>
-              Log a published post
+              {t("log_published")}
             </Button>
           }
         />
@@ -74,7 +81,7 @@ export function HealthCard({ health, scored = true, className }: { health: Conte
           </p>
           {weakest && weakest.score < weakest.max ? (
             <p className="text-xs text-muted-foreground">
-              Biggest gap: <span className="text-foreground">{weakest.label}</span>
+              {t("biggest_gap")} <span className="text-foreground">{weakest.label}</span>
             </p>
           ) : null}
         </div>

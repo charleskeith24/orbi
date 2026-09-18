@@ -6,10 +6,12 @@ import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { EmptyState, PageContainer, PageHeader, useConfirm } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { useT, useUiLang } from "@/lib/i18n"
 import { dataActions, useBrand, useSettings, useTable } from "@/lib/store"
 import type { PostingSlot } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
 import { weekdayOrder } from "./calendar-model"
+import { scheduleMessages } from "./schedule-messages"
 import { anyPlatformPosts, capacitySummary, platformLoad, recommendedSlots, slotPillarMix, slotPosts } from "./schedule-model"
 import { ScheduleSummary } from "./schedule-summary"
 import { ScheduleWeek } from "./schedule-week"
@@ -22,6 +24,8 @@ import { replaceSearchParams } from "./use-calendar-nav"
  */
 export function ScheduleView() {
   const searchParams = useSearchParams()
+  const t = useT(scheduleMessages)
+  const lang = useUiLang()
   const slots = useTable("content_calendar")
   const pillars = useTable("content_pillars")
   const formats = useTable("content_formats")
@@ -35,7 +39,7 @@ export function ScheduleView() {
   const capacity = useMemo(() => capacitySummary(slots, settings), [slots, settings])
   const platforms = useMemo(() => platformLoad(slots, strategies), [slots, strategies])
   const anyPlatform = useMemo(() => anyPlatformPosts(slots), [slots])
-  const mix = useMemo(() => slotPillarMix(slots, pillars, settings.pillar_tolerance), [slots, pillars, settings.pillar_tolerance])
+  const mix = useMemo(() => slotPillarMix(slots, pillars, settings.pillar_tolerance, lang), [slots, pillars, settings.pillar_tolerance, lang])
 
   const openId = searchParams.get("open")
   const openSlot = openId ? slots.find((s) => s.id === openId) : undefined
@@ -64,9 +68,9 @@ export function ScheduleView() {
     const previous: PostingSlot[] = dataActions.getDb().content_calendar
     if (previous.length) {
       const ok = await confirm({
-        title: "Reset to the recommended weekly strategy?",
-        description: `Your ${pluralize(previous.length, "posting slot")} will be replaced by seven themed slots — Monday Educational / Authority through Sunday Reflection / Community — matched to your pillars, formats and active platforms. You can undo right after.`,
-        confirmLabel: "Reset schedule",
+        title: t("reset_title"),
+        description: t.plural("reset_description", previous.length, { count: formatNumber(previous.length) }),
+        confirmLabel: t("reset_confirm"),
       })
       if (!ok) return
       dataActions.remove(
@@ -77,10 +81,13 @@ export function ScheduleView() {
     const created = dataActions.insertMany("content_calendar", recommendedSlots({ pillars, formats, strategies, brand }))
     const posts = created.reduce((n, s) => n + slotPosts(s), 0)
     if (openId) setOpen(null)
-    toast.success(previous.length ? "Posting Schedule reset to the recommended weekly strategy" : "Recommended weekly strategy added", {
-      description: `${pluralize(created.length, "slot")} · ${pluralize(posts, "post")} a week`,
+    toast.success(previous.length ? t("reset_done") : t("recommended_added"), {
+      description: t("slots_posts_week", {
+        slots: t.plural("slots", created.length, { count: formatNumber(created.length) }),
+        posts: t.plural("posts", posts, { count: formatNumber(posts) }),
+      }),
       action: {
-        label: "Undo",
+        label: t("undo"),
         onClick: () => {
           dataActions.remove(
             "content_calendar",
@@ -97,17 +104,17 @@ export function ScheduleView() {
       <PageHeader
         title="Posting Schedule"
         icon={Target}
-        description="Your recurring weekly posting targets — shape them however you work. The Calendar shows them as lanes and the Weekly Planner fills them first."
+        description={t("description")}
         actions={
           slots.length ? (
             <>
               <Button type="button" size="sm" variant="outline" onClick={() => void resetToRecommended()}>
                 <RotateCcw aria-hidden />
-                Reset to recommended
+                {t("reset_to_recommended")}
               </Button>
               <Button type="button" size="sm" onClick={() => add(firstRestDay)}>
                 <Plus aria-hidden />
-                Add slot
+                {t("add_slot")}
               </Button>
             </>
           ) : null
@@ -122,18 +129,18 @@ export function ScheduleView() {
       ) : (
         <EmptyState
           icon={Target}
-          title="No posting schedule yet"
-          description="Posting slots are recurring weekly targets — like Monday Educational / Authority on TikTok and Facebook. They turn “post more” into a plan the Calendar and the Weekly Planner can fill."
+          title={t("empty_title")}
+          description={t("empty_description")}
           action={
             <Button type="button" size="sm" onClick={() => void resetToRecommended()}>
               <RotateCcw aria-hidden />
-              Use the recommended weekly strategy
+              {t("use_recommended")}
             </Button>
           }
           secondaryAction={
             <Button type="button" size="sm" variant="outline" onClick={() => add(weekStartsOn)}>
               <Plus aria-hidden />
-              Add a slot
+              {t("add_a_slot")}
             </Button>
           }
         />

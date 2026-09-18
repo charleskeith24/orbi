@@ -19,7 +19,9 @@ import {
   SERIES_FREQUENCY_MAP,
   STORY_TYPE_MAP,
 } from "@/lib/constants"
+import { searchDocMessages } from "@/components/app-shell/command-palette-messages"
 import { contentItemDate, formatDate, formatShortDate } from "@/lib/dates"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type {
   AudiencePersona,
   AudienceProblem,
@@ -39,7 +41,7 @@ import type {
   ResearchItem,
   Story,
 } from "@/lib/types"
-import { formatCompact, formatMoney, pluralize } from "@/lib/utils"
+import { formatCompact, formatMoney, formatNumber } from "@/lib/utils"
 
 /** Entity kinds the palette searches. */
 export type SearchKind =
@@ -179,14 +181,20 @@ export function currentScriptBodies(scripts: ContentScript[]): Map<ID, string> {
   return bodies
 }
 
-export function buildContentDocs(items: ContentItem[], pillarNames: Map<ID, string>, scriptBodies: Map<ID, string>): SearchDoc[] {
+export function buildContentDocs(
+  items: ContentItem[],
+  pillarNames: Map<ID, string>,
+  scriptBodies: Map<ID, string>,
+  lang: UiLang = "en"
+): SearchDoc[] {
+  const t = translator(searchDocMessages, lang)
   return items.map((item): SearchDoc => {
     const date = contentItemDate(item)
     return {
       key: `content:${item.id}`,
       kind: "content",
       id: item.id,
-      title: item.title || "Untitled content",
+      title: item.title || t("untitled_content"),
       secondary: joinParts(
         PLATFORMS[item.platform]?.label,
         PIPELINE_STAGE_MAP[item.stage]?.label,
@@ -205,15 +213,16 @@ export function buildContentDocs(items: ContentItem[], pillarNames: Map<ID, stri
   })
 }
 
-export function buildIdeaDocs(ideas: ContentIdea[], pillarNames: Map<ID, string>): SearchDoc[] {
+export function buildIdeaDocs(ideas: ContentIdea[], pillarNames: Map<ID, string>, lang: UiLang = "en"): SearchDoc[] {
+  const t = translator(searchDocMessages, lang)
   return ideas.map(
     (idea): SearchDoc => ({
       key: `idea:${idea.id}`,
       kind: "idea",
       id: idea.id,
-      title: idea.title || "Untitled idea",
+      title: idea.title || t("untitled_idea"),
       secondary: joinParts(IDEA_STATUS_MAP[idea.status]?.label, pillarName(pillarNames, idea.pillar_id), idea.core_topic),
-      hint: idea.score !== null ? `Score ${Math.round(idea.score)}` : "",
+      hint: idea.score !== null ? t("score", { score: Math.round(idea.score) }) : "",
       href: `/ideas?open=${idea.id}`,
       updatedAt: idea.updated_at,
       fields: [
@@ -228,15 +237,16 @@ export function buildIdeaDocs(ideas: ContentIdea[], pillarNames: Map<ID, string>
   )
 }
 
-export function buildHookDocs(hooks: Hook[]): SearchDoc[] {
+export function buildHookDocs(hooks: Hook[], lang: UiLang = "en"): SearchDoc[] {
+  const t = translator(searchDocMessages, lang)
   return hooks.map(
     (hook): SearchDoc => ({
       key: `hook:${hook.id}`,
       kind: "hook",
       id: hook.id,
-      title: hook.text || "Untitled hook",
-      secondary: joinParts(HOOK_CATEGORIES[hook.category]?.label, hook.is_template && "Template"),
-      hint: hook.is_favorite ? "Favorite" : "",
+      title: hook.text || t("untitled_hook"),
+      secondary: joinParts(HOOK_CATEGORIES[hook.category]?.label, hook.is_template && t("template")),
+      hint: hook.is_favorite ? t("favorite") : "",
       href: `/ideas/hooks?open=${hook.id}`,
       updatedAt: hook.updated_at,
       fields: [...field(hook.text, 3), ...field(hook.notes, 1)],
@@ -244,13 +254,14 @@ export function buildHookDocs(hooks: Hook[]): SearchDoc[] {
   )
 }
 
-export function buildAngleDocs(angles: ContentAngle[]): SearchDoc[] {
+export function buildAngleDocs(angles: ContentAngle[], lang: UiLang = "en"): SearchDoc[] {
+  const t = translator(searchDocMessages, lang)
   return angles.map(
     (angle): SearchDoc => ({
       key: `angle:${angle.id}`,
       kind: "angle",
       id: angle.id,
-      title: angle.name || "Untitled angle",
+      title: angle.name || t("untitled_angle"),
       secondary: angle.description,
       hint: "",
       href: `/ideas/angles?open=${angle.id}`,
@@ -260,13 +271,14 @@ export function buildAngleDocs(angles: ContentAngle[]): SearchDoc[] {
   )
 }
 
-export function buildStoryDocs(stories: Story[], pillarNames: Map<ID, string>): SearchDoc[] {
+export function buildStoryDocs(stories: Story[], pillarNames: Map<ID, string>, lang: UiLang = "en"): SearchDoc[] {
+  const t = translator(searchDocMessages, lang)
   return stories.map(
     (story): SearchDoc => ({
       key: `story:${story.id}`,
       kind: "story",
       id: story.id,
-      title: story.title || "Untitled story",
+      title: story.title || t("untitled_story"),
       secondary: joinParts(STORY_TYPE_MAP[story.type]?.label, pillarName(pillarNames, story.pillar_id)),
       hint: story.occurred_on ? formatDate(story.occurred_on, "MMM yyyy") : "",
       href: `/stories?open=${story.id}`,
@@ -281,13 +293,14 @@ export function buildStoryDocs(stories: Story[], pillarNames: Map<ID, string>): 
   )
 }
 
-export function buildCampaignDocs(campaigns: ContentCampaign[]): SearchDoc[] {
+export function buildCampaignDocs(campaigns: ContentCampaign[], lang: UiLang = "en"): SearchDoc[] {
+  const t = translator(searchDocMessages, lang)
   return campaigns.map(
     (campaign): SearchDoc => ({
       key: `campaign:${campaign.id}`,
       kind: "campaign",
       id: campaign.id,
-      title: campaign.name || "Untitled campaign",
+      title: campaign.name || t("untitled_campaign"),
       secondary: joinParts(
         CAMPAIGN_STATUS_MAP[campaign.status]?.label,
         campaign.start_date && campaign.end_date
@@ -307,17 +320,18 @@ export function buildCampaignDocs(campaigns: ContentCampaign[]): SearchDoc[] {
   )
 }
 
-export function buildSeriesDocs(series: ContentSeries[], pillarNames: Map<ID, string>): SearchDoc[] {
+export function buildSeriesDocs(series: ContentSeries[], pillarNames: Map<ID, string>, lang: UiLang = "en"): SearchDoc[] {
+  const t = translator(searchDocMessages, lang)
   return series.map(
     (entry): SearchDoc => ({
       key: `series:${entry.id}`,
       kind: "series",
       id: entry.id,
-      title: entry.name || "Untitled series",
+      title: entry.name || t("untitled_series"),
       secondary: joinParts(
         SERIES_FREQUENCY_MAP[entry.frequency]?.label,
         pillarName(pillarNames, entry.pillar_id),
-        !entry.is_active && "Paused"
+        !entry.is_active && t("paused")
       ),
       hint: "",
       href: `/series?open=${entry.id}`,
@@ -327,14 +341,15 @@ export function buildSeriesDocs(series: ContentSeries[], pillarNames: Map<ID, st
   )
 }
 
-export function buildPillarDocs(pillars: ContentPillar[]): SearchDoc[] {
+export function buildPillarDocs(pillars: ContentPillar[], lang: UiLang = "en"): SearchDoc[] {
+  const t = translator(searchDocMessages, lang)
   return pillars.map(
     (pillar): SearchDoc => ({
       key: `pillar:${pillar.id}`,
       kind: "pillar",
       id: pillar.id,
-      title: pillar.name || "Untitled pillar",
-      secondary: joinParts(`${Math.round(pillar.target_percentage)}% of the mix`, !pillar.is_active && "Inactive"),
+      title: pillar.name || t("untitled_pillar"),
+      secondary: joinParts(t("share_of_mix", { pct: Math.round(pillar.target_percentage) }), !pillar.is_active && t("inactive")),
       hint: "",
       href: `/pillars?open=${pillar.id}`,
       updatedAt: pillar.updated_at,
@@ -343,15 +358,16 @@ export function buildPillarDocs(pillars: ContentPillar[]): SearchDoc[] {
   )
 }
 
-export function buildPersonaDocs(personas: AudiencePersona[]): SearchDoc[] {
+export function buildPersonaDocs(personas: AudiencePersona[], lang: UiLang = "en"): SearchDoc[] {
+  const t = translator(searchDocMessages, lang)
   return personas.map(
     (persona): SearchDoc => ({
       key: `persona:${persona.id}`,
       kind: "persona",
       id: persona.id,
-      title: persona.name || "Untitled persona",
+      title: persona.name || t("untitled_persona"),
       secondary: joinParts(persona.profession, persona.industry),
-      hint: persona.is_primary ? "Primary" : "",
+      hint: persona.is_primary ? t("primary") : "",
       href: `/audience?open=${persona.id}`,
       updatedAt: persona.updated_at,
       fields: [
@@ -364,13 +380,14 @@ export function buildPersonaDocs(personas: AudiencePersona[]): SearchDoc[] {
   )
 }
 
-export function buildResearchDocs(research: ResearchItem[]): SearchDoc[] {
+export function buildResearchDocs(research: ResearchItem[], lang: UiLang = "en"): SearchDoc[] {
+  const t = translator(searchDocMessages, lang)
   return research.map(
     (item): SearchDoc => ({
       key: `research:${item.id}`,
       kind: "research",
       id: item.id,
-      title: item.title || item.url || "Untitled reference",
+      title: item.title || item.url || t("untitled_reference"),
       secondary: joinParts(
         RESEARCH_TYPE_MAP[item.type]?.label,
         item.platform ? PLATFORMS[item.platform]?.label : null,
@@ -391,14 +408,15 @@ export function buildResearchDocs(research: ResearchItem[]): SearchDoc[] {
   )
 }
 
-export function buildProblemDocs(problems: AudienceProblem[]): SearchDoc[] {
+export function buildProblemDocs(problems: AudienceProblem[], lang: UiLang = "en"): SearchDoc[] {
+  const t = translator(searchDocMessages, lang)
   return problems.map(
     (problem): SearchDoc => ({
       key: `problem:${problem.id}`,
       kind: "problem",
       id: problem.id,
-      title: problem.problem || "Untitled problem",
-      secondary: joinParts(PROBLEM_CATEGORY_MAP[problem.category]?.label, `Severity ${problem.severity}/5`),
+      title: problem.problem || t("untitled_problem"),
+      secondary: joinParts(PROBLEM_CATEGORY_MAP[problem.category]?.label, t("severity", { severity: problem.severity })),
       hint: "",
       href: `/audience/problems?open=${problem.id}`,
       updatedAt: problem.updated_at,
@@ -407,17 +425,18 @@ export function buildProblemDocs(problems: AudienceProblem[]): SearchDoc[] {
   )
 }
 
-export function buildQuestionDocs(questions: AudienceQuestion[]): SearchDoc[] {
+export function buildQuestionDocs(questions: AudienceQuestion[], lang: UiLang = "en"): SearchDoc[] {
+  const t = translator(searchDocMessages, lang)
   return questions.map(
     (question): SearchDoc => ({
       key: `question:${question.id}`,
       kind: "question",
       id: question.id,
-      title: question.question || "Untitled question",
+      title: question.question || t("untitled_question"),
       secondary: joinParts(
         QUESTION_STATUS_MAP[question.status]?.label,
         question.topic,
-        question.frequency > 1 && `Asked ${question.frequency}×`
+        question.frequency > 1 && t("asked", { count: question.frequency })
       ),
       hint: "",
       href: `/audience/questions?open=${question.id}`,
@@ -427,13 +446,14 @@ export function buildQuestionDocs(questions: AudienceQuestion[]): SearchDoc[] {
   )
 }
 
-export function buildExperimentDocs(experiments: ContentExperiment[]): SearchDoc[] {
+export function buildExperimentDocs(experiments: ContentExperiment[], lang: UiLang = "en"): SearchDoc[] {
+  const t = translator(searchDocMessages, lang)
   return experiments.map(
     (experiment): SearchDoc => ({
       key: `experiment:${experiment.id}`,
       kind: "experiment",
       id: experiment.id,
-      title: experiment.name || "Untitled experiment",
+      title: experiment.name || t("untitled_experiment"),
       secondary: joinParts(
         EXPERIMENT_STATUS_MAP[experiment.status]?.label,
         EXPERIMENT_METRIC_MAP[experiment.metric]?.label
@@ -451,7 +471,8 @@ export function buildExperimentDocs(experiments: ContentExperiment[]): SearchDoc
 }
 
 /** Distinct idea topics (case-insensitive) → the Idea Bank filtered by that topic. */
-export function buildTopicDocs(ideas: ContentIdea[]): SearchDoc[] {
+export function buildTopicDocs(ideas: ContentIdea[], lang: UiLang = "en"): SearchDoc[] {
+  const t = translator(searchDocMessages, lang)
   const topics = new Map<string, { label: string; count: number; updatedAt: string }>()
   for (const idea of ideas) {
     const label = idea.core_topic.trim()
@@ -471,8 +492,8 @@ export function buildTopicDocs(ideas: ContentIdea[]): SearchDoc[] {
       kind: "topic",
       id: key,
       title: topic.label,
-      secondary: pluralize(topic.count, "idea"),
-      hint: "Topic",
+      secondary: t.plural("ideas", topic.count, { count: formatNumber(topic.count) }),
+      hint: t("topic"),
       href: `/ideas?q=${encodeURIComponent(topic.label)}`,
       updatedAt: topic.updatedAt,
       fields: field(topic.label, 3),
@@ -481,7 +502,8 @@ export function buildTopicDocs(ideas: ContentIdea[]): SearchDoc[] {
 }
 
 /** Published items that have at least one metrics snapshot (latest snapshot supplies the views hint). */
-export function buildAnalyticsDocs(items: ContentItem[], metrics: ContentMetric[]): SearchDoc[] {
+export function buildAnalyticsDocs(items: ContentItem[], metrics: ContentMetric[], lang: UiLang = "en"): SearchDoc[] {
+  const t = translator(searchDocMessages, lang)
   const latest = new Map<ID, ContentMetric>()
   for (const metric of metrics) {
     const current = latest.get(metric.content_item_id)
@@ -501,9 +523,9 @@ export function buildAnalyticsDocs(items: ContentItem[], metrics: ContentMetric[
       key: `analytics:${item.id}`,
       kind: "analytics",
       id: item.id,
-      title: item.title || "Untitled post",
+      title: item.title || t("untitled_post"),
       secondary: joinParts(PLATFORMS[item.platform]?.label, item.published_at ? formatShortDate(item.published_at) : null),
-      hint: `${formatCompact(metric.views)} views`,
+      hint: t("views", { views: formatCompact(metric.views) }),
       href: `/analytics/posts?open=${item.id}`,
       updatedAt: metric.updated_at > item.updated_at ? metric.updated_at : item.updated_at,
       fields: [...field(item.title, 3), ...field(item.hook, 2)],
@@ -513,13 +535,14 @@ export function buildAnalyticsDocs(items: ContentItem[], metrics: ContentMetric[
 }
 
 /** Brand deals → `/money/deals?open=<id>`, found by brand, contact, deliverables and notes. */
-export function buildDealDocs(deals: BrandDeal[]): SearchDoc[] {
+export function buildDealDocs(deals: BrandDeal[], lang: UiLang = "en"): SearchDoc[] {
+  const t = translator(searchDocMessages, lang)
   return deals.map(
     (deal): SearchDoc => ({
       key: `deal:${deal.id}`,
       kind: "deal",
       id: deal.id,
-      title: deal.brand_name || "Untitled deal",
+      title: deal.brand_name || t("untitled_deal"),
       secondary: joinParts(
         DEAL_STATUS_MAP[deal.status]?.label,
         deal.fee !== null ? formatMoney(deal.fee, deal.currency) : null,
@@ -558,24 +581,24 @@ export interface SearchSources {
 }
 
 /** Whole index in one call (the palette memoizes per kind instead). */
-export function buildSearchIndex(sources: SearchSources): SearchIndex {
+export function buildSearchIndex(sources: SearchSources, lang: UiLang = "en"): SearchIndex {
   const pillarNames = new Map(sources.pillars.map((p) => [p.id, p.name]))
   return {
-    content: buildContentDocs(sources.items, pillarNames, currentScriptBodies(sources.scripts)),
-    idea: buildIdeaDocs(sources.ideas, pillarNames),
-    hook: buildHookDocs(sources.hooks),
-    angle: buildAngleDocs(sources.angles),
-    story: buildStoryDocs(sources.stories, pillarNames),
-    campaign: buildCampaignDocs(sources.campaigns),
-    series: buildSeriesDocs(sources.series, pillarNames),
-    pillar: buildPillarDocs(sources.pillars),
-    persona: buildPersonaDocs(sources.personas),
-    problem: buildProblemDocs(sources.problems),
-    question: buildQuestionDocs(sources.questions),
-    research: buildResearchDocs(sources.research),
-    experiment: buildExperimentDocs(sources.experiments),
-    deal: buildDealDocs(sources.deals),
-    topic: buildTopicDocs(sources.ideas),
-    analytics: buildAnalyticsDocs(sources.items, sources.metrics),
+    content: buildContentDocs(sources.items, pillarNames, currentScriptBodies(sources.scripts), lang),
+    idea: buildIdeaDocs(sources.ideas, pillarNames, lang),
+    hook: buildHookDocs(sources.hooks, lang),
+    angle: buildAngleDocs(sources.angles, lang),
+    story: buildStoryDocs(sources.stories, pillarNames, lang),
+    campaign: buildCampaignDocs(sources.campaigns, lang),
+    series: buildSeriesDocs(sources.series, pillarNames, lang),
+    pillar: buildPillarDocs(sources.pillars, lang),
+    persona: buildPersonaDocs(sources.personas, lang),
+    problem: buildProblemDocs(sources.problems, lang),
+    question: buildQuestionDocs(sources.questions, lang),
+    research: buildResearchDocs(sources.research, lang),
+    experiment: buildExperimentDocs(sources.experiments, lang),
+    deal: buildDealDocs(sources.deals, lang),
+    topic: buildTopicDocs(sources.ideas, lang),
+    analytics: buildAnalyticsDocs(sources.items, sources.metrics, lang),
   }
 }

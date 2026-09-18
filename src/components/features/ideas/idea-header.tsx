@@ -7,17 +7,22 @@ import { Button } from "@/components/ui/button"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
 import { Kbd } from "@/components/ui/kbd"
 import { IDEA_STATUSES } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { createIdea, uiActions } from "@/lib/store"
 import type { ContentIdea, IdeaStatus } from "@/lib/types"
 import { cn, formatNumber } from "@/lib/utils"
 import { SHORT_STATUS_LABEL } from "./idea-badges"
 import { titleFromText } from "./idea-model"
+import { ideaBankMessages } from "./messages"
 
 const MAX_LENGTH = 500
 
 /** Inline Quick Capture: Enter saves an Inbox idea; "Transform with AI" hands the text to the Quick Capture dialog. */
 export function IdeaQuickCapture({ onCreated, className }: { onCreated: (idea: ContentIdea) => void; className?: string }) {
   const inputId = useId()
+  const t = useT(ideaBankMessages)
+  const c = useT(commonMessages)
   const [text, setText] = useState("")
   const trimmed = text.trim()
 
@@ -38,7 +43,7 @@ export function IdeaQuickCapture({ onCreated, className }: { onCreated: (idea: C
   return (
     <form onSubmit={save} aria-label="Quick Capture" className={cn("flex min-w-0 items-center gap-2", className)}>
       <label htmlFor={inputId} className="sr-only">
-        Capture an idea
+        {t("capture_idea")}
       </label>
       <InputGroup className="h-8 min-w-0 flex-1">
         <InputGroupAddon>
@@ -50,26 +55,26 @@ export function IdeaQuickCapture({ onCreated, className }: { onCreated: (idea: C
           maxLength={MAX_LENGTH}
           autoComplete="off"
           enterKeyHint="done"
-          placeholder="Capture an idea, a hook, a question someone asked…"
+          placeholder={t("capture_placeholder")}
           onChange={(event) => setText(event.target.value)}
         />
         <InputGroupAddon align="inline-end" className="hidden sm:flex">
-          <Kbd title="Press Enter to save">
+          <Kbd title={t("enter_title")}>
             <CornerDownLeft aria-hidden />
-            <span className="sr-only">Enter saves</span>
+            <span className="sr-only">{t("enter_saves")}</span>
           </Kbd>
         </InputGroupAddon>
       </InputGroup>
       <Button type="submit" size="sm" disabled={!trimmed}>
-        Save
+        {c("save")}
       </Button>
       <AiButton
         type="button"
         size="sm"
-        title="Turn the text into a complete idea with the Quick Capture assistant"
+        title={t("transform_title")}
         onClick={() => uiActions.openDialog({ type: "quick-capture", initialText: trimmed || undefined })}
       >
-        <span className="hidden sm:inline">Transform with AI</span>
+        <span className="hidden sm:inline">{t("transform")}</span>
         <span className="sm:hidden">AI</span>
       </AiButton>
     </form>
@@ -88,9 +93,10 @@ export function IdeaStatusStrip({
   onSelect: (status: IdeaStatus) => void
   className?: string
 }) {
+  const t = useT(ideaBankMessages)
   const only = value.length === 1 ? value[0] : null
   return (
-    <div role="group" aria-label="Ideas by status" className={cn("flex flex-wrap items-center gap-1.5", className)}>
+    <div role="group" aria-label={t("by_status")} className={cn("flex flex-wrap items-center gap-1.5", className)}>
       {IDEA_STATUSES.map((status) => {
         const Icon = IDEA_STATUS_ICONS[status.id]
         const pressed = only === status.id

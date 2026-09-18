@@ -9,8 +9,10 @@ import { EmptyState, NumberField, SectionCard } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toISODate } from "@/lib/dates"
+import { useT, useUiLang } from "@/lib/i18n"
 import { updateSettings, useTable } from "@/lib/store"
 import { cn, uid } from "@/lib/utils"
+import { engagementMessages } from "./engagement-messages"
 import { SaveBar } from "./save-bar"
 import {
   ENGAGEMENT_DEFAULTS,
@@ -28,7 +30,9 @@ const ROW_GRID = "md:grid-cols-[1.25rem_minmax(0,1fr)_8.5rem_6.5rem_5.75rem]"
 
 export function EngagementTab({ draft, now }: { draft: SettingsDraft<EngagementValues>; now: Date }) {
   const tasks = draft.values.tasks
-  const errors = validateEngagement(draft.values)
+  const lang = useUiLang()
+  const t = useT(engagementMessages)
+  const errors = validateEngagement(draft.values, lang)
   const valid = engagementValid(errors)
   const [focusRid, setFocusRid] = useState<string | null>(null)
   const logs = useTable("engagement_logs")
@@ -65,14 +69,14 @@ export function EngagementTab({ draft, now }: { draft: SettingsDraft<EngagementV
     if (!draft.dirty || !valid) return
     updateSettings(engagementPatch(draft.values))
     draft.discard()
-    toast.success("Engagement tasks saved")
+    toast.success(t("saved"))
   }
 
   return (
     <form onSubmit={save} noValidate className="flex min-w-0 flex-col gap-4">
       <SectionCard
-        title="Daily tasks"
-        description="Your daily engagement commitments. Targets are counts; a target of 0 makes the task a simple checkbox."
+        title={t("title")}
+        description={t("description")}
         action={
           <Button asChild variant="ghost" size="sm">
             <Link href="/today">Engagement Tracker</Link>
@@ -84,10 +88,10 @@ export function EngagementTab({ draft, now }: { draft: SettingsDraft<EngagementV
             <>
               <Button type="button" variant="outline" size="sm" onClick={add} disabled={tasks.length >= LIMITS.maxTasks}>
                 <Plus aria-hidden />
-                Add task
+                {t("add_task")}
               </Button>
               <span className="min-w-0">
-                {errors.list ?? `${tasks.length} of ${LIMITS.maxTasks} · renaming a task keeps its history`}
+                {errors.list ?? t("footer", { count: tasks.length, max: LIMITS.maxTasks })}
               </span>
             </>
           ) : undefined
@@ -102,10 +106,10 @@ export function EngagementTab({ draft, now }: { draft: SettingsDraft<EngagementV
               )}
             >
               <span aria-hidden>#</span>
-              <span>Task</span>
-              <span>Daily target</span>
-              <span>Last {HISTORY_DAYS} days</span>
-              <span className="sr-only">Actions</span>
+              <span>{t("col_task")}</span>
+              <span>{t("col_target")}</span>
+              <span>{t("col_history", { days: HISTORY_DAYS })}</span>
+              <span className="sr-only">{t("col_actions")}</span>
             </div>
             <ol className="divide-y">
               {tasks.map((task, index) => {
@@ -121,9 +125,9 @@ export function EngagementTab({ draft, now }: { draft: SettingsDraft<EngagementV
                       <Input
                         value={task.label}
                         maxLength={LIMITS.taskLabelLength + 20}
-                        placeholder="e.g. Reply to comments"
+                        placeholder={t("task_placeholder")}
                         autoFocus={task.rid === focusRid}
-                        aria-label={`Task ${index + 1} name`}
+                        aria-label={t("task_aria", { index: index + 1 })}
                         aria-invalid={Boolean(rowErrors?.label) || undefined}
                         onChange={(event) => update(task.rid, { label: event.target.value })}
                       />
@@ -136,20 +140,20 @@ export function EngagementTab({ draft, now }: { draft: SettingsDraft<EngagementV
                         max={LIMITS.taskTarget.max}
                         value={task.target}
                         onChange={(next) => update(task.rid, { target: next })}
-                        suffix="/ day"
+                        suffix={t("per_day")}
                         className="w-32"
-                        aria-label={`Daily target for task ${index + 1}`}
+                        aria-label={t("target_aria", { index: index + 1 })}
                         aria-invalid={Boolean(rowErrors?.target) || undefined}
                       />
                       {rowErrors?.target ? <p className="mt-1 text-xs text-destructive">{rowErrors.target}</p> : null}
                     </div>
                     <div className="col-start-2 text-xs text-muted-foreground md:col-start-auto">
                       {done === null ? (
-                        "New task"
+                        t("new_task")
                       ) : (
                         <span>
                           <span className="font-medium text-foreground num">{done}</span>
-                          <span className="num"> of {HISTORY_DAYS} days</span>
+                          <span className="num"> {t("of_days", { days: HISTORY_DAYS })}</span>
                         </span>
                       )}
                     </div>
@@ -158,7 +162,7 @@ export function EngagementTab({ draft, now }: { draft: SettingsDraft<EngagementV
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        aria-label={`Move task ${index + 1} up`}
+                        aria-label={t("move_up_aria", { index: index + 1 })}
                         disabled={index === 0}
                         onClick={() => move(index, -1)}
                       >
@@ -168,7 +172,7 @@ export function EngagementTab({ draft, now }: { draft: SettingsDraft<EngagementV
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        aria-label={`Move task ${index + 1} down`}
+                        aria-label={t("move_down_aria", { index: index + 1 })}
                         disabled={index === tasks.length - 1}
                         onClick={() => move(index, 1)}
                       >
@@ -178,7 +182,7 @@ export function EngagementTab({ draft, now }: { draft: SettingsDraft<EngagementV
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        aria-label={`Remove task ${index + 1}`}
+                        aria-label={t("remove_aria", { index: index + 1 })}
                         className="text-muted-foreground hover:text-destructive"
                         onClick={() => setTasks(tasks.filter((t) => t.rid !== task.rid))}
                       >
@@ -194,17 +198,17 @@ export function EngagementTab({ draft, now }: { draft: SettingsDraft<EngagementV
           <EmptyState
             compact
             icon={MessagesSquare}
-            title="No engagement tasks"
-            description="Daily tasks keep you replying, commenting and collecting questions — the habits that turn followers into a community."
+            title={t("empty_title")}
+            description={t("empty_description")}
             action={
               <Button type="button" size="sm" onClick={add}>
                 <Plus aria-hidden />
-                Add task
+                {t("add_task")}
               </Button>
             }
             secondaryAction={
               <Button type="button" size="sm" variant="outline" onClick={() => draft.replace(ENGAGEMENT_DEFAULTS)}>
-                Use recommended tasks
+                {t("use_recommended")}
               </Button>
             }
           />
@@ -214,7 +218,7 @@ export function EngagementTab({ draft, now }: { draft: SettingsDraft<EngagementV
       <SaveBar
         dirty={draft.dirty}
         valid={valid}
-        invalidMessage={errors.list ?? "Fix the highlighted tasks to save."}
+        invalidMessage={errors.list ?? t("fix_tasks")}
         onDiscard={draft.discard}
         onReset={() => draft.replace(ENGAGEMENT_DEFAULTS)}
         resetDisabled={sameValues(draft.values, ENGAGEMENT_DEFAULTS)}

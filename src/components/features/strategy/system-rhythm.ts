@@ -13,14 +13,19 @@ import {
   weeklyPostingProgress,
 } from "@/lib/analytics"
 import { PRODUCTION_STAGES, REVIEW_STAGES } from "@/lib/constants"
-import { formatRelativeDay, toISODate, weekRange } from "@/lib/dates"
+import { toISODate, weekRange } from "@/lib/dates"
+import { translator, type UiLang } from "@/lib/i18n/core"
 import type { AppSettings, Database } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { relativeDayInline } from "./relative-day"
+import { systemEvidenceMessages } from "./system-messages"
+import { counted } from "./system-model"
 
 export type RhythmKey = "daily" | "weekly" | "monthly"
 
 /** One evidence line per OPERATING_RHYTHM step (same order). */
-export function rhythmEvidence(db: Database, now: Date, settings: AppSettings): Record<RhythmKey, string[]> {
+export function rhythmEvidence(db: Database, now: Date, settings: AppSettings, lang: UiLang = "en"): Record<RhythmKey, string[]> {
+  const t = translator(systemEvidenceMessages, lang)
+  const n = (key: Parameters<typeof counted>[1], value: number) => counted(t, key, value)
   const today = toISODate(now)
   const isToday = (value: string | null) => Boolean(value) && toISODate(parseISO(value as string)) === today
   const count = (stages: string[]) => db.content_items.filter((i) => stages.includes(i.stage)).length
@@ -45,32 +50,32 @@ export function rhythmEvidence(db: Database, now: Date, settings: AppSettings): 
   const monthName = format(lastMonth, "MMMM")
   const monthly = db.monthly_reviews.find((r) => r.month === toISODate(lastMonth))
   const brand = db.brand_profiles[0]
-  const updated = brand ? formatRelativeDay(brand.updated_at, now) : ""
-  const mix = pillarMix(db, now, settings)
+  const updated = brand ? relativeDayInline(brand.updated_at, now, lang) : ""
+  const mix = pillarMix(db, now, settings, { lang })
   const winners = getWinners(db, settings, now, { days: 30 }).length
-  const fixes = strategicInsights(db, now, settings).filter((i) => i.type === "fix" || i.type === "warning").length
+  const fixes = strategicInsights(db, now, settings, lang).filter((i) => i.type === "fix" || i.type === "warning").length
 
   return {
     daily: [
-      capturedToday ? `${pluralize(capturedToday, "idea")} captured today` : "Nothing captured yet today",
-      `${pluralize(inCreation, "item")} in brief or scripting`,
-      inReview ? `${pluralize(inReview, "item")} awaiting review` : "Nothing waiting for review",
-      `${publishedToday} published · ${scheduledToday} scheduled today`,
-      tasks ? `${log?.completed_tasks.length ?? 0}/${tasks} engagement tasks done today` : "No engagement tasks set up",
+      capturedToday ? t("captured_today", { ideas: n("ideas", capturedToday) }) : t("nothing_captured"),
+      t("in_creation", { items: n("items", inCreation) }),
+      inReview ? t("awaiting_review", { items: n("items", inReview) }) : t("nothing_review"),
+      t("published_today", { published: publishedToday, scheduled: scheduledToday }),
+      tasks ? t("tasks_done", { done: log?.completed_tasks.length ?? 0, total: tasks }) : t("no_tasks"),
     ],
     weekly: [
-      lastReview ? (lastReview.status === "final" ? "Last week reviewed" : "Last week's review is a draft") : "Last week not reviewed yet",
-      thisPlan ? "This week is planned" : "No plan for this week yet",
-      `${pluralize(count(PRODUCTION_STAGES), "item")} in production`,
-      `${week.published + week.scheduledRemaining}/${week.target} published or scheduled this week`,
-      running ? `${pluralize(running, "experiment")} running` : "No experiment running",
+      lastReview ? (lastReview.status === "final" ? t("last_week_reviewed") : t("last_week_draft")) : t("last_week_not_reviewed"),
+      thisPlan ? t("week_planned") : t("week_not_planned"),
+      t("in_production", { items: n("items", count(PRODUCTION_STAGES)) }),
+      t("week_progress", { done: week.published + week.scheduledRemaining, target: week.target }),
+      running ? t("experiments_running", { experiments: n("experiments", running) }) : t("no_experiment"),
     ],
     monthly: [
-      monthly ? `${monthName} reviewed` : `${monthName} not reviewed yet`,
-      updated ? `Brand HQ updated ${["Today", "Yesterday"].includes(updated) ? updated.toLowerCase() : updated}` : "Brand HQ not set up",
-      mix.warnings.length ? `${pluralize(mix.warnings.length, "pillar")} off target` : "Pillar mix on target",
-      winners ? `${pluralize(winners, "winner")} to replicate` : "No winners this month yet",
-      fixes ? `${pluralize(fixes, "fix", "fixes")} flagged by insights` : "Nothing flagged by insights",
+      monthly ? t("month_reviewed", { month: monthName }) : t("month_not_reviewed", { month: monthName }),
+      updated ? t("brand_updated", { when: updated }) : t("brand_not_set"),
+      mix.warnings.length ? t("pillars_off", { pillars: n("pillars", mix.warnings.length) }) : t("mix_on_target"),
+      winners ? t("winners_to_replicate", { winners: n("winners", winners) }) : t("no_winners_month"),
+      fixes ? t("fixes_flagged", { fixes: n("fixes", fixes) }) : t("nothing_flagged"),
     ],
   }
 }
@@ -82,24 +87,30 @@ export interface LoopStep {
 }
 
 /** Strategy → … → New strategy, each step linked to its module with a live count. */
-export function coreLoop(db: Database, now: Date, settings: AppSettings, brandCompleteness: number): LoopStep[] {
+export function coreLoop(db: Database, now: Date, settings: AppSettings, brandCompleteness: number, lang: UiLang = "en"): LoopStep[] {
+  const t = translator(systemEvidenceMessages, lang)
+  const n = (key: Parameters<typeof counted>[1], value: number) => counted(t, key, value)
   const count = (stages: string[]) => db.content_items.filter((i) => stages.includes(i.stage)).length
   const rows30 = scopedRows(db, now, { days: 30, settings })
   const openIdeas = db.content_ideas.filter((i) => i.status !== "archived" && i.status !== "converted").length
   return [
-    { label: "Strategy", href: "/strategy", stat: `Brand HQ ${brandCompleteness}%` },
-    { label: "Audience", href: "/audience", stat: `${pluralize(db.audience_personas.length, "persona")} · ${pluralize(db.audience_problems.length, "problem")}` },
-    { label: "Pillars", href: "/pillars", stat: pluralize(db.content_pillars.filter((p) => p.is_active).length, "active pillar") },
-    { label: "Ideas", href: "/ideas", stat: pluralize(openIdeas, "open idea") },
-    { label: "Create", href: "/studio", stat: `${count(["brief", "scripting"])} in brief & script` },
-    { label: "Produce", href: "/pipeline", stat: `${count([...PRODUCTION_STAGES, ...REVIEW_STAGES])} in production` },
-    { label: "Publish", href: "/calendar", stat: `${count(["scheduled"])} scheduled` },
+    { label: t("loop_strategy"), href: "/strategy", stat: t("loop_brand", { pct: brandCompleteness }) },
     {
-      label: "Measure",
-      href: "/analytics",
-      stat: rows30.length ? `${rows30.filter((r) => r.metric).length}/${rows30.length} posts measured` : "No posts in 30 days",
+      label: t("loop_audience"),
+      href: "/audience",
+      stat: `${n("personas", db.audience_personas.length)} · ${n("problems", db.audience_problems.length)}`,
     },
-    { label: "Learn", href: "/reports", stat: pluralize(db.weekly_reviews.length, "weekly report") },
-    { label: "New strategy", href: "/reports/monthly", stat: pluralize(db.monthly_reviews.length, "monthly review") },
+    { label: t("loop_pillars"), href: "/pillars", stat: n("active_pillars", db.content_pillars.filter((p) => p.is_active).length) },
+    { label: t("loop_ideas"), href: "/ideas", stat: n("open_ideas", openIdeas) },
+    { label: t("loop_create"), href: "/studio", stat: t("loop_in_brief", { count: count(["brief", "scripting"]) }) },
+    { label: t("loop_produce"), href: "/pipeline", stat: t("loop_in_production", { count: count([...PRODUCTION_STAGES, ...REVIEW_STAGES]) }) },
+    { label: t("loop_publish"), href: "/calendar", stat: t("loop_scheduled", { count: count(["scheduled"]) }) },
+    {
+      label: t("loop_measure"),
+      href: "/analytics",
+      stat: rows30.length ? t("loop_measured", { measured: rows30.filter((r) => r.metric).length, total: rows30.length }) : t("loop_no_posts"),
+    },
+    { label: t("loop_learn"), href: "/reports", stat: n("weekly_reports", db.weekly_reviews.length) },
+    { label: t("loop_new_strategy"), href: "/reports/monthly", stat: n("monthly_reviews", db.monthly_reviews.length) },
   ]
 }

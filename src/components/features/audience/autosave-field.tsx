@@ -3,6 +3,8 @@
 import { useEffect, useId, useRef, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { useT } from "@/lib/i18n"
+import { audienceMessages } from "./messages"
 
 interface AutosaveBox {
   dirty: string | null
@@ -93,12 +95,13 @@ export function AutosaveInput({
   value,
   onCommit,
   required = false,
-  requiredMessage = "This field can't be empty.",
+  requiredMessage,
   onBlur,
   onKeyDown,
   ...props
 }: NativeInputProps & AutosaveProps) {
   const errorId = useId()
+  const t = useT(audienceMessages)
   const { draft, change, flush, invalid } = useAutosave(value, onCommit, normalizeLine, required)
   return (
     <>
@@ -120,7 +123,7 @@ export function AutosaveInput({
           onKeyDown?.(event)
         }}
       />
-      {invalid ? <FieldError id={errorId} message={requiredMessage} /> : null}
+      {invalid ? <FieldError id={errorId} message={requiredMessage ?? t("field_required")} /> : null}
     </>
   )
 }
@@ -130,12 +133,13 @@ export function AutosaveTextarea({
   value,
   onCommit,
   required = false,
-  requiredMessage = "This field can't be empty.",
+  requiredMessage,
   onBlur,
   onKeyDown,
   ...props
 }: NativeTextareaProps & AutosaveProps) {
   const errorId = useId()
+  const t = useT(audienceMessages)
   const { draft, change, flush, invalid } = useAutosave(value, onCommit, normalizeText, required)
   return (
     <>
@@ -157,7 +161,7 @@ export function AutosaveTextarea({
           onKeyDown?.(event)
         }}
       />
-      {invalid ? <FieldError id={errorId} message={requiredMessage} /> : null}
+      {invalid ? <FieldError id={errorId} message={requiredMessage ?? t("field_required")} /> : null}
     </>
   )
 }

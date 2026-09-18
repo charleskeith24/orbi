@@ -4,8 +4,10 @@ import { Info, TriangleAlert } from "lucide-react"
 import Link from "next/link"
 import { Fragment, useDeferredValue, useMemo } from "react"
 import { Meter, StatusPill, Token, type MeterTone, type StatusTone } from "@/components/common"
+import { useT, useUiLang } from "@/lib/i18n"
 import { useDb, useSettings } from "@/lib/store"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { nicheAlignmentMessages } from "./brand-messages"
 import {
   ALIGNMENT_DAYS,
   HIGH_ALIGNMENT,
@@ -17,20 +19,31 @@ import {
   type AlignmentStatus,
 } from "./niche-alignment"
 
-const STATUS: Record<AlignmentStatus, { label: string; tone: StatusTone }> = {
-  "no-niche": { label: "No niche set", tone: "neutral" },
-  "not-enough": { label: "Not enough content yet", tone: "neutral" },
-  low: { label: "Mostly off niche", tone: "warning" },
-  mixed: { label: "Partly on niche", tone: "neutral" },
-  high: { label: "On niche", tone: "good" },
-}
+const STATUS = {
+  "no-niche": { label: "status_no_niche", tone: "neutral" },
+  "not-enough": { label: "status_not_enough", tone: "neutral" },
+  low: { label: "status_low", tone: "warning" },
+  mixed: { label: "status_mixed", tone: "neutral" },
+  high: { label: "status_high", tone: "good" },
+} as const satisfies Record<AlignmentStatus, { label: string; tone: StatusTone }>
 
 function meterTone(share: number | null): MeterTone {
   if (share === null) return "neutral"
   return share >= HIGH_ALIGNMENT ? "good" : share < LOW_ALIGNMENT ? "warning" : "brand"
 }
 
-function AlignmentStat({ label, group, noun, emptyText }: { label: string; group: AlignmentGroup; noun: string; emptyText: string }) {
+function AlignmentStat({
+  label,
+  group,
+  noun,
+  emptyText,
+}: {
+  label: string
+  group: AlignmentGroup
+  noun: "posts_match" | "winners_match"
+  emptyText: string
+}) {
+  const t = useT(nicheAlignmentMessages)
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
       <p className="flex items-baseline justify-between gap-2 text-xs">
@@ -44,11 +57,11 @@ function AlignmentStat({ label, group, noun, emptyText }: { label: string; group
             max={group.total}
             tone={meterTone(group.share)}
             size="sm"
-            aria-label={`${label}: on niche`}
-            valueText={`${group.aligned} of ${group.total}`}
+            aria-label={t("on_niche_aria", { label })}
+            valueText={t("value_text", { aligned: group.aligned, total: group.total })}
           />
           <p className="text-xs text-muted-foreground num">
-            {group.aligned} of {pluralize(group.total, noun)} match your niche
+            {t.plural(noun, group.total, { aligned: group.aligned, count: formatNumber(group.total) })}
           </p>
         </>
       ) : (
@@ -60,19 +73,20 @@ function AlignmentStat({ label, group, noun, emptyText }: { label: string; group
 
 /** “A”, “B” and 3 more — each title links to the post in the Studio. */
 function TitleList({ items, max = 3 }: { items: AlignedItem[]; max?: number }) {
+  const t = useT(nicheAlignmentMessages)
   const shown = items.slice(0, max)
   const more = items.length - shown.length
   return (
     <>
       {shown.map((item, index) => (
         <Fragment key={item.id}>
-          {index ? (index === shown.length - 1 && !more ? " and " : ", ") : ""}
+          {index ? (index === shown.length - 1 && !more ? t("list_and") : ", ") : ""}
           <Link href={`/studio/${item.id}`} className="font-medium text-foreground underline-offset-2 hover:underline">
-            “{item.title}”
+            “{item.title || t("untitled")}”
           </Link>
         </Fragment>
       ))}
-      {more ? ` and ${more} more` : ""}
+      {more ? t("list_more", { count: more }) : ""}
     </>
   )
 }
@@ -84,11 +98,13 @@ function TitleList({ items, max = 3 }: { items: AlignedItem[]; max?: number }) {
 export function NicheAlignmentPanel({ niche, interests, now }: { niche: string; interests: string[]; now: Date }) {
   const db = useDb()
   const settings = useSettings()
+  const t = useT(nicheAlignmentMessages)
+  const lang = useUiLang()
   const deferredNiche = useDeferredValue(niche)
   const deferredInterests = useDeferredValue(interests)
   const result = useMemo(
-    () => nicheAlignment(db, settings, now, deferredNiche, deferredInterests),
-    [db, settings, now, deferredNiche, deferredInterests]
+    () => nicheAlignment(db, settings, now, deferredNiche, deferredInterests, lang),
+    [db, settings, now, deferredNiche, deferredInterests, lang]
   )
   const { recent, winners, status, topMatches } = result
   const meta = STATUS[status]
@@ -98,42 +114,33 @@ export function NicheAlignmentPanel({ niche, interests, now }: { niche: string; 
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1 basis-56">
           <h4 id="niche-alignment-heading" className="text-sm font-medium">
-            Niche alignment
+            {t("title")}
           </h4>
-          <p className="mt-0.5 text-xs text-pretty text-muted-foreground">
-            How much of what you publish is about your niche — keyword overlap between your niche and interests and each post&apos;s
-            title, hook, core topic and pillar.
-          </p>
+          <p className="mt-0.5 text-xs text-pretty text-muted-foreground">{t("description")}</p>
         </div>
-        <StatusPill tone={meta.tone}>{meta.label}</StatusPill>
+        <StatusPill tone={meta.tone}>{t(meta.label)}</StatusPill>
       </div>
 
       {status === "no-niche" ? (
-        <p className="text-xs text-pretty text-muted-foreground">
-          Add your niche and a few interests above to see how well your content matches them.
-        </p>
+        <p className="text-xs text-pretty text-muted-foreground">{t("no_niche")}</p>
       ) : status === "not-enough" ? (
         <p className="text-xs text-pretty text-muted-foreground">
-          Publish or schedule at least {MIN_ALIGNMENT_SAMPLE} posts to see how well they match your niche —{" "}
-          <span className="num">{recent.total}</span> in the last {ALIGNMENT_DAYS} days so far.{" "}
+          {t("not_enough_before", { min: MIN_ALIGNMENT_SAMPLE })}
+          <span className="num">{recent.total}</span>
+          {t("not_enough_after", { days: ALIGNMENT_DAYS })}
           <Link href="/calendar/planner" className="font-medium text-foreground underline-offset-2 hover:underline">
-            Plan the week
+            {t("plan_week")}
           </Link>
         </p>
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2">
-            <AlignmentStat label={`Published or scheduled · ${ALIGNMENT_DAYS} days`} group={recent} noun="post" emptyText="" />
-            <AlignmentStat
-              label="Winners · all time"
-              group={winners}
-              noun="winner"
-              emptyText="No winners yet — they appear once you log analytics for your posts."
-            />
+            <AlignmentStat label={t("recent_label", { days: ALIGNMENT_DAYS })} group={recent} noun="posts_match" emptyText="" />
+            <AlignmentStat label={t("winners_label")} group={winners} noun="winners_match" emptyText={t("winners_empty")} />
           </div>
           {topMatches.length ? (
             <div className="flex min-w-0 flex-wrap items-center gap-1 text-xs text-muted-foreground">
-              <span className="mr-0.5">Niche keywords you use most</span>
+              <span className="mr-0.5">{t("top_keywords")}</span>
               {topMatches.slice(0, 5).map((match) => (
                 <Token key={match.label}>
                   <span className="truncate">{match.label}</span>
@@ -145,22 +152,25 @@ export function NicheAlignmentPanel({ niche, interests, now }: { niche: string; 
             <p className="flex items-start gap-1.5 text-xs text-pretty">
               <TriangleAlert className="mt-px size-3.5 shrink-0 text-warning-fg" aria-hidden />
               <span>
-                Most of your recent posts are outside your niche: <TitleList items={recent.offNiche} />. Tie them back to your niche — or
-                update it if your focus has moved.
+                {t("low_before")}
+                <TitleList items={recent.offNiche} />
+                {t("low_after")}
               </span>
             </p>
           ) : status === "mixed" && recent.offNiche.length ? (
             <p className="flex items-start gap-1.5 text-xs text-pretty text-muted-foreground">
               <Info className="mt-px size-3.5 shrink-0" aria-hidden />
               <span>
-                Some recent posts drift from your niche: <TitleList items={recent.offNiche} />.
+                {t("mixed_before")}
+                <TitleList items={recent.offNiche} />
+                {t("mixed_after")}
               </span>
             </p>
           ) : null}
           {winners.total >= MIN_ALIGNMENT_SAMPLE && winners.share !== null && winners.share < LOW_ALIGNMENT ? (
             <p className="flex items-start gap-1.5 text-xs text-pretty text-muted-foreground">
               <Info className="mt-px size-3.5 shrink-0" aria-hidden />
-              <span>Most of your winners sit outside your niche — worth checking whether your niche line is too narrow.</span>
+              <span>{t("winners_outside")}</span>
             </p>
           ) : null}
         </>

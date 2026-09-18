@@ -8,9 +8,11 @@ import { FunnelBadge, NumberField, SectionCard, StatusPill } from "@/components/
 import { Button } from "@/components/ui/button"
 import { funnelMix } from "@/lib/analytics"
 import { FUNNEL_STAGES } from "@/lib/constants"
+import { useT, useUiLang } from "@/lib/i18n"
 import { updateSettings, useDb, useSettings } from "@/lib/store"
 import type { CategoricalColor, FunnelStage } from "@/lib/types"
-import { formatNumber, pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { funnelMessages } from "./funnel-messages"
 import { SaveBar } from "./save-bar"
 import { FUNNEL_DEFAULTS, FUNNEL_KEYS, funnelPatch, funnelTotal, normalizeFunnel, validateFunnel, type FunnelValues } from "./sections"
 import { SettingRow, SettingRows } from "./setting-row"
@@ -21,7 +23,9 @@ const STAGE_COLORS: Record<FunnelStage, CategoricalColor> = { tofu: "blue", mofu
 
 export function FunnelTab({ draft, now }: { draft: SettingsDraft<FunnelValues>; now: Date }) {
   const { values, set } = draft
-  const errors = validateFunnel(values)
+  const lang = useUiLang()
+  const t = useT(funnelMessages)
+  const errors = validateFunnel(values, lang)
   const valid = Object.keys(errors).length === 0
   const total = funnelTotal(values)
   const fieldsValid = !errors.tofu && !errors.mofu && !errors.bofu
@@ -31,14 +35,14 @@ export function FunnelTab({ draft, now }: { draft: SettingsDraft<FunnelValues>; 
     if (!draft.dirty || !valid) return
     updateSettings(funnelPatch(values))
     draft.discard()
-    toast.success("Funnel targets saved")
+    toast.success(t("saved"))
   }
 
   return (
     <form onSubmit={save} noValidate className="flex min-w-0 flex-col gap-4">
       <SectionCard
-        title="Target mix"
-        description="What share of your content should serve each stage. Content Funnel, the dashboard and AI recommendations compare your recent mix with these targets."
+        title={t("mix_title")}
+        description={t("mix_description")}
       >
         <SettingRows>
           {FUNNEL_KEYS.map((stage) => {
@@ -73,14 +77,14 @@ export function FunnelTab({ draft, now }: { draft: SettingsDraft<FunnelValues>; 
         </SettingRows>
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-3">
           <StatusPill tone={total === 100 ? "good" : "warning"}>
-            <span className="num">Total {formatNumber(total)}%</span>
+            <span className="num">{t("total", { total: formatNumber(total) })}</span>
           </StatusPill>
           {total !== 100 ? (
             <>
-              <span className="text-xs text-muted-foreground">Targets must add up to 100%.</span>
+              <span className="text-xs text-muted-foreground">{t("must_total")}</span>
               {fieldsValid && total > 0 ? (
                 <Button type="button" variant="outline" size="sm" onClick={() => draft.replace(normalizeFunnel(values))}>
-                  Normalize to 100%
+                  {t("normalize")}
                 </Button>
               ) : null}
             </>
@@ -93,7 +97,7 @@ export function FunnelTab({ draft, now }: { draft: SettingsDraft<FunnelValues>; 
       <SaveBar
         dirty={draft.dirty}
         valid={valid}
-        invalidMessage={errors.total ?? "Fix the highlighted fields to save."}
+        invalidMessage={errors.total}
         onDiscard={draft.discard}
         onReset={() => draft.replace(FUNNEL_DEFAULTS)}
         resetDisabled={sameValues(values, FUNNEL_DEFAULTS)}
@@ -105,13 +109,17 @@ export function FunnelTab({ draft, now }: { draft: SettingsDraft<FunnelValues>; 
 function FunnelPreview({ values, usingSaved, now }: { values: FunnelValues; usingSaved: boolean; now: Date }) {
   const db = useDb()
   const settings = useSettings()
+  const lang = useUiLang()
+  const t = useT(funnelMessages)
   const mix = useMemo(
     () =>
-      funnelMix(db, now, {
-        ...settings,
-        funnel_targets: { tofu: values.tofu ?? 0, mofu: values.mofu ?? 0, bofu: values.bofu ?? 0 },
-      }),
-    [db, settings, values, now]
+      funnelMix(
+        db,
+        now,
+        { ...settings, funnel_targets: { tofu: values.tofu ?? 0, mofu: values.mofu ?? 0, bofu: values.bofu ?? 0 } },
+        { lang }
+      ),
+    [db, settings, values, now, lang]
   )
 
   const segments: MixSegment[] = mix.rows.map((row) => ({
@@ -124,12 +132,8 @@ function FunnelPreview({ values, usingSaved, now }: { values: FunnelValues; usin
 
   return (
     <SectionCard
-      title="Last 30 days vs target"
-      description={
-        usingSaved
-          ? "Showing your saved targets until the edited ones add up to 100%."
-          : "Published and upcoming content with a funnel stage, against the targets above."
-      }
+      title={t("preview_title")}
+      description={usingSaved ? t("preview_saved") : t("preview_live")}
       action={
         <Button asChild variant="ghost" size="sm">
           <Link href="/pillars/funnel">Content Funnel</Link>
@@ -140,9 +144,9 @@ function FunnelPreview({ values, usingSaved, now }: { values: FunnelValues; usin
         <MixBar
           segments={segments}
           targets={targets}
-          valueLabel="Posts"
-          emptyMessage="No content with a funnel stage in the last 30 days."
-          aria-label="Funnel mix in the last 30 days against targets"
+          valueLabel={t("value_label")}
+          emptyMessage={t("preview_empty")}
+          aria-label={t("preview_aria")}
         />
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
           {mix.enoughData ? (
@@ -153,16 +157,16 @@ function FunnelPreview({ values, usingSaved, now }: { values: FunnelValues; usin
                 </StatusPill>
               ))
             ) : (
-              <StatusPill tone="good">Within tolerance of every target</StatusPill>
+              <StatusPill tone="good">{t("within_tolerance")}</StatusPill>
             )
           ) : (
-            <span>Too little recent content to judge the mix yet.</span>
+            <span>{t("too_little")}</span>
           )}
           {mix.unassigned ? (
             <span>
-              {pluralize(mix.unassigned, "item")} in this window {mix.unassigned === 1 ? "has" : "have"} no funnel stage —{" "}
+              {t.plural("unassigned", mix.unassigned, { count: formatNumber(mix.unassigned) })}{" "}
               <Link href="/pillars/funnel" className="font-medium text-foreground underline-offset-2 hover:underline">
-                assign stages
+                {t("assign_stages")}
               </Link>
               .
             </span>

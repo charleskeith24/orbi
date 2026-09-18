@@ -9,11 +9,14 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { buildWeeklyReviewInput, summarizeWeeklyReport, useAiTask } from "@/lib/ai"
-import type { WeeklyReport } from "@/lib/analytics"
+import { weeklyReport, type WeeklyReport } from "@/lib/analytics"
 import { formatDateTime } from "@/lib/dates"
+import { useT, useUiLang } from "@/lib/i18n"
+import { useSettings } from "@/lib/store"
 import type { Database, GeneratedBy, ReviewStatus, WeeklyReview } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { AiErrorNotice } from "./ai-error-notice"
+import { reportMessages } from "./messages"
 import type { ReportPeriod } from "./report-periods"
 import { saveWeeklyReview } from "./review-actions"
 import {
@@ -26,6 +29,7 @@ import {
   type WeeklyReviewFields,
 } from "./review-model"
 import { ReviewStatusBadge } from "./review-status"
+import { weeklyReportMessages } from "./weekly-messages"
 
 interface Engine {
   provider: GeneratedBy
@@ -52,6 +56,10 @@ export function WeeklyReviewEditor({
   now: Date
   className?: string
 }) {
+  const t = useT(weeklyReportMessages)
+  const r = useT(reportMessages)
+  const lang = useUiLang()
+  const settings = useSettings()
   const [fields, setFields] = useState<WeeklyReviewFields>(() => weeklyFieldsOf(saved))
   const [status, setStatus] = useState<ReviewStatus>(() => saved?.status ?? "draft")
   const [engine, setEngine] = useState<Engine | null>(() => (saved?.generated_by ? { provider: saved.generated_by } : null))
@@ -69,9 +77,9 @@ export function WeeklyReviewEditor({
   async function generate() {
     if (hasText) {
       const ok = await confirm({
-        title: "Replace the review text?",
-        description: "The new draft replaces all six sections. Nothing is saved until you click Save.",
-        confirmLabel: "Replace",
+        title: t("replace_title"),
+        description: t("replace_description"),
+        confirmLabel: r("replace"),
         destructive: false,
       })
       if (!ok) return
@@ -93,7 +101,9 @@ export function WeeklyReviewEditor({
   function save() {
     if (!canSave) return
     const clean = trimWeeklyFields(fields)
-    const summary = summarizeWeeklyReport(report, db, now)
+    // The frozen snapshot stays in English whatever the UI language (like the AI input).
+    const source = lang === "en" ? report : weeklyReport(db, period.start, settings, now)
+    const summary = summarizeWeeklyReport(source, db, now)
     saveWeeklyReview(period, {
       fields: clean,
       status,
@@ -101,28 +111,28 @@ export function WeeklyReviewEditor({
       report: { ...summary, saved_at: new Date().toISOString() },
     })
     setFields(clean)
-    toast.success(status === "final" ? `Final review saved for ${period.label}` : `Draft review saved for ${period.label}`)
+    toast.success(status === "final" ? r("saved_final", { period: period.label }) : r("saved_draft", { period: period.label }))
   }
 
   const hint = !hasText
-    ? "Draft it from this week's numbers with AI, or write it yourself."
+    ? t("hint_empty")
     : canSave
       ? savedHasText
-        ? "Unsaved changes."
-        : "Not saved yet."
+        ? r("unsaved_changes")
+        : r("not_saved_yet")
       : status === "final"
-        ? "Saved as final, with this week's numbers frozen alongside."
-        : "Saved as a draft."
+        ? t("hint_final")
+        : r("saved_as_draft")
 
   return (
     <SectionCard
-      title="Weekly review"
-      description="What worked, what didn't, what we learned — and what to double down on, stop and test next week."
+      title={t("review_title")}
+      description={t("review_description")}
       icon={NotebookPen}
       className={className}
       action={
         <AiButton size="sm" pending={ai.isPending} onClick={() => void generate()} className="print:hidden">
-          {hasText ? "Regenerate" : "Draft with AI"}
+          {hasText ? r("regenerate") : r("draft_with_ai")}
         </AiButton>
       }
     >
@@ -130,37 +140,37 @@ export function WeeklyReviewEditor({
         <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <ReviewStatusBadge state={weeklyReviewState(saved)} />
           {engine ? <ProviderBadge provider={engine.provider} model={engine.model} /> : null}
-          {saved && savedHasText ? <span className="num">Saved {formatDateTime(saved.updated_at)}</span> : null}
+          {saved && savedHasText ? <span className="num">{r("saved_at", { date: formatDateTime(saved.updated_at) })}</span> : null}
           {focus ? (
             <span className="flex min-w-0 items-center gap-1">
               <Target className="size-3.5 shrink-0" aria-hidden />
               <span className="truncate" title={focus}>
-                Focus: {focus}
+                {t("focus", { focus })}
               </span>
             </span>
           ) : null}
         </div>
         {engine && engine.provider !== "manual" ? <AiNotice className="print:hidden" /> : null}
-        <AiErrorNotice error={ai.error} title="Couldn't draft the review." onRetry={() => void generate()} />
+        <AiErrorNotice error={ai.error} title={t("review_error")} onRetry={() => void generate()} />
         <div className="grid gap-4 md:grid-cols-2">
-          {WEEKLY_FIELDS.map((field) => (
-            <div key={field.key} className="flex min-w-0 flex-col gap-1.5 print:break-inside-avoid">
-              <Label htmlFor={`weekly-review-${field.key}`} className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                {field.label}
+          {WEEKLY_FIELDS.map((key) => (
+            <div key={key} className="flex min-w-0 flex-col gap-1.5 print:break-inside-avoid">
+              <Label htmlFor={`weekly-review-${key}`} className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                {t(`label_${key}`)}
               </Label>
               <Textarea
-                id={`weekly-review-${field.key}`}
-                value={fields[field.key]}
-                placeholder={field.placeholder}
+                id={`weekly-review-${key}`}
+                value={fields[key]}
+                placeholder={t(`placeholder_${key}`)}
                 readOnly={ai.isPending}
                 aria-busy={ai.isPending || undefined}
                 onChange={(event) => {
                   const value = event.target.value
-                  setFields((prev) => ({ ...prev, [field.key]: value }))
+                  setFields((prev) => ({ ...prev, [key]: value }))
                 }}
                 className={cn("min-h-24 print:hidden", ai.isPending && "opacity-70")}
               />
-              <p className="hidden text-sm whitespace-pre-wrap print:block">{fields[field.key].trim() || "—"}</p>
+              <p className="hidden text-sm whitespace-pre-wrap print:block">{fields[key].trim() || "—"}</p>
             </div>
           ))}
         </div>
@@ -178,17 +188,17 @@ export function WeeklyReviewEditor({
               onValueChange={(value) => {
                 if (value === "draft" || value === "final") setStatus(value)
               }}
-              aria-label="Save as"
+              aria-label={r("save_as")}
             >
               <ToggleGroupItem value="draft" className="px-2.5 text-xs">
-                Draft
+                {r("draft")}
               </ToggleGroupItem>
               <ToggleGroupItem value="final" className="px-2.5 text-xs">
-                Final
+                {r("final")}
               </ToggleGroupItem>
             </ToggleGroup>
             <Button size="sm" onClick={save} disabled={!canSave || ai.isPending}>
-              {status === "final" ? "Save as final" : "Save draft"}
+              {status === "final" ? r("save_as_final") : r("save_draft")}
             </Button>
           </div>
         </div>

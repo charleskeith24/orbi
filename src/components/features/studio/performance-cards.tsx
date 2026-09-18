@@ -7,12 +7,17 @@ import { TrendChart, type TrendDatum } from "@/components/charts"
 import { SectionCard, StatusPill, TierBadge } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { computeRates, isWinnerTier, type TieredRow } from "@/lib/analytics"
+import { useT, type Translator } from "@/lib/i18n"
 import { PERFORMANCE_TIERS, PLATFORMS, RATE_FIELDS, WINNER_METRIC_MAP } from "@/lib/constants"
 import { formatDate } from "@/lib/dates"
 import type { AppSettings, ContentMetric, PerformanceTier, RateKey } from "@/lib/types"
-import { cn, formatDuration, formatNumber, formatPercent, pluralize } from "@/lib/utils"
+import { cn, formatDuration, formatNumber, formatPercent } from "@/lib/utils"
+import { performanceMessages } from "./performance-messages"
 
-export const SOURCE_LABEL: Record<ContentMetric["source"], string> = { manual: "Manual", import: "Imported", integration: "Integration" }
+type PerformanceT = Translator<(typeof performanceMessages)["en"]>
+
+const sourceLabel = (t: PerformanceT, source: ContentMetric["source"]) =>
+  source === "manual" || source === "import" || source === "integration" ? t(`source_${source}`) : source
 
 const ratioLabel = (ratio: number) => `${ratio.toFixed(1)}×`
 
@@ -27,6 +32,7 @@ function comparisonLabel(value: number | null, settings: AppSettings): string {
 
 /** Winner detection for one post: tier, value vs baseline, ratio and where it sits on the tier scale. */
 export function TierCard({ row, settings }: { row: TieredRow; settings: AppSettings }) {
+  const t = useT(performanceMessages)
   const platform = PLATFORMS[row.platform].label
   const metric = (WINNER_METRIC_MAP[settings.winner_metric]?.label ?? "Views").toLowerCase()
   const minSample = Math.min(settings.winner_window, settings.winner_min_sample)
@@ -35,33 +41,33 @@ export function TierCard({ row, settings }: { row: TieredRow; settings: AppSetti
   if (!tiered) {
     if (row.sampleSize < minSample) {
       reason = row.sampleSize
-        ? `Only ${pluralize(row.sampleSize, `earlier measured ${platform} post`)} to compare with — tiers start at ${minSample}.`
-        : `No earlier measured ${platform} posts to compare with yet — tiers start at ${minSample}.`
+        ? t.plural("only_earlier", row.sampleSize, { count: formatNumber(row.sampleSize), platform, min: minSample })
+        : t("no_earlier", { platform, min: minSample })
     } else if (row.value === null) {
-      reason = `No ${metric} logged for this post yet.`
+      reason = t("no_metric", { metric })
     } else {
-      reason = "Your comparison average is 0, so there's no ratio yet."
+      reason = t("zero_average")
     }
   }
   const composite = settings.winner_metric === "composite"
 
   return (
     <SectionCard
-      title="Winner detection"
-      description={`Compared with the average ${metric} of your previous ${settings.winner_window} measured ${platform} posts`}
+      title={t("winner_detection")}
+      description={t("compared_with", { metric, window: settings.winner_window, platform })}
       action={
         <Button type="button" variant="ghost" size="xs" asChild>
-          <Link href="/settings?tab=performance">Thresholds</Link>
+          <Link href="/settings?tab=performance">{t("thresholds")}</Link>
         </Button>
       }
       contentClassName="flex flex-col gap-4"
     >
       <div className="flex min-w-0 flex-wrap items-center gap-2">
-        {tiered ? <TierBadge tier={row.tier} showNormal /> : <StatusPill tone="neutral">Not tiered yet</StatusPill>}
+        {tiered ? <TierBadge tier={row.tier} showNormal /> : <StatusPill tone="neutral">{t("not_tiered")}</StatusPill>}
         <span className="text-sm text-pretty">
           {tiered && row.ratio !== null ? (
             <>
-              <span className="font-medium num">{ratioLabel(row.ratio)}</span> your {platform} average
+              <span className="font-medium num">{ratioLabel(row.ratio)}</span> {t("your_average", { platform })}
             </>
           ) : (
             reason
@@ -70,18 +76,20 @@ export function TierCard({ row, settings }: { row: TieredRow; settings: AppSetti
       </div>
       <dl className="grid grid-cols-3 gap-3">
         <div className="min-w-0">
-          <dt className="truncate text-xs text-muted-foreground">{composite ? "Performance index" : "This post"}</dt>
+          <dt className="truncate text-xs text-muted-foreground">{composite ? t("performance_index") : t("this_post")}</dt>
           <dd className="text-sm font-medium num">{comparisonLabel(row.value, settings)}</dd>
         </div>
         <div className="min-w-0">
-          <dt className="truncate text-xs text-muted-foreground">Baseline</dt>
+          <dt className="truncate text-xs text-muted-foreground">{t("baseline")}</dt>
           <dd className="text-sm font-medium num">
             {comparisonLabel(row.baseline, settings)}
-            <span className="block text-xs font-normal text-muted-foreground">avg of {pluralize(row.sampleSize, "post")}</span>
+            <span className="block text-xs font-normal text-muted-foreground">
+              {t.plural("avg_of", row.sampleSize, { count: formatNumber(row.sampleSize) })}
+            </span>
           </dd>
         </div>
         <div className="min-w-0">
-          <dt className="truncate text-xs text-muted-foreground">Ratio</dt>
+          <dt className="truncate text-xs text-muted-foreground">{t("ratio")}</dt>
           <dd className="text-sm font-medium num">{row.ratio !== null ? ratioLabel(row.ratio) : "—"}</dd>
         </div>
       </dl>
@@ -92,8 +100,8 @@ export function TierCard({ row, settings }: { row: TieredRow; settings: AppSetti
           className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-xs outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50"
         >
           <Trophy className="size-3.5 shrink-0 text-good-fg" aria-hidden />
-          <span className="min-w-0 flex-1">In your Winning Content Library — create more content like this.</span>
-          <span className="shrink-0 font-medium">Replicate</span>
+          <span className="min-w-0 flex-1">{t("in_library")}</span>
+          <span className="shrink-0 font-medium">{t("replicate")}</span>
         </Link>
       ) : null}
     </SectionCard>
@@ -159,8 +167,8 @@ function TierScale({ ratio, active, settings }: { ratio: number | null; active: 
 
 /* ---------------------------------- Rates --------------------------------- */
 
-function rateInputs(key: RateKey, r: TieredRow): string {
-  const base = `${formatNumber(r.base)} ${r.reach > 0 ? "reach" : "views"}`
+function rateInputs(key: RateKey, r: TieredRow, t: PerformanceT): string {
+  const base = `${formatNumber(r.base)} ${r.reach > 0 ? t("reach_unit") : t("views_unit")}`
   switch (key) {
     case "engagement_rate":
       return `${formatNumber(r.engagements)} ÷ ${base}`
@@ -170,17 +178,18 @@ function rateInputs(key: RateKey, r: TieredRow): string {
       return `${formatNumber(r.saves)} ÷ ${base}`
     case "lead_conversion_rate":
       return r.linkClicks > 0
-        ? `${formatNumber(r.leads)} ÷ ${formatNumber(r.linkClicks)} link clicks`
-        : `${formatNumber(r.leads)} ÷ ${formatNumber(r.profileVisits)} profile visits`
+        ? `${formatNumber(r.leads)} ÷ ${formatNumber(r.linkClicks)} ${t("link_clicks_unit")}`
+        : `${formatNumber(r.leads)} ÷ ${formatNumber(r.profileVisits)} ${t("profile_visits_unit")}`
     case "follower_conversion_rate":
-      return `${formatNumber(r.followersGained)} ÷ ${formatNumber(r.profileVisits)} profile visits`
+      return `${formatNumber(r.followersGained)} ÷ ${formatNumber(r.profileVisits)} ${t("profile_visits_unit")}`
   }
 }
 
 /** Every derived rate with its formula (RATE_FIELDS) and this post's own inputs. */
 export function RatesCard({ row }: { row: TieredRow }) {
+  const t = useT(performanceMessages)
   return (
-    <SectionCard title="Rates" description="Derived from the latest snapshot" contentClassName="px-0 pt-2 pb-1">
+    <SectionCard title={t("rates")} description={t("rates_description")} contentClassName="px-0 pt-2 pb-1">
       <ul className="divide-y">
         {RATE_FIELDS.map((field) => {
           const value = row.rates[field.key]
@@ -190,7 +199,7 @@ export function RatesCard({ row }: { row: TieredRow }) {
                 <p className="text-sm">{field.label}</p>
                 <p className="text-xs text-pretty text-muted-foreground">
                   {field.formula}
-                  <span className="text-foreground/70 num"> · {rateInputs(field.key, row)}</span>
+                  <span className="text-foreground/70 num"> · {rateInputs(field.key, row, t)}</span>
                 </p>
               </div>
               <span className="shrink-0 pt-px text-sm font-medium num">{value === null ? "—" : formatPercent(value)}</span>
@@ -205,26 +214,31 @@ export function RatesCard({ row }: { row: TieredRow }) {
 /* ------------------------------ Latest snapshot ---------------------------- */
 
 export function LatestSnapshot({ metric }: { metric: ContentMetric }) {
+  const t = useT(performanceMessages)
   const watch = metric.watch_time_seconds
   const cells: { label: string; value: string }[] = [
-    { label: "Views", value: formatNumber(metric.views) },
-    { label: "Reach", value: formatNumber(metric.reach) },
-    { label: "Likes", value: formatNumber(metric.likes) },
-    { label: "Comments", value: formatNumber(metric.comments) },
-    { label: "Shares", value: formatNumber(metric.shares) },
-    { label: "Saves", value: formatNumber(metric.saves) },
-    { label: "Followers gained", value: formatNumber(metric.followers_gained) },
-    { label: "Profile visits", value: formatNumber(metric.profile_visits) },
-    { label: "Link clicks", value: formatNumber(metric.link_clicks) },
-    { label: "Leads", value: formatNumber(metric.leads) },
-    { label: "Sales", value: formatNumber(metric.sales) },
-    { label: "Watch time", value: watch === null ? "—" : formatDuration(watch) },
-    { label: "Avg. retention", value: formatPercent(metric.avg_retention) },
+    { label: t("views"), value: formatNumber(metric.views) },
+    { label: t("reach"), value: formatNumber(metric.reach) },
+    { label: t("likes"), value: formatNumber(metric.likes) },
+    { label: t("comments"), value: formatNumber(metric.comments) },
+    { label: t("shares"), value: formatNumber(metric.shares) },
+    { label: t("saves"), value: formatNumber(metric.saves) },
+    { label: t("followers_gained"), value: formatNumber(metric.followers_gained) },
+    { label: t("profile_visits"), value: formatNumber(metric.profile_visits) },
+    { label: t("link_clicks"), value: formatNumber(metric.link_clicks) },
+    { label: t("leads"), value: formatNumber(metric.leads) },
+    { label: t("sales"), value: formatNumber(metric.sales) },
+    { label: t("watch_time"), value: watch === null ? "—" : formatDuration(watch) },
+    { label: t("avg_retention"), value: formatPercent(metric.avg_retention) },
   ]
   return (
     <SectionCard
-      title="Latest snapshot"
-      description={`Recorded ${formatDate(metric.recorded_at, "EEE, MMM d, yyyy")} · ${SOURCE_LABEL[metric.source] ?? metric.source}${metric.notes ? ` · ${metric.notes}` : ""}`}
+      title={t("latest_snapshot")}
+      description={t("snapshot_description", {
+        date: formatDate(metric.recorded_at, "EEE, MMM d, yyyy"),
+        source: sourceLabel(t, metric.source),
+        notes: metric.notes ? ` · ${metric.notes}` : "",
+      })}
     >
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4 xl:grid-cols-7">
         {cells.map((cell) => (
@@ -242,6 +256,7 @@ export function LatestSnapshot({ metric }: { metric: ContentMetric }) {
 
 /** Every logged snapshot (newest first), with a views/reach trend once there are two or more. */
 export function SnapshotHistory({ snapshots, itemId, onAdd }: { snapshots: ContentMetric[]; itemId: string; onAdd: () => void }) {
+  const t = useT(performanceMessages)
   const chart = useMemo<TrendDatum[]>(
     () =>
       [...snapshots].reverse().map((s) => ({
@@ -253,16 +268,16 @@ export function SnapshotHistory({ snapshots, itemId, onAdd }: { snapshots: Conte
   )
   return (
     <SectionCard
-      title="Snapshot history"
-      description={`${pluralize(snapshots.length, "snapshot")} — each check-in records the running totals from the platform.`}
+      title={t("snapshot_history")}
+      description={t.plural("snapshots", snapshots.length, { count: formatNumber(snapshots.length) })}
       action={
         <>
           <Button type="button" variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
-            <Link href={`/analytics/posts?open=${itemId}`}>Edit in Post Performance</Link>
+            <Link href={`/analytics/posts?open=${itemId}`}>{t("edit_in_post_performance")}</Link>
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={onAdd}>
             <Plus aria-hidden />
-            Add analytics
+            {t("add_analytics")}
           </Button>
         </>
       }
@@ -273,11 +288,11 @@ export function SnapshotHistory({ snapshots, itemId, onAdd }: { snapshots: Conte
           <TrendChart
             data={chart}
             series={[
-              { key: "views", label: "Views", color: "blue" },
-              { key: "reach", label: "Reach", color: "orange" },
+              { key: "views", label: t("views"), color: "blue" },
+              { key: "reach", label: t("reach"), color: "orange" },
             ]}
             height={180}
-            aria-label="Views and reach at each snapshot"
+            aria-label={t("chart_aria")}
           />
         </div>
       ) : null}
@@ -286,9 +301,9 @@ export function SnapshotHistory({ snapshots, itemId, onAdd }: { snapshots: Conte
           <thead>
             <tr className="border-b text-xs text-muted-foreground">
               <th scope="col" className="h-8 px-4 text-left font-medium">
-                Recorded
+                {t("recorded")}
               </th>
-              {["Views", "Reach", "Likes", "Comments", "Shares", "Saves", "Leads", "Eng. rate"].map((label) => (
+              {[t("views"), t("reach"), t("likes"), t("comments"), t("shares"), t("saves"), t("leads"), t("eng_rate_short")].map((label) => (
                 <th key={label} scope="col" className="h-8 px-3 text-right font-medium">
                   {label}
                 </th>
@@ -301,9 +316,9 @@ export function SnapshotHistory({ snapshots, itemId, onAdd }: { snapshots: Conte
                 <td className="px-4 py-2 whitespace-nowrap">
                   <span className="flex items-center gap-1.5">
                     {formatDate(s.recorded_at)}
-                    {index === 0 ? <span className="rounded-sm bg-muted px-1 text-[11px] font-medium text-muted-foreground">Latest</span> : null}
+                    {index === 0 ? <span className="rounded-sm bg-muted px-1 text-[11px] font-medium text-muted-foreground">{t("latest")}</span> : null}
                   </span>
-                  <span className="block text-xs text-muted-foreground">{SOURCE_LABEL[s.source] ?? s.source}</span>
+                  <span className="block text-xs text-muted-foreground">{sourceLabel(t, s.source)}</span>
                 </td>
                 <td className="px-3 py-2 text-right num">{formatNumber(s.views)}</td>
                 <td className="px-3 py-2 text-right num">{formatNumber(s.reach)}</td>

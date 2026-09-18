@@ -6,8 +6,11 @@ import { FormField } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { useT, useUiLang } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions, useTable } from "@/lib/store"
 import type { ContentAngle } from "@/lib/types"
+import { angleMessages } from "./angle-messages"
 import { ANGLE_NAME_MAX, validateAngleName } from "./angle-model"
 import { LabDialog, LabDialogBody, LabDialogFooter, LabDialogHeader } from "./lab-dialog"
 
@@ -36,6 +39,9 @@ export function AngleFormDialog({
 
 function AngleForm({ onClose, onCreated }: { onClose: () => void; onCreated: (angle: ContentAngle) => void }) {
   const id = useId()
+  const t = useT(angleMessages)
+  const c = useT(commonMessages)
+  const lang = useUiLang()
   const angles = useTable("angles")
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
@@ -44,7 +50,7 @@ function AngleForm({ onClose, onCreated }: { onClose: () => void; onCreated: (an
 
   function submit(event: React.FormEvent) {
     event.preventDefault()
-    const problem = validateAngleName(name, angles)
+    const problem = validateAngleName(name, angles, undefined, lang)
     if (problem) {
       setError(problem)
       return
@@ -61,9 +67,9 @@ function AngleForm({ onClose, onCreated }: { onClose: () => void; onCreated: (an
 
   return (
     <form noValidate onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
-      <LabDialogHeader title="New angle" description="A lens you'll reuse — the Idea Generator can build whole batches around it." />
+      <LabDialogHeader title={t("new_angle")} description={t("new_description")} />
       <LabDialogBody className="flex flex-col gap-4">
-        <FormField label="Name" htmlFor={`${id}-name`} required error={error ?? undefined} description={`Short and specific, e.g. “Ad teardown”. Up to ${ANGLE_NAME_MAX} characters.`}>
+        <FormField label={t("name")} htmlFor={`${id}-name`} required error={error ?? undefined} description={t("name_help", { max: ANGLE_NAME_MAX })}>
           <Input
             id={`${id}-name`}
             autoFocus
@@ -77,33 +83,33 @@ function AngleForm({ onClose, onCreated }: { onClose: () => void; onCreated: (an
             }}
           />
         </FormField>
-        <FormField label="Description" htmlFor={`${id}-description`}>
+        <FormField label={t("description_label")} htmlFor={`${id}-description`}>
           <Textarea
             id={`${id}-description`}
             rows={3}
             maxLength={500}
             value={description}
-            placeholder="What this angle does to a topic, and when to use it."
+            placeholder={t("description_placeholder_form")}
             onChange={(event) => setDescription(event.target.value)}
           />
         </FormField>
-        <FormField label="Example" htmlFor={`${id}-example`}>
+        <FormField label={t("example")} htmlFor={`${id}-example`}>
           <Input
             id={`${id}-example`}
             value={example}
             maxLength={300}
-            placeholder="A title written in this angle"
+            placeholder={t("example_placeholder_form")}
             onChange={(event) => setExample(event.target.value)}
           />
         </FormField>
       </LabDialogBody>
       <LabDialogFooter>
         <Button type="button" variant="ghost" onClick={onClose}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={!name.trim()}>
           <Plus aria-hidden />
-          Add angle
+          {t("add_angle")}
         </Button>
       </LabDialogFooter>
     </form>

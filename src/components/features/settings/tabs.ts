@@ -15,64 +15,23 @@ export const SETTINGS_TAB_KEYS = [
 
 export type SettingsTabKey = (typeof SETTINGS_TAB_KEYS)[number]
 
+/** Labels and descriptions live in `settingsMessages` (`tab_<key>_label`, `tab_<key>_description`). */
 export interface SettingsTabMeta {
   key: SettingsTabKey
-  label: string
   icon: LucideIcon
-  description: string
 }
 
 export const SETTINGS_TABS: SettingsTabMeta[] = [
-  {
-    key: "general",
-    label: "General",
-    icon: SlidersHorizontal,
-    description: "App language, Simple mode, currency, posting target, week start, timezone, default owner and how strictly the content mix is checked.",
-  },
-  {
-    key: "performance",
-    label: "Performance",
-    icon: Gauge,
-    description: "How Winner detection compares posts, and when the Content Buffer counts as healthy.",
-  },
-  { key: "funnel", label: "Funnel", icon: Funnel, description: "The target mix of awareness, trust and conversion content." },
-  {
-    key: "formats",
-    label: "Formats",
-    icon: Shapes,
-    description: "The formats you produce and the script structure Content Studio starts each one with.",
-  },
-  {
-    key: "tags",
-    label: "Tags",
-    icon: Tags,
-    description: "Tags shared by ideas, content, stories, hooks, research and campaigns.",
-  },
-  {
-    key: "engagement",
-    label: "Engagement",
-    icon: MessagesSquare,
-    description: "The daily engagement tasks and targets behind the Engagement Tracker on Today.",
-  },
-  {
-    key: "reminders",
-    label: "Reminders",
-    icon: Bell,
-    description: "Nudges to post, to show up for your posting slots and to review your week.",
-  },
-  {
-    key: "ai",
-    label: "AI",
-    icon: Sparkles,
-    description: "Which engine writes for you, what it knows about your brand, and a log of every generation.",
-  },
-  {
-    key: "integrations",
-    label: "Integrations",
-    icon: Plug,
-    description: "Platform and tool connections, and the CSV analytics import that works without them.",
-  },
-  { key: "data", label: "Data", icon: Database, description: "Where your workspace lives, backups and restores, and resets." },
+  { key: "general", icon: SlidersHorizontal },
+  { key: "performance", icon: Gauge },
+  { key: "funnel", icon: Funnel },
+  { key: "formats", icon: Shapes },
+  { key: "tags", icon: Tags },
+  { key: "engagement", icon: MessagesSquare },
+  { key: "reminders", icon: Bell },
+  { key: "ai", icon: Sparkles },
+  { key: "integrations", icon: Plug },
+  { key: "data", icon: Database },
 ]
 
 export const SETTINGS_TAB_MAP = Object.fromEntries(SETTINGS_TABS.map((t) => [t.key, t])) as Record<SettingsTabKey, SettingsTabMeta>

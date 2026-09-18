@@ -3,12 +3,15 @@
 import { CalendarClock, CalendarIcon, X } from "lucide-react"
 import { useState } from "react"
 import type { Matcher } from "react-day-picker"
+import { datePickerMessages } from "@/components/common/messages"
 import type { ControlSize } from "@/components/common/types"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { combineDateTime, formatDate, parseDate, toISODate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import type { ISODate, ISODateTime } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -67,6 +70,7 @@ function PickerShell({
   ariaLabel?: string
   ariaInvalid?: boolean
 }) {
+  const t = useT(datePickerMessages)
   return (
     <div className={cn("relative w-full min-w-0", className)}>
       <Popover open={open} onOpenChange={onOpenChange}>
@@ -98,7 +102,7 @@ function PickerShell({
           type="button"
           variant="ghost"
           size="icon-xs"
-          aria-label="Clear date"
+          aria-label={t("clear_date")}
           onClick={onClear}
           className="absolute top-1/2 right-1 -translate-y-1/2 text-muted-foreground"
         >
@@ -113,7 +117,7 @@ function PickerShell({
 export function DatePicker({
   value,
   onChange,
-  placeholder = "Pick a date",
+  placeholder,
   clearable = true,
   disabled,
   id,
@@ -124,6 +128,8 @@ export function DatePicker({
   "aria-label": ariaLabel,
   "aria-invalid": ariaInvalid,
 }: PickerBaseProps & { value: ISODate | null; onChange: (value: ISODate | null) => void }) {
+  const t = useT(datePickerMessages)
+  const c = useT(commonMessages)
   const [open, setOpen] = useState(false)
   const selected = parseDate(value) ?? undefined
   const today = toISODate(new Date())
@@ -137,7 +143,7 @@ export function DatePicker({
   return (
     <PickerShell
       icon={CalendarIcon}
-      label={selected ? formatDate(selected, "EEE, MMM d, yyyy") : placeholder}
+      label={selected ? formatDate(selected, "EEE, MMM d, yyyy") : (placeholder ?? t("pick_date"))}
       empty={!selected}
       showClear={clearable && Boolean(selected) && !disabled}
       onClear={() => onChange(null)}
@@ -164,11 +170,11 @@ export function DatePicker({
       />
       <div className="flex items-center justify-between gap-2 border-t p-1.5">
         <Button type="button" variant="ghost" size="xs" disabled={!todayAllowed} onClick={() => pick(new Date())}>
-          Today
+          {c("today")}
         </Button>
         {clearable && selected ? (
           <Button type="button" variant="ghost" size="xs" className="text-muted-foreground" onClick={() => pick(null)}>
-            Clear
+            {c("clear")}
           </Button>
         ) : null}
       </div>
@@ -184,7 +190,7 @@ export function TimeInput({
   disabled,
   size = "default",
   className,
-  "aria-label": ariaLabel = "Time",
+  "aria-label": ariaLabel,
 }: {
   value: string | null
   onChange: (value: string | null) => void
@@ -194,13 +200,14 @@ export function TimeInput({
   className?: string
   "aria-label"?: string
 }) {
+  const c = useT(commonMessages)
   return (
     <Input
       id={id}
       type="time"
       value={value ?? ""}
       disabled={disabled}
-      aria-label={ariaLabel}
+      aria-label={ariaLabel ?? c("time")}
       onChange={(event) => onChange(event.target.value || null)}
       className={cn("w-32 num dark:[color-scheme:dark]", size === "sm" && "h-7", className)}
     />
@@ -211,7 +218,7 @@ export function TimeInput({
 export function DateTimePicker({
   value,
   onChange,
-  placeholder = "Pick date & time",
+  placeholder,
   clearable = true,
   defaultTime = "09:00",
   disabled,
@@ -228,6 +235,8 @@ export function DateTimePicker({
   /** Time applied when a day is picked before any time is set. */
   defaultTime?: string
 }) {
+  const t = useT(datePickerMessages)
+  const c = useT(commonMessages)
   const [open, setOpen] = useState(false)
   const selected = parseDate(value) ?? undefined
   const time = selected ? formatDate(selected, "HH:mm") : null
@@ -235,7 +244,7 @@ export function DateTimePicker({
   return (
     <PickerShell
       icon={CalendarClock}
-      label={selected ? formatDate(selected, "EEE, MMM d · h:mm a") : placeholder}
+      label={selected ? formatDate(selected, "EEE, MMM d · h:mm a") : (placeholder ?? t("pick_date_time"))}
       empty={!selected}
       showClear={clearable && Boolean(selected) && !disabled}
       onClear={() => onChange(null)}
@@ -259,7 +268,7 @@ export function DateTimePicker({
         }}
       />
       <div className="flex items-center gap-2 border-t p-2">
-        <span className="text-xs text-muted-foreground">Time</span>
+        <span className="text-xs text-muted-foreground">{c("time")}</span>
         <TimeInput
           size="sm"
           value={time ?? defaultTime}
@@ -268,7 +277,7 @@ export function DateTimePicker({
           }}
         />
         <Button type="button" size="xs" className="ml-auto" onClick={() => setOpen(false)}>
-          Done
+          {c("done")}
         </Button>
       </div>
     </PickerShell>

@@ -2,9 +2,12 @@
 
 import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react"
 import { useMemo, useState } from "react"
+import { dataTableMessages } from "@/components/common/messages"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { cn, formatNumber } from "@/lib/utils"
 
 type SortValue = string | number | boolean | null | undefined
@@ -90,6 +93,8 @@ export function DataTable<T>({
   rowClassName,
   "aria-label": ariaLabel,
 }: DataTableProps<T>) {
+  const t = useT(dataTableMessages)
+  const c = useT(commonMessages)
   const [sort, setSort] = useState<DataTableSort | null>(defaultSort ?? null)
   const [limit, setLimit] = useState(pageSize ?? Infinity)
 
@@ -159,7 +164,7 @@ export function DataTable<T>({
                   )}
                 >
                   <Checkbox
-                    aria-label="Select all rows"
+                    aria-label={t("select_all_rows")}
                     checked={selectedCount === 0 ? false : selectedCount === allIds.length ? true : "indeterminate"}
                     onCheckedChange={toggleAll}
                     disabled={!allIds.length}
@@ -261,7 +266,7 @@ export function DataTable<T>({
                     {selectable ? (
                       <TableCell className={cn("w-10 pr-0 pl-4", cellY)}>
                         <Checkbox
-                          aria-label={`Select ${rowLabel?.(row) ?? "row"}`}
+                          aria-label={t("select_row", { label: rowLabel?.(row) ?? t("row") })}
                           checked={isSelected}
                           onCheckedChange={() => toggleRow(id)}
                         />
@@ -288,7 +293,7 @@ export function DataTable<T>({
             ) : (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={colCount} className="p-0 whitespace-normal">
-                  {empty ?? <p className="px-4 py-10 text-center text-sm text-muted-foreground">No results.</p>}
+                  {empty ?? <p className="px-4 py-10 text-center text-sm text-muted-foreground">{t("no_results")}</p>}
                 </TableCell>
               </TableRow>
             )}
@@ -298,10 +303,10 @@ export function DataTable<T>({
       {visible.length < sorted.length ? (
         <div className="flex items-center justify-between gap-2 border-t px-4 py-2 text-xs text-muted-foreground">
           <span className="num">
-            Showing {formatNumber(visible.length)} of {formatNumber(sorted.length)}
+            {t("showing", { shown: formatNumber(visible.length), total: formatNumber(sorted.length) })}
           </span>
           <Button type="button" variant="ghost" size="xs" onClick={() => setLimit((l) => l + (pageSize ?? sorted.length))}>
-            Show more
+            {c("show_more")}
           </Button>
         </div>
       ) : null}

@@ -131,12 +131,8 @@ export function overallPerformance(db: Database, now: Date): GroupAggregate {
 
 export type HookMetric = "views" | "retention" | "engagement" | "leads"
 
-export const HOOK_METRICS: { id: HookMetric; label: string; description: string }[] = [
-  { id: "views", label: "Views", description: "Average views per post" },
-  { id: "retention", label: "Retention", description: "Average retention of video posts" },
-  { id: "engagement", label: "Engagement", description: "Engagements ÷ reach" },
-  { id: "leads", label: "Leads", description: "Average leads per post" },
-]
+/** Ranking metrics in toggle order (labels: `metric_<id>` in `labMessages`). */
+export const HOOK_METRICS: HookMetric[] = ["views", "retention", "engagement", "leads"]
 
 export function hookMetricValue(aggregate: GroupAggregate, metric: HookMetric): number | null {
   switch (metric) {
@@ -160,21 +156,12 @@ export function formatHookMetric(value: number | null, metric: HookMetric): stri
 
 /* -------------------------------- Filtering ------------------------------- */
 
-export const HOOK_SOURCES: Record<HookSource, { label: string; description: string }> = {
-  library: { label: "Starter library", description: "Proven templates that ship with the app" },
-  user: { label: "Written by you", description: "Hooks you added" },
-  ai: { label: "AI", description: "Saved from AI suggestions" },
-  content: { label: "From your content", description: "Opening lines of content you've made" },
-}
-export const HOOK_SOURCE_IDS = Object.keys(HOOK_SOURCES) as HookSource[]
+/** Hook sources in filter order (labels: `source_<id>` in `hookMessages`). */
+export const HOOK_SOURCE_IDS: HookSource[] = ["library", "user", "ai", "content"]
 
 export type HookSort = "performance" | "uses" | "newest" | "az"
-export const HOOK_SORTS: { id: HookSort; label: string }[] = [
-  { id: "performance", label: "Best performing" },
-  { id: "uses", label: "Most used" },
-  { id: "newest", label: "Newest" },
-  { id: "az", label: "A–Z" },
-]
+/** Sort options in menu order (labels: `sort_<id>` in `labMessages`). */
+export const HOOK_SORTS: HookSort[] = ["performance", "uses", "newest", "az"]
 
 export interface HookFilters {
   q: string

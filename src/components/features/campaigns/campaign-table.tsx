@@ -4,24 +4,27 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMemo } from "react"
 import { ColorDot, DataTable, Meter, PillarBadge, PlatformIcon, type DataTableColumn } from "@/components/common"
+import { useT, useUiLang } from "@/lib/i18n"
 import { useLookup } from "@/lib/store"
 import type { ContentCampaign } from "@/lib/types"
 import { formatCompact, formatNumber } from "@/lib/utils"
 import { CampaignActionsMenu } from "./campaign-actions-menu"
 import { CampaignStatusPill } from "./campaign-status"
 import { CAMPAIGN_STATUS_ORDER, dateRangeLabel, timeLabel, type CampaignSummary } from "./campaign-utils"
+import { campaignMessages } from "./messages"
 
 /* DataTable only knows sm/md/lg; these columns need xl. */
 const XL_ONLY = "hidden xl:table-cell"
 
 function PiecesCell({ summary }: { summary: CampaignSummary }) {
+  const t = useT(campaignMessages)
   const { perf, campaign } = summary
   const target = perf.targetPosts
   return (
     <div className="flex w-24 flex-col gap-1 sm:w-28">
       <span className="text-xs font-medium text-foreground num">
         {perf.published}
-        <span className="font-normal text-muted-foreground"> / {target ?? "no target"}</span>
+        <span className="font-normal text-muted-foreground"> / {target ?? t("no_target")}</span>
       </span>
       {target ? (
         <Meter
@@ -29,11 +32,11 @@ function PiecesCell({ summary }: { summary: CampaignSummary }) {
           max={target}
           color={campaign.color}
           size="sm"
-          aria-label="Pieces published vs target"
-          valueText={`${perf.published} of ${target} published`}
+          aria-label={t("pieces_vs_target")}
+          valueText={t("published_of", { published: perf.published, target })}
         />
       ) : null}
-      <span className="text-xs text-muted-foreground num">{perf.planned} planned</span>
+      <span className="text-xs text-muted-foreground num">{t("planned_count", { count: perf.planned })}</span>
     </div>
   )
 }
@@ -48,6 +51,8 @@ export function CampaignTable({
   empty?: React.ReactNode
 }) {
   const router = useRouter()
+  const t = useT(campaignMessages)
+  const lang = useUiLang()
   const goals = useLookup("content_goals")
   const pillars = useLookup("content_pillars")
 
@@ -55,7 +60,7 @@ export function CampaignTable({
     () => [
       {
         id: "name",
-        header: "Campaign",
+        header: t("col_campaign"),
         sortValue: (r) => r.campaign.name.toLowerCase(),
         className: "w-full max-w-0 min-w-36",
         cell: (r) => (
@@ -66,13 +71,13 @@ export function CampaignTable({
                 href={`/campaigns/${r.campaign.id}`}
                 className="line-clamp-2 font-medium break-words whitespace-normal outline-none hover:underline focus-visible:underline"
               >
-                {r.campaign.name || "Untitled campaign"}
+                {r.campaign.name || t("untitled_campaign")}
               </Link>
               <p className="text-xs text-pretty whitespace-normal text-muted-foreground xl:hidden">
-                {dateRangeLabel(r.campaign)} · {timeLabel(r.window)}
+                {dateRangeLabel(r.campaign, lang)} · {timeLabel(r.window, lang)}
               </p>
               <p className="hidden truncate text-xs text-muted-foreground xl:block" title={r.campaign.objective || undefined}>
-                {r.campaign.objective || r.campaign.message || "No objective yet"}
+                {r.campaign.objective || r.campaign.message || t("no_objective")}
               </p>
               <CampaignStatusPill status={r.campaign.status} className="mt-1.5 sm:hidden" />
             </div>
@@ -81,34 +86,34 @@ export function CampaignTable({
       },
       {
         id: "status",
-        header: "Status",
+        header: t("col_status"),
         hideBelow: "sm",
         sortValue: (r) => CAMPAIGN_STATUS_ORDER[r.campaign.status],
         cell: (r) => <CampaignStatusPill status={r.campaign.status} />,
       },
       {
         id: "dates",
-        header: "Dates",
+        header: t("col_dates"),
         className: XL_ONLY,
         headerClassName: XL_ONLY,
         sortValue: (r) => r.campaign.start_date,
         cell: (r) => (
           <div className="flex w-40 flex-col gap-1">
-            <span className="truncate text-xs">{dateRangeLabel(r.campaign)}</span>
+            <span className="truncate text-xs">{dateRangeLabel(r.campaign, lang)}</span>
             <Meter
               value={r.window.elapsedPct ?? 0}
               tone="neutral"
               size="sm"
-              aria-label="Campaign time elapsed"
-              valueText={timeLabel(r.window)}
+              aria-label={t("time_elapsed_aria")}
+              valueText={timeLabel(r.window, lang)}
             />
-            <span className="truncate text-xs text-muted-foreground">{timeLabel(r.window)}</span>
+            <span className="truncate text-xs text-muted-foreground">{timeLabel(r.window, lang)}</span>
           </div>
         ),
       },
       {
         id: "focus",
-        header: "Pillar & goal",
+        header: t("col_focus"),
         className: XL_ONLY,
         headerClassName: XL_ONLY,
         sortValue: (r) => (r.campaign.pillar_id ? pillars.get(r.campaign.pillar_id)?.name : null),
@@ -118,7 +123,7 @@ export function CampaignTable({
             <div className="flex w-36 flex-col items-start gap-1">
               <PillarBadge pillarId={r.campaign.pillar_id} variant="plain" className="max-w-full" />
               <span className="max-w-full truncate text-xs text-muted-foreground" title={goal?.name}>
-                {goal?.name ?? "No goal"}
+                {goal?.name ?? t("no_goal")}
               </span>
             </div>
           )
@@ -126,7 +131,7 @@ export function CampaignTable({
       },
       {
         id: "platforms",
-        header: "Platforms",
+        header: t("col_platforms"),
         hideBelow: "lg",
         cell: (r) =>
           r.campaign.platforms.length ? (
@@ -141,13 +146,13 @@ export function CampaignTable({
       },
       {
         id: "pieces",
-        header: "Pieces",
+        header: t("col_pieces"),
         sortValue: (r) => r.perf.progressPct ?? r.perf.published,
         cell: (r) => <PiecesCell summary={r} />,
       },
       {
         id: "views",
-        header: "Views",
+        header: t("col_views"),
         align: "right",
         hideBelow: "sm",
         sortValue: (r) => r.perf.totals.views,
@@ -155,7 +160,7 @@ export function CampaignTable({
       },
       {
         id: "leads",
-        header: "Leads",
+        header: t("col_leads"),
         align: "right",
         hideBelow: "sm",
         sortValue: (r) => r.perf.totals.leads,
@@ -163,13 +168,13 @@ export function CampaignTable({
       },
       {
         id: "actions",
-        header: <span className="sr-only">Actions</span>,
+        header: <span className="sr-only">{t("col_actions")}</span>,
         className: "w-10 pl-0",
         headerClassName: "w-10",
         cell: (r) => <CampaignActionsMenu campaign={r.campaign} onEdit={() => onEdit(r.campaign)} showOpen />,
       },
     ],
-    [goals, pillars, onEdit]
+    [goals, pillars, onEdit, t, lang]
   )
 
   return (
@@ -178,9 +183,9 @@ export function CampaignTable({
       columns={columns}
       getRowId={(r) => r.campaign.id}
       onRowClick={(r) => router.push(`/campaigns/${r.campaign.id}`)}
-      rowLabel={(r) => `Open ${r.campaign.name || "campaign"}`}
+      rowLabel={(r) => t("open_row", { name: r.campaign.name || t("campaign_lower") })}
       empty={empty}
-      aria-label="Campaigns"
+      aria-label={t("table_label")}
     />
   )
 }

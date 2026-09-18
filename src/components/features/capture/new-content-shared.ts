@@ -1,4 +1,6 @@
+import type { Translator } from "@/lib/i18n/core"
 import type { BrandProfile, ContentIdea, ContentItem, InsertRow, PlatformId } from "@/lib/types"
+import type { newContentMessages } from "./capture-messages"
 
 /** Values a caller passes to the New Content dialog; they prefill the form and carry through to every item. */
 export type ContentDefaults = InsertRow<"content_items">
@@ -19,4 +21,6 @@ export function withoutId(values: ContentDefaults | undefined): ContentDefaults 
   return copy
 }
 
-export const createLabel = (count: number) => (count > 1 ? `Create ${count} items` : "Create content")
+/** Submit label: "Create content" for one platform, "Create 3 items" for several. */
+export const createLabel = (count: number, t: Translator<(typeof newContentMessages)["en"]>) =>
+  count > 1 ? t("create_items", { count }) : t("create_content")

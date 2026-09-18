@@ -3,9 +3,14 @@
 import Link from "next/link"
 import { useId } from "react"
 import { ColorSwatchPicker, FormField, FormRow, ListEditor, PlatformToggleGroup } from "@/components/common"
+import { useT, type Translator } from "@/lib/i18n"
 import { dataActions } from "@/lib/store"
 import type { AudiencePersona, ID, UpdateRow } from "@/lib/types"
 import { AutosaveInput, AutosaveTextarea } from "./autosave-field"
+import { personaMessages } from "./persona-messages"
+
+type PersonaKey = keyof (typeof personaMessages)["en"]
+type PersonaT = Translator<(typeof personaMessages)["en"]>
 
 const save = (id: ID, patch: UpdateRow<"audience_personas">) => dataActions.update("audience_personas", id, patch)
 
@@ -35,34 +40,34 @@ function listPatch(key: PersonaListKey, value: string[]): UpdateRow<"audience_pe
 }
 
 /** Full-width rows: these values are often a long phrase ("Metro Manila, Cebu, Davao — plus founders across SEA"). */
-const TEXT_FIELDS: { key: Exclude<PersonaTextKey, "age_range">; label: string; placeholder: string }[] = [
-  { key: "profession", label: "Profession", placeholder: "e.g. Founder of a DTC brand" },
-  { key: "industry", label: "Industry", placeholder: "e.g. E-commerce — beauty, fashion" },
-  { key: "experience_level", label: "Experience level", placeholder: "e.g. 3–7 years in business" },
-  { key: "location", label: "Location", placeholder: "e.g. Metro Manila" },
+const TEXT_FIELDS: { key: Exclude<PersonaTextKey, "age_range">; label: PersonaKey; placeholder: PersonaKey }[] = [
+  { key: "profession", label: "profession", placeholder: "profession_placeholder" },
+  { key: "industry", label: "industry", placeholder: "industry_placeholder" },
+  { key: "experience_level", label: "experience_level", placeholder: "experience_placeholder" },
+  { key: "location", label: "location", placeholder: "location_placeholder" },
 ]
 
 const LINK = "underline underline-offset-4 hover:text-foreground"
 
 interface ListFieldSpec {
   key: PersonaListKey
-  label: string
-  placeholder: string
+  label: PersonaKey
+  placeholder: PersonaKey
   variant: "lines" | "chips"
-  description?: (persona: AudiencePersona) => React.ReactNode
+  description?: (persona: AudiencePersona, t: PersonaT) => React.ReactNode
 }
 
 export const GOALS_AND_PAINS: ListFieldSpec[] = [
-  { key: "goals", label: "Goals", placeholder: "What are they trying to achieve?", variant: "lines" },
-  { key: "aspirations", label: "Aspirations", placeholder: "What would success look like for them?", variant: "lines" },
+  { key: "goals", label: "goals", placeholder: "goals_placeholder", variant: "lines" },
+  { key: "aspirations", label: "aspirations", placeholder: "aspirations_placeholder", variant: "lines" },
   {
     key: "problems",
-    label: "Problems",
-    placeholder: "What is getting in their way?",
+    label: "problems",
+    placeholder: "problems_placeholder",
     variant: "lines",
-    description: (persona) => (
+    description: (persona, t) => (
       <>
-        In their words. Problems you&apos;ll make content about live in the{" "}
+        {t("problems_description")}{" "}
         <Link href={`/audience/problems?persona=${persona.id}`} className={LINK}>
           Problem Bank
         </Link>
@@ -70,16 +75,16 @@ export const GOALS_AND_PAINS: ListFieldSpec[] = [
       </>
     ),
   },
-  { key: "fears", label: "Fears", placeholder: "What keeps them up at night?", variant: "lines" },
-  { key: "frustrations", label: "Frustrations", placeholder: "What annoys them about the status quo?", variant: "lines" },
+  { key: "fears", label: "fears", placeholder: "fears_placeholder", variant: "lines" },
+  { key: "frustrations", label: "frustrations", placeholder: "frustrations_placeholder", variant: "lines" },
   {
     key: "questions",
-    label: "Questions",
-    placeholder: "What do they keep asking?",
+    label: "questions",
+    placeholder: "questions_placeholder",
     variant: "lines",
-    description: (persona) => (
+    description: (persona, t) => (
       <>
-        Questions people actually asked you are counted in the{" "}
+        {t("questions_description")}{" "}
         <Link href={`/audience/questions?persona=${persona.id}`} className={LINK}>
           Question Bank
         </Link>
@@ -87,82 +92,83 @@ export const GOALS_AND_PAINS: ListFieldSpec[] = [
       </>
     ),
   },
-  { key: "objections", label: "Objections", placeholder: "Why might they say no?", variant: "lines" },
+  { key: "objections", label: "objections", placeholder: "objections_placeholder", variant: "lines" },
 ]
 
 const MEDIA_AND_VOICE: ListFieldSpec[] = [
-  { key: "content_consumed", label: "Content they consume", placeholder: "Podcasts, groups, newsletters…", variant: "lines" },
-  { key: "influencers", label: "Influencers they follow", placeholder: "A creator, author or community", variant: "lines" },
+  { key: "content_consumed", label: "content_consumed", placeholder: "content_consumed_placeholder", variant: "lines" },
+  { key: "influencers", label: "influencers", placeholder: "influencers_placeholder", variant: "lines" },
   {
     key: "language_used",
-    label: "Language they use",
-    placeholder: "Type a word or phrase and press Enter",
+    label: "language_used",
+    placeholder: "language_used_placeholder",
     variant: "chips",
-    description: () => "Their exact words and phrases — hooks and captions should sound like this.",
+    description: (_persona, t) => t("language_used_description"),
   },
 ]
 
 /** Identity, colour, buying motivation and notes. Text saves on blur / Enter. */
 export function PersonaProfileFields({ persona }: { persona: AudiencePersona }) {
   const id = useId()
+  const t = useT(personaMessages)
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <FormRow className="sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <FormField label="Name" htmlFor={`${id}-name`} required>
+        <FormField label={t("name")} htmlFor={`${id}-name`} required>
           <AutosaveInput
             id={`${id}-name`}
             value={persona.name}
             maxLength={120}
             required
-            requiredMessage="Give this persona a name."
+            requiredMessage={t("name_required")}
             onCommit={(name) => save(persona.id, { name })}
           />
         </FormField>
-        <FormField label="Age range" htmlFor={`${id}-age_range`}>
+        <FormField label={t("age_range")} htmlFor={`${id}-age_range`}>
           <AutosaveInput
             id={`${id}-age_range`}
             value={persona.age_range}
             maxLength={40}
-            placeholder="e.g. 28–42"
+            placeholder={t("age_placeholder")}
             onCommit={(age_range) => save(persona.id, { age_range })}
           />
         </FormField>
       </FormRow>
       {TEXT_FIELDS.map((field) => (
-        <FormField key={field.key} label={field.label} htmlFor={`${id}-${field.key}`}>
+        <FormField key={field.key} label={t(field.label)} htmlFor={`${id}-${field.key}`}>
           <AutosaveInput
             id={`${id}-${field.key}`}
             value={persona[field.key]}
             maxLength={200}
-            placeholder={field.placeholder}
+            placeholder={t(field.placeholder)}
             onCommit={(value) => save(persona.id, textPatch(field.key, value))}
           />
         </FormField>
       ))}
-      <FormField label="Colour" description="Identifies this persona in badges, filters and charts.">
-        <ColorSwatchPicker value={persona.color} onChange={(color) => save(persona.id, { color })} aria-label="Persona colour" />
+      <FormField label={t("colour")} description={t("colour_description")}>
+        <ColorSwatchPicker value={persona.color} onChange={(color) => save(persona.id, { color })} aria-label={t("colour_aria")} />
       </FormField>
       <FormField
-        label="Buying motivation"
+        label={t("buying_motivation")}
         htmlFor={`${id}-motivation`}
-        description="What finally makes them act — and what they need to see first."
+        description={t("buying_motivation_description")}
       >
         <AutosaveTextarea
           id={`${id}-motivation`}
           value={persona.buying_motivation}
           maxLength={2000}
           rows={3}
-          placeholder="e.g. Buys when a plateau starts hurting cash flow and someone shows real numbers."
+          placeholder={t("buying_motivation_placeholder")}
           onCommit={(buying_motivation) => save(persona.id, { buying_motivation })}
         />
       </FormField>
-      <FormField label="Notes" htmlFor={`${id}-notes`}>
+      <FormField label={t("notes")} htmlFor={`${id}-notes`}>
         <AutosaveTextarea
           id={`${id}-notes`}
           value={persona.notes}
           maxLength={4000}
           rows={3}
-          placeholder="Anything else worth remembering when you create for them"
+          placeholder={t("notes_placeholder")}
           onCommit={(notes) => save(persona.id, { notes })}
         />
       </FormField>
@@ -173,6 +179,7 @@ export function PersonaProfileFields({ persona }: { persona: AudiencePersona }) 
 /** A stack of list fields; every add, edit, reorder or removal saves immediately. */
 export function PersonaListFields({ persona, fields }: { persona: AudiencePersona; fields: ListFieldSpec[] }) {
   const id = useId()
+  const t = useT(personaMessages)
   return (
     <div className="flex min-w-0 flex-col gap-5">
       {fields.map((field) => {
@@ -181,10 +188,10 @@ export function PersonaListFields({ persona, fields }: { persona: AudiencePerson
           <FormField
             key={field.key}
             htmlFor={`${id}-${field.key}`}
-            description={field.description?.(persona)}
+            description={field.description?.(persona, t)}
             label={
               <>
-                {field.label}
+                {t(field.label)}
                 {value.length ? <span className="ml-1.5 font-normal text-muted-foreground num">{value.length}</span> : null}
               </>
             }
@@ -194,8 +201,8 @@ export function PersonaListFields({ persona, fields }: { persona: AudiencePerson
               variant={field.variant}
               value={value}
               maxItems={40}
-              placeholder={field.placeholder}
-              aria-label={field.label}
+              placeholder={t(field.placeholder)}
+              aria-label={t(field.label)}
               onChange={(next) => save(persona.id, listPatch(field.key, next))}
             />
           </FormField>
@@ -207,13 +214,14 @@ export function PersonaListFields({ persona, fields }: { persona: AudiencePerson
 
 /** Platforms they use, what they consume, who they follow and the words they use. */
 export function PersonaMediaFields({ persona }: { persona: AudiencePersona }) {
+  const t = useT(personaMessages)
   return (
     <div className="flex min-w-0 flex-col gap-5">
-      <FormField label="Platforms" description="Where they spend their attention.">
+      <FormField label={t("platforms")} description={t("platforms_description")}>
         <PlatformToggleGroup
           value={persona.platforms}
           onChange={(platforms) => save(persona.id, { platforms })}
-          aria-label="Persona platforms"
+          aria-label={t("platforms_aria")}
         />
       </FormField>
       <PersonaListFields persona={persona} fields={MEDIA_AND_VOICE} />

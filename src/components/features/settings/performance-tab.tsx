@@ -7,9 +7,11 @@ import { Meter, NumberField, OptionSelect, SectionCard, StatusPill, TierBadge } 
 import { Label } from "@/components/ui/label"
 import { contentBuffer, type BufferStatus } from "@/lib/analytics"
 import { WINNER_METRIC_MAP, WINNER_METRICS } from "@/lib/constants"
+import { useT, useUiLang } from "@/lib/i18n"
 import { updateSettings, useDb, useSettings } from "@/lib/store"
 import type { PerformanceTier, WinnerMetric } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { performanceMessages } from "./performance-messages"
 import { SaveBar } from "./save-bar"
 import { LIMITS, PERFORMANCE_DEFAULTS, performancePatch, validatePerformance, type PerformanceValues } from "./sections"
 import { SettingRow, SettingRows } from "./setting-row"
@@ -26,7 +28,9 @@ const BUFFER_TONE: Record<BufferStatus, "good" | "warning" | "serious"> = { heal
 
 export function PerformanceTab({ draft, now }: { draft: SettingsDraft<PerformanceValues>; now: Date }) {
   const { values, set } = draft
-  const errors = validatePerformance(values)
+  const lang = useUiLang()
+  const t = useT(performanceMessages)
+  const errors = validatePerformance(values, lang)
   const valid = Object.keys(errors).length === 0
   const fields = useMemo(() => tierFieldsFrom(values), [values])
   const thresholdError = errors.tier_good ?? errors.tier_winner ?? errors.tier_breakout
@@ -37,11 +41,17 @@ export function PerformanceTab({ draft, now }: { draft: SettingsDraft<Performanc
     if (!draft.dirty || !valid) return
     updateSettings(performancePatch(values))
     draft.discard()
-    toast.success("Performance settings saved", { description: "Tiers, winners and the Content Buffer use the new rules." })
+    toast.success(t("saved"), { description: t("saved_description") })
   }
 
   const rule = fields
-    ? `Each post is compared with the average ${values.winner_metric === "composite" ? "performance" : (metric?.label.toLowerCase() ?? "performance")} of the previous ${fields.winner_window} measured posts on its platform · Good ≥ ${formatTimes(fields.tier_good)} · Winner ≥ ${formatTimes(fields.tier_winner)} · Breakout ≥ ${formatTimes(fields.tier_breakout)}`
+    ? t("rule", {
+        metric: values.winner_metric === "composite" ? t("metric_performance") : (metric?.label.toLowerCase() ?? t("metric_performance")),
+        window: fields.winner_window,
+        good: formatTimes(fields.tier_good),
+        winner: formatTimes(fields.tier_winner),
+        breakout: formatTimes(fields.tier_breakout),
+      })
     : null
 
   return (
@@ -49,15 +59,15 @@ export function PerformanceTab({ draft, now }: { draft: SettingsDraft<Performanc
       <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="flex min-w-0 flex-col gap-4">
           <SectionCard
-            title="Winner detection"
-            description="Every measured post gets a ratio: its number ÷ the average of earlier posts on the same platform. The ratio sets its tier."
+            title={t("winner_title")}
+            description={t("winner_description")}
             footer={rule ? <span className="text-pretty">{rule}</span> : undefined}
           >
             <SettingRows>
               <SettingRow
-                label="Compare by"
+                label={t("compare_label")}
                 htmlFor="settings-winner-metric"
-                description="The number a post is judged on."
+                description={t("compare_description")}
               >
                 <OptionSelect
                   id="settings-winner-metric"
@@ -71,9 +81,9 @@ export function PerformanceTab({ draft, now }: { draft: SettingsDraft<Performanc
                 {metric?.description ? <p className="text-xs text-muted-foreground">{metric.description}.</p> : null}
               </SettingRow>
               <SettingRow
-                label="Comparison window"
+                label={t("window_label")}
                 htmlFor="settings-winner-window"
-                description="How many earlier measured posts on the same platform make up the baseline."
+                description={t("window_description")}
                 error={errors.winner_window}
               >
                 <NumberField
@@ -83,15 +93,15 @@ export function PerformanceTab({ draft, now }: { draft: SettingsDraft<Performanc
                   max={LIMITS.window.max}
                   value={values.winner_window}
                   onChange={(next) => set("winner_window", next)}
-                  suffix="posts"
+                  suffix={t("suffix_posts")}
                   className="w-32"
                   aria-invalid={Boolean(errors.winner_window) || undefined}
                 />
               </SettingRow>
               <SettingRow
-                label="Minimum sample"
+                label={t("min_sample_label")}
                 htmlFor="settings-min-sample"
-                description="A post is only tiered once its platform has at least this many earlier measured posts."
+                description={t("min_sample_description")}
                 error={errors.winner_min_sample}
               >
                 <NumberField
@@ -101,15 +111,15 @@ export function PerformanceTab({ draft, now }: { draft: SettingsDraft<Performanc
                   max={LIMITS.window.max}
                   value={values.winner_min_sample}
                   onChange={(next) => set("winner_min_sample", next)}
-                  suffix="posts"
+                  suffix={t("suffix_posts")}
                   className="w-32"
                   aria-invalid={Boolean(errors.winner_min_sample) || undefined}
                 />
               </SettingRow>
               <SettingRow
-                label="Tier thresholds"
+                label={t("thresholds_label")}
                 labelId="settings-thresholds-label"
-                description="Multiples of the platform average. Each tier must be higher than the one before."
+                description={t("thresholds_description")}
                 error={thresholdError}
               >
                 <div role="group" aria-labelledby="settings-thresholds-label" className="grid max-w-md grid-cols-3 gap-2">
@@ -138,13 +148,13 @@ export function PerformanceTab({ draft, now }: { draft: SettingsDraft<Performanc
 
           <SectionCard
             title="Content Buffer"
-            description="Days of ready-to-post and scheduled content at your weekly post target."
+            description={t("buffer_description")}
           >
             <SettingRows>
               <SettingRow
-                label="Healthy at"
+                label={t("healthy_label")}
                 htmlFor="settings-buffer-healthy"
-                description="At or above this many days the buffer shows as Healthy."
+                description={t("healthy_description")}
                 error={errors.buffer_healthy_days}
               >
                 <NumberField
@@ -154,15 +164,15 @@ export function PerformanceTab({ draft, now }: { draft: SettingsDraft<Performanc
                   max={LIMITS.bufferDays.max}
                   value={values.buffer_healthy_days}
                   onChange={(next) => set("buffer_healthy_days", next)}
-                  suffix="days"
+                  suffix={t("suffix_days")}
                   className="w-32"
                   aria-invalid={Boolean(errors.buffer_healthy_days) || undefined}
                 />
               </SettingRow>
               <SettingRow
-                label="Low below"
+                label={t("low_label")}
                 htmlFor="settings-buffer-warning"
-                description="Under this many days you'll see “Content Buffer Low”. In between, the buffer shows as OK."
+                description={t("low_description")}
                 error={errors.buffer_warning_days}
               >
                 <NumberField
@@ -172,7 +182,7 @@ export function PerformanceTab({ draft, now }: { draft: SettingsDraft<Performanc
                   max={LIMITS.bufferDays.max}
                   value={values.buffer_warning_days}
                   onChange={(next) => set("buffer_warning_days", next)}
-                  suffix="days"
+                  suffix={t("suffix_days")}
                   className="w-32"
                   aria-invalid={Boolean(errors.buffer_warning_days) || undefined}
                 />
@@ -204,12 +214,14 @@ export function PerformanceTab({ draft, now }: { draft: SettingsDraft<Performanc
 function BufferCheck({ healthy, warning, now }: { healthy: number | null; warning: number | null; now: Date }) {
   const db = useDb()
   const settings = useSettings()
+  const lang = useUiLang()
+  const t = useT(performanceMessages)
   const buffer = useMemo(
     () =>
       healthy === null || warning === null
         ? null
-        : contentBuffer(db, now, { ...settings, buffer_healthy_days: healthy, buffer_warning_days: warning }),
-    [db, settings, healthy, warning, now]
+        : contentBuffer(db, now, { ...settings, buffer_healthy_days: healthy, buffer_warning_days: warning }, lang),
+    [db, settings, healthy, warning, now, lang]
   )
   if (!buffer || healthy === null) return null
   const tone = BUFFER_TONE[buffer.status]
@@ -217,7 +229,7 @@ function BufferCheck({ healthy, warning, now }: { healthy: number | null; warnin
     <div className="mt-4 flex flex-col gap-2 rounded-lg border bg-muted/20 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-sm">
-          <span className="font-semibold num">{buffer.days}</span> days of ready content today
+          <span className="font-semibold num">{buffer.days}</span> {t("buffer_days")}
         </span>
         <StatusPill tone={tone}>{buffer.label}</StatusPill>
       </div>
@@ -227,12 +239,14 @@ function BufferCheck({ healthy, warning, now }: { healthy: number | null; warnin
         target={healthy}
         tone={tone}
         size="sm"
-        aria-label="Content Buffer days"
-        valueText={`${buffer.days} days`}
+        aria-label={t("buffer_aria")}
+        valueText={t("buffer_value", { days: buffer.days })}
       />
       <p className="text-xs text-muted-foreground">
-        {pluralize(buffer.readyCount, "post")} ready to post or scheduled, at {settings.weekly_post_target} posts a week. The tick
-        marks the healthy threshold.{" "}
+        {t("buffer_note", {
+          posts: t.plural("posts", buffer.readyCount, { count: formatNumber(buffer.readyCount) }),
+          target: settings.weekly_post_target,
+        })}{" "}
         <Link href="/pipeline" className="font-medium text-foreground underline-offset-2 hover:underline">
           Pipeline
         </Link>

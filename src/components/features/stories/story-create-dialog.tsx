@@ -8,8 +8,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { todayISO } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions } from "@/lib/store"
 import type { ID, ISODate, Story, StoryType } from "@/lib/types"
+import { storyFormMessages } from "./messages"
 import { STORY_TYPE_OPTIONS } from "./story-badges"
 
 /** "New story": the essentials, then the detail sheet opens for the rest of the STAR fields. */
@@ -48,7 +51,9 @@ function StoryForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (
   const [situation, setSituation] = useState("")
   const [lesson, setLesson] = useState("")
   const [touched, setTouched] = useState(false)
-  const titleError = title.trim() ? undefined : "Give the story a title."
+  const t = useT(storyFormMessages)
+  const c = useT(commonMessages)
+  const titleError = title.trim() ? undefined : t("title_required")
 
   function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -62,35 +67,33 @@ function StoryForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (
       situation: situation.trim(),
       lesson: lesson.trim(),
     })
-    toast.success("Story added to your vault", { description: story.title })
+    toast.success(t("added"), { description: story.title })
     onCreated(story)
   }
 
   return (
     <form onSubmit={submit} noValidate className="flex min-h-0 flex-1 flex-col">
       <DialogHeader className="gap-1 border-b py-3.5 pr-12 pl-4">
-        <DialogTitle>New story</DialogTitle>
-        <DialogDescription className="text-xs">
-          Capture the moment while it&apos;s fresh. You can add the problem, action and result in the story after saving.
-        </DialogDescription>
+        <DialogTitle>{t("new_title")}</DialogTitle>
+        <DialogDescription className="text-xs">{t("new_description")}</DialogDescription>
       </DialogHeader>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 scrollbar-thin">
         <div className="flex flex-col gap-4">
-          <FormField label="Story title" htmlFor={field("title")} required error={touched ? titleError : undefined}>
+          <FormField label={t("story_title")} htmlFor={field("title")} required error={touched ? titleError : undefined}>
             <Input
               id={field("title")}
               value={title}
               autoFocus
               maxLength={200}
-              placeholder="e.g. The client who taught me to say no"
+              placeholder={t("story_title_placeholder")}
               aria-invalid={(touched && Boolean(titleError)) || undefined}
               onChange={(event) => setTitle(event.target.value)}
               onBlur={() => setTouched(true)}
             />
           </FormField>
           <FormRow>
-            <FormField label="Type" htmlFor={field("type")}>
+            <FormField label={t("type")} htmlFor={field("type")}>
               <OptionSelect
                 id={field("type")}
                 options={STORY_TYPE_OPTIONS}
@@ -100,29 +103,29 @@ function StoryForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (
                 }}
               />
             </FormField>
-            <FormField label="Potential Content Pillar" htmlFor={field("pillar")}>
+            <FormField label={t("potential_pillar")} htmlFor={field("pillar")}>
               <PillarSelect id={field("pillar")} allowNone value={pillarId} onChange={setPillarId} />
             </FormField>
           </FormRow>
-          <FormField label="Date" htmlFor={field("date")} description="When it happened.">
+          <FormField label={t("date")} htmlFor={field("date")} description={t("date_description")}>
             <DatePicker id={field("date")} value={date} maxDate={today} onChange={setDate} />
           </FormField>
-          <FormField label="What happened?" htmlFor={field("situation")}>
+          <FormField label={t("what_happened")} htmlFor={field("situation")}>
             <Textarea
               id={field("situation")}
               rows={3}
               value={situation}
-              placeholder="The situation, in a few honest sentences."
+              placeholder={t("what_happened_placeholder")}
               onChange={(event) => setSituation(event.target.value)}
             />
           </FormField>
-          <FormField label="Lesson" htmlFor={field("lesson")} description="The part your audience can reuse.">
+          <FormField label={t("lesson")} htmlFor={field("lesson")} description={t("lesson_description")}>
             <Textarea
               id={field("lesson")}
               rows={2}
               className="min-h-14"
               value={lesson}
-              placeholder="What would you tell someone in the same spot?"
+              placeholder={t("lesson_placeholder")}
               onChange={(event) => setLesson(event.target.value)}
             />
           </FormField>
@@ -131,10 +134,10 @@ function StoryForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: (
 
       <DialogFooter className="m-0 rounded-b-xl px-4 py-3">
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {c("cancel")}
         </Button>
         <Button type="submit" disabled={Boolean(titleError)}>
-          Add story
+          {t("add_story")}
         </Button>
       </DialogFooter>
     </form>

@@ -5,12 +5,17 @@ import { format } from "date-fns"
 import { CalendarPlus } from "lucide-react"
 import { catVar, EmptyState } from "@/components/common"
 import { DAYS_OF_WEEK } from "@/lib/constants"
+import { useT, type Translator } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import type { ContentPillar, ID } from "@/lib/types"
-import { cn, pluralize } from "@/lib/utils"
+import { cn, formatNumber } from "@/lib/utils"
 import { useCalendarActions } from "./calendar-actions"
 import { CalendarItem, type ItemVariant } from "./calendar-item"
 import { dayDropId, isFillable, type CalendarDay, type Placement } from "./calendar-model"
+import { calendarMessages } from "./messages"
 import { SlotChip, SlotLane, SlotLine, type SlotPillar } from "./slot-lane"
+
+type T = Translator<typeof calendarMessages.en>
 
 export interface DayContext {
   pillars: Map<ID, ContentPillar>
@@ -25,15 +30,16 @@ export interface DayContext {
 
 const MONTH_ITEM_LIMIT = 3
 
-function pillarOf(ctx: DayContext, id: ID | null): SlotPillar | null {
+function pillarOf(ctx: DayContext, id: ID | null, t: T): SlotPillar | null {
   const pillar = id ? ctx.pillars.get(id) : undefined
-  return pillar ? { name: pillar.name || "Untitled pillar", color: pillar.color } : null
+  return pillar ? { name: pillar.name || t("untitled_pillar"), color: pillar.color } : null
 }
 
-const dayLabel = (day: CalendarDay) => `${format(day.date, "EEEE, MMMM d")}${day.isToday ? " (today)" : ""}`
+const dayLabel = (day: CalendarDay, t: T) => `${format(day.date, "EEEE, MMMM d")}${day.isToday ? t("today_suffix") : ""}`
 
 function PlacedItem({ placement, ctx, variant }: { placement: Placement; ctx: DayContext; variant: ItemVariant }) {
-  const pillar = pillarOf(ctx, placement.item.pillar_id)
+  const t = useT(calendarMessages)
+  const pillar = pillarOf(ctx, placement.item.pillar_id, t)
   return (
     <CalendarItem
       item={placement.item}
@@ -50,12 +56,13 @@ function PlacedItem({ placement, ctx, variant }: { placement: Placement; ctx: Da
 
 /** A day as a drop target (past days don't take drops). */
 function DropZone({ day, ctx, className, children }: { day: CalendarDay; ctx: DayContext; className?: string; children: React.ReactNode }) {
+  const t = useT(calendarMessages)
   const { setNodeRef, isOver } = useDroppable({ id: dayDropId(day.key), disabled: !ctx.dnd || day.isPast })
   return (
     <div
       ref={setNodeRef}
       role="group"
-      aria-label={dayLabel(day)}
+      aria-label={dayLabel(day, t)}
       aria-current={day.isToday ? "date" : undefined}
       data-drop-over={isOver || undefined}
       className={cn(className, isOver && "bg-brand-soft ring-2 ring-brand/50 ring-inset")}
@@ -66,11 +73,11 @@ function DropZone({ day, ctx, className, children }: { day: CalendarDay; ctx: Da
 }
 
 /** "2 posts · 1 open slot · 1 due" for a day. */
-export function daySummary(day: CalendarDay, showSlots: boolean): string {
+export function daySummary(day: CalendarDay, showSlots: boolean, t: T): string {
   const open = showSlots ? day.slots.filter((s) => isFillable(s, day.isPast)).length : 0
-  const parts = [pluralize(day.posts.length, "post")]
-  if (open) parts.push(pluralize(open, "open slot"))
-  if (day.due.length) parts.push(`${day.due.length} due`)
+  const parts = [t.plural("posts", day.posts.length, { count: formatNumber(day.posts.length) })]
+  if (open) parts.push(t.plural("stat_open_slots", open, { count: formatNumber(open) }))
+  if (day.due.length) parts.push(t("stat_due", { count: day.due.length }))
   return parts.join(" · ")
 }
 
@@ -106,6 +113,7 @@ export function MonthGrid({
 }
 
 function MonthCell({ day, ctx, onOpenDay }: { day: CalendarDay; ctx: DayContext; onOpenDay: (date: Date) => void }) {
+  const t = useT(calendarMessages)
   const actions = useCalendarActions()
   const entries = [...day.posts, ...day.due]
   // An item opened via ?open= is never hidden behind "+N more".
@@ -125,7 +133,7 @@ function MonthCell({ day, ctx, onOpenDay }: { day: CalendarDay; ctx: DayContext;
         <button
           type="button"
           onClick={() => onOpenDay(day.date)}
-          aria-label={`Open ${dayLabel(day)} in Day view`}
+          aria-label={t("open_in_day_view", { day: dayLabel(day, t) })}
           className={cn(
             "inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-medium num outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50",
             !day.inPeriod && "text-muted-foreground",
@@ -139,7 +147,7 @@ function MonthCell({ day, ctx, onOpenDay }: { day: CalendarDay; ctx: DayContext;
         <PlacedItem key={p.item.id} placement={p} ctx={ctx} variant="chip" />
       ))}
       {fillable.map((s) => (
-        <SlotChip key={s.slot.id} daySlot={s} pillar={pillarOf(ctx, s.slot.pillar_id)} onFill={() => actions.fillSlot(day.date, s)} />
+        <SlotChip key={s.slot.id} daySlot={s} pillar={pillarOf(ctx, s.slot.pillar_id, t)} onFill={() => actions.fillSlot(day.date, s)} />
       ))}
       {hidden > 0 ? (
         <button
@@ -147,7 +155,7 @@ function MonthCell({ day, ctx, onOpenDay }: { day: CalendarDay; ctx: DayContext;
           onClick={() => onOpenDay(day.date)}
           className="self-start rounded-sm px-1 text-[11px] text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
         >
-          +{hidden} more
+          {t("more", { count: hidden })}
         </button>
       ) : null}
     </DropZone>
@@ -168,6 +176,7 @@ export function CompactMonthGrid({
   selectedKey: string
   onSelect: (date: Date) => void
 }) {
+  const t = useT(calendarMessages)
   return (
     <div className="overflow-hidden rounded-lg border bg-card">
       <div aria-hidden className="grid grid-cols-7 border-b bg-muted/40 dark:bg-muted/20">
@@ -189,7 +198,10 @@ export function CompactMonthGrid({
               onClick={() => onSelect(day.date)}
               aria-pressed={selected}
               aria-current={day.isToday ? "date" : undefined}
-              aria-label={`${dayLabel(day)}: ${pluralize(entries.length, "item")}${open ? ", open posting slot" : ""}`}
+              aria-label={t(open ? "day_items_open_aria" : "day_items_aria", {
+                day: dayLabel(day, t),
+                items: t.plural("items", entries.length, { count: formatNumber(entries.length) }),
+              })}
               className={cn(
                 "flex h-14 min-w-0 flex-col items-center gap-1 border-r border-b pt-1.5 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset",
                 !day.inPeriod && "bg-muted/35 text-muted-foreground dark:bg-muted/15",
@@ -229,12 +241,14 @@ export function CompactMonthGrid({
 /* ---------------------------------- Week ----------------------------------- */
 
 function DayHeader({ day, onOpenDay }: { day: CalendarDay; onOpenDay: (date: Date) => void }) {
+  const t = useT(calendarMessages)
+  const c = useT(commonMessages)
   return (
     <div className={cn("flex min-w-0 items-center justify-between gap-1 border-b px-2 py-1.5", day.isToday && "bg-brand-soft")}>
       <button
         type="button"
         onClick={() => onOpenDay(day.date)}
-        aria-label={`Open ${dayLabel(day)} in Day view`}
+        aria-label={t("open_in_day_view", { day: dayLabel(day, t) })}
         className="flex items-baseline gap-1.5 rounded-sm text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
       >
         <span className={cn("font-medium tracking-wide uppercase", day.isToday ? "text-brand" : "text-muted-foreground")}>
@@ -242,7 +256,7 @@ function DayHeader({ day, onOpenDay }: { day: CalendarDay; onOpenDay: (date: Dat
         </span>
         <span className={cn("text-sm font-semibold num", day.isPast && "text-muted-foreground")}>{format(day.date, "d")}</span>
       </button>
-      {day.isToday ? <span className="text-[11px] font-medium text-brand">Today</span> : null}
+      {day.isToday ? <span className="text-[11px] font-medium text-brand">{c("today")}</span> : null}
     </div>
   )
 }
@@ -253,6 +267,7 @@ function GroupLabel({ children }: { children: React.ReactNode }) {
 
 /** Slots (as lanes holding their posts), the remaining posts and the day's deadlines. */
 function DayContent({ day, ctx, variant }: { day: CalendarDay; ctx: DayContext; variant: "card" | "row" }) {
+  const t = useT(calendarMessages)
   const actions = useCalendarActions()
   const lanes = ctx.showSlots && !ctx.filtering
   const loose = lanes ? day.extraPosts : day.posts
@@ -268,7 +283,7 @@ function DayContent({ day, ctx, variant }: { day: CalendarDay; ctx: DayContext; 
                 key={s.slot.id}
                 daySlot={s}
                 isPast={day.isPast}
-                pillar={pillarOf(ctx, s.slot.pillar_id)}
+                pillar={pillarOf(ctx, s.slot.pillar_id, t)}
                 size={rows ? "md" : "sm"}
                 onFill={() => actions.fillSlot(day.date, s)}
               >
@@ -281,22 +296,22 @@ function DayContent({ day, ctx, variant }: { day: CalendarDay; ctx: DayContext; 
                 key={s.slot.id}
                 daySlot={s}
                 isPast={day.isPast}
-                pillar={pillarOf(ctx, s.slot.pillar_id)}
+                pillar={pillarOf(ctx, s.slot.pillar_id, t)}
                 onFill={() => actions.fillSlot(day.date, s)}
               />
             )
           )
         : null}
-      {loose.length && rows && slotsShown ? <GroupLabel>{lanes ? "Other posts" : "Posts"}</GroupLabel> : null}
+      {loose.length && rows && slotsShown ? <GroupLabel>{lanes ? t("other_posts") : t("posts")}</GroupLabel> : null}
       {loose.map((p) => (
         <PlacedItem key={p.item.id} placement={p} ctx={ctx} variant={variant} />
       ))}
-      {day.due.length && rows ? <GroupLabel>Due — no publish time yet</GroupLabel> : null}
+      {day.due.length && rows ? <GroupLabel>{t("due_no_time")}</GroupLabel> : null}
       {day.due.map((p) => (
         <PlacedItem key={p.item.id} placement={p} ctx={ctx} variant={variant} />
       ))}
       {!slotsShown && !loose.length && !day.due.length ? (
-        <p className="px-1 py-0.5 text-[11px] text-muted-foreground">Nothing planned</p>
+        <p className="px-1 py-0.5 text-[11px] text-muted-foreground">{t("nothing_planned")}</p>
       ) : null}
     </>
   )
@@ -349,8 +364,9 @@ export function WeekStrip({
   ctx: DayContext
   onSelect: (date: Date) => void
 }) {
+  const t = useT(calendarMessages)
   return (
-    <div role="group" aria-label="Days of this week" className="grid grid-cols-7 gap-1">
+    <div role="group" aria-label={t("days_of_week")} className="grid grid-cols-7 gap-1">
       {days.map((day) => {
         const selected = day.key === selectedKey
         const count = day.posts.length + day.due.length
@@ -361,7 +377,7 @@ export function WeekStrip({
             type="button"
             aria-pressed={selected}
             aria-current={day.isToday ? "date" : undefined}
-            aria-label={`${dayLabel(day)}: ${daySummary(day, ctx.showSlots)}`}
+            aria-label={t("day_summary_aria", { day: dayLabel(day, t), summary: daySummary(day, ctx.showSlots, t) })}
             onClick={() => onSelect(day.date)}
             className={cn(
               "flex min-w-0 flex-col items-center gap-0.5 rounded-md border px-1 py-1.5 outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50",
@@ -384,28 +400,24 @@ export function WeekStrip({
 }
 
 export function DayAgenda({ day, ctx, className }: { day: CalendarDay; ctx: DayContext; className?: string }) {
+  const t = useT(calendarMessages)
+  const c = useT(commonMessages)
   const empty = !day.posts.length && !day.due.length && !(ctx.showSlots && day.slots.length)
   return (
     <DropZone day={day} ctx={ctx} className={cn("flex min-w-0 flex-col gap-2 rounded-lg border bg-card p-3 md:p-4", className)}>
       <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2 className="text-sm font-semibold">
           {format(day.date, "EEEE, MMMM d")}
-          {day.isToday ? <span className="ml-2 text-xs font-medium text-brand">Today</span> : null}
+          {day.isToday ? <span className="ml-2 text-xs font-medium text-brand">{c("today")}</span> : null}
         </h2>
-        <p className="text-xs text-muted-foreground num">{daySummary(day, ctx.showSlots)}</p>
+        <p className="text-xs text-muted-foreground num">{daySummary(day, ctx.showSlots, t)}</p>
       </div>
       {empty ? (
         <EmptyState
           compact
           icon={CalendarPlus}
-          title="Nothing planned"
-          description={
-            day.isPast
-              ? "Nothing was published or due this day."
-              : ctx.dnd
-                ? "No posting slot falls on this day. Drag unscheduled content here, or schedule it from the Studio."
-                : "No posting slot falls on this day. Schedule unscheduled content from the list below."
-          }
+          title={t("nothing_planned")}
+          description={day.isPast ? t("empty_past") : ctx.dnd ? t("empty_drag") : t("empty_touch")}
         />
       ) : (
         <DayContent day={day} ctx={ctx} variant="row" />

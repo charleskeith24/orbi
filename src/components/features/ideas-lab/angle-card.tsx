@@ -5,8 +5,10 @@ import Link from "next/link"
 import { Token } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { formatMultiple, type GroupAggregate } from "@/lib/analytics"
+import { useT } from "@/lib/i18n"
 import type { ContentAngle, ID } from "@/lib/types"
-import { pluralize } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils"
+import { angleMessages } from "./angle-messages"
 import { generatorHref, type AngleStats } from "./angle-model"
 import { formatHookMetric } from "./hook-model"
 
@@ -22,6 +24,7 @@ export function AngleCard({
   overall: GroupAggregate
   onOpen: (id: ID) => void
 }) {
+  const t = useT(angleMessages)
   const performance = stats.performance && stats.performance.measured > 0 ? stats.performance : null
   const lift = performance?.avgViews && overall.avgViews ? performance.avgViews / overall.avgViews : null
   return (
@@ -34,27 +37,27 @@ export function AngleCard({
             onClick={() => onOpen(angle.id)}
             className="text-left outline-none after:absolute after:inset-0 after:rounded-lg after:content-['']"
           >
-            {angle.name || "Untitled angle"}
+            {angle.name || t("untitled_angle")}
           </button>
         </h3>
-        <Token className="font-normal text-muted-foreground">{angle.is_default ? "Default" : "Custom"}</Token>
+        <Token className="font-normal text-muted-foreground">{angle.is_default ? t("kind_default") : t("kind_custom")}</Token>
       </div>
       {angle.description ? (
         <p className="line-clamp-2 text-sm text-pretty text-muted-foreground">{angle.description}</p>
       ) : (
-        <p className="text-sm text-muted-foreground">No description yet — open it to add one.</p>
+        <p className="text-sm text-muted-foreground">{t("no_description")}</p>
       )}
-      {angle.example ? <p className="line-clamp-2 text-xs text-pretty text-foreground/80">e.g. “{angle.example}”</p> : null}
+      {angle.example ? <p className="line-clamp-2 text-xs text-pretty text-foreground/80">{t("example_quote", { example: angle.example })}</p> : null}
       <div className="mt-auto flex min-w-0 flex-col gap-2.5 border-t pt-3">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-          <span className="num">{pluralize(stats.ideaIds.length, "idea")}</span>
+          <span className="num">{t.plural("ideas", stats.ideaIds.length, { count: formatNumber(stats.ideaIds.length) })}</span>
           <span aria-hidden>·</span>
-          <span className="num">{pluralize(stats.itemIds.length, "content piece")}</span>
+          <span className="num">{t.plural("pieces", stats.itemIds.length, { count: formatNumber(stats.itemIds.length) })}</span>
           {performance ? (
             <>
               <span aria-hidden>·</span>
               <span className="num">
-                <span className="font-medium text-foreground">{formatHookMetric(performance.avgViews, "views")}</span> avg views
+                <span className="font-medium text-foreground">{formatHookMetric(performance.avgViews, "views")}</span> {t("avg_views")}
                 {lift ? ` (${formatMultiple(lift)})` : ""}
               </span>
             </>
@@ -63,7 +66,7 @@ export function AngleCard({
         <Button type="button" size="xs" variant="outline" className="relative z-10 self-start" asChild>
           <Link href={generatorHref(angle.id)}>
             <Sparkles className="text-brand" aria-hidden />
-            Generate ideas
+            {t("generate_ideas")}
           </Link>
         </Button>
       </div>

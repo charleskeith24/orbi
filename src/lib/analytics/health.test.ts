@@ -128,6 +128,25 @@ describe("contentHealthScore", () => {
   })
 })
 
+describe("contentHealthScore language", () => {
+  it("defaults to English and scores the same in Taglish", () => {
+    const db = healthyDb()
+    const settings = settingsOf(db)
+    const en = contentHealthScore(db, NOW, settings)
+    expect(contentHealthScore(db, NOW, settings, "en")).toEqual(en)
+    const tl = contentHealthScore(db, NOW, settings, "tl")
+    expect(tl.score).toBe(en.score)
+    expect(tl.components.map((c) => [c.key, c.score, c.max])).toEqual(en.components.map((c) => [c.key, c.score, c.max]))
+    expect(tl.components.find((c) => c.key === "consistency")?.label).toBe("Consistency sa pag-post")
+    expect(tl.components.find((c) => c.key === "backlog")?.label).toBe("Content Buffer")
+    expect(tl.band.label).toBe("Healthy na Content System")
+    for (const c of tl.components) {
+      expect(c.detail).not.toBe(en.components.find((e) => e.key === c.key)?.detail)
+      expect(c.detail).not.toMatch(/\{\w+\}/)
+    }
+  })
+})
+
 describe("engagementTrendPoints", () => {
   it.each([
     [0.3, 3],

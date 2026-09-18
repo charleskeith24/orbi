@@ -5,8 +5,10 @@ import { BarList, ChartFrame, platformColor, type BarListItem, type ChartColor, 
 import { PageSection } from "@/components/common"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { GroupAggregate, MonthlyReport } from "@/lib/analytics"
+import { useT } from "@/lib/i18n"
 import { cn, formatCompact, formatNumber, formatPercent } from "@/lib/utils"
-import { countLabel } from "./report-format"
+import { reportMessages } from "./messages"
+import { monthlyReviewMessages } from "./monthly-messages"
 
 type PerfMetric = "avgViews" | "engagementRate" | "leads" | "posts"
 
@@ -33,6 +35,8 @@ function PerformanceChart({
   metric: PerfMetric
   limit?: number
 }) {
+  const t = useT(monthlyReviewMessages)
+  const r = useT(reportMessages)
   const def = METRICS[metric]
   const items: BarListItem[] = groups.flatMap((g) => {
     const value = def.pick(g)
@@ -44,7 +48,7 @@ function PerformanceChart({
         label: g.label,
         value,
         color: g.color,
-        secondary: `${countLabel(g.posts, "post")}${unmeasured > 0 ? ` · ${formatNumber(unmeasured)} without analytics` : ""}`,
+        secondary: `${r.plural("posts", g.posts, { count: formatNumber(g.posts) })}${unmeasured > 0 ? t("without_analytics", { count: formatNumber(unmeasured) }) : ""}`,
       },
     ]
   })
@@ -55,12 +59,12 @@ function PerformanceChart({
       .map((g) => [g.label, g.posts, formatNumber(g.views), formatNumber(g.avgViews), formatPercent(g.engagementRate), g.leads]),
   }
   return (
-    <ChartFrame title={title} description={`${def.label} by ${dimension.toLowerCase()}`} table={table} className="print:break-inside-avoid">
+    <ChartFrame title={title} description={t("by_dimension", { metric: def.label, dimension: dimension.toLowerCase() })} table={table} className="print:break-inside-avoid">
       <BarList
         items={items}
         valueFormatter={def.format}
         limit={limit}
-        emptyMessage="No published posts this month."
+        emptyMessage={t("no_published_month")}
         aria-label={`${title}: ${def.label}`}
       />
     </ChartFrame>
@@ -69,13 +73,14 @@ function PerformanceChart({
 
 /** Platform / Pillar / Topic / Format Performance with one shared metric switch. */
 export function PerformanceBreakdowns({ report, className }: { report: MonthlyReport; className?: string }) {
+  const t = useT(monthlyReviewMessages)
   const [metric, setMetric] = useState<PerfMetric>("avgViews")
   const platforms: Group[] = report.platformPerformance.map((g) => ({ ...g, color: platformColor(g.platform) }))
   const pillars: Group[] = report.pillarPerformance.map((g) => ({ ...g, color: g.color ?? "other" }))
   return (
     <PageSection
-      title="Performance"
-      description="How each platform, pillar, topic and format performed this month"
+      title={t("performance")}
+      description={t("performance_description")}
       className={className}
       action={
         <ToggleGroup
@@ -87,7 +92,7 @@ export function PerformanceBreakdowns({ report, className }: { report: MonthlyRe
           onValueChange={(value) => {
             if (value && value in METRICS) setMetric(value as PerfMetric)
           }}
-          aria-label="Performance metric"
+          aria-label={t("performance_metric")}
           className="print:hidden"
         >
           {METRIC_IDS.map((id) => (

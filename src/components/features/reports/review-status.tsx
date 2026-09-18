@@ -1,19 +1,24 @@
+"use client"
+
 import { CalendarRange, CircleCheck, CircleDashed, PenLine, type LucideIcon } from "lucide-react"
 import { StatusPill } from "@/components/common"
+import { useT } from "@/lib/i18n"
+import { reportMessages } from "./messages"
 import type { ReviewState } from "./review-model"
 
-const COPY: Record<ReviewState, { label: string; icon: LucideIcon; tone: "good" | "neutral"; title: string }> = {
-  final: { label: "Final", icon: CircleCheck, tone: "good", title: "Saved as final" },
-  draft: { label: "Draft", icon: PenLine, tone: "neutral", title: "Saved as a draft" },
-  plan: { label: "Plan only", icon: CalendarRange, tone: "neutral", title: "Planned in the Weekly Planner — no review written yet" },
-  unsaved: { label: "Not saved", icon: CircleDashed, tone: "neutral", title: "No saved review for this period yet" },
+const COPY: Record<ReviewState, { icon: LucideIcon; tone: "good" | "neutral" }> = {
+  final: { icon: CircleCheck, tone: "good" },
+  draft: { icon: PenLine, tone: "neutral" },
+  plan: { icon: CalendarRange, tone: "neutral" },
+  unsaved: { icon: CircleDashed, tone: "neutral" },
 }
 
 export function ReviewStatusBadge({ state, className }: { state: ReviewState; className?: string }) {
+  const t = useT(reportMessages)
   const copy = COPY[state]
   return (
-    <StatusPill tone={copy.tone} icon={copy.icon} title={copy.title} className={className}>
-      {copy.label}
+    <StatusPill tone={copy.tone} icon={copy.icon} title={t(`status_${state}_title`)} className={className}>
+      {t(`status_${state}`)}
     </StatusPill>
   )
 }

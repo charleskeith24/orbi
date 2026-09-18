@@ -9,9 +9,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { commonMessages } from "@/lib/i18n/messages/common"
+import { useT, useUiLang } from "@/lib/i18n"
 import type { AudiencePersona } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { audienceMessages } from "./messages"
 import { personaName, type PersonaActions } from "./persona-actions"
+import { personaMessages } from "./persona-messages"
 
 /** "⋯" menu for one persona: open, set primary, duplicate, copy link, delete. */
 export function PersonaActionsMenu({
@@ -26,6 +30,10 @@ export function PersonaActionsMenu({
   onOpen?: () => void
   className?: string
 }) {
+  const t = useT(personaMessages)
+  const a = useT(audienceMessages)
+  const c = useT(commonMessages)
+  const lang = useUiLang()
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -33,7 +41,7 @@ export function PersonaActionsMenu({
           type="button"
           variant="ghost"
           size="icon-xs"
-          aria-label={`Actions for ${personaName(persona)}`}
+          aria-label={t("actions_for", { name: personaName(persona, lang) })}
           className={cn("text-muted-foreground", className)}
         >
           <Ellipsis aria-hidden />
@@ -43,25 +51,25 @@ export function PersonaActionsMenu({
         {onOpen ? (
           <DropdownMenuItem onSelect={onOpen}>
             <PanelRightOpen aria-hidden />
-            Open profile
+            {t("open_profile")}
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem disabled={persona.is_primary} onSelect={() => actions.setPrimary(persona)}>
           <Star aria-hidden />
-          {persona.is_primary ? "Primary persona" : "Set as primary"}
+          {persona.is_primary ? t("primary_persona") : t("set_primary")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => actions.duplicate(persona)}>
           <Copy aria-hidden />
-          Duplicate
+          {t("duplicate")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => void actions.copyLink(persona)}>
           <Link2 aria-hidden />
-          Copy link
+          {a("copy_link")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={() => void actions.remove(persona)}>
           <Trash2 aria-hidden />
-          Delete
+          {c("delete")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

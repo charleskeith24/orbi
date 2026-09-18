@@ -40,6 +40,16 @@ export const commonMessages = defineMessages({
     show_less: "Show less",
     no_results: "No matches",
     error_generic: "Something went wrong — try again.",
+    // Added in wave 3 (shared building blocks)
+    clear: "Clear",
+    today: "Today",
+    time: "Time",
+    untitled: "Untitled",
+    generating: "Generating…",
+    no_data: "No data",
+    error_title: "Something went wrong",
+    view: "View",
+    select_all: "Select all",
   },
   tl: {
     save: "I-save",
@@ -76,5 +86,15 @@ export const commonMessages = defineMessages({
     show_less: "Itago",
     no_results: "Walang nahanap",
     error_generic: "May mali — subukan ulit.",
+    // Added in wave 3 (shared building blocks)
+    clear: "I-clear",
+    today: "Ngayon",
+    time: "Oras",
+    untitled: "Walang title",
+    generating: "Ginagawa…",
+    no_data: "Walang data",
+    error_title: "May mali",
+    view: "View",
+    select_all: "Piliin ang lahat",
   },
 })

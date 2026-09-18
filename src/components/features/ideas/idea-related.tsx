@@ -7,10 +7,12 @@ import { CampaignBadge, contentDateInfo, EmptyState, PlatformIcon, StageBadge } 
 import { Button } from "@/components/ui/button"
 import { IDEA_SOURCE_MAP, PLATFORMS, PROBLEM_CATEGORY_MAP, RESEARCH_TYPE_MAP, STORY_TYPE_MAP } from "@/lib/constants"
 import { formatDate } from "@/lib/dates"
+import { useT, useUiLang, type Translator } from "@/lib/i18n"
 import { useTable } from "@/lib/store"
 import type { AudienceQuestion, ContentIdea, ContentItem, ResearchItem, Story } from "@/lib/types"
-import { cn, pluralize } from "@/lib/utils"
+import { cn, formatNumber } from "@/lib/utils"
 import { useIdeaActions } from "./idea-actions"
+import { ideaDetailMessages } from "./idea-detail-messages"
 
 interface SourceLink {
   kind: string
@@ -21,7 +23,8 @@ interface SourceLink {
 
 function resolveSource(
   idea: ContentIdea,
-  rows: { stories: Story[]; research: ResearchItem[]; questions: AudienceQuestion[]; items: ContentItem[] }
+  rows: { stories: Story[]; research: ResearchItem[]; questions: AudienceQuestion[]; items: ContentItem[] },
+  t: Translator<(typeof ideaDetailMessages)["en"]>
 ): SourceLink | null {
   const ref = idea.source_ref_id
   if (!ref) return null
@@ -40,7 +43,7 @@ function resolveSource(
     return {
       kind: "Question Bank",
       title: question.question,
-      detail: `Asked ${pluralize(question.frequency, "time")}${question.source_person ? ` · ${question.source_person}` : ""}`,
+      detail: `${t.plural("asked", question.frequency, { count: formatNumber(question.frequency) })}${question.source_person ? ` · ${question.source_person}` : ""}`,
       href: `/audience/questions?open=${question.id}`,
     }
   const item = rows.items.find((i) => i.id === ref)
@@ -55,6 +58,7 @@ function resolveSource(
 }
 
 function useRelated(idea: ContentIdea) {
+  const t = useT(ideaDetailMessages)
   const items = useTable("content_items")
   const stories = useTable("stories")
   const research = useTable("research_items")
@@ -62,11 +66,11 @@ function useRelated(idea: ContentIdea) {
   const problems = useTable("audience_problems")
   return useMemo(() => {
     const made = items.filter((i) => i.idea_id === idea.id).sort((a, b) => a.created_at.localeCompare(b.created_at))
-    const source = resolveSource(idea, { stories, research, questions, items })
+    const source = resolveSource(idea, { stories, research, questions, items }, t)
     const linkedQuestions = questions.filter((q) => q.idea_id === idea.id && q.id !== idea.source_ref_id)
     const problem = idea.problem_id ? (problems.find((p) => p.id === idea.problem_id) ?? null) : null
     return { made, source, linkedQuestions, problem }
-  }, [idea, items, stories, research, questions, problems])
+  }, [idea, items, stories, research, questions, problems, t])
 }
 
 /** Number shown on the Related tab. */
@@ -93,6 +97,8 @@ const ROW_LINK =
 /** Content made from the idea, where it came from, its audience problem, linked questions, campaign and series. */
 export function IdeaRelated({ idea, now }: { idea: ContentIdea; now: Date }) {
   const actions = useIdeaActions()
+  const t = useT(ideaDetailMessages)
+  const lang = useUiLang()
   const campaigns = useTable("content_campaigns")
   const series = useTable("content_series")
   const { made, source, linkedQuestions, problem } = useRelated(idea)
@@ -101,18 +107,18 @@ export function IdeaRelated({ idea, now }: { idea: ContentIdea; now: Date }) {
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <Block title="Content made from this idea" count={made.length}>
+      <Block title={t("made_from")} count={made.length}>
         {made.length ? (
           <ul className="divide-y rounded-lg border">
             {made.map((item) => {
-              const info = contentDateInfo(item, now)
+              const info = contentDateInfo(item, now, lang)
               const Icon = info?.icon
               return (
                 <li key={item.id} className="flex min-w-0 items-center gap-3 px-3 py-2">
                   <PlatformIcon platform={item.platform} label className="size-4 text-muted-foreground" />
                   <div className="min-w-0 flex-1">
                     <Link href={`/studio/${item.id}`} className={ROW_LINK} title={item.title}>
-                      {item.title || "Untitled content"}
+                      {item.title || t("untitled_content")}
                     </Link>
                     <p className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
                       {info && Icon ? (
@@ -121,7 +127,7 @@ export function IdeaRelated({ idea, now }: { idea: ContentIdea; now: Date }) {
                           {info.label}
                         </span>
                       ) : (
-                        "No date yet"
+                        t("no_date")
                       )}
                     </p>
                   </div>
@@ -134,19 +140,19 @@ export function IdeaRelated({ idea, now }: { idea: ContentIdea; now: Date }) {
           <EmptyState
             compact
             icon={FilePlus2}
-            title="Not converted yet"
-            description="Converting creates one content item per platform, each with a Content Brief pre-filled from this idea."
+            title={t("not_converted")}
+            description={t("not_converted_description")}
             action={
               <Button type="button" size="sm" variant="outline" onClick={() => actions.convert(idea.id)}>
                 <FilePlus2 aria-hidden />
-                Convert to content
+                {t("convert")}
               </Button>
             }
           />
         )}
       </Block>
 
-      <Block title="Where it came from">
+      <Block title={t("where_from")}>
         {source ? (
           <Link
             href={source.href}
@@ -154,20 +160,20 @@ export function IdeaRelated({ idea, now }: { idea: ContentIdea; now: Date }) {
           >
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground">{source.kind}</p>
-              <p className="line-clamp-2 text-sm font-medium">{source.title || "Untitled"}</p>
+              <p className="line-clamp-2 text-sm font-medium">{source.title || t("untitled")}</p>
               {source.detail ? <p className="mt-0.5 text-xs text-muted-foreground">{source.detail}</p> : null}
             </div>
             <ArrowUpRight className="size-4 shrink-0 text-muted-foreground group-hover/source:text-foreground" aria-hidden />
           </Link>
         ) : (
           <p className="text-sm text-muted-foreground">
-            {IDEA_SOURCE_MAP[idea.source]?.label ?? "Manual"} · captured {formatDate(idea.created_at)}
+            {t("source_captured", { source: IDEA_SOURCE_MAP[idea.source]?.label ?? "Manual", date: formatDate(idea.created_at) })}
           </p>
         )}
       </Block>
 
       {problem ? (
-        <Block title="Audience problem">
+        <Block title={t("audience_problem")}>
           <Link
             href={`/audience/problems?open=${problem.id}`}
             className="group/problem flex min-w-0 items-start gap-3 rounded-lg border px-3 py-2.5 outline-none hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -175,7 +181,7 @@ export function IdeaRelated({ idea, now }: { idea: ContentIdea; now: Date }) {
             <div className="min-w-0 flex-1">
               <p className="text-sm text-pretty">{problem.problem}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {PROBLEM_CATEGORY_MAP[problem.category]?.label ?? "Problem"} · severity <span className="num">{problem.severity}</span>/5
+                {PROBLEM_CATEGORY_MAP[problem.category]?.label ?? "Problem"} · {t("severity")} <span className="num">{problem.severity}</span>/5
               </p>
             </div>
             <ArrowUpRight className="size-4 shrink-0 text-muted-foreground group-hover/problem:text-foreground" aria-hidden />
@@ -184,7 +190,7 @@ export function IdeaRelated({ idea, now }: { idea: ContentIdea; now: Date }) {
       ) : null}
 
       {linkedQuestions.length ? (
-        <Block title="Linked questions" count={linkedQuestions.length}>
+        <Block title={t("linked_questions")} count={linkedQuestions.length}>
           <ul className="flex flex-col gap-1.5">
             {linkedQuestions.map((question) => (
               <li key={question.id} className="flex min-w-0 items-start gap-2">
@@ -200,7 +206,7 @@ export function IdeaRelated({ idea, now }: { idea: ContentIdea; now: Date }) {
       ) : null}
 
       {campaign || seriesRow ? (
-        <Block title="Campaign & series">
+        <Block title={t("campaign_series")}>
           <div className="flex flex-wrap items-center gap-2">
             {campaign ? (
               <Link href={`/campaigns/${campaign.id}`} className="rounded-md outline-none hover:opacity-80 focus-visible:ring-3 focus-visible:ring-ring/50">
@@ -212,7 +218,7 @@ export function IdeaRelated({ idea, now }: { idea: ContentIdea; now: Date }) {
                 href={`/series?open=${seriesRow.id}`}
                 className="inline-flex h-6 items-center rounded-md border bg-card px-2 text-sm font-medium outline-none hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
               >
-                {seriesRow.name || "Untitled series"}
+                {seriesRow.name || t("untitled_series")}
               </Link>
             ) : null}
           </div>

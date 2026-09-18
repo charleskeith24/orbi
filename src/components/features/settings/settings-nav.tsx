@@ -1,6 +1,8 @@
 "use client"
 
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
+import { settingsMessages } from "./settings-messages"
 import { replaceSettingsUrl, SETTINGS_TABS, settingsHref, type SettingsTabKey } from "./tabs"
 
 /** Section navigation: a sticky list on desktop, a horizontally scrolling row on mobile. */
@@ -11,8 +13,9 @@ export function SettingsNav({
   active: SettingsTabKey
   dirty: Partial<Record<SettingsTabKey, boolean>>
 }) {
+  const t = useT(settingsMessages)
   return (
-    <nav aria-label="Settings sections" className="-mx-4 min-w-0 md:-mx-6 lg:sticky lg:top-4 lg:mx-0 lg:self-start">
+    <nav aria-label={t("nav_aria")} className="-mx-4 min-w-0 md:-mx-6 lg:sticky lg:top-4 lg:mx-0 lg:self-start">
       <ul className="flex gap-1 overflow-x-auto px-4 pb-1 scrollbar-thin md:px-6 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0">
         {SETTINGS_TABS.map((tab) => {
           const isActive = tab.key === active
@@ -20,11 +23,11 @@ export function SettingsNav({
           const content = (
             <>
               <Icon className={cn("size-4 shrink-0", isActive && "text-brand")} aria-hidden />
-              <span>{tab.label}</span>
+              <span>{t(`tab_${tab.key}_label`)}</span>
               {dirty[tab.key] ? (
                 <>
                   <span className="ml-auto size-1.5 shrink-0 rounded-full bg-brand" aria-hidden />
-                  <span className="sr-only">(unsaved changes)</span>
+                  <span className="sr-only">{t("nav_unsaved")}</span>
                 </>
               ) : null}
             </>

@@ -19,9 +19,11 @@ import {
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PROBLEM_CATEGORIES, PROBLEM_CATEGORY_MAP } from "@/lib/constants"
+import { useT } from "@/lib/i18n"
+import { commonMessages } from "@/lib/i18n/messages/common"
 import { useTable } from "@/lib/store"
 import type { AudienceProblem, ID } from "@/lib/types"
-import { formatNumber, formatPercent, matchesQuery, pluralize, truncate } from "@/lib/utils"
+import { formatNumber, formatPercent, matchesQuery, truncate } from "@/lib/utils"
 import {
   clampSeverity,
   isProblemCategory,
@@ -34,10 +36,12 @@ import {
   sortPersonas,
   sortProblems,
 } from "./audience-model"
+import { audienceMessages } from "./messages"
 import { MissingLinkNotice } from "./missing-link-notice"
 import { useProblemActions } from "./problem-actions"
 import { ProblemFormDialog, type ProblemDefaults } from "./problem-form-dialog"
 import { ProblemGroups, type ProblemGroup } from "./problem-list"
+import { problemMessages } from "./problem-messages"
 import { ProblemSheet } from "./problem-sheet"
 import { useUrlState } from "./use-url-state"
 
@@ -56,6 +60,9 @@ function TabCount({ value }: { value: number }) {
  * `?new=1` (add dialog) and `?open=<problemId>`.
  */
 export function ProblemBankView() {
+  const t = useT(problemMessages)
+  const a = useT(audienceMessages)
+  const c = useT(commonMessages)
   const [url, update] = useUrlState(URL_KEYS)
   const problems = useTable("audience_problems")
   const ideas = useTable("content_ideas")
@@ -127,11 +134,11 @@ export function ProblemBankView() {
     const persona: FacetOption[] = [
       ...sortPersonas(personas).map((p) => ({
         value: p.id,
-        label: p.name || "Untitled persona",
+        label: p.name || a("untitled_persona"),
         count: count((x) => x.persona_id === p.id),
         icon: <ColorDot color={p.color} />,
       })),
-      { value: NONE, label: "No persona", count: count((x) => !x.persona_id) },
+      { value: NONE, label: a("no_persona"), count: count((x) => !x.persona_id) },
     ]
     const pillar: FacetOption[] = [
       ...pillars
@@ -139,11 +146,11 @@ export function ProblemBankView() {
         .sort((a, b) => a.sort_order - b.sort_order)
         .map((p) => ({
           value: p.id,
-          label: p.name || "Untitled pillar",
+          label: p.name || a("untitled_pillar"),
           count: count((x) => x.pillar_id === p.id),
           icon: <ColorDot color={p.color} />,
         })),
-      { value: NONE, label: "No pillar", count: count((x) => !x.pillar_id) },
+      { value: NONE, label: a("no_pillar"), count: count((x) => !x.pillar_id) },
     ]
     const severity: FacetOption[] = [...SEVERITY_LEVELS].reverse().map((s) => ({
       value: String(s.value),
@@ -151,7 +158,7 @@ export function ProblemBankView() {
       count: count((x) => clampSeverity(x.severity) === s.value),
     }))
     return { persona, pillar, severity }
-  }, [problems, personas, pillars])
+  }, [problems, personas, pillars, a])
 
   const setOpen = useCallback((id: ID | null) => update({ open: id ?? "" }), [update])
   const actions = useProblemActions({
@@ -177,9 +184,9 @@ export function ProblemBankView() {
 
   function onCreated(problem: AudienceProblem) {
     update({ new: "" })
-    toast.success("Problem added to the bank", {
+    toast.success(t("added"), {
       description: truncate(problem.problem, 80),
-      action: { label: "Open", onClick: () => setOpen(problem.id) },
+      action: { label: a("open"), onClick: () => setOpen(problem.id) },
     })
   }
 
@@ -190,11 +197,11 @@ export function ProblemBankView() {
       <EmptyState
         compact
         icon={SearchX}
-        title={`No ${tabLabel.toLowerCase()} problems match`}
-        description={`${pluralize(hiddenInOtherTabs, "matching problem")} in other categories.`}
+        title={t("no_category_match", { category: tabLabel.toLowerCase() })}
+        description={t.plural("hidden_other", hiddenInOtherTabs, { count: formatNumber(hiddenInOtherTabs) })}
         action={
           <Button type="button" size="sm" variant="outline" onClick={() => update({ tab: "" })}>
-            Show all categories
+            {t("show_all_categories")}
           </Button>
         }
         className="rounded-lg border bg-card"
@@ -203,11 +210,11 @@ export function ProblemBankView() {
       <EmptyState
         compact
         icon={SearchX}
-        title="No problems match"
-        description="Try a different search or fewer filters."
+        title={t("no_match")}
+        description={a("no_matches_description")}
         action={
           <Button type="button" size="sm" variant="outline" onClick={resetFilters}>
-            Reset filters
+            {a("reset_filters")}
           </Button>
         }
         className="rounded-lg border bg-card"
@@ -216,12 +223,12 @@ export function ProblemBankView() {
       <EmptyState
         compact
         icon={Crosshair}
-        title={`No ${tabLabel.toLowerCase()} problems yet`}
-        description="Add the ones your audience mentions — each can become a content idea."
+        title={t("no_category_yet", { category: tabLabel.toLowerCase() })}
+        description={t("no_category_yet_description")}
         action={
           <Button type="button" size="sm" variant="outline" onClick={() => update({ new: "1" })}>
             <Plus aria-hidden />
-            Add problem
+            {t("add_problem")}
           </Button>
         }
         className="rounded-lg border bg-card"
@@ -232,11 +239,11 @@ export function ProblemBankView() {
     <PageContainer>
       <PageHeader
         title="Problem Bank"
-        description="What your audience struggles with, by category and severity. Each problem can become a content idea — start with the severe ones nothing addresses yet."
+        description={t("description")}
         actions={
           <Button type="button" size="sm" onClick={() => update({ new: "1" })}>
             <Plus aria-hidden />
-            Add problem
+            {t("add_problem")}
           </Button>
         }
       />
@@ -247,27 +254,27 @@ export function ProblemBankView() {
         <>
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatTile
-              label="Problems"
+              label={t("problems")}
               value={formatNumber(problems.length)}
-              sublabel={`${pluralize(stats.personas, "persona")} · ${pluralize(stats.categories, "category", "categories")}`}
+              sublabel={`${t.plural("personas_count", stats.personas, { count: formatNumber(stats.personas) })} · ${t.plural("categories_count", stats.categories, { count: formatNumber(stats.categories) })}`}
             />
             <StatTile
-              label="Untapped"
+              label={t("untapped")}
               icon={Lightbulb}
               value={formatNumber(stats.untapped)}
-              sublabel="No idea or content yet"
+              sublabel={t("untapped_sublabel")}
               href="/audience/problems?untapped=1"
             />
             <StatTile
-              label="Severity 4–5"
+              label={t("severity_high")}
               value={formatNumber(stats.severe)}
-              sublabel={`${formatNumber(stats.severeUntapped)} of them untapped`}
+              sublabel={t("severe_untapped", { count: formatNumber(stats.severeUntapped) })}
               href="/audience/problems?severity=4,5"
             />
             <StatTile
-              label="Addressed in content"
+              label={t("addressed")}
               value={formatNumber(stats.addressed)}
-              sublabel={`${formatPercent((stats.addressed / problems.length) * 100, 0)} of the bank`}
+              sublabel={t("share_of_bank", { pct: formatPercent((stats.addressed / problems.length) * 100, 0) })}
             />
           </div>
 
@@ -277,9 +284,9 @@ export function ProblemBankView() {
             className="min-w-0 gap-3"
           >
             <div className="-mx-4 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
-              <TabsList variant="line" aria-label="Problem categories">
+              <TabsList variant="line" aria-label={t("categories_aria")}>
                 <TabsTrigger value={ALL} className="flex-none">
-                  All <TabCount value={filtered.length} />
+                  {c("all")} <TabCount value={filtered.length} />
                 </TabsTrigger>
                 {PROBLEM_CATEGORIES.map((category) => (
                   <TabsTrigger key={category.id} value={category.id} className="flex-none">
@@ -293,15 +300,18 @@ export function ProblemBankView() {
               actions={
                 <span className="text-xs text-muted-foreground num" aria-live="polite">
                   {visibleCount === problems.length
-                    ? pluralize(problems.length, "problem")
-                    : `${formatNumber(visibleCount)} of ${pluralize(problems.length, "problem")}`}
+                    ? t.plural("problems_count", problems.length, { count: formatNumber(problems.length) })
+                    : a("shown_of", {
+                        shown: formatNumber(visibleCount),
+                        total: t.plural("problems_count", problems.length, { count: formatNumber(problems.length) }),
+                      })}
                 </span>
               }
             >
-              <SearchInput value={url.q} onChange={(q) => update({ q })} placeholder="Search problems…" />
-              <FacetFilter title="Persona" options={facets.persona} value={personaFilter} onChange={(v) => update({ persona: v.join(",") })} />
-              <FacetFilter title="Pillar" options={facets.pillar} value={pillarFilter} onChange={(v) => update({ pillar: v.join(",") })} />
-              <FacetFilter title="Severity" options={facets.severity} value={severityFilter} onChange={(v) => update({ severity: v.join(",") })} />
+              <SearchInput value={url.q} onChange={(q) => update({ q })} placeholder={t("search_placeholder")} />
+              <FacetFilter title={a("persona")} options={facets.persona} value={personaFilter} onChange={(v) => update({ persona: v.join(",") })} />
+              <FacetFilter title={a("pillar")} options={facets.pillar} value={pillarFilter} onChange={(v) => update({ pillar: v.join(",") })} />
+              <FacetFilter title={t("severity")} options={facets.severity} value={severityFilter} onChange={(v) => update({ severity: v.join(",") })} />
               <button
                 type="button"
                 aria-pressed={untappedOnly}
@@ -309,7 +319,7 @@ export function ProblemBankView() {
                 className={chipVariants({ size: "sm", selected: untappedOnly })}
               >
                 <Lightbulb aria-hidden />
-                Untapped only
+                {t("untapped_only")}
               </button>
               <ResetFiltersButton show={filtering} onClick={resetFilters} />
             </FilterBar>
@@ -333,12 +343,12 @@ export function ProblemBankView() {
       ) : (
         <EmptyState
           icon={Crosshair}
-          title="Your Problem Bank is empty"
-          description="List what your audience struggles with, in their words. Each problem can become a content idea — the Idea Generator can turn one into several."
+          title={t("empty_title")}
+          description={t("empty_description")}
           action={
             <Button type="button" size="sm" onClick={() => update({ new: "1" })}>
               <Plus aria-hidden />
-              Add problem
+              {t("add_problem")}
             </Button>
           }
         />

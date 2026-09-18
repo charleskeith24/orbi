@@ -4,9 +4,11 @@ import { CircleAlert, CornerDownRight, Pencil, RotateCcw, Sparkles } from "lucid
 import { CopyButton, Markdown, ProviderBadge } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { formatDateTime, formatTime, isSameDay } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { ContextChips } from "./context-chips"
 import { strategistSession, type PendingTurn } from "./session"
+import { strategistMessages } from "./strategist-messages"
 import { SuggestedIdeas } from "./suggested-ideas"
 import type { StrategistTurn } from "./turns"
 
@@ -24,10 +26,11 @@ export function StrategistAvatar({ className }: { className?: string }) {
 }
 
 function UserBubble({ text }: { text: string }) {
+  const t = useT(strategistMessages)
   return (
     <div className="flex justify-end">
       <p className="max-w-[85%] rounded-2xl rounded-br-md bg-muted px-3 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap">
-        <span className="sr-only">You: </span>
+        <span className="sr-only">{t("you")}</span>
         {text}
       </p>
     </div>
@@ -35,9 +38,10 @@ function UserBubble({ text }: { text: string }) {
 }
 
 function FollowUps({ questions, disabled }: { questions: string[]; disabled: boolean }) {
+  const t = useT(strategistMessages)
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-xs font-medium text-muted-foreground">Ask next</p>
+      <p className="text-xs font-medium text-muted-foreground">{t("ask_next")}</p>
       <div className="flex flex-wrap gap-1.5">
         {questions.map((question) => (
           <Button
@@ -75,6 +79,7 @@ export function TurnView({
   now: Date
   onNavigate?: () => void
 }) {
+  const t = useT(strategistMessages)
   return (
     <li data-turn={turn.id} className="flex scroll-mt-16 flex-col gap-3">
       {turn.question ? <UserBubble text={turn.question} /> : null}
@@ -90,7 +95,7 @@ export function TurnView({
             <time dateTime={turn.createdAt} className="text-xs text-muted-foreground">
               {isSameDay(turn.createdAt, now) ? formatTime(turn.createdAt) : formatDateTime(turn.createdAt)}
             </time>
-            <CopyButton text={turn.reply} size="icon-xs" successMessage="Answer copied" className="ml-auto" />
+            <CopyButton text={turn.reply} size="icon-xs" successMessage={t("answer_copied")} className="ml-auto" />
           </div>
           {latest && turn.followUps.length ? <FollowUps questions={turn.followUps} disabled={busy} /> : null}
         </div>
@@ -100,6 +105,7 @@ export function TurnView({
 }
 
 function TypingIndicator() {
+  const t = useT(strategistMessages)
   return (
     <div role="status" className="flex h-6 items-center gap-1">
       {[0, 1, 2].map((dot) => (
@@ -110,27 +116,28 @@ function TypingIndicator() {
           style={{ animationDelay: `${dot * 200}ms` }}
         />
       ))}
-      <span className="ml-1.5 text-xs text-muted-foreground">Thinking through your numbers…</span>
+      <span className="ml-1.5 text-xs text-muted-foreground">{t("thinking")}</span>
     </div>
   )
 }
 
 function FailedAnswer({ message }: { message: string | null }) {
+  const t = useT(strategistMessages)
   return (
     <div role="alert" className="flex min-w-0 flex-1 flex-col gap-2 rounded-lg border border-critical/30 bg-critical/5 p-3 dark:bg-critical/10">
       <p className="flex items-center gap-1.5 text-sm font-medium text-critical-fg">
         <CircleAlert className="size-4 shrink-0" aria-hidden />
-        Couldn&apos;t get an answer
+        {t("failed")}
       </p>
       {message ? <p className="text-xs text-pretty text-muted-foreground">{message}</p> : null}
       <div className="flex flex-wrap gap-1.5">
         <Button type="button" variant="outline" size="xs" onClick={() => strategistSession.retry()}>
           <RotateCcw aria-hidden />
-          Retry
+          {t("retry")}
         </Button>
         <Button type="button" variant="ghost" size="xs" onClick={() => strategistSession.edit()}>
           <Pencil aria-hidden />
-          Edit question
+          {t("edit_question")}
         </Button>
       </div>
     </div>

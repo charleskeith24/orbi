@@ -7,11 +7,14 @@ import { useMemo, useState } from "react"
 import { ContentCard, EmptyState, PriorityBadge } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { contentItemDate } from "@/lib/dates"
+import { useT } from "@/lib/i18n"
 import { useTable } from "@/lib/store"
 import type { AudiencePersona, ContentItem } from "@/lib/types"
 import { formatNumber, formatPercent } from "@/lib/utils"
 import { questionPriority, RECENT_DAYS } from "./audience-model"
+import { audienceMessages } from "./messages"
 import type { PersonaStats } from "./persona-card"
+import { personaMessages } from "./persona-messages"
 import { SeverityMeter } from "./severity"
 
 const LIMIT = 5
@@ -55,6 +58,8 @@ function LinkedSection({
 
 /** What the persona is connected to: their problems, their questions and recent content aimed at them. */
 export function PersonaLinked({ persona, stats }: { persona: AudiencePersona; stats: PersonaStats | undefined }) {
+  const t = useT(personaMessages)
+  const a = useT(audienceMessages)
   const problems = useTable("audience_problems")
   const questions = useTable("audience_questions")
   const items = useTable("content_items")
@@ -92,9 +97,9 @@ export function PersonaLinked({ persona, stats }: { persona: AudiencePersona; st
       <LinkedSection
         title="Problem Bank"
         count={personaProblems.length}
-        detail={stats?.untapped ? `${formatNumber(stats.untapped)} untapped` : undefined}
+        detail={stats?.untapped ? a("untapped", { count: formatNumber(stats.untapped) }) : undefined}
         href={`/audience/problems?persona=${persona.id}`}
-        hrefLabel="View all"
+        hrefLabel={t("view_all")}
       >
         {personaProblems.length ? (
           <ul className="divide-y rounded-lg border">
@@ -113,11 +118,11 @@ export function PersonaLinked({ persona, stats }: { persona: AudiencePersona; st
           <EmptyState
             compact
             icon={Crosshair}
-            title="No problems for this persona yet"
-            description="Each problem in the Problem Bank can become a content idea."
+            title={t("no_problems_title")}
+            description={t("no_problems_description")}
             action={
               <Button type="button" size="sm" variant="outline" asChild>
-                <Link href={`/audience/problems?new=1&persona=${persona.id}`}>Add a problem</Link>
+                <Link href={`/audience/problems?new=1&persona=${persona.id}`}>{t("add_problem")}</Link>
               </Button>
             }
           />
@@ -127,16 +132,16 @@ export function PersonaLinked({ persona, stats }: { persona: AudiencePersona; st
       <LinkedSection
         title="Question Bank"
         count={personaQuestions.length}
-        detail={stats?.openQuestions ? `${formatNumber(stats.openQuestions)} open` : undefined}
+        detail={stats?.openQuestions ? a("open_count", { count: formatNumber(stats.openQuestions) }) : undefined}
         href={`/audience/questions?persona=${persona.id}`}
-        hrefLabel="View all"
+        hrefLabel={t("view_all")}
       >
         {personaQuestions.length ? (
           <ul className="divide-y rounded-lg border">
             {personaQuestions.slice(0, LIMIT).map((question) => (
               <li key={question.id}>
                 <Link href={`/audience/questions?open=${question.id}`} className={ROW}>
-                  <span className="w-7 shrink-0 text-right text-xs font-medium text-muted-foreground num" title="Times asked">
+                  <span className="w-7 shrink-0 text-right text-xs font-medium text-muted-foreground num" title={t("times_asked")}>
                     {formatNumber(question.frequency)}×
                   </span>
                   <span className="min-w-0 flex-1 truncate" title={question.question}>
@@ -151,11 +156,11 @@ export function PersonaLinked({ persona, stats }: { persona: AudiencePersona; st
           <EmptyState
             compact
             icon={MessageCircleQuestion}
-            title="No questions from this persona yet"
-            description="Log what they ask in comments and DMs — repeated questions are your best content ideas."
+            title={t("no_questions_title")}
+            description={t("no_questions_description")}
             action={
               <Button type="button" size="sm" variant="outline" asChild>
-                <Link href={`/audience/questions?new=1&persona=${persona.id}`}>Add a question</Link>
+                <Link href={`/audience/questions?new=1&persona=${persona.id}`}>{t("add_question")}</Link>
               </Button>
             }
           />
@@ -163,9 +168,9 @@ export function PersonaLinked({ persona, stats }: { persona: AudiencePersona; st
       </LinkedSection>
 
       <LinkedSection
-        title="Recent content"
+        title={t("recent_content")}
         count={stats?.content ?? recent.length}
-        detail={share === null ? undefined : `${formatPercent(share, 0)} of the last ${RECENT_DAYS} days`}
+        detail={share === null ? undefined : t("share_of_window", { pct: formatPercent(share, 0), days: RECENT_DAYS })}
       >
         {recent.length ? (
           <div className="flex flex-col gap-2">
@@ -177,11 +182,11 @@ export function PersonaLinked({ persona, stats }: { persona: AudiencePersona; st
           <EmptyState
             compact
             icon={FileText}
-            title="No recent content for this persona"
-            description="Aim your next idea at them so they keep hearing from you."
+            title={t("no_recent_title")}
+            description={t("no_recent_description")}
             action={
               <Button type="button" size="sm" variant="outline" asChild>
-                <Link href={`/ideas/generator?persona=${persona.id}`}>Generate ideas</Link>
+                <Link href={`/ideas/generator?persona=${persona.id}`}>{a("generate_ideas")}</Link>
               </Button>
             }
           />
