@@ -13,8 +13,9 @@ export function isCronRoute(pathname: string): boolean {
 
 /**
  * Supabase mode: refreshes the auth session on every request and guards routes.
- * - anonymous page request   → /login?next=<path>
- * - anonymous /api/* request → 401 JSON (except /api/cron/*, which authenticates with CRON_SECRET)
+ * - anonymous page request   → /login?next=<path> (except the public /privacy notice)
+ * - anonymous /api/* request → 401 JSON (except /api/cron/*, which authenticates with CRON_SECRET, and
+ *   POST /api/access-requests, the public "Request access" form)
  * - signed-in /login|/signup → the `next` page or '/'
  * Local mode (no Supabase env vars): a pass-through.
  */
@@ -47,7 +48,7 @@ export async function proxy(request: NextRequest) {
   }
 
   const { pathname, search } = request.nextUrl
-  const decision = decideProxyAction(pathname, search, isAuthenticated)
+  const decision = decideProxyAction(pathname, search, isAuthenticated, request.method)
   if (decision.action === "continue") return response
 
   const final =

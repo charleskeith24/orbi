@@ -1,9 +1,10 @@
 "use client"
 
 import type { User } from "@supabase/supabase-js"
-import { ChevronsUpDown, Download, KeyRound, LogIn, LogOut, Settings } from "lucide-react"
+import { ChevronsUpDown, Download, KeyRound, LogIn, LogOut, Settings, ShieldCheck } from "lucide-react"
 import Link from "next/link"
 import { useRef } from "react"
+import { useIsAdmin } from "@/components/features/admin/use-is-admin"
 import { describeUser, useAuthUser } from "@/components/features/auth/use-auth-user"
 import { InstallSidebarItem, useInstallOrbi } from "@/components/features/pwa/install-orbi"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -66,10 +67,14 @@ function AccountMenu() {
   return <AccountMenuView user={user} />
 }
 
-/** The menu for a known user: avatar, name and email; Settings, Set a password, Install Orbi and Sign out. Renders a SidebarMenuItem. */
+/**
+ * The menu for a known user: avatar, name and email; Settings, Set a password, Admin (admins only),
+ * Install Orbi and Sign out. Renders a SidebarMenuItem.
+ */
 export function AccountMenuView({ user }: { user: Pick<User, "email" | "user_metadata"> }) {
   const { isMobile, state, setOpenMobile } = useSidebar()
   const t = useT(userMenuMessages)
+  const isAdmin = useIsAdmin()
   const signOutForm = useRef<HTMLFormElement>(null)
   // Set when a menu item opens a dialog, so the closing menu doesn't pull focus back to its trigger.
   const openingDialog = useRef(false)
@@ -128,6 +133,13 @@ export function AccountMenuView({ user }: { user: Pick<User, "email" | "user_met
               <KeyRound aria-hidden /> {t("set_password")}
             </Link>
           </DropdownMenuItem>
+          {isAdmin ? (
+            <DropdownMenuItem asChild>
+              <Link href="/admin" onClick={() => setOpenMobile(false)}>
+                <ShieldCheck aria-hidden /> {t("admin")}
+              </Link>
+            </DropdownMenuItem>
+          ) : null}
           {install.visible ? (
             <DropdownMenuItem
               onSelect={() => {

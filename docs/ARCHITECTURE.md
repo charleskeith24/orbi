@@ -33,9 +33,13 @@ src/
     layout.tsx                 root: fonts, theme, toaster
     (app)/layout.tsx           DataProvider + AppShell (sidebar, top bar, dialogs, ⌘K, strategist)
     (app)/<route>/page.tsx     server component: exports `metadata`, renders ONE client view
-    (auth)/login|signup        Supabase auth pages (explain local mode when unconfigured)
+    (auth)/login|signup        Supabase auth pages (explain local mode when unconfigured); /signup = Request access (waitlist)
+    (admin)/admin/…            admin area (§14): own minimal shell, never loads a workspace; every page runs getAdminGate()
+    privacy/                   public privacy notice (no sign-in needed)
     onboarding/                first-run wizard (outside the shell)
     api/ai/route.ts            AI gateway (server-only keys)
+    api/admin/…                admin API (§14): every handler wrapped in withAdmin (requireAdmin)
+    api/access-requests/       public waitlist endpoint (anonymous POST, same-origin, rate-limited in Postgres)
   components/
     ui/                        shadcn primitives (generated)
     app-shell/                 sidebar, top bar, data gate, command palette, global dialogs
@@ -51,7 +55,8 @@ src/
     analytics/                 pure analytics functions (metrics, tiers, health, buffer, reports, recommendations)
     ai/                        AI tasks, prompts, providers, offline engine, client hook
     i18n/                      UI language: core (pure), useT, getUiLang, shared messages (§11)
-    supabase/                  config, browser + server clients
+    supabase/                  config, browser + server clients, secret-key client (admin.ts — server only)
+    admin/                     admin & access (§14): contract types, form schema, gate (pages), guard (API), server/* (data access)
     dates.ts  utils.ts  scoring.ts  navigation.ts
 supabase/migrations/           SQL schema, RLS, triggers
 docs/                          this file + setup guides
@@ -78,7 +83,7 @@ Client views read `useSearchParams()` — wrap them in `<Suspense>` in the page 
 New workspaces are created from the **Starter Kit** (`src/lib/data/starter.ts`: formats, angles, hook templates, goals, platform strategies, posting schedule, tags, settings, blank brand) and go through **Quick setup** (`/onboarding`, `docs/QUICK_SETUP.md`): four screens — language, name and platforms · interests and skills · who you help · pick a niche direction or write your own — then a Building screen, and `quickSetupAnswers` (`features/onboarding/quick-setup.ts`) fills in the rest (role, industry, positioning, pillars, persona, goals, posting schedule, first ideas) before the one apply path (`planOnboarding` → `applyOnboardingPlan`). Voice and audience problems are left to the Home checklist (`features/dashboard/first-run.ts`). Brand HQ re-runs use the **Detailed setup** (the full niche-first flow) and `/onboarding?step=niche` re-runs Niche Discovery on Quick setup screens 2–4. The demo workspace (`src/lib/data/seed.ts`) is a **test fixture and dev-only QA seed** (`localStorage["pbos:dev-seed"]` = `demo` | `fresh`, set by the scripts' `--seed` flag) — never shown to users.
 
 ### Model
-`src/lib/types.ts` defines 32 workspace tables (`TABLE_NAMES` in `src/lib/data/defaults.ts` = insert order = the order `supabase/migrations/20260910000000_init.sql` creates them). Field names are snake_case and identical to Postgres columns. Text defaults to `''`, lists to `[]`, optional FKs are `ID | null`. Server-only tables that aren't part of the workspace (`push_subscriptions`, `feedback`, `usage_events`) live in their owner's own migration; the parity test tolerates them and requires RLS.
+`src/lib/types.ts` defines 32 workspace tables (`TABLE_NAMES` in `src/lib/data/defaults.ts` = insert order = the order `supabase/migrations/20260910000000_init.sql` creates them). Field names are snake_case and identical to Postgres columns. Text defaults to `''`, lists to `[]`, optional FKs are `ID | null`. Server-only tables that aren't part of the workspace (`push_subscriptions`, `feedback`, `usage_events`, and the admin tables in §14) live in their owner's own migration; the parity test tolerates them and requires RLS.
 
 Workspace-schema changes: edit `types.ts`, `TABLE_DEFAULTS` (and `LOCAL_DATE_DEFAULTS` for "today" dates), `relations.ts` for references, and the init migration's `create table` — `src/lib/data/schema-parity.test.ts` checks all of them against each other (types, nullability, CHECK lists, defaults, FKs, indexes, RLS, triggers) and that the demo workspace fits. Fractional numbers need `numeric` and an entry in its `FRACTIONAL_FIELDS`. `normalizeDatabase` fills new columns and tables in older local workspaces and imports.
 `ISODate` = `'YYYY-MM-DD'` (local calendar day). `ISODateTime` = full ISO timestamp.
@@ -128,6 +133,8 @@ Use `new Date()` at the call site (`now`) and pass it into pure analytics functi
 - Content item detail lives at **`/studio/<itemId>`**; campaign detail at **`/campaigns/<id>`**.
 - Entity → page map (for links): idea `/ideas?open=`, item `/studio/<id>`, hook `/ideas/hooks?open=`, angle `/ideas/angles?open=`, persona `/audience?open=`, problem `/audience/problems?open=`, question `/audience/questions?open=`, pillar `/pillars?open=`, story `/stories?open=`, research `/research?open=`, series `/series?open=`, experiment `/experiments?open=`, campaign `/campaigns/<id>`, brand deal `/money/deals?open=`, income entry `/money/income?open=`. Rate cards are edited on `/money/media-kit`.
 - Settings tabs: `general`, `performance`, `funnel`, `formats`, `tags`, `engagement`, `reminders`, `ai`, `integrations`, `data` (`settingsHref(tab)` in `features/settings/tabs.ts`).
+- Admin area (Supabase mode, admins only, §14): `/admin` (Overview), `/admin/requests`, `/admin/users`, `/admin/feedback`, `/admin/audit`, `/admin/security` (2-step verification). Never in `NAV_SECTIONS`; the entry is the account menu and ⌘K, for admins only.
+- Public pages (no sign-in in Supabase mode): `/login`, `/signup` (Request access), `/privacy`.
 
 Global actions (callable from anywhere):
 ```ts
@@ -240,10 +247,51 @@ toast.success(translate(m, getUiLang(), "saved"))
 
 ## 13. Feedback & usage analytics (privacy rules)
 
-Both are **online-version only** (Supabase) and live in server-only tables (`feedback`, `usage_events` in `supabase/migrations/20260914000100_beta.sql`; RLS: users insert and read only their own rows). `schema-parity.test.ts` lists them in `SERVER_ONLY_TABLES` with `push_subscriptions` (Reminders) — tolerated outside `TABLE_NAMES`, RLS required.
+Both are **online-version only** (Supabase) and live in server-only tables (`feedback`, `usage_events` in `supabase/migrations/20260914000100_beta.sql`; RLS: users insert and read only their own rows; admins with 2-step verification read every row, §14). `schema-parity.test.ts` lists them in `SERVER_ONLY_TABLES` with `push_subscriptions` (Reminders) and the admin tables (§14) — tolerated outside `TABLE_NAMES`, RLS required.
 
 - **Feedback** — top-bar dialog → `POST /api/feedback` (`src/lib/telemetry/feedback.ts`: kind `bug | idea | confusing | praise`, message ≤ 4,000 chars, the page path without query string or hash, a viewport bucket). Local mode never sends anything: it says so honestly and offers "Copy feedback".
 - **Usage analytics** — opt-in, **off by default, per device** (consent in this browser's localStorage `pbos:usage-analytics`, never in the workspace). `trackUsage(name, props)` from `@/lib/telemetry` is a no-op on the server, in local mode, before the workspace loads and without consent. Batches go to `POST /api/events`, which re-validates with the same rules.
 - **What an event may contain:** a name from `USAGE_EVENT_NAMES` and only the whitelisted properties for that event (`EVENT_PROPS` in `src/lib/telemetry/events.ts`) — enum-like tokens, small counts, booleans. `sanitizeProps` drops everything else; `normalizePath` strips query strings and ids from paths. **Never** put titles, notes, scripts, captions, hooks, names, handles, emails, amounts, URLs or any other text a creator typed into an event — and don't widen the whitelist to allow it.
 - **Key actions** (`idea_captured`, `content_created`, `post_published`, `metrics_logged`) are derived from workspace changes in `src/lib/telemetry/store-watch.ts` (ids, enums and booleans only; bulk changes such as imports or a reset are ignored), so domain operations and components need no tracking calls. Onboarding step events are the only explicit calls (`features/onboarding/wizard.tsx`).
 - **Adding an event:** extend `USAGE_EVENT_NAMES` and `EVENT_PROPS` and the CHECK list on `usage_events.name` in the beta migration together, with a test.
+
+## 14. Admin & access
+
+The online version has a platform admin (the owner, plus anyone they promote) and a waitlist: nobody gets an account without an admin's approval. The owner's guide is `docs/ADMIN.md`; the schema is `supabase/migrations/20260918000000_admin.sql`. **Local mode is unchanged**: there are no accounts, `/admin` shows an honest notice, every admin and waitlist route answers `501 not_configured`, and admin links never appear.
+
+- **The admin never sees a creator's content.** Account metadata and **counts** only (`admin_user_stats()` and `admin_onboarding_funnel()` return numbers). Never select titles or text from workspace tables in admin code. Feedback is readable in full because it was written *to* the team.
+- **The role can't be self-granted.** It lives in `admin_users`, which has no grants or policies for `authenticated`. It is written only by the server with the secret key, or by the SQL line in ADMIN.md for the first admin. Never put a role column on `public.users` (users update their own row). `public.is_admin()` is `security definer`, `stable`, `set search_path = ''`, and executable by `authenticated`; the UI may call it to decide whether to show the Admin entry.
+- **Contract.** `src/lib/admin/types.ts` holds the route table, the error codes, the `AdminApi` client interface and `AdminGate`. `access-request.ts` is the form schema, shared by the form and the route. The UI's HTTP client follows the route table exactly; add to the contract, never rename.
+- **Pages.** Every `/admin` page calls `getAdminGate()` (`src/lib/admin/gate.ts`):
+  - `local` → the notice;
+  - `signed_out` → `/login?next=`;
+  - `not_admin` → 404, so the area isn't revealed;
+  - `needs_mfa` → `/admin/security`, to enroll when `!has_factor`, otherwise to take the challenge;
+  - `ok` → the page.
+- **API.** Every `/api/admin/*` handler is `withAdmin(...)` (`src/lib/admin/guard.ts`). `requireAdmin` runs these checks in order:
+  1. local mode → `501 not_configured`;
+  2. a mutation (anything but GET/HEAD) without a same-origin `Origin` → `403 bad_origin`;
+  3. no session from `auth.getUser()`, never cookies alone → `401 unauthorized`;
+  4. not `is_admin()`, or the check failed → `404 not_found`;
+  5. session not AAL2 → `403 mfa_required`;
+  6. no `SUPABASE_SECRET_KEY` → `501 not_configured`.
+
+  Handlers get `{ admin, supabase, service, origin, now }`: `supabase` is the admin's session, where RLS applies; `service` is the secret-key client (`src/lib/supabase/admin.ts`, server only). Every response is `Cache-Control: no-store`. Failures are `{ error, message }`; throw `AdminError(code, message)`, and anything else becomes `500 server_error` with details only in the server log.
+- **Guard rails.**
+  - An admin can't disable, delete or un-admin themselves → `409 self_action`.
+  - The last admin can't be removed → `409 last_admin`. `revoke_admin()` decides this in one serialized transaction.
+  - Deleting an account requires the body to repeat its email.
+- **Audit.** Every successful change writes **one** `admin_audit_log` row with `writeAudit()`: the action from `ADMIN_AUDIT_ACTIONS` (the CHECK list is kept in sync), the target id and email, and small content-free `details` such as `{ from: "active", to: "disabled" }`. The log is append-only: no update or delete grant, not even for the secret key.
+- **Reads that need 2-step verification.** Admins read the audit log, `feedback` and `usage_events` through RLS policies that require `is_admin()` **and** `auth.jwt() ->> 'aal' = 'aal2'`. A stolen password alone can't read them through the Data API.
+- **Waitlist.** `POST /api/access-requests` is the only anonymous API call the proxy lets through (`isPublicApiCall` in `features/auth/auth-paths.ts`); `/privacy` is the only public page besides the auth pages. The route:
+  - requires a same-origin `Origin`;
+  - validates with the shared zod schema, answering `400 invalid` with a `fields` map;
+  - accepts a filled honeypot silently, without storing it;
+  - stores the request through `public.submit_access_request()` with the secret key. That function runs in one serialized transaction: `403 closed` while `platform_settings.access_open` is off, `429 rate_limited` after 30 new requests in an hour for everyone together, and nothing stored for an email that already has an account or a pending request.
+
+  New, repeat and existing emails all get the same `201 { ok: true }`. No IP address is read or stored. The `/signup` server component reads `getAccessRequestState()` (`src/lib/admin/server/settings.ts`).
+- **Emails.** Approve and invite use `auth.admin.inviteUserByEmail`, password resets use `resetPasswordForEmail`, and both land on `/set-password` through the token-hash email templates (DEPLOY.md step 5). Reject sends no email. Disable is a long `ban_duration`, and enable is `"none"`.
+- **Tests.**
+  - `src/lib/admin/admin-migration.pglite.test.ts`: the SQL on Postgres.
+  - `src/lib/admin/guard.test.ts`: every gate and guard branch.
+  - `src/app/api/admin/routes.test.ts` and `src/app/api/access-requests/route.test.ts`: every handler and error code, against the in-memory fake in `src/lib/admin/testing/fake-supabase.ts`.

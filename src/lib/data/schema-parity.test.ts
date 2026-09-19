@@ -44,7 +44,16 @@ const FRACTIONAL_FIELDS = [
  * Supabase-only tables outside the workspace model (not in TABLE_NAMES), each created by its owner's own
  * migration: tolerated when present, and they must enable row-level security.
  */
-const SERVER_ONLY_TABLES = ["push_subscriptions", "feedback", "usage_events"]
+const SERVER_ONLY_TABLES = [
+  "push_subscriptions",
+  "feedback",
+  "usage_events",
+  // Admin & access (20260918000000_admin.sql)
+  "admin_users",
+  "platform_settings",
+  "access_requests",
+  "admin_audit_log",
+]
 
 /* ------------------------------ SQL parsing ------------------------------ */
 

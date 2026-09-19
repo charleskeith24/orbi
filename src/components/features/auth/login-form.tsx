@@ -17,6 +17,8 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 type Pending = "password" | "magic" | null
 
+const linkClass = "font-medium text-foreground underline-offset-4 hover:underline"
+
 /** Email + password sign-in with a magic-link alternative. `next` is already sanitized by the page. */
 export function LoginForm({ next, errorCode }: { next: string; errorCode?: string }) {
   const t = useScreenT(authMessages)
@@ -89,12 +91,15 @@ export function LoginForm({ next, errorCode }: { next: string; errorCode?: strin
       description={t("sign_in_description")}
       footer={
         <>
-          {t("new_here")}{" "}
-          <Link
-            href={authPageHref("/signup", next)}
-            className="font-medium text-foreground underline-offset-4 hover:underline"
-          >
-            {t("create_account_link")}
+          {t("no_account")}{" "}
+          <Link href={authPageHref("/signup", next)} className={linkClass}>
+            {t("request_access_link")}
+          </Link>
+          <span aria-hidden className="mx-2">
+            ·
+          </span>
+          <Link href="/privacy" className={linkClass}>
+            {t("privacy_link")}
           </Link>
         </>
       }

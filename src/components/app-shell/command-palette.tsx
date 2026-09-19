@@ -22,6 +22,7 @@ import {
   Repeat,
   Send,
   Shapes,
+  ShieldCheck,
   Sparkles,
   Sun,
   Target,
@@ -59,6 +60,7 @@ import {
 } from "@/components/app-shell/command-palette/search"
 import { paletteMessages } from "@/components/app-shell/command-palette-messages"
 import { KeyboardShortcuts, useIsMac } from "@/components/app-shell/keyboard-shortcuts"
+import { useIsAdmin } from "@/components/features/admin/use-is-admin"
 import {
   Command,
   CommandDialog,
@@ -258,6 +260,7 @@ function PaletteContent({ onClose }: { onClose: () => void }) {
   const lang = useUiLang()
   const t = useT(paletteMessages)
   const index = useSearchIndex(lang)
+  const isAdmin = useIsAdmin()
   const [query, setQuery] = useState("")
 
   const trimmed = query.trim()
@@ -333,6 +336,17 @@ function PaletteContent({ onClose }: { onClose: () => void }) {
       icon: CalendarRange,
       perform: () => go("/calendar/planner"),
     },
+    // Admins only (online version) — never part of the pages everyone sees.
+    ...(isAdmin
+      ? [
+          {
+            id: "admin",
+            ...titled("action_admin", ["admin", "users", "access requests", "waitlist", "feedback", "audit log"]),
+            icon: ShieldCheck,
+            perform: () => go("/admin"),
+          },
+        ]
+      : []),
   ]
   const matchedActions = trimmed ? rankEntries(actions, trimmed) : actions
   const matchedPages = trimmed ? rankEntries(PAGES, trimmed).slice(0, RESULTS_PER_GROUP) : PAGES

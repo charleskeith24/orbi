@@ -21,6 +21,21 @@ export function isApiRoute(pathname: string): boolean {
   return matches(pathname, "/api")
 }
 
+/** Pages anyone may read, signed in or not (the privacy notice is linked from the request-access form). */
+export const PUBLIC_PAGES = ["/privacy"] as const
+
+export function isPublicPage(pathname: string): boolean {
+  return PUBLIC_PAGES.some((page) => matches(pathname, page))
+}
+
+/**
+ * API calls anonymous visitors may make: `POST /api/access-requests`, the "Request access" form (the route
+ * checks the Origin header, validates and rate-limits). Every other method and API path still needs a session.
+ */
+export function isPublicApiCall(pathname: string, method: string): boolean {
+  return pathname === "/api/access-requests" && method.toUpperCase() === "POST"
+}
+
 /**
  * Only same-origin, relative paths are accepted as post-sign-in destinations
  * (prevents open redirects such as `?next=//evil.com` or `?next=/\evil.com`).
@@ -55,8 +70,8 @@ export type ProxyDecision =
   | { action: "unauthorized" }
 
 /** What the proxy does with a request once it knows whether a session exists. */
-export function decideProxyAction(pathname: string, search: string, isAuthenticated: boolean): ProxyDecision {
-  if (isAuthRoute(pathname)) return { action: "continue" }
+export function decideProxyAction(pathname: string, search: string, isAuthenticated: boolean, method = "GET"): ProxyDecision {
+  if (isAuthRoute(pathname) || isPublicPage(pathname) || isPublicApiCall(pathname, method)) return { action: "continue" }
   if (isAuthPage(pathname)) {
     if (!isAuthenticated) return { action: "continue" }
     return { action: "redirect", location: safeNextPath(new URLSearchParams(search).get("next")) }

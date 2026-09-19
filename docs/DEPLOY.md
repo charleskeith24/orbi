@@ -44,7 +44,9 @@ The database design lives in the project folder `supabase/migrations/`. **Run ev
 |---|---|---|
 | 1 | `20260910000000_init.sql` | Your workspace: brand, strategy, ideas, content, analytics, money, settings — with row-level security (each account only sees its own rows) |
 | 2 | `20260914000100_beta.sql` | In-app feedback and opt-in usage analytics (`feedback`, `usage_events`) |
-| … | any newer file, e.g. `20260914000200_push.sql` (push reminders) | whatever that feature needs |
+| 3 | `20260914000200_push.sql` | Push reminders on phones (`push_subscriptions`) |
+| 4 | `20260918000000_admin.sql` | The admin area and the "Request access" waitlist (`admin_users`, `access_requests`, `admin_audit_log`, `platform_settings`) |
+| … | any newer file | whatever that feature needs |
 
 If new files appear in that folder later (after you pull an update), run just the new ones, in order.
 
@@ -92,7 +94,7 @@ npx supabase db push
    | Name | When you need it |
    |---|---|
    | `ANTHROPIC_API_KEY` (+ `AI_MODEL`, `AI_EFFORT`) | Claude-powered AI. Without it, AI features use the offline templates (clearly labelled). |
-   | `SUPABASE_SECRET_KEY` | Server jobs such as push reminders. Supabase → API Keys → **Secret key**. |
+   | `SUPABASE_SECRET_KEY` | The admin area and the "Request access" form (step 7), and server jobs such as push reminders. Supabase → API Keys → **Secret key**. Add it now if you'll run a beta. |
    | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET` | Push reminders on phones (optional). Key generation, the free 15-minute scheduler (Supabase Cron) and testing are in [REMINDERS.md](REMINDERS.md). Without them, **Add to my calendar** reminders still work. |
 
    > Only variables that start with `NEXT_PUBLIC_` are visible in the browser, and only the publishable key belongs there — row-level security protects the data. The **secret key**, `VAPID_PRIVATE_KEY`, `CRON_SECRET` and `ANTHROPIC_API_KEY` must never get a `NEXT_PUBLIC_` name and must never be committed to GitHub.
@@ -108,7 +110,7 @@ Sign-in emails contain links back to your site. Supabase only allows addresses y
 
 Supabase → **Authentication → URL Configuration**:
 
-1. **Site URL:** your site, e.g. `https://orbi-yourname.vercel.app` (switch it to your custom domain in step 7).
+1. **Site URL:** your site, e.g. `https://orbi-yourname.vercel.app` (switch it to your custom domain in step 8).
 2. **Redirect URLs → Add URL**, one per line:
    - `https://orbi-yourname.vercel.app/**`
    - `http://localhost:3000/**` (so sign-in also works when you run Orbi on your computer with the same project)
@@ -129,13 +131,32 @@ The invited person clicks the link, is signed in, and chooses a password on Orbi
 
 ## 6. First sign-in and moving your workspace
 
-1. Open your site → you land on **Sign in** → **Create an account** (or use an invite).
-2. Confirm your email if asked.
+On the online version, `/signup` is a **Request access** form (a waitlist you approve in step 7), so your own first account is made in Supabase:
+
+1. Supabase → **Authentication → Users → Add user → Create new user**. Enter your email and a strong password, tick **Auto Confirm User** → **Create user**.
+2. Open your site → **Sign in** with that email and password.
 3. A new account is empty, so onboarding opens. To bring your existing workspace instead, type your site address followed by `/settings?tab=data` (for example `https://orbi-yourname.vercel.app/settings?tab=data`) — Settings → Data opens even before onboarding. Then **Import workspace…** → choose the JSON file you exported before you started → **Replace workspace…**. A progress bar shows the rows being saved; if anything fails midway, your account is put back as it was and nothing is lost. The same file can be imported into more than one account (each gets its own copy).
 
 Running Orbi on your own computer with the same Supabase variables in `.env.local`? Then the local workspace is at the same address, and Orbi offers **"Move my local workspace to my account"** right after you sign in (also in **Settings → Data**). The local copy stays in that browser until the move succeeds.
 
-## 7. Your own domain (optional)
+## 7. Lock sign-ups and become the admin
+
+Do this before you share the site with anyone. Full guide, in plain words: **[ADMIN.md](ADMIN.md)**.
+
+1. **Turn off Supabase sign-ups.** Supabase → **Authentication → Sign In / Providers** → turn **Allow new users to sign up** off → **Save**. Orbi's own sign-up page is already a waitlist; this closes the back door (creating an account by calling Supabase directly). Invited and existing accounts still sign in.
+2. **Make yourself admin.** Check that `SUPABASE_SECRET_KEY` is set in Vercel (step 4) and that you redeployed. Then Supabase → **SQL Editor** → **New query** → paste this with your own email → **Run**:
+
+   ```sql
+   insert into admin_users (user_id) select id from auth.users where email = 'you@example.com';
+   ```
+
+   "1 rows affected" means it worked. Nobody can make themselves admin from inside the app; after this, you add other admins from **Admin → Users**.
+3. **Turn on 2-step verification.** Open `https://<your-site>/admin`. It opens on **Security**: scan the QR code with an authenticator app on your phone (Google Authenticator, Microsoft Authenticator, 1Password, Authy…) and type the 6-digit code. The admin area only opens with that code.
+4. **Approve requests.** People ask to join on `/signup`. You approve them in **Admin → Requests**; each approval emails an invite that lands on **Set a password** (the Invite user template from step 5). **Reject** sends no email. The **Accepting requests** switch there closes the form for a while.
+
+Admins see account details, counts and feedback — never anyone's ideas, scripts, brand or money. ADMIN.md explains what the admin area can and can't see.
+
+## 8. Your own domain (optional)
 
 1. Buy a domain from any registrar (for example a `.com` or `.ph`).
 2. Vercel → your project → **Settings → Domains** → **Add** → type the domain (e.g. `orbi.yourname.com`).
@@ -165,7 +186,9 @@ If you start charging other creators for Orbi, re-read both plans' terms.
 | Sign-in email link opens the wrong site, or says the link is invalid | Site URL and Redirect URLs in step 5 don't match your address. Add `https://<your-address>/**` and try with a new link (old links expire). |
 | "Open the link in the same browser you requested it from" | Default email links only work in the browser that asked for them. Request a new link there, or switch the templates to the `token_hash` format (step 5). |
 | "Too many emails were sent" / invitees never get the email | Built-in email limits. Wait, or set up custom SMTP (step 5). |
-| New people can create accounts, but this is invite-only | Supabase → **Authentication → Sign In / Providers** → turn off **Allow new users to sign up**. Invited and existing accounts can still sign in. |
+| New people can create accounts without your approval | Supabase → **Authentication → Sign In / Providers** → turn off **Allow new users to sign up** (step 7). Invited and existing accounts can still sign in. |
+| `/admin` shows "page not found" | Your account isn't an admin yet — run the SQL line in step 7 with the exact email you sign in with. More in [ADMIN.md](ADMIN.md) → Troubleshooting. |
+| Admin pages or the Request access form say "not configured" | `SUPABASE_SECRET_KEY` is missing in Vercel, or you didn't redeploy after adding it. |
 | Import says **"Nothing was changed — your previous workspace is back"** | The file had a row Postgres rejected, or the connection dropped. The message names the table; your account is as it was. Fix or re-export the file and try again. |
 | Saving shows **"the row no longer exists"** | It was deleted on another device. Reload the page to see the latest. |
 | Changes to environment variables don't show | Redeploy (Vercel → Deployments → ⋯ → Redeploy). |
@@ -173,6 +196,6 @@ If you start charging other creators for Orbi, re-read both plans' terms.
 
 ## What has been tested — and what hasn't
 
-The database migrations are tested automatically on a real Postgres engine (PGlite, Postgres compiled to WebAssembly): every file applies cleanly in order, the whole sample workspace goes in, every delete rule matches the app, `updated_at` stamps itself, and row-level security keeps two accounts apart. Orbi's Supabase data code is also run against that database.
+The database migrations are tested automatically on a real Postgres engine (PGlite, Postgres compiled to WebAssembly): every file applies cleanly in order, the whole sample workspace goes in, every delete rule matches the app, `updated_at` stamps itself, and row-level security keeps two accounts apart. Orbi's Supabase data code is also run against that database. The admin rules are tested the same way: nobody can make themselves admin, signed-in users can't read the waitlist, the audit log can't be edited, and admin read access needs 2-step verification.
 
-That proves the SQL. It does not prove the hosted parts of Supabase — the Data API (PostgREST), Auth and its emails, and your project's dashboard settings — or Vercel. Do a quick check after deploying: create an account, finish onboarding, add an idea on your phone and see it on your laptop, then delete it.
+That proves the SQL. It does not prove the hosted parts of Supabase — the Data API (PostgREST), Auth and its emails, and your project's dashboard settings — or Vercel. Do a quick check after deploying: create an account, finish onboarding, add an idea on your phone and see it on your laptop, then delete it. For the admin area: request access from a private window, approve it in **Admin → Requests**, open the invite email and set a password.

@@ -8,10 +8,10 @@ Orbi runs in one of two modes. Nothing in the UI changes except where your data 
 |---|---|---|
 | Turned on by | no Supabase env vars | `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` |
 | Data | this browser's `localStorage` (`pbos:workspace:v2`), starting from the Starter Kit | Postgres, one workspace per account, row-level security |
-| Accounts | none; `/login`, `/signup` and `/set-password` explain local mode | email + password, magic link, email confirmation, invites |
+| Accounts | none; `/login`, `/signup`, `/set-password` and `/admin` explain local mode | email + password, magic link, invites; new people ask on `/signup` (**Request access**) and an admin approves them in `/admin` ([ADMIN.md](ADMIN.md)) |
 | Devices | one browser | any device you sign in on |
 | Backups | Settings → Data → Export; the banner reminds you after 7 days without one | the database; exports still work |
-| Route guard (`src/proxy.ts`) | pass-through | refreshes the session on every request; signed-out pages → `/login?next=…`, signed-out `/api/*` → `401` |
+| Route guard (`src/proxy.ts`) | pass-through | refreshes the session on every request; signed-out pages → `/login?next=…`, signed-out `/api/*` → `401` (public: `/privacy`, `POST /api/access-requests`) |
 | Adapter | `src/lib/data/local-adapter.ts` | `src/lib/data/supabase-adapter.ts` |
 
 The switch is `isSupabaseConfigured` in `src/lib/supabase/config.ts`. The AI provider is configured separately (`ANTHROPIC_API_KEY`) and works in both modes.
@@ -32,6 +32,7 @@ The switch is `isSupabaseConfigured` in `src/lib/supabase/config.ts`. The AI pro
 | `20260910000000_init.sql` | workspace | `public.users` + every workspace table (`TABLE_NAMES` in `src/lib/data/defaults.ts`), indexes, triggers, RLS |
 | `20260914000100_beta.sql` | beta toolkit | `feedback`, `usage_events` (server-only, RLS: insert/read own rows) |
 | `20260914000200_push.sql` | push reminders | `push_subscriptions` (server-only, RLS: own rows) + reminder claim functions — setup in [REMINDERS.md](REMINDERS.md) |
+| `20260918000000_admin.sql` | admin & access | `admin_users`, `access_requests`, `admin_audit_log`, `platform_settings` (server-only, RLS), `is_admin()`, the waitlist and admin functions, admin read policies on `feedback` / `usage_events` — setup in [ADMIN.md](ADMIN.md) |
 | newer files | their feature | run them too, in filename order |
 
 **Option A: SQL Editor** — Dashboard → **SQL Editor** → **New query** → paste one whole file → **Run** ("Success. No rows returned") → next file.
@@ -52,7 +53,7 @@ Dashboard → **Authentication**:
 
 1. **Sign In / Providers → Email**: keep it enabled.
    - **Confirm email** on: new accounts click a link before their first sign-in; the sign-up form shows "Check your email to confirm".
-   - **Allow new users to sign up** off: invite-only (existing and invited accounts still sign in).
+   - **Allow new users to sign up** off: accounts only through invites (existing and invited accounts still sign in). Orbi's `/signup` is a waitlist; with this switch on, someone could still sign up by calling Supabase Auth directly ([ADMIN.md](ADMIN.md) step 2).
 2. **URL Configuration**:
    - **Site URL**: `http://localhost:3000` locally, your production URL once deployed.
    - **Redirect URLs**: `http://localhost:3000/**`, `https://<your-domain>/**` (and your `*.vercel.app` address). Email links go to `/auth/callback?next=<page>`; the `/**` pattern allows the query string.
@@ -75,8 +76,8 @@ Both are under **Project Settings → API Keys** (and **Data API** for the URL).
 
 Environment variables are read when the app starts (and are built into the bundle on Vercel), so restart `npm run dev` or redeploy. Then:
 
-1. You're redirected to **/login** → **Create an account**.
-2. Confirm your email if required. The link lands on `/auth/callback`, which signs you in.
+1. You're redirected to **/login**. `/signup` is the **Request access** waitlist, so create your own first account in the dashboard: **Authentication → Users → Add user → Create new user** (tick **Auto Confirm User**), then sign in.
+2. Make that account the admin and turn on 2-step verification ([ADMIN.md](ADMIN.md)). From then on, people request access and you approve them in `/admin`; each approval sends a Supabase invite.
 3. A new account starts empty, so onboarding opens — unless this browser holds a local workspace (next section).
 
 The account menu sits at the bottom of the sidebar (avatar + email) and has **Settings** and **Sign out**.
@@ -102,13 +103,16 @@ The account menu sits at the bottom of the sidebar (avatar + email) and has **Se
 
 | Piece | File | What it does |
 |---|---|---|
-| Proxy | `src/proxy.ts` | Supabase mode only: calls `auth.getUser()` to refresh the session cookie; signed-out page requests → `/login?next=<path>`, signed-out `/api/*` → `401 {"error":"unauthorized"}`, signed-in visitors of `/login` / `/signup` → `next` or `/`. Public: `/login`, `/signup`, `/auth/*`, `/api/cron/*` (authenticated by `CRON_SECRET` in the route), and static files the matcher skips — `/sw.js`, `/manifest.webmanifest`, `/icons/*`, images, fonts. |
+| Proxy | `src/proxy.ts` | Supabase mode only: calls `auth.getUser()` to refresh the session cookie; signed-out page requests → `/login?next=<path>`, signed-out `/api/*` → `401 {"error":"unauthorized"}`, signed-in visitors of `/login` / `/signup` → `next` or `/`. Public: `/login`, `/signup`, `/privacy`, `/auth/*`, `POST /api/access-requests` (the waitlist form; the route checks the Origin header and rate-limits), `/api/cron/*` (authenticated by `CRON_SECRET` in the route), and static files the matcher skips — `/sw.js`, `/manifest.webmanifest`, `/icons/*`, images, fonts. |
 | Auth pages | `src/app/(auth)/login`, `signup`, `set-password` | Email + password, "Email me a magic link", confirmation state; **Set a password** for signed-in users (invited testers, magic-link users). In local mode they explain local mode. |
 | Email links | `src/app/auth/callback/route.ts` | Exchanges `?code=` (PKCE) or verifies `?token_hash=&type=` (`email`, `invite`, `recovery`…), sets the session cookies, continues to `next`. Failures → `/login?error=<code>` with a readable message. |
 | Sign-out | `src/app/auth/signout/route.ts` | `POST` only; ends this browser's session (`scope: "local"`). |
 | Clients | `src/lib/supabase/{client,server}.ts` | Browser singleton and per-request server client (cookies). |
 | Data | `src/lib/data/supabase-adapter.ts` | Loads every table (paged, ordered by `created_at, id`), writes rows (unknown fields dropped), sends the effects Postgres can't express (array-reference cleanup, tag links), fails loudly when an update matches no row, and replaces a workspace with rollback + progress (`trackReplace`). |
 | Local → cloud | `src/lib/supabase/{move-local,rekey}.ts`, `features/settings/data-move-local.tsx` | Reads the local snapshot, decides whether to offer the move, rekeys and imports. |
+| Secret-key client | `src/lib/supabase/admin.ts` | Server only: the `SUPABASE_SECRET_KEY` client (bypasses RLS) for the admin API and the waitlist. |
+| Waitlist | `src/app/api/access-requests/route.ts` | `POST` from the public Request access form → `public.submit_access_request()` (one pending request per email, about 30 new requests per hour, closed when the admin switches requests off). Same answer for new, repeat and existing emails. |
+| Admin | `src/lib/admin/{gate,guard}.ts`, `src/app/api/admin/*` | Every admin page and route checks the session (`auth.getUser()`), `is_admin()` and 2-step verification (AAL2). Details in ARCHITECTURE.md §14. |
 
 `next` values are restricted to same-origin relative paths (`src/components/features/auth/auth-paths.ts`), so links like `/login?next=//evil.com` can't redirect elsewhere.
 
@@ -137,7 +141,7 @@ The init migration mirrors `src/lib/types.ts` exactly. Column names are the Type
 - Enum-typed columns are `text` with a `CHECK` listing exactly the values in `types.ts` (arrays of enums use `<@ array[...]`).
 - Defaults match `TABLE_DEFAULTS` in `src/lib/data/defaults.ts`.
 - Tables are created in `TABLE_NAMES` order (parents before children), the same order the adapter imports in.
-- Server-only tables (`feedback`, `usage_events`, `push_subscriptions`) are not part of the workspace model; they live in their feature's own migration with RLS.
+- Server-only tables (`feedback`, `usage_events`, `push_subscriptions`, `admin_users`, `access_requests`, `admin_audit_log`, `platform_settings`) are not part of the workspace model; they live in their feature's own migration with RLS.
 
 **Relationships** (identical to `src/lib/data/relations.ts`, which applies the same rules in memory for local mode)
 
@@ -151,6 +155,7 @@ The init migration mirrors `src/lib/types.ts` exactly. Column names are the Type
 - `public.users` is filled by the `on_auth_user_created` trigger and kept in sync by `on_auth_user_updated`.
 - One `brand_profiles` row and one `app_settings` row per user; tag names unique per user, case-insensitively; a tag is linked to an entity at most once.
 - Row **ids are global primary keys** — two accounts can't hold rows with the same id. The app generates random UUIDs; moves and imports rekey (above).
+- **Admin.** The admin role lives in `admin_users`, which signed-in users can't read or write — never on `public.users`, whose row each user may update. `public.is_admin()` (security definer) tells the signed-in user whether they are an admin. `access_requests` and `platform_settings` are secret-key only. `admin_audit_log` is append-only (no update or delete grant, not even for the secret key). Admins can read every `feedback` and `usage_events` row and the audit log only with a 2-step-verified session (`auth.jwt() ->> 'aal' = 'aal2'`). The admin functions return counts, never workspace content.
 
 ## How the schema is tested
 
@@ -158,6 +163,7 @@ The init migration mirrors `src/lib/types.ts` exactly. Column names are the Type
 |---|---|
 | `src/lib/data/schema-parity.test.ts` | Reads the migration text: columns, SQL types, nullability, CHECK lists, defaults, FKs vs `relations.ts`, indexes, RLS policies and grants, triggers, comments; the demo workspace fits the column types. |
 | `src/lib/data/schema.pglite.test.ts` | **Runs** every migration, in filename order, on real Postgres (PGlite — Postgres 18 compiled to WASM, in memory) on top of a stub of Supabase's `auth` schema (`auth.users`, `auth.uid()` / `auth.role()` / `auth.jwt()` reading `request.jwt.claims`, the `anon` / `authenticated` / `service_role` roles, Supabase's default grants). Then: the demo workspace inserts table by table in `TABLE_NAMES` order as its owner with RLS on and reads back identically; for **every** `relations.ts` reference, deleting a parent leaves exactly what `planDelete` predicts (minus the array/tag cleanup that is the adapter's job); `updated_at` triggers fire on every table; RLS: another account sees, updates and deletes nothing, can't insert rows for someone else, `anon` is denied; per-account unique keys; account deletion cascades; sign-up creates `public.users`. |
+| `src/lib/admin/admin-migration.pglite.test.ts` | The admin migration on that database: signed-in users (even admins) can't write `admin_users`; `is_admin()` is right for admins and others and not callable by anon; nobody but the secret key reads `access_requests`; the waitlist function's outcomes (created, duplicate, exists, closed, rate limited); the audit log is append-only even for the secret key; admin reads of feedback, usage events and the audit log need aal2; `revoke_admin()` keeps the last admin; the stats and funnel functions return counts only; account deletion keeps the audit log. |
 | `src/lib/data/supabase-adapter.pglite.test.ts` | Runs the **real adapter** against that database through a PostgREST stand-in (`src/lib/supabase/testing/postgrest-fake.ts`: one transaction per request as `authenticated` with the user's JWT claims, rows in/out as JSON, `PGRST204` for unknown columns). Covers load (paging past 1,000 rows), insert, update (including "no row matched"), `remove` for every reference end to end (Postgres + the adapter's cleanup = the in-memory store), `replaceAll` with progress, rollback after a rejected row and after a dropped connection, and local → cloud moves (including the primary-key collision rekeying prevents). |
 
 Run them with `npx vitest run src/lib/data/schema.pglite.test.ts src/lib/data/supabase-adapter.pglite.test.ts` (about a minute; one PGlite instance per file). They are data-driven — new tables, references and migration files are picked up automatically.
