@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
+import { firstWeek } from "@/components/features/dashboard/first-week"
 import { contentToday, weeklyPostingProgress } from "@/lib/analytics"
 import { BUFFER_STAGES } from "@/lib/constants"
 import { toISODate } from "@/lib/dates"
@@ -46,6 +47,8 @@ export function useTodayData() {
       /** Items with at least one analytics snapshot. */
       measured: new Set(db.content_metrics.map((metric) => metric.content_item_id)),
       slots: todaySlots(db.content_calendar, now),
+      /** "Your first week" — Today shows its compact row while the plan is active. */
+      firstWeek: firstWeek(db, now, lang),
     }
   }, [db, now, settings, lang])
 }

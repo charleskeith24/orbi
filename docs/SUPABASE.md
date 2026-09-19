@@ -11,7 +11,7 @@ Orbi runs in one of two modes. Nothing in the UI changes except where your data 
 | Accounts | none; `/login`, `/signup`, `/set-password` and `/admin` explain local mode | email + password, magic link, invites; new people ask on `/signup` (**Request access**) and an admin approves them in `/admin` ([ADMIN.md](ADMIN.md)) |
 | Devices | one browser | any device you sign in on |
 | Backups | Settings → Data → Export; the banner reminds you after 7 days without one | the database; exports still work |
-| Route guard (`src/proxy.ts`) | pass-through | refreshes the session on every request; signed-out pages → `/login?next=…`, signed-out `/api/*` → `401` (public: `/privacy`, `POST /api/access-requests`) |
+| Route guard (`src/proxy.ts`) | pass-through | refreshes the session on every request; signed-out pages → `/login?next=…`, signed-out `/api/*` → `401` (public: `/privacy`, `/terms`, `POST /api/access-requests`) |
 | Adapter | `src/lib/data/local-adapter.ts` | `src/lib/data/supabase-adapter.ts` |
 
 The switch is `isSupabaseConfigured` in `src/lib/supabase/config.ts`. The AI provider is configured separately (`ANTHROPIC_API_KEY`) and works in both modes.
@@ -33,6 +33,7 @@ The switch is `isSupabaseConfigured` in `src/lib/supabase/config.ts`. The AI pro
 | `20260914000100_beta.sql` | beta toolkit | `feedback`, `usage_events` (server-only, RLS: insert/read own rows) |
 | `20260914000200_push.sql` | push reminders | `push_subscriptions` (server-only, RLS: own rows) + reminder claim functions — setup in [REMINDERS.md](REMINDERS.md) |
 | `20260918000000_admin.sql` | admin & access | `admin_users`, `access_requests`, `admin_audit_log`, `platform_settings` (server-only, RLS), `is_admin()`, the waitlist and admin functions, admin read policies on `feedback` / `usage_events` — setup in [ADMIN.md](ADMIN.md) |
+| `20260919000000_circles.sql` | Collab Circles | `circles`, `circle_members`, `circle_contacts`, `circle_checkins`, `circle_asks`, `circle_ask_interests` (server-only, members-only RLS, no admin access), `is_circle_member()` and the circle RPCs (create, preview/join, rotate invite, remove, leave, accept interest, contacts) — ARCHITECTURE §15 |
 | newer files | their feature | run them too, in filename order |
 
 **Option A: SQL Editor** — Dashboard → **SQL Editor** → **New query** → paste one whole file → **Run** ("Success. No rows returned") → next file.
@@ -103,7 +104,7 @@ The account menu sits at the bottom of the sidebar (avatar + email) and has **Se
 
 | Piece | File | What it does |
 |---|---|---|
-| Proxy | `src/proxy.ts` | Supabase mode only: calls `auth.getUser()` to refresh the session cookie; signed-out page requests → `/login?next=<path>`, signed-out `/api/*` → `401 {"error":"unauthorized"}`, signed-in visitors of `/login` / `/signup` → `next` or `/`. Public: `/login`, `/signup`, `/privacy`, `/auth/*`, `POST /api/access-requests` (the waitlist form; the route checks the Origin header and rate-limits), `/api/cron/*` (authenticated by `CRON_SECRET` in the route), and static files the matcher skips — `/sw.js`, `/manifest.webmanifest`, `/icons/*`, images, fonts. |
+| Proxy | `src/proxy.ts` | Supabase mode only: calls `auth.getUser()` to refresh the session cookie; signed-out page requests → `/login?next=<path>`, signed-out `/api/*` → `401 {"error":"unauthorized"}`, signed-in visitors of `/login` / `/signup` → `next` or `/`. Public: `/login`, `/signup`, `/privacy`, `/terms`, `/auth/*`, `POST /api/access-requests` (the waitlist form; the route checks the Origin header and rate-limits), `/api/cron/*` (authenticated by `CRON_SECRET` in the route), and static files the matcher skips — `/sw.js`, `/manifest.webmanifest`, `/icons/*`, images, fonts. |
 | Auth pages | `src/app/(auth)/login`, `signup`, `set-password` | Email + password, "Email me a magic link", confirmation state; **Set a password** for signed-in users (invited testers, magic-link users). In local mode they explain local mode. |
 | Email links | `src/app/auth/callback/route.ts` | Exchanges `?code=` (PKCE) or verifies `?token_hash=&type=` (`email`, `invite`, `recovery`…), sets the session cookies, continues to `next`. Failures → `/login?error=<code>` with a readable message. |
 | Sign-out | `src/app/auth/signout/route.ts` | `POST` only; ends this browser's session (`scope: "local"`). |

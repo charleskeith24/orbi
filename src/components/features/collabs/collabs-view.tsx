@@ -15,6 +15,7 @@ import {
   SearchInput,
   ViewToggle,
 } from "@/components/common"
+import { AskYourCircleLink } from "@/components/features/circles/ask-your-circle-link"
 import { useNow } from "@/components/features/today/use-now"
 import { Button } from "@/components/ui/button"
 import { COLLAB_STATUS_IDS, COLLAB_TYPE_IDS, PLATFORM_IDS, PLATFORMS } from "@/lib/constants"
@@ -142,6 +143,7 @@ export function CollabsView() {
 
   const actions = (
     <>
+      <AskYourCircleLink />
       <AiButton size="sm" onClick={() => setIdeasOpen(true)}>
         {t("ideas_button")}
       </AiButton>

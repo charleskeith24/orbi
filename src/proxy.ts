@@ -13,7 +13,7 @@ export function isCronRoute(pathname: string): boolean {
 
 /**
  * Supabase mode: refreshes the auth session on every request and guards routes.
- * - anonymous page request   → /login?next=<path> (except the public /privacy notice)
+ * - anonymous page request   → /login?next=<path> (except the public /privacy and /terms pages)
  * - anonymous /api/* request → 401 JSON (except /api/cron/*, which authenticates with CRON_SECRET, and
  *   POST /api/access-requests, the public "Request access" form)
  * - signed-in /login|/signup → the `next` page or '/'

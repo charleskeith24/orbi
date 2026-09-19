@@ -6,7 +6,7 @@
 import { isPublishedItem } from "@/lib/analytics"
 import { parseDate, toISODate } from "@/lib/dates"
 import { translator, type UiLang } from "@/lib/i18n/core"
-import type { ContentItem, Database, ISODate } from "@/lib/types"
+import type { BrandProfile, ContentIdea, ContentItem, Database, ID, ISODate } from "@/lib/types"
 import { firstStepMessages } from "./messages"
 
 export function hasPublishedContent(items: readonly Pick<ContentItem, "stage">[]): boolean {
@@ -36,7 +36,18 @@ export function workspaceStartKey(db: StartInput): ISODate | null {
 
 export type FirstStepAction =
   | { kind: "link"; href: string }
-  | { kind: "dialog"; dialog: "quick-capture" | "new-content" | "log-post" | "add-metrics" }
+  /** `itemId` pre-selects the post in Add analytics. */
+  | { kind: "dialog"; dialog: "quick-capture" | "new-content" | "log-post" | "add-metrics"; itemId?: ID }
+
+/** Brand HQ has a voice once it has at least one tone or personality trait. */
+export function hasVoice(brand: Pick<BrandProfile, "tones" | "personality_traits"> | null | undefined): boolean {
+  return Boolean(brand && (brand.tones.length > 0 || brand.personality_traits.length > 0))
+}
+
+/** Ideas the creator added: everything except the starter ideas setup generates (`source: "onboarding"`). */
+export function ownIdeas<T extends Pick<ContentIdea, "source">>(ideas: readonly T[]): T[] {
+  return ideas.filter((idea) => idea.source !== "onboarding")
+}
 
 export interface FirstStep {
   key: "niche" | "pillars" | "voice" | "problems" | "idea" | "content" | "publish" | "analytics"
@@ -78,7 +89,7 @@ export function firstSteps(db: Database, lang: UiLang = "en"): FirstStep[] {
       label: t("voice_label"),
       detail: t("voice_detail"),
       cta: t("voice_cta"),
-      done: Boolean(brand && (brand.tones.length > 0 || brand.personality_traits.length > 0)),
+      done: hasVoice(brand),
       action: { kind: "link", href: "/strategy#personality" },
     },
     {

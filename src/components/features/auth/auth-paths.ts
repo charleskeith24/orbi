@@ -21,8 +21,11 @@ export function isApiRoute(pathname: string): boolean {
   return matches(pathname, "/api")
 }
 
-/** Pages anyone may read, signed in or not (the privacy notice is linked from the request-access form). */
-export const PUBLIC_PAGES = ["/privacy"] as const
+/**
+ * Pages anyone may read, signed in or not: the privacy notice and the terms of use, which the request-access
+ * form asks people to agree to before they have an account.
+ */
+export const PUBLIC_PAGES = ["/privacy", "/terms"] as const
 
 export function isPublicPage(pathname: string): boolean {
   return PUBLIC_PAGES.some((page) => matches(pathname, page))

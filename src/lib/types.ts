@@ -879,6 +879,8 @@ export interface AppSettings extends BaseRow {
   reminders_review_day: number
   /** Local time of the weekly review reminder, "HH:mm". */
   reminders_review_time: string
+  /** The creator hid Home's "Your first week" plan (it also retires 14 days after the workspace start). */
+  first_week_dismissed: boolean
 }
 
 /* -------------------------------------------------------------------------- */

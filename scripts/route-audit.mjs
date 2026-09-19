@@ -30,7 +30,8 @@ const STATIC_ROUTES = [
   "/calendar", "/calendar/planner", "/calendar/schedule", "/campaigns", "/series",
   "/stories", "/stories/experience", "/research", "/research/adapt", "/analytics", "/analytics/posts",
   "/winners", "/experiments", "/reports", "/reports/monthly", "/settings", "/strategist",
-  "/onboarding", "/login", "/signup",
+  "/money", "/money/deals", "/money/income", "/money/media-kit", "/collabs", "/circles", "/share",
+  "/onboarding", "/login", "/signup", "/set-password", "/privacy", "/terms", "/admin",
 ]
 
 const browser = await chromium.launch({ channel: "chrome", headless: true })

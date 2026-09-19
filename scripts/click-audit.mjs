@@ -7,6 +7,7 @@
  *   node scripts/click-audit.mjs /ideas --all --max=60 --out=/tmp/ideas-audit.json
  *   node scripts/click-audit.mjs /pipeline --fast        (one page, Escape/back between clicks)
  *   node scripts/click-audit.mjs /admin/users --admin    (dev-only admin fixture: sample data)
+ *   node scripts/click-audit.mjs /circles --circles      (dev-only Circles fixture: sample circles)
  *
  * Default mode isolates every click in a fresh browser context (fresh demo
  * workspace), so destructive actions can't affect later clicks.
@@ -53,6 +54,8 @@ const SEED = String(args.seed ?? "demo")
 const LANG = args.lang ? String(args.lang) : ""
 // --admin turns on the dev-only admin fixture (sample data on /admin, which can't run in local mode).
 const ADMIN = Boolean(args.admin)
+// --circles turns on the dev-only Circles fixture (sample circles; Circles need the online version otherwise).
+const CIRCLES = Boolean(args.circles)
 const newContextRaw = browser.newContext.bind(browser)
 browser.newContext = async (options) => {
   const context = await newContextRaw(options)
@@ -68,6 +71,11 @@ browser.newContext = async (options) => {
   if (ADMIN) {
     await context.addInitScript(() => {
       if (!localStorage.getItem("pbos:dev-admin")) localStorage.setItem("pbos:dev-admin", "fixture")
+    })
+  }
+  if (CIRCLES) {
+    await context.addInitScript(() => {
+      if (!localStorage.getItem("pbos:dev-circles")) localStorage.setItem("pbos:dev-circles", "fixture")
     })
   }
   return context
@@ -88,8 +96,8 @@ async function openPage() {
   await page
     .waitForFunction(() => !document.querySelector('[aria-label="Loading workspace"]'), null, { timeout: 45000 })
     .catch(() => errors.push("timeout: workspace never finished loading"))
-  // The admin screens load their (fixture) data after the page: wait until nothing is busy.
-  if (ADMIN) {
+  // The admin and Circles screens load their (fixture) data after the page: wait until nothing is busy.
+  if (ADMIN || CIRCLES) {
     await page
       .waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 45000 })
       .catch(() => errors.push("timeout: admin screen never finished loading"))

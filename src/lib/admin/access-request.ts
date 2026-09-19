@@ -31,7 +31,7 @@ export const accessRequestSchema = z.object({
     .max(ACCESS_REQUEST_LIMITS.link, { error: "link_invalid" })
     .refine((value) => value === "" || /^https?:\/\/\S+$/i.test(value), { error: "link_invalid" })
     .default(""),
-  /** Must be true: the person agreed to the privacy notice (/privacy). */
+  /** Must be true: the person agreed to the Terms (/terms) and the privacy notice (/privacy). */
   consent: z.literal(true, { error: "consent_required" }),
   /** Honeypot — hidden from people; bots fill it. A non-empty value is accepted but silently dropped. */
   website: z.string().max(ACCESS_REQUEST_LIMITS.link).default(""),

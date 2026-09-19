@@ -18,6 +18,7 @@ import {
   SquareKanban,
   Trophy,
   Users,
+  UsersRound,
   Wallet,
   type LucideIcon,
 } from "lucide-react"
@@ -136,6 +137,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { title: "Campaigns", href: "/campaigns", icon: Megaphone, description: "Grouped content pushes" },
       { title: "Collabs", href: "/collabs", icon: Blend, description: "Creator collaborations and whether they were worth it" },
+      { title: "Circles", href: "/circles", icon: UsersRound, description: "Small creator groups: weekly check-ins, streaks and collab asks" },
       { title: "Series", href: "/series", icon: Repeat, description: "Recurring content series" },
       {
         title: "Story Vault",

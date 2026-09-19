@@ -24,6 +24,7 @@ import type { UiLang } from "@/lib/i18n/core"
 import type { AppSettings, Database } from "@/lib/types"
 import { buildWeekDays, platformGrowthRows, strategistPrompts } from "./dashboard-utils"
 import { firstSteps, hasPublishedContent, workspaceStartKey } from "./first-run"
+import { firstWeek } from "./first-week"
 
 /** Trailing window for performance sections (top content, pillars, platforms). */
 export const PERFORMANCE_DAYS = 30
@@ -42,12 +43,14 @@ export function computeDashboard(db: Database, settings: AppSettings, now: Date,
     settings,
   })
 
+  // Setup's starter ideas aren't "captured today" (same rule as the first-week plan).
+  const today = contentToday(db, now)
   return {
     now,
     week: weekRange(now, settings.week_starts_on),
     weekly,
     history: postingHistory(db, now, settings, 8),
-    today: contentToday(db, now),
+    today,
     buffer: contentBuffer(db, now, settings, lang),
     growth: {
       current: growthCurrent,
@@ -69,6 +72,8 @@ export function computeDashboard(db: Database, settings: AppSettings, now: Date,
     hasContent: db.content_items.length > 0,
     startKey: workspaceStartKey(db),
     steps: firstSteps(db, lang),
+    /** "Your first week": replaces `steps` on Home while it's visible (`isFirstWeekVisible`). */
+    firstWeek: firstWeek(db, now, lang),
   }
 }
 

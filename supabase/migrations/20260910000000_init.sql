@@ -1488,6 +1488,7 @@ create table public.app_settings (
   reminders_review_enabled boolean not null default false,
   reminders_review_day integer not null default 0 check (reminders_review_day between 0 and 6),
   reminders_review_time text not null default '18:00',
+  first_week_dismissed boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint app_settings_user_id_key unique (user_id)
@@ -1505,6 +1506,7 @@ comment on column public.app_settings.reminders_daily_time is 'Local time of the
 comment on column public.app_settings.reminders_slot_lead_minutes is 'Minutes before each posting-schedule slot.';
 comment on column public.app_settings.reminders_review_day is 'Weekly review day: 0 = Sunday ... 6 = Saturday.';
 comment on column public.app_settings.reminders_review_time is 'Local time of the weekly review reminder, HH:mm.';
+comment on column public.app_settings.first_week_dismissed is 'The creator hid the Home "Your first week" plan; it also retires by itself 14 days after the workspace start.';
 
 
 create trigger set_updated_at before update on public.app_settings

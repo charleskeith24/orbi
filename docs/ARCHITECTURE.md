@@ -35,7 +35,8 @@ src/
     (app)/<route>/page.tsx     server component: exports `metadata`, renders ONE client view
     (auth)/login|signup        Supabase auth pages (explain local mode when unconfigured); /signup = Request access (waitlist)
     (admin)/admin/…            admin area (§14): own minimal shell, never loads a workspace; every page runs getAdminGate()
-    privacy/                   public privacy notice (no sign-in needed)
+    privacy/                   public privacy notice (no sign-in needed); also the shared legal frame (legal-shell.tsx) and contact-email.ts
+    terms/                     public Terms of Use (no sign-in needed)
     onboarding/                first-run wizard (outside the shell)
     api/ai/route.ts            AI gateway (server-only keys)
     api/admin/…                admin API (§14): every handler wrapped in withAdmin (requireAdmin)
@@ -80,7 +81,7 @@ Client views read `useSearchParams()` — wrap them in `<Suspense>` in the page 
 
 ## 3. Data layer
 
-New workspaces are created from the **Starter Kit** (`src/lib/data/starter.ts`: formats, angles, hook templates, goals, platform strategies, posting schedule, tags, settings, blank brand) and go through **Quick setup** (`/onboarding`, `docs/QUICK_SETUP.md`): four screens — language, name and platforms · interests and skills · who you help · pick a niche direction or write your own — then a Building screen, and `quickSetupAnswers` (`features/onboarding/quick-setup.ts`) fills in the rest (role, industry, positioning, pillars, persona, goals, posting schedule, first ideas) before the one apply path (`planOnboarding` → `applyOnboardingPlan`). Voice and audience problems are left to the Home checklist (`features/dashboard/first-run.ts`). Brand HQ re-runs use the **Detailed setup** (the full niche-first flow) and `/onboarding?step=niche` re-runs Niche Discovery on Quick setup screens 2–4. The demo workspace (`src/lib/data/seed.ts`) is a **test fixture and dev-only QA seed** (`localStorage["pbos:dev-seed"]` = `demo` | `fresh`, set by the scripts' `--seed` flag) — never shown to users.
+New workspaces are created from the **Starter Kit** (`src/lib/data/starter.ts`: formats, angles, hook templates, goals, platform strategies, posting schedule, tags, settings, blank brand) and go through **Quick setup** (`/onboarding`, `docs/QUICK_SETUP.md`): four screens — language, name and platforms · interests and skills · who you help · pick a niche direction or write your own — then a Building screen, and `quickSetupAnswers` (`features/onboarding/quick-setup.ts`) fills in the rest (role, industry, positioning, pillars, persona, goals, posting schedule, first ideas) before the one apply path (`planOnboarding` → `applyOnboardingPlan`). Voice and audience problems are left to the Home checklist (`features/dashboard/first-run.ts`). **Your first week** (`features/dashboard/first-week.ts`, docs/FIRST_WEEK.md) then paces seven missions (capture 3 own ideas → content → script → voice + audience problem → publish → numbers → review/plan, plus a collab bonus) from `firstWeekStartKey` — row creation dates, never typed publish/schedule dates. Each mission ticks from workspace data only; setup's starter ideas (`source: "onboarding"`) never count as captured (`contentToday` excludes them too). It replaces Home's first-steps card while visible, shows one row on Today, and retires on day 15 or when hidden (`app_settings.first_week_dismissed`). Brand HQ re-runs use the **Detailed setup** (the full niche-first flow) and `/onboarding?step=niche` re-runs Niche Discovery on Quick setup screens 2–4. The demo workspace (`src/lib/data/seed.ts`) is a **test fixture and dev-only QA seed** (`localStorage["pbos:dev-seed"]` = `demo` | `fresh`, set by the scripts' `--seed` flag) — never shown to users.
 
 ### Model
 `src/lib/types.ts` defines 33 workspace tables (`TABLE_NAMES` in `src/lib/data/defaults.ts` = insert order = the order `supabase/migrations/20260910000000_init.sql` creates them). Field names are snake_case and identical to Postgres columns. Text defaults to `''`, lists to `[]`, optional FKs are `ID | null`. Server-only tables that aren't part of the workspace (`push_subscriptions`, `feedback`, `usage_events`, and the admin tables in §14) live in their owner's own migration; the parity test tolerates them and requires RLS.
@@ -98,7 +99,7 @@ Key relationships:
 - `content_calendar` = recurring weekly posting slots (not dated entries — a dated entry is an item's `scheduled_at`).
 - Money: `brand_deals` (status `lead → pitched → negotiating → contracted → in_progress → delivered → paid`, or `lost`; `content_item_ids` = content made for the deal; optional `campaign_id`), `income_entries` (`received` or `expected`, optional `brand_deal_id` / `content_item_id`, free-text `affiliate_program`), `rate_cards` (media-kit packages; `price: null` = ask for a quote). Every money row carries its own `currency`; `app_settings.currency` is only the default for new rows — total per currency, never add ₱ and $. Format with `formatMoney(amount, currency)` (`₱12,500`) from `@/lib/utils`.
 - Collabs: `collabs` = one collaboration with another creator (status `idea → reached_out → agreed → scheduled → published → reviewed`, or `declined`; `type` duet/stitch, guesting, joint Live, shoutout swap, giveaway, co-created, group brand deal, other). Partner fields are free text (no link to another account); `content_item_ids` = the creator's posts made for it (`array_remove`, like `brand_deals`); optional `pillar_id` / `goal_id` / `campaign_id` / `brand_deal_id` (set null). Results come only from the latest snapshot of linked posts (`collabResults`); **Collab lift** (`collabLift` in `src/lib/analytics/collabs.ts`) compares collab vs solo posts on the same platform over the last 90 days (medians; needs ≥ 3 collab and ≥ 5 solo posts with analytics, otherwise it says what's missing). Writes go through `features/collabs/collab-actions.ts`; `uiActions.openDialog({ type: "new-content", defaults, collabId })` links the created items to a collab.
-- `app_settings` also holds the UI language (`ui_language`), `simple_mode`, the default `currency` and the `reminders_*` preferences; `brand_profiles` holds the media-kit contact fields (`contact_email`, `website`, `media_kit_bio`).
+- `app_settings` also holds the UI language (`ui_language`), `simple_mode`, the default `currency`, the `reminders_*` preferences and `first_week_dismissed`; `brand_profiles` holds the media-kit contact fields (`contact_email`, `website`, `media_kit_bio`).
 
 ### Reading
 ```ts
@@ -135,7 +136,8 @@ Use `new Date()` at the call site (`now`) and pass it into pure analytics functi
 - Entity → page map (for links): idea `/ideas?open=`, item `/studio/<id>`, hook `/ideas/hooks?open=`, angle `/ideas/angles?open=`, persona `/audience?open=`, problem `/audience/problems?open=`, question `/audience/questions?open=`, pillar `/pillars?open=`, story `/stories?open=`, research `/research?open=`, series `/series?open=`, experiment `/experiments?open=`, campaign `/campaigns/<id>`, brand deal `/money/deals?open=`, income entry `/money/income?open=`, collab `/collabs?open=` (`/collabs?new=1&campaign=<id>` or `&deal=<id>` opens the form pre-linked; `/collabs?ideas=1` opens Collab ideas). Rate cards are edited on `/money/media-kit`.
 - Settings tabs: `general`, `performance`, `funnel`, `formats`, `tags`, `engagement`, `reminders`, `ai`, `integrations`, `data` (`settingsHref(tab)` in `features/settings/tabs.ts`).
 - Admin area (Supabase mode, admins only, §14): `/admin` (Overview), `/admin/requests`, `/admin/users`, `/admin/feedback`, `/admin/audit`, `/admin/security` (2-step verification). Never in `NAV_SECTIONS`; the entry is the account menu and ⌘K, for admins only.
-- Public pages (no sign-in in Supabase mode): `/login`, `/signup` (Request access), `/privacy`.
+- Collab Circles (§15, online version; local mode shows a notice): `/circles` (list), `/circles/<id>` (a circle; `#asks` jumps to Collab asks), `/circles/join/<code>` (invite link; signed-out visitors go through `/login?next=`).
+- Public pages (no sign-in in Supabase mode): `/login`, `/signup` (Request access), `/privacy`, `/terms` (`PUBLIC_PAGES` in `features/auth/auth-paths.ts`). Both legal pages show `NEXT_PUBLIC_CONTACT_EMAIL` when it's set (`src/app/privacy/contact-email.ts`) and say honestly when it isn't; `?preview=contact` fakes one in development only.
 
 Global actions (callable from anywhere):
 ```ts
@@ -199,7 +201,7 @@ Phase 4 integrations (Meta, TikTok, YouTube, LinkedIn, Google Drive, Canva, Buff
 
 ## 9. Terminology (use exactly)
 
-Brand HQ · Audience HQ · Persona · Problem Bank · Question Bank · Content Pillar · Content Matrix · Content Funnel (TOFU/MOFU/BOFU) · Idea Bank · Quick Capture · Idea Generator · Hook Library · Angle Library · Content Studio · Content Brief · Script · Content Score · Pipeline · Calendar · Posting Schedule · Weekly Planner · Campaign · Series · Story Vault · Research Library · Analytics · Winner detection (Normal / Good / Winner / Breakout) · Winning Content Library · Repurposing Engine · Content Tree · Experiments · Weekly Report · Monthly Review · Content Strategist · Content Health Score · Content Buffer · Collab tracker · Collab lift.
+Brand HQ · Audience HQ · Persona · Problem Bank · Question Bank · Content Pillar · Content Matrix · Content Funnel (TOFU/MOFU/BOFU) · Idea Bank · Quick Capture · Idea Generator · Hook Library · Angle Library · Content Studio · Content Brief · Script · Content Score · Pipeline · Calendar · Posting Schedule · Weekly Planner · Campaign · Series · Story Vault · Research Library · Analytics · Winner detection (Normal / Good / Winner / Breakout) · Winning Content Library · Repurposing Engine · Content Tree · Experiments · Weekly Report · Monthly Review · Content Strategist · Content Health Score · Content Buffer · Collab tracker · Collab lift · Collab Circles · Your first week.
 
 ## 10. Definition of done (every feature)
 
@@ -284,7 +286,7 @@ The online version has a platform admin (the owner, plus anyone they promote) an
   - Deleting an account requires the body to repeat its email.
 - **Audit.** Every successful change writes **one** `admin_audit_log` row with `writeAudit()`: the action from `ADMIN_AUDIT_ACTIONS` (the CHECK list is kept in sync), the target id and email, and small content-free `details` such as `{ from: "active", to: "disabled" }`. The log is append-only: no update or delete grant, not even for the secret key.
 - **Reads that need 2-step verification.** Admins read the audit log, `feedback` and `usage_events` through RLS policies that require `is_admin()` **and** `auth.jwt() ->> 'aal' = 'aal2'`. A stolen password alone can't read them through the Data API.
-- **Waitlist.** `POST /api/access-requests` is the only anonymous API call the proxy lets through (`isPublicApiCall` in `features/auth/auth-paths.ts`); `/privacy` is the only public page besides the auth pages. The route:
+- **Waitlist.** `POST /api/access-requests` is the only anonymous API call the proxy lets through (`isPublicApiCall` in `features/auth/auth-paths.ts`); `/privacy` and `/terms` are the only public pages besides the auth pages. The route:
   - requires a same-origin `Origin`;
   - validates with the shared zod schema, answering `400 invalid` with a `fields` map;
   - accepts a filled honeypot silently, without storing it;
@@ -296,3 +298,32 @@ The online version has a platform admin (the owner, plus anyone they promote) an
   - `src/lib/admin/admin-migration.pglite.test.ts`: the SQL on Postgres.
   - `src/lib/admin/guard.test.ts`: every gate and guard branch.
   - `src/app/api/admin/routes.test.ts` and `src/app/api/access-requests/route.test.ts`: every handler and error code, against the in-memory fake in `src/lib/admin/testing/fake-supabase.ts`.
+
+## 15. Collab Circles
+
+Small invite-only groups of creators (3–8) who keep each other posting and find collab partners: a weekly check-in, streaks and collab asks (`docs/CIRCLES.md`). **Online version only**; local mode shows an honest notice (the `/admin` pattern). No chat, no public directory, no engagement pods.
+
+- **Privacy is the product.**
+  - Nothing leaves a workspace automatically. A check-in holds only what the member submits: a number of posts (pre-filled from their own workspace by `checkinDraft`, editable) and an optional note ≤ 280.
+  - Contacts (`circle_contacts`) have **no grants and no policies**. They're written only by `set_circle_contact()` and read only by `circle_contact(circle, other)`, which answers for yourself or for a member linked to you by an **accepted** interest on an ask in that circle (either direction).
+  - Admins get nothing: no admin policies, and `service_role` has no grants on the circle tables.
+  - Leaving, being removed or deleting the account removes the member's check-ins, asks, interests and contact in that circle (composite foreign keys to `circle_members`).
+- **Schema.** `supabase/migrations/20260919000000_circles.sql`: `circles`, `circle_members`, `circle_contacts`, `circle_checkins`, `circle_asks`, `circle_ask_interests`. These are server-only tables (`SERVER_ONLY_TABLES`), not workspace tables, so the Collab tracker's data model is unchanged.
+  - Members read their circles' rows through RLS (`is_circle_member()`), but never `circles.invite_code_hash` (column grant — always list columns, never `select *`).
+  - Members write their own check-ins (this or last week only), asks (edit/close their own), interests (only in others' open asks; withdraw while pending) and their own `display_name`.
+  - Everything else goes through `security definer` functions that check `auth.uid()`: `create_circle`, `preview_invite`, `join_circle` (8 members max, 10 circles per person), `rotate_invite` / `remove_member` (owner only; never the owner), `leave_circle` (the longest-standing member takes over; the last one deletes the circle — a trigger does the same when an account is deleted), `accept_interest` (the ask's author only).
+  - Errors are raised as short codes (`circle_full`, `not_owner`, …) and mapped by `toCircleError`.
+- **Invite codes.** 43 base64url characters (244 random bits), generated by the database; only the SHA-256 is stored. An owner's browser remembers the link it last created or rotated (`circle-memory.ts`, localStorage); elsewhere the owner makes a new link.
+- **Client.** `CirclesApi` (`src/lib/circles/types.ts`) has two implementations:
+  - `features/circles/api/supabase-api.ts`: the browser Supabase client, with RLS and RPCs only. There are no API routes and no secret key.
+  - `src/lib/circles/fixture-api.ts`: an in-memory fake with the same rules, used for tests and the dev fixture.
+  - `useCirclesClient()` / `<CirclesFrame>` pick the right one and render the local, signed-out and loading states.
+- **Pure logic** (`src/lib/circles`), with tests:
+  - `circleStreak`: consecutive weeks, ending with the current or previous week, with a check-in of ≥ 1 post. 6–8-day gaps count as consecutive (Monday ↔ Sunday weeks).
+  - `circleWeek`: this week's check-ins, sorted by name, never by score.
+  - `checkinDraft`: the same count as the weekly posting goal.
+  - `collabFromAsk`: "Add to Collabs" creates an Agreed collab in the author's own workspace with a 3-day follow-up.
+- **Dev fixture.** `localStorage["pbos:dev-circles"] = "fixture"`, set by the scripts' `--circles` flag, loads sample circles on the local dev server. `dev-fixture.ts` checks `NODE_ENV` and never loads the fixture in production, and creating the fake in production throws.
+- **Tests.**
+  - `src/lib/circles/circles-migration.pglite.test.ts`: every RLS rule and function on Postgres.
+  - `features/circles/api/supabase-api.pglite.test.ts`: the browser client end to end through a PostgREST-like stand-in (`src/lib/circles/testing/pglite-client.ts`).

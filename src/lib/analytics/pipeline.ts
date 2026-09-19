@@ -99,7 +99,7 @@ export interface TodayContent {
   toPost: ContentItem[]
   /** Not published and scheduled before now, or still in production past its due date (see isOverdue). */
   overdue: ContentItem[]
-  /** Ideas created today, newest first. */
+  /** Ideas the creator captured today, newest first (Quick setup's starter ideas, source "onboarding", don't count). */
   ideasCapturedToday: ContentIdea[]
 }
 
@@ -142,7 +142,7 @@ export function contentToday(db: Database, now: Date): TodayContent {
     if (key !== "ideasCapturedToday") sortByPlannedDate(out[key])
   }
   out.ideasCapturedToday = db.content_ideas
-    .filter((i) => isToday(timeOf(i, "created_at")))
+    .filter((i) => i.source !== "onboarding" && isToday(timeOf(i, "created_at")))
     .sort((a, b) => compareText(b.created_at, a.created_at))
   return out
 }

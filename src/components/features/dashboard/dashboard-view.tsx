@@ -6,6 +6,8 @@ import { useBrand, useSettings } from "@/lib/store"
 import { ContentTodayCard } from "./content-today-card"
 import { DashboardHeader } from "./dashboard-header"
 import { FirstStepsCard, PerformancePlaceholder } from "./first-steps-card"
+import { isFirstWeekVisible } from "./first-week"
+import { FirstWeekCard } from "./first-week-card"
 import { HealthCard } from "./health-card"
 import { IncomeCard } from "./income-card"
 import { InsightsCard } from "./insights-card"
@@ -24,6 +26,8 @@ import { WeekCalendar } from "./week-calendar"
  * one column with Today, the KPIs and Quick Capture first; two columns from 768px; the full
  * 12-column grid from 1024px. DOM order is the desktop order; `order-*` sets the mobile stack.
  * Until something is published, first steps replace the KPIs and the performance cards collapse into one.
+ * In a workspace's first two weeks "Your first week" leads instead of the first steps (above the KPIs once
+ * something is published), until it's hidden or retires.
  */
 export function DashboardView() {
   const brand = useBrand()
@@ -32,16 +36,18 @@ export function DashboardView() {
   const todaySlots = data.weekDays.find((day) => day.isToday)?.slots ?? []
   const firstRun = !data.hasPublished
   const showWork = !firstRun || data.hasContent
+  const showFirstWeek = isFirstWeekVisible(data.firstWeek)
 
   return (
     <PageContainer className="@container gap-4">
       <DashboardHeader ownerName={brand.name} now={data.now} weekStart={data.week.start} weekEnd={data.week.end} />
       <div className="grid min-w-0 grid-cols-1 gap-4 @3xl:grid-cols-12">
-        {firstRun ? (
+        {showFirstWeek ? (
+          <FirstWeekCard plan={data.firstWeek} className="order-first @3xl:order-1 @3xl:col-span-12" />
+        ) : firstRun ? (
           <FirstStepsCard steps={data.steps} className="order-first @3xl:order-1 @3xl:col-span-12" />
-        ) : (
-          <KpiRow data={data} className="order-2 @3xl:order-1 @3xl:col-span-12" />
-        )}
+        ) : null}
+        {firstRun ? null : <KpiRow data={data} className="order-2 @3xl:order-1 @3xl:col-span-12" />}
         {showWork ? <PipelineStrip pipeline={data.pipeline} className="order-5 @3xl:order-2 @3xl:col-span-12" /> : null}
         <ContentTodayCard
           today={data.today}

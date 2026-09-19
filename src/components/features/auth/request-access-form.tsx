@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useState } from "react"
 import { useScreenT } from "@/components/app-shell/device-ui-lang"
 import { AuthCard, AuthNotice, EmailSentence } from "@/components/features/auth/auth-card"
+import { authLinkClass, fillTemplate, LegalLinks } from "@/components/features/auth/legal-links"
 import { authMessages, authValidationMessages } from "@/components/features/auth/messages"
 import { normalizeLink, submitAccessRequest } from "@/components/features/auth/request-access-client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -22,7 +23,6 @@ type FieldName = "name" | "email" | "about" | "link" | "consent"
 type ValidationKey = keyof (typeof authValidationMessages)["en"]
 
 const FIELDS: FieldName[] = ["name", "email", "about", "link", "consent"]
-const linkClass = "font-medium text-foreground underline-offset-4 hover:underline"
 const untouched = (): Record<FieldName, boolean> => ({ name: false, email: false, about: false, link: false, consent: false })
 
 type Outcome = "sent" | "closed" | null
@@ -159,16 +159,15 @@ export function RequestAccessForm({ state = "open" }: { state?: Exclude<AccessRe
       description={t("request_description")}
       footer={
         <>
-          {t("have_account")}{" "}
-          <Link href="/login" className={linkClass}>
-            {t("sign_in")}
-          </Link>
-          <span aria-hidden className="mx-2">
-            ·
-          </span>
-          <Link href="/privacy" className={linkClass}>
-            {t("privacy_link")}
-          </Link>
+          <p>
+            {t("have_account")}{" "}
+            <Link href="/login" className={authLinkClass}>
+              {t("sign_in")}
+            </Link>
+          </p>
+          <p className="mt-1.5 text-xs">
+            <LegalLinks />
+          </p>
         </>
       }
     >
@@ -307,11 +306,19 @@ export function RequestAccessForm({ state = "open" }: { state?: Exclude<AccessRe
                 className="mt-0.5"
               />
               <label htmlFor="request-consent" className="text-sm leading-snug font-normal text-muted-foreground">
-                {t("consent_before")}{" "}
-                <Link href="/privacy" target="_blank" rel="noopener" className={linkClass}>
-                  {t("consent_link")}
-                </Link>{" "}
-                {t("consent_after")}
+                {/* New tab, so the half-filled form stays put. */}
+                {fillTemplate(t("consent_label"), {
+                  terms: (
+                    <Link href="/terms" target="_blank" rel="noopener" className={authLinkClass}>
+                      {t("consent_terms")}
+                    </Link>
+                  ),
+                  privacy: (
+                    <Link href="/privacy" target="_blank" rel="noopener" className={authLinkClass}>
+                      {t("consent_privacy")}
+                    </Link>
+                  ),
+                })}
               </label>
             </div>
             <FieldError id="request-consent-error">{consentError}</FieldError>

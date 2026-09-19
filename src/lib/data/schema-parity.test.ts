@@ -53,6 +53,13 @@ const SERVER_ONLY_TABLES = [
   "platform_settings",
   "access_requests",
   "admin_audit_log",
+  // Collab Circles (20260919000000_circles.sql)
+  "circles",
+  "circle_members",
+  "circle_contacts",
+  "circle_checkins",
+  "circle_asks",
+  "circle_ask_interests",
 ]
 
 /* ------------------------------ SQL parsing ------------------------------ */

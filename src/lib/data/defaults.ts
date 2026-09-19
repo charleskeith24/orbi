@@ -454,6 +454,7 @@ export const TABLE_DEFAULTS: Defaults = {
     reminders_review_enabled: false,
     reminders_review_day: 0,
     reminders_review_time: "18:00",
+    first_week_dismissed: false,
   },
   brand_deals: {
     brand_name: "",

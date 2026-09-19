@@ -6,6 +6,7 @@
  *   node scripts/smoke.mjs /ideas
  *   node scripts/smoke.mjs /ideas --out=/tmp/ideas.png --width=390 --height=844 --dark --full
  *   node scripts/smoke.mjs /admin/users --admin --lang=tl        (dev-only admin fixture: sample data)
+ *   node scripts/smoke.mjs /circles --circles --lang=tl          (dev-only Circles fixture: sample circles)
  *   node scripts/smoke.mjs /ideas --actions='[{"click":"text=Add idea"},{"wait":400},{"fill":["input[name=title]","Test"]},{"press":"Enter"},{"screenshot":"/tmp/after.png"}]'
  *
  * Each run uses a fresh browser profile → empty localStorage → the demo workspace is seeded.
@@ -41,6 +42,8 @@ const SEED = String(args.seed ?? "demo")
 const LANG = args.lang ? String(args.lang) : ""
 // --admin turns on the dev-only admin fixture (sample data on /admin, which can't run in local mode).
 const ADMIN = Boolean(args.admin)
+// --circles turns on the dev-only Circles fixture (sample circles; Circles need the online version otherwise).
+const CIRCLES = Boolean(args.circles)
 const newContextRaw = browser.newContext.bind(browser)
 browser.newContext = async (options) => {
   const context = await newContextRaw(options)
@@ -56,6 +59,11 @@ browser.newContext = async (options) => {
   if (ADMIN) {
     await context.addInitScript(() => {
       if (!localStorage.getItem("pbos:dev-admin")) localStorage.setItem("pbos:dev-admin", "fixture")
+    })
+  }
+  if (CIRCLES) {
+    await context.addInitScript(() => {
+      if (!localStorage.getItem("pbos:dev-circles")) localStorage.setItem("pbos:dev-circles", "fixture")
     })
   }
   return context

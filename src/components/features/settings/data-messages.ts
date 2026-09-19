@@ -79,6 +79,9 @@ export const dataTabMessages = defineMessages({
     sync_step_4: "Signed in on this same address, Orbi offers to move this local workspace into your account. On a new address (your deployed site), export a backup here and import it there.",
     variables_copied: "Variables copied",
     guides_label: "Step-by-step guides in the project:",
+    legal_label: "Legal",
+    legal_terms: "Terms of Use",
+    legal_privacy: "Privacy notice",
   },
   tl: {
     where_title: "Saan naka-save ang data mo",
@@ -157,6 +160,9 @@ export const dataTabMessages = defineMessages({
     sync_step_4: "Kapag naka-sign in sa parehong address na 'to, iaalok ng Orbi na ilipat ang local workspace sa account mo. Sa bagong address (ang deployed site mo), mag-export ng backup dito at i-import ito roon.",
     variables_copied: "Na-copy ang variables",
     guides_label: "Step-by-step guides sa project:",
+    legal_label: "Legal",
+    legal_terms: "Terms of Use",
+    legal_privacy: "Privacy notice",
   },
 })
 

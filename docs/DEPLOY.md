@@ -46,6 +46,7 @@ The database design lives in the project folder `supabase/migrations/`. **Run ev
 | 2 | `20260914000100_beta.sql` | In-app feedback and opt-in usage analytics (`feedback`, `usage_events`) |
 | 3 | `20260914000200_push.sql` | Push reminders on phones (`push_subscriptions`) |
 | 4 | `20260918000000_admin.sql` | The admin area and the "Request access" waitlist (`admin_users`, `access_requests`, `admin_audit_log`, `platform_settings`) |
+| 5 | `20260919000000_circles.sql` | Collab Circles: small invite-only creator groups (`circles`, `circle_members`, `circle_contacts`, `circle_checkins`, `circle_asks`, `circle_ask_interests`) |
 | … | any newer file | whatever that feature needs |
 
 If new files appear in that folder later (after you pull an update), run just the new ones, in order.
@@ -95,6 +96,7 @@ npx supabase db push
    |---|---|
    | `ANTHROPIC_API_KEY` (+ `AI_MODEL`, `AI_EFFORT`) | Claude-powered AI. Without it, AI features use the offline templates (clearly labelled). |
    | `SUPABASE_SECRET_KEY` | The admin area and the "Request access" form (step 7), and server jobs such as push reminders. Supabase → API Keys → **Secret key**. Add it now if you'll run a beta. |
+   | `NEXT_PUBLIC_CONTACT_EMAIL` | The email people can write to, shown as "Email us at …" on `/privacy` and `/terms` — including for deleting an account or an access request when they don't have an account. **Set it before real people sign up.** It's public, so use an inbox you're happy to publish (e.g. a support address). Without it, those pages say no contact email is set up yet. |
    | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET` | Push reminders on phones (optional). Key generation, the free 15-minute scheduler (Supabase Cron) and testing are in [REMINDERS.md](REMINDERS.md). Without them, **Add to my calendar** reminders still work. |
 
    > Only variables that start with `NEXT_PUBLIC_` are visible in the browser, and only the publishable key belongs there — row-level security protects the data. The **secret key**, `VAPID_PRIVATE_KEY`, `CRON_SECRET` and `ANTHROPIC_API_KEY` must never get a `NEXT_PUBLIC_` name and must never be committed to GitHub.
@@ -153,6 +155,7 @@ Do this before you share the site with anyone. Full guide, in plain words: **[AD
    "1 rows affected" means it worked. Nobody can make themselves admin from inside the app; after this, you add other admins from **Admin → Users**.
 3. **Turn on 2-step verification.** Open `https://<your-site>/admin`. It opens on **Security**: scan the QR code with an authenticator app on your phone (Google Authenticator, Microsoft Authenticator, 1Password, Authy…) and type the 6-digit code. The admin area only opens with that code.
 4. **Approve requests.** People ask to join on `/signup`. You approve them in **Admin → Requests**; each approval emails an invite that lands on **Set a password** (the Invite user template from step 5). **Reject** sends no email. The **Accepting requests** switch there closes the form for a while.
+5. **Check the legal pages.** Everyone who asks to join agrees to the **Terms of Use** (`/terms`) and the **Privacy notice** (`/privacy`). Both are drafts: read them, review them with a lawyer, and set `NEXT_PUBLIC_CONTACT_EMAIL` (step 4) so people can reach you — then redeploy. [ADMIN.md](ADMIN.md) step 7 covers what to do when someone writes in.
 
 Admins see account details, counts and feedback — never anyone's ideas, scripts, brand or money. ADMIN.md explains what the admin area can and can't see.
 

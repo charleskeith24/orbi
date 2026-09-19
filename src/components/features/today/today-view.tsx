@@ -5,6 +5,7 @@ import { CollabFollowUpsSection } from "@/components/features/collabs/today-foll
 import { WhatToPost } from "@/components/features/recommendations/what-to-post"
 import { useTable } from "@/lib/store"
 import { EngagementTracker } from "./engagement-tracker"
+import { FirstWeekRow } from "./first-week-row"
 import { IdeasTodaySection } from "./ideas-today"
 import { RhythmStrip } from "./rhythm-strip"
 import { TodayHeader } from "./today-header"
@@ -23,6 +24,7 @@ export function TodayView() {
   return (
     <PageContainer className="@container gap-4">
       <TodayHeader data={data} />
+      <FirstWeekRow plan={data.firstWeek} />
       <RhythmStrip steps={data.rhythm} />
       <div className="flex min-w-0 flex-col gap-4 @4xl:grid @4xl:grid-cols-12 @4xl:items-start">
         <div className="contents @4xl:col-span-7 @4xl:flex @4xl:min-w-0 @4xl:flex-col @4xl:gap-4">

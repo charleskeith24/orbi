@@ -1,15 +1,16 @@
 /**
  * DRAFT — privacy notice for the owner to review before launch (docs/ADMIN_BRIEF.md §6). Not legal advice.
- * Every sentence states a fact of this implementation as of 2026-09-18 (the tables, routes and settings named
+ * Every sentence states a fact of this implementation as of 2026-09-19 (the tables, routes and settings named
  * in the comments of `privacy-view.tsx`). When the app changes what it stores or who can see it, update this
- * file. Owner to-do: add a contact email for deletion requests from people without an account.
+ * file. The contact and deletion lines shared with /terms are in `legal-messages.ts`; the contact email is
+ * `NEXT_PUBLIC_CONTACT_EMAIL` (owner to-do: set it before real people sign up — docs/DEPLOY.md step 4).
  */
 import { defineMessages } from "@/lib/i18n/core"
 
 export const privacyMessages = defineMessages({
   en: {
     title: "Privacy notice",
-    updated: "Last updated September 18, 2026",
+    updated: "Last updated September 19, 2026",
     intro: "A plain-language summary of what Orbi stores, who can see it, where it's kept, and how to take it with you or delete it.",
 
     stores_title: "What Orbi stores",
@@ -29,12 +30,19 @@ export const privacyMessages = defineMessages({
     stores_usage:
       "Off by default and chosen per device. When on: page names, setup step names and counts of key actions (like “an idea was captured”). Never your ideas, posts or anything else you type.",
 
+    stores_circles_title: "Collab Circles — only if you join one",
+    stores_circles:
+      "The circles you create or join, the name you use in each, your weekly check-ins (the number of posts you choose to share and an optional note), collab asks and interests, and the contact you choose to share. Leaving a circle deletes what you wrote in it.",
+    see_circles:
+      "Members of a circle see its names, check-ins and asks. Your contact is shown only to a member linked to you by an accepted collab ask, and theirs only to you. Admins can't see circles.",
+
     see_title: "Who can see what",
     see_you: "You can see and change everything in your workspace.",
     see_admins:
       "Orbi's admins see account details (email, name, status, join and last sign-in dates, whether setup is finished, whether 2-step verification is on) and counts (how many ideas, content items and published posts you have). They never see your ideas, scripts, posts or anything else inside your workspace.",
     see_admins_read: "Admins read access requests and the feedback people send, because both are written to the Orbi team.",
-    see_audit: "Every change an admin makes to an account is recorded in an audit log.",
+    see_audit:
+      "Every change an admin makes to an account or an access request is recorded in an audit log, with the email it was about. Log entries stay after an account is deleted.",
 
     hosting_title: "Where it's kept",
     hosting_supabase: "Supabase — the database and sign-in. It also sends the sign-in and invite emails.",
@@ -45,8 +53,6 @@ export const privacyMessages = defineMessages({
     control_title: "Take it with you or delete it",
     control_export: "Export: Settings → Data → Export workspace downloads a JSON file with everything in your workspace.",
     control_clear: "Clear: Settings → Data → Start fresh replaces everything in your workspace.",
-    control_delete:
-      "Delete your account: ask the Orbi team (use the Feedback button). Deleting an account deletes its workspace too. The same goes for an access request you want removed.",
     control_usage: "Usage analytics: turn it on or off anytime in the Feedback dialog.",
 
     storage_title: "Cookies and browser storage",
@@ -56,13 +62,10 @@ export const privacyMessages = defineMessages({
     local_title: "The local version",
     local_body:
       "If you use Orbi without an account (local mode), your workspace stays in this browser. There are no accounts, access requests, feedback or usage analytics sent anywhere.",
-
-    back: "Back to Orbi",
-    request_access: "Request access",
   },
   tl: {
     title: "Privacy notice",
-    updated: "Huling na-update noong September 18, 2026",
+    updated: "Huling na-update noong September 19, 2026",
     intro: "Simpleng buod kung ano ang sine-save ng Orbi, sino ang nakakakita, saan ito nakatago, at paano mo ito makukuha o mabubura.",
 
     stores_title: "Ano ang sine-save ng Orbi",
@@ -82,12 +85,19 @@ export const privacyMessages = defineMessages({
     stores_usage:
       "Naka-off by default at pinipili kada device. Kapag naka-on: pangalan ng pages, pangalan ng setup steps at bilang ng mahahalagang action (gaya ng “may na-capture na idea”). Hindi kailanman ang ideas, posts o kahit anong tina-type mo.",
 
+    stores_circles_title: "Collab Circles — kung sasali ka lang",
+    stores_circles:
+      "Ang mga circle na ginawa o sinalihan mo, ang pangalang gamit mo sa bawat isa, ang weekly check-ins mo (ang bilang ng posts na pinili mong i-share at optional na note), collab asks at interests, at ang contact na pinili mong i-share. Kapag umalis ka sa circle, buburahin ang mga isinulat mo roon.",
+    see_circles:
+      "Nakikita ng mga miyembro ng circle ang mga pangalan, check-ins at asks doon. Ipinapakita lang ang contact mo sa miyembrong naka-link sa'yo sa isang na-accept na collab ask, at ang sa kanila sa'yo lang. Hindi nakikita ng admins ang circles.",
+
     see_title: "Sino ang nakakakita ng ano",
     see_you: "Nakikita at nababago mo ang lahat sa workspace mo.",
     see_admins:
       "Ang mga admin ng Orbi ay nakakakita ng account details (email, pangalan, status, petsa ng pagsali at huling sign-in, kung tapos na ang setup, kung naka-on ang 2-step verification) at counts (ilan ang ideas, content items at published posts mo). Hindi nila kailanman nakikita ang ideas, scripts, posts o kahit ano sa loob ng workspace mo.",
     see_admins_read: "Binabasa ng admins ang access requests at ang feedback na pinapadala, kasi pareho itong para sa Orbi team.",
-    see_audit: "Nire-record sa audit log ang bawat binabago ng admin sa isang account.",
+    see_audit:
+      "Nire-record sa audit log ang bawat binabago ng admin sa isang account o access request, kasama ang email na tinutukoy nito. Nananatili ang log entries kahit na-delete na ang account.",
 
     hosting_title: "Saan ito nakatago",
     hosting_supabase: "Supabase — ang database at sign-in. Ito rin ang nagpapadala ng sign-in at invite emails.",
@@ -98,8 +108,6 @@ export const privacyMessages = defineMessages({
     control_title: "Kunin o burahin",
     control_export: "I-export: Settings → Data → Export workspace — magda-download ng JSON file na nandoon lahat ng nasa workspace mo.",
     control_clear: "I-clear: Settings → Data → Start fresh — papalitan ang lahat ng nasa workspace mo.",
-    control_delete:
-      "I-delete ang account mo: sabihan ang Orbi team (gamitin ang Feedback button). Kapag na-delete ang account, buburahin din ang workspace nito. Ganoon din para sa access request na gusto mong ipabura.",
     control_usage: "Usage analytics: i-on o i-off anytime sa Feedback dialog.",
 
     storage_title: "Cookies at browser storage",
@@ -109,8 +117,5 @@ export const privacyMessages = defineMessages({
     local_title: "Ang local version",
     local_body:
       "Kung gamit mo ang Orbi nang walang account (local mode), nasa browser na 'to lang ang workspace mo. Walang accounts, access requests, feedback o usage analytics na pinapadala kahit saan.",
-
-    back: "Balik sa Orbi",
-    request_access: "Mag-request ng access",
   },
 })

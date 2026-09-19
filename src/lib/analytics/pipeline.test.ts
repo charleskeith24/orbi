@@ -56,6 +56,7 @@ describe("contentToday", () => {
     const out = addPublished(db, 0, { title: "Out", due_date: "2026-09-01" })
     add(db, "content_ideas", { title: "Fresh" })
     add(db, "content_ideas", { title: "Old" }, { created_at: daysAgo(3).toISOString() })
+    add(db, "content_ideas", { title: "Setup starter", source: "onboarding" })
 
     const today = contentToday(db, NOW)
     expect(ids(today.dueToday)).toEqual([dueToday.id])

@@ -2,6 +2,7 @@
 
 import { formatDistanceStrict } from "date-fns"
 import { CircleAlert, Cloud, Download, FileBraces, HardDrive, History, RotateCcw, TriangleAlert, Upload } from "lucide-react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
@@ -42,6 +43,8 @@ const SUPABASE_SNIPPET = `NEXT_PUBLIC_SUPABASE_URL=https://<your-project-ref>.su
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...`
 
 const SYNC_STEPS: Key[] = ["sync_step_1", "sync_step_2", "sync_step_3", "sync_step_4"]
+
+const legalLinkClass = "font-medium text-foreground underline-offset-4 hover:underline"
 
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
@@ -351,6 +354,17 @@ export function DataTab({ now }: { now: Date }) {
           </p>
         </div>
       </SectionCard>
+
+      <nav aria-label={t("legal_label")} className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1 text-xs text-muted-foreground">
+        <span>{t("legal_label")}:</span>
+        <Link href="/terms" className={legalLinkClass}>
+          {t("legal_terms")}
+        </Link>
+        <span aria-hidden>·</span>
+        <Link href="/privacy" className={legalLinkClass}>
+          {t("legal_privacy")}
+        </Link>
+      </nav>
 
       <ConfirmDialog
         open={Boolean(action)}

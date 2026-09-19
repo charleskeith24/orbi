@@ -95,10 +95,11 @@ describe("proxy in Supabase mode", () => {
     }
   })
 
-  it("keeps /privacy and the request-access POST public, and guards the admin area", async () => {
+  it("keeps /privacy, /terms and the request-access POST public, and guards the admin area", async () => {
     signedOut()
     const { proxy } = await loadProxy(true)
     expect((await proxy(request("/privacy"))).headers.get("x-middleware-next")).toBe("1")
+    expect((await proxy(request("/terms"))).headers.get("x-middleware-next")).toBe("1")
     const post = new NextRequest(new URL("/api/access-requests", "http://localhost:3000"), { method: "POST" })
     expect((await proxy(post)).headers.get("x-middleware-next")).toBe("1")
     expect((await proxy(request("/api/access-requests"))).status).toBe(401)

@@ -73,7 +73,7 @@ Then sign in and set it up again (step 3).
 
 ## 4. Approve a request
 
-People who want to join fill in **Request access** on your site. They give their name, their email, what they create and a link to their page (the last two are optional), and agree to the privacy notice at `/privacy`.
+People who want to join fill in **Request access** on your site. They give their name, their email, what they create and a link to their page (the last two are optional), and agree to the **Terms of Use** at `/terms` and the **Privacy notice** at `/privacy`.
 
 1. **Admin → Requests** lists the pending requests first.
 2. **Approve.** Orbi emails them an invite. They click it, choose a password on **Set a password**, and start with their own empty workspace (onboarding opens).
@@ -133,6 +133,22 @@ Creators put unpublished ideas, scripts, income and brand deals into Orbi. They 
 - Row-level security still keeps every workspace private to its owner.
 
 **Be honest with your testers about one thing.** Anyone who can open your **Supabase dashboard** can read the database directly. That's the project owner, so keep dashboard access to yourself, and use a strong password with 2-step verification on your Supabase account too.
+
+## 7. The contact email and deletion requests
+
+`/privacy` and `/terms` tell people how to reach you. Set **`NEXT_PUBLIC_CONTACT_EMAIL`** in Vercel → Project → Settings → Environment Variables (for example a support inbox — it's shown publicly), then **redeploy**. Until it's set, both pages say that no contact email is set up yet and point signed-in people to the Feedback button. People without an account then have no way to reach you, so set it before you open the waitlist.
+
+Both pages are drafts. Review them with a lawyer, especially the governing law (the Philippines) in the Terms. The open questions are listed at the top of `src/app/terms/terms-messages.ts`.
+
+When someone writes in:
+
+| They ask to… | What to do |
+|---|---|
+| **Delete their account** | Only act on a message from the account's own email address. **Admin → Users** → the row menu → **Delete**, and type their email to confirm. Their workspace, feedback and usage events are deleted with it. |
+| **Remove their access request** (no account) | Only act on a message from the email on the request. Supabase → **SQL Editor**: `delete from access_requests where email = 'them@example.com';` There's no button for this in the admin area. |
+| **Report someone breaking the Terms** | **Admin → Users** → **Disable account**. They can't sign in; their workspace stays as it is. |
+
+The **audit log** keeps its entries, including the email an action was about, even after an account is deleted. The Privacy notice says so.
 
 ---
 

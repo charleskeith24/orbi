@@ -7,23 +7,48 @@ import { Button } from "@/components/ui/button"
 import { useT } from "@/lib/i18n"
 import { uiActions } from "@/lib/store"
 import { cn } from "@/lib/utils"
-import type { FirstStep } from "./first-run"
+import type { FirstStep, FirstStepAction } from "./first-run"
 import { dashboardMessages } from "./messages"
 
-function StepButton({ step, primary }: { step: FirstStep; primary: boolean }) {
-  const variant = primary ? "default" : "outline"
-  if (step.action.kind === "link") {
+/** A first-run step's or first-week mission's one action: a link, or one of the app-wide dialogs. */
+export function StepActionButton({
+  action,
+  children,
+  variant = "default",
+  className,
+  "aria-label": ariaLabel,
+}: {
+  action: FirstStepAction
+  children: React.ReactNode
+  variant?: "default" | "outline"
+  className?: string
+  "aria-label"?: string
+}) {
+  if (action.kind === "link") {
     return (
-      <Button asChild size="sm" variant={variant} className="self-start">
-        <Link href={step.action.href}>{step.cta}</Link>
+      <Button asChild size="sm" variant={variant} className={className}>
+        <Link href={action.href} aria-label={ariaLabel}>
+          {children}
+        </Link>
       </Button>
     )
   }
-  const dialog = step.action.dialog
+  const open = () => {
+    if (action.dialog === "add-metrics") uiActions.openDialog({ type: "add-metrics", itemId: action.itemId })
+    else uiActions.openDialog({ type: action.dialog })
+  }
   return (
-    <Button type="button" size="sm" variant={variant} className="self-start" onClick={() => uiActions.openDialog({ type: dialog })}>
-      {step.cta}
+    <Button type="button" size="sm" variant={variant} className={className} aria-label={ariaLabel} onClick={open}>
+      {children}
     </Button>
+  )
+}
+
+function StepButton({ step, primary }: { step: FirstStep; primary: boolean }) {
+  return (
+    <StepActionButton action={step.action} variant={primary ? "default" : "outline"} className="self-start">
+      {step.cta}
+    </StepActionButton>
   )
 }
 

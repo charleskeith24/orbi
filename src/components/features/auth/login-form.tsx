@@ -7,6 +7,7 @@ import { useScreenLang, useScreenT } from "@/components/app-shell/device-ui-lang
 import { AuthCard, AuthDivider, AuthNotice, EmailSentence } from "@/components/features/auth/auth-card"
 import { authPageHref, describeAuthError, emailRedirectUrl, type AuthErrorLike } from "@/components/features/auth/auth-client"
 import { authSchemas, fieldErrors } from "@/components/features/auth/auth-schemas"
+import { authLinkClass, LegalLinks } from "@/components/features/auth/legal-links"
 import { authMessages } from "@/components/features/auth/messages"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -16,8 +17,6 @@ import { Spinner } from "@/components/ui/spinner"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 type Pending = "password" | "magic" | null
-
-const linkClass = "font-medium text-foreground underline-offset-4 hover:underline"
 
 /** Email + password sign-in with a magic-link alternative. `next` is already sanitized by the page. */
 export function LoginForm({ next, errorCode }: { next: string; errorCode?: string }) {
@@ -91,16 +90,15 @@ export function LoginForm({ next, errorCode }: { next: string; errorCode?: strin
       description={t("sign_in_description")}
       footer={
         <>
-          {t("no_account")}{" "}
-          <Link href={authPageHref("/signup", next)} className={linkClass}>
-            {t("request_access_link")}
-          </Link>
-          <span aria-hidden className="mx-2">
-            ·
-          </span>
-          <Link href="/privacy" className={linkClass}>
-            {t("privacy_link")}
-          </Link>
+          <p>
+            {t("no_account")}{" "}
+            <Link href={authPageHref("/signup", next)} className={authLinkClass}>
+              {t("request_access_link")}
+            </Link>
+          </p>
+          <p className="mt-1.5 text-xs">
+            <LegalLinks />
+          </p>
         </>
       }
     >

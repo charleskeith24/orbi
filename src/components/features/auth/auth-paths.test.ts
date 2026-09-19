@@ -3,7 +3,9 @@ import {
   decideProxyAction,
   firstParam,
   isAuthPage,
+  isPublicPage,
   loginPathFor,
+  PUBLIC_PAGES,
   safeNextPath,
 } from "@/components/features/auth/auth-paths"
 
@@ -81,6 +83,20 @@ describe("decideProxyAction", () => {
     expect(decideProxyAction("/privacy", "", false)).toEqual({ action: "continue" })
     expect(decideProxyAction("/privacy", "", true)).toEqual({ action: "continue" })
     expect(decideProxyAction("/privacy-policy", "", false)).toEqual({ action: "redirect", location: "/login?next=%2Fprivacy-policy" })
+  })
+
+  it("keeps the terms of use public, signed in or not, without matching lookalikes", () => {
+    expect(isPublicPage("/terms")).toBe(true)
+    expect(decideProxyAction("/terms", "", false)).toEqual({ action: "continue" })
+    expect(decideProxyAction("/terms", "?preview=contact", false)).toEqual({ action: "continue" })
+    expect(decideProxyAction("/terms", "", true)).toEqual({ action: "continue" })
+    expect(isPublicPage("/terms-of-service")).toBe(false)
+    expect(decideProxyAction("/terms-of-service", "", false)).toEqual({ action: "redirect", location: "/login?next=%2Fterms-of-service" })
+    expect(decideProxyAction("/api/terms", "", false)).toEqual({ action: "unauthorized" })
+  })
+
+  it("lists exactly the legal pages as public", () => {
+    expect([...PUBLIC_PAGES].sort()).toEqual(["/privacy", "/terms"])
   })
 
   it("lets anonymous visitors POST the request-access form, and nothing else under that path", () => {
