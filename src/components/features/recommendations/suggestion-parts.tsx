@@ -100,7 +100,7 @@ export function SuggestionMeta({ s, className }: { s: Suggestion; className?: st
 export function HookQuote({ text, className }: { text: string; className?: string }) {
   return (
     <blockquote className={cn("border-l-2 border-brand/40 pl-2.5 text-sm leading-snug text-pretty", className)}>
-      “{text}”
+      {`“${text}”`}
     </blockquote>
   )
 }

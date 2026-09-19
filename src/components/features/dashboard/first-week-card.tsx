@@ -1,24 +1,26 @@
 "use client"
 
-import { format } from "date-fns"
 import { Circle, CircleCheck, EyeOff } from "lucide-react"
 import { toast } from "sonner"
-import { SectionCard, StatTile } from "@/components/common"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { parseDate } from "@/lib/dates"
 import { useT } from "@/lib/i18n"
 import type { Translator } from "@/lib/i18n/core"
 import { updateSettings } from "@/lib/store"
 import { cn, formatNumber } from "@/lib/utils"
 import { StepActionButton } from "./first-steps-card"
-import { FIRST_WEEK_DAYS, type FirstWeek, type Mission } from "./first-week"
+import type { FirstWeek, Mission } from "./first-week"
 import { firstWeekMessages } from "./messages"
 
 type T = Translator<typeof firstWeekMessages.en>
 
+/**
+ * "Your first week" pieces for Home's focus hero (`FocusHero`): hide for good, a mission's progress, the full
+ * mission list (behind "All missions") and the finish numbers.
+ */
+
 /** Hide for good (stored on `app_settings`, so it follows the account); the toast offers Undo. */
-function HideButton() {
+export function HideButton() {
   const t = useT(firstWeekMessages)
   const hide = () => {
     updateSettings({ first_week_dismissed: true })
@@ -28,7 +30,7 @@ function HideButton() {
     })
   }
   return (
-    <Button type="button" size="sm" variant="ghost" className="text-muted-foreground" aria-label={t("hide_aria")} onClick={hide}>
+    <Button type="button" size="xs" variant="ghost" className="text-muted-foreground" aria-label={t("hide_aria")} onClick={hide}>
       <EyeOff aria-hidden />
       <span className="hidden @md:inline">{t("hide")}</span>
     </Button>
@@ -36,7 +38,7 @@ function HideButton() {
 }
 
 /** Day 1's idea count as three dots, or day 4's two parts, each with its own tick. */
-function MissionProgress({ mission, t }: { mission: Mission; t: T }) {
+export function MissionProgress({ mission, t }: { mission: Mission; t: T }) {
   if (mission.parts.length) {
     return (
       <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -64,40 +66,6 @@ function MissionProgress({ mission, t }: { mission: Mission; t: T }) {
         ))}
       </span>
       <span className="num">{t("progress_ideas", { current, target })}</span>
-    </div>
-  )
-}
-
-/** The mission to do now: today's, a gentle catch-up, or a head start. */
-function FocusMission({ plan, t }: { plan: FirstWeek; t: T }) {
-  const mission = plan.focus
-  if (!mission) return null
-  const eyebrow =
-    plan.focusReason === "today"
-      ? `${t("day_of", { day: plan.day, total: FIRST_WEEK_DAYS })} · ${t("focus_today")}`
-      : plan.focusReason === "catch_up"
-        ? `${t("day_short", { day: mission.day ?? plan.day })} · ${t("focus_catch_up")}`
-        : t("focus_ahead")
-  const until = parseDate(plan.lastDayKey)
-  return (
-    <div className="flex min-w-0 flex-col gap-3 rounded-lg border border-brand/40 bg-brand-soft p-4">
-      <div className="min-w-0">
-        <p className="text-xs font-medium text-brand">{eyebrow}</p>
-        <h4 className="mt-1 text-sm font-semibold text-pretty">
-          {plan.focusReason === "ahead" ? (
-            <span className="font-normal text-muted-foreground">{t("day_short", { day: mission.day ?? plan.day })} · </span>
-          ) : null}
-          {mission.label}
-        </h4>
-        <p className="mt-1 text-xs text-pretty text-muted-foreground">{mission.detail}</p>
-      </div>
-      <MissionProgress mission={mission} t={t} />
-      <StepActionButton action={mission.action} className="self-start">
-        {mission.cta}
-      </StepActionButton>
-      {plan.day > FIRST_WEEK_DAYS && until ? (
-        <p className="text-xs text-muted-foreground">{t("open_until", { date: format(until, "MMM d") })}</p>
-      ) : null}
     </div>
   )
 }
@@ -137,7 +105,22 @@ function MissionRow({ mission, t }: { mission: Mission; t: T }) {
   )
 }
 
-function FinishCard({ plan, className }: { plan: FirstWeek; className?: string }) {
+/** The other six missions and the optional bonus, each ticked from the workspace. */
+export function MissionList({ plan }: { plan: FirstWeek }) {
+  const t = useT(firstWeekMessages)
+  const rest = plan.missions.filter((mission) => mission !== plan.focus)
+  return (
+    <ol className="flex min-w-0 flex-col divide-y">
+      {rest.map((mission) => (
+        <MissionRow key={mission.key} mission={mission} t={t} />
+      ))}
+      <MissionRow mission={plan.bonus} t={t} />
+    </ol>
+  )
+}
+
+/** The finish card's real counts: ideas, content, posts and first views. */
+export function FinishStats({ plan }: { plan: FirstWeek }) {
   const t = useT(firstWeekMessages)
   const stats = [
     { key: "ideas", label: t("stat_ideas"), value: plan.totals.ideas },
@@ -146,57 +129,13 @@ function FinishCard({ plan, className }: { plan: FirstWeek; className?: string }
     { key: "views", label: t("stat_views"), value: plan.totals.views },
   ]
   return (
-    <SectionCard title={t("finish_title")} description={t("finish_description")} action={<HideButton />} className={className}>
-      <div className="flex flex-col gap-3">
-        <div className="grid grid-cols-2 gap-2 @3xl:grid-cols-4">
-          {stats.map((stat) => (
-            <StatTile key={stat.key} label={stat.label} value={<span className="num">{formatNumber(stat.value)}</span>} className="p-3" />
-          ))}
+    <dl className="grid grid-cols-2 gap-x-6 gap-y-2 @xl:grid-cols-4">
+      {stats.map((stat) => (
+        <div key={stat.key} className="flex min-w-0 flex-col">
+          <dt className="truncate text-xs text-muted-foreground">{stat.label}</dt>
+          <dd className="text-xl leading-7 font-semibold tracking-tight num">{formatNumber(stat.value)}</dd>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <StepActionButton action={plan.next.action}>{plan.next.cta}</StepActionButton>
-          {plan.bonus.done ? null : (
-            <StepActionButton action={plan.bonus.action} variant="outline">
-              {`${t("badge_bonus")}: ${plan.bonus.label}`}
-            </StepActionButton>
-          )}
-        </div>
-      </div>
-    </SectionCard>
-  )
-}
-
-/**
- * Home's "Your first week" card: today's mission first, then the rest with ✓ or ○ and the optional bonus.
- * Replaces the first-steps checklist while the plan is visible; the finish card takes over once all seven are done.
- */
-export function FirstWeekCard({ plan, className }: { plan: FirstWeek; className?: string }) {
-  const t = useT(firstWeekMessages)
-  if (plan.state === "finished") return <FinishCard plan={plan} className={className} />
-  const rest = plan.missions.filter((mission) => mission !== plan.focus)
-  return (
-    <SectionCard
-      title={t("title")}
-      description={t("description")}
-      action={
-        <>
-          <span className="text-xs whitespace-nowrap text-muted-foreground num">
-            {t("done_count", { done: plan.doneCount, total: FIRST_WEEK_DAYS })}
-          </span>
-          <HideButton />
-        </>
-      }
-      className={className}
-    >
-      <div className="grid min-w-0 grid-cols-1 gap-4 @3xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] @3xl:items-start">
-        <FocusMission plan={plan} t={t} />
-        <ol className="flex min-w-0 flex-col divide-y">
-          {rest.map((mission) => (
-            <MissionRow key={mission.key} mission={mission} t={t} />
-          ))}
-          <MissionRow mission={plan.bonus} t={t} />
-        </ol>
-      </div>
-    </SectionCard>
+      ))}
+    </dl>
   )
 }

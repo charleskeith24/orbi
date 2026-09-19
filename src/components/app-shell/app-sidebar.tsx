@@ -3,10 +3,8 @@
 import { ChevronRight, Cloud, HardDrive, LayoutGrid, ListCollapse } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { OrbiLogo, OrbiMark } from "@/components/app-shell/orbi-logo"
-import { UserMenu } from "@/components/app-shell/user-menu"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   Sidebar,
   SidebarContent,
@@ -15,20 +13,33 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { useDeviceValue, writeDeviceValue } from "@/hooks/use-device-value"
 import { useT } from "@/lib/i18n"
-import { isNavActive, NAV_SECTIONS, sidebarSections, type NavItem } from "@/lib/navigation"
+import {
+  groupItems,
+  isNavActive,
+  NAV_SECTIONS,
+  parseCollapsedGroups,
+  sidebarSections,
+  type NavItem,
+  type NavSectionKey,
+} from "@/lib/navigation"
 import { updateSettings, useBrand, useDataStatus, useSettings } from "@/lib/store"
 import { sidebarMessages } from "./app-sidebar-messages"
 
+/** This device's folded sidebar groups (`parseCollapsedGroups`). */
+const COLLAPSED_KEY = "pbos:sidebar:collapsed"
+
+/**
+ * The sidebar (Calm UI): Home and Today, the Plan · Create · Grow · Measure groups (each folds; remembered per
+ * device), then Money and Settings. One link per module — sub-pages are tabs on the page. Simple mode trims it
+ * to the everyday modules (§12). The account menu lives in the top bar.
+ */
 export function AppSidebar() {
   const pathname = usePathname()
   const brand = useBrand()
@@ -37,8 +48,18 @@ export function AppSidebar() {
   const { mode } = useDataStatus()
   const { isMobile, setOpenMobile, state } = useSidebar()
   const nav = useMemo(() => sidebarSections(NAV_SECTIONS, { simpleMode, pathname }), [simpleMode, pathname])
+  const collapsedValue = useDeviceValue(COLLAPSED_KEY)
+  const collapsed = useMemo(() => parseCollapsedGroups(collapsedValue), [collapsedValue])
+  // The icon rail has no group headers to unfold, so it always lists every module.
+  const iconRail = state === "collapsed" && !isMobile
   const onNavigate = () => {
     if (isMobile) setOpenMobile(false)
+  }
+  const toggleGroup = (key: NavSectionKey) => {
+    const next = new Set(collapsed)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    writeDeviceValue(COLLAPSED_KEY, next.size ? [...next].join(",") : null)
   }
   const modeLabel = simpleMode ? t.plural("show_all", nav.hidden) : t("back_to_simple")
 
@@ -50,7 +71,7 @@ export function AppSidebar() {
             <SidebarMenuButton size="lg" asChild tooltip="Orbi">
               {/* `!` sizes beat the menu button's `[&_svg]:size-4`. */}
               <Link href="/" onClick={onNavigate}>
-                {state === "collapsed" && !isMobile ? (
+                {iconRail ? (
                   <OrbiMark className="size-8! text-sidebar-foreground" />
                 ) : (
                   <>
@@ -67,26 +88,41 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent className="scrollbar-thin">
-        {nav.sections.map((section, index) => (
-          <SidebarGroup key={section.label ?? `section-${index}`} className="py-1">
-            {section.label ? <SidebarGroupLabel>{section.label}</SidebarGroupLabel> : null}
-            <SidebarMenu>
-              {section.items.map((item) => (
-                <NavEntry
-                  key={item.href}
-                  item={item}
-                  pathname={pathname}
-                  onNavigate={onNavigate}
-                  toggleLabel={t("toggle_group", { title: item.title })}
-                />
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
-        ))}
+      <SidebarContent className="scrollbar-thin gap-0">
+        {nav.sections.map((section) => {
+          const folded = !iconRail && collapsed.has(section.key)
+          const items = iconRail ? section.items : groupItems(section, { collapsed: folded, pathname })
+          const menuId = `sidebar-group-${section.key}`
+          return (
+            <SidebarGroup key={section.key} className="py-1">
+              {section.label ? (
+                <SidebarGroupLabel asChild>
+                  <button
+                    type="button"
+                    aria-expanded={!folded}
+                    aria-controls={menuId}
+                    onClick={() => toggleGroup(section.key)}
+                    className="group/label w-full gap-1 text-left hover:text-sidebar-foreground"
+                  >
+                    <span>{section.label}</span>
+                    <ChevronRight
+                      aria-hidden
+                      className="size-3! opacity-0 transition-[transform,opacity] duration-150 group-hover/label:opacity-100 group-focus-visible/label:opacity-100 group-aria-expanded/label:rotate-90 group-aria-[expanded=false]/label:opacity-100"
+                    />
+                  </button>
+                </SidebarGroupLabel>
+              ) : null}
+              <SidebarMenu id={menuId}>
+                {items.map((item) => (
+                  <NavEntry key={item.href} item={item} active={isNavActive(pathname, item.href)} onNavigate={onNavigate} />
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+          )
+        })}
       </SidebarContent>
 
-      <SidebarFooter>
+      <SidebarFooter className="gap-0.5">
         <SidebarMenu>
           <SidebarMenuItem>
             {/* Simple mode lives in app_settings (also in Settings → General); ⌘K reaches every page either way. */}
@@ -112,7 +148,6 @@ export function AppSidebar() {
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <UserMenu />
         </SidebarMenu>
       </SidebarFooter>
       <SidebarRail />
@@ -120,64 +155,16 @@ export function AppSidebar() {
   )
 }
 
-function NavEntry({
-  item,
-  pathname,
-  onNavigate,
-  toggleLabel,
-}: {
-  item: NavItem
-  pathname: string
-  onNavigate: () => void
-  toggleLabel: string
-}) {
-  const active = isNavActive(pathname, item.href)
-  const [manualOpen, setManualOpen] = useState<boolean | null>(null)
+function NavEntry({ item, active, onNavigate }: { item: NavItem; active: boolean; onNavigate: () => void }) {
   const Icon = item.icon
-
-  if (!item.children?.length) {
-    return (
-      <SidebarMenuItem>
-        <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
-          <Link href={item.href} onClick={onNavigate}>
-            <Icon />
-            <span>{item.title}</span>
-          </Link>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    )
-  }
-
-  const open = manualOpen ?? active
   return (
-    <Collapsible asChild open={open} onOpenChange={setManualOpen}>
-      <SidebarMenuItem>
-        <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
-          <Link href={item.href} onClick={onNavigate}>
-            <Icon />
-            <span>{item.title}</span>
-          </Link>
-        </SidebarMenuButton>
-        <CollapsibleTrigger asChild>
-          <SidebarMenuAction className="transition-transform data-[state=open]:rotate-90">
-            <ChevronRight />
-            <span className="sr-only">{toggleLabel}</span>
-          </SidebarMenuAction>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <SidebarMenuSub>
-            {item.children.map((child) => (
-              <SidebarMenuSubItem key={child.href}>
-                <SidebarMenuSubButton asChild isActive={pathname === child.href}>
-                  <Link href={child.href} onClick={onNavigate}>
-                    <span>{child.title}</span>
-                  </Link>
-                </SidebarMenuSubButton>
-              </SidebarMenuSubItem>
-            ))}
-          </SidebarMenuSub>
-        </CollapsibleContent>
-      </SidebarMenuItem>
-    </Collapsible>
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
+        <Link href={item.href} onClick={onNavigate} aria-current={active ? "page" : undefined}>
+          <Icon />
+          <span>{item.title}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
   )
 }

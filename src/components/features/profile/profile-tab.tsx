@@ -4,7 +4,7 @@ import { Camera, CircleAlert, Eye, Globe, HardDrive, Lock, Plus, ShieldCheck, Tr
 import Link from "next/link"
 import { useId, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
-import { FormField, PlatformIcon, SectionCard, useConfirm } from "@/components/common"
+import { FormField, InfoHint, PlatformIcon, SectionCard, useConfirm } from "@/components/common"
 import { SaveBar } from "@/components/features/settings/save-bar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -45,9 +45,9 @@ const LINK_ERROR_KEY: Record<LinkError, "error_link_empty" | "error_link_url" | 
 }
 
 /**
- * Settings → Profile (`/settings?tab=profile`): the person's own profile — photo, display name, headline,
- * location, links and the opt-in niche — with a live preview ("How your circles see you") and who can see it.
- * Online it's saved to the account; in local mode to this device only, and the tab says so.
+ * Settings → Profile (`/settings?tab=profile`), Calm UI: the form — photo, display name, headline, location, links
+ * and the opt-in niche — beside a compact live Preview whose ⓘ says who can see it. Online it's saved to the
+ * account; in local mode to this device only, said in one line.
  */
 export function ProfileTab() {
   const t = useT(profileMessages)
@@ -149,164 +149,166 @@ function ProfileEditor({ me, source }: { me: MyProfile; source: ProfilesSource }
   const fallbackName = brand.name.trim() || t("section_title")
 
   return (
-    <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
-      <form onSubmit={save} noValidate className="flex min-w-0 flex-col gap-4">
-        {local ? <LocalNote /> : null}
-        <SectionCard title={t("section_title")} description={t("section_description")} contentClassName="flex flex-col gap-5">
-          <PhotoField me={me} photoUrl={photoUrl} name={preview.display_name || fallbackName} source={source} />
+    <div className="flex min-w-0 flex-col gap-3">
+      {local ? <LocalNote /> : null}
+      <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <form onSubmit={save} noValidate className="flex min-w-0 flex-col gap-4">
+          <SectionCard contentClassName="flex flex-col gap-5">
+            <PhotoField me={me} photoUrl={photoUrl} name={preview.display_name || fallbackName} source={source} />
 
-          <FormField
-            label={t("name_label")}
-            htmlFor={`${id}-name`}
-            description={t("name_help")}
-            error={errors.display_name ? t("error_too_long", { max: PROFILE_LIMITS.displayName }) : undefined}
-          >
-            <Input
-              id={`${id}-name`}
-              value={draft.display_name}
-              maxLength={PROFILE_LIMITS.displayName + 20}
-              autoComplete="name"
-              placeholder={brand.name.trim() ? t("name_placeholder", { name: brand.name.trim() }) : t("name_placeholder_default")}
-              aria-invalid={Boolean(errors.display_name) || undefined}
-              onChange={(e) => set("display_name", e.target.value)}
+            <FormField
+              label={t("name_label")}
+              htmlFor={`${id}-name`}
+              error={errors.display_name ? t("error_too_long", { max: PROFILE_LIMITS.displayName }) : undefined}
+            >
+              <Input
+                id={`${id}-name`}
+                value={draft.display_name}
+                maxLength={PROFILE_LIMITS.displayName + 20}
+                autoComplete="name"
+                placeholder={brand.name.trim() ? t("name_placeholder", { name: brand.name.trim() }) : t("name_placeholder_default")}
+                aria-invalid={Boolean(errors.display_name) || undefined}
+                onChange={(e) => set("display_name", e.target.value)}
+              />
+            </FormField>
+
+            <FormField
+              label={t("headline_label")}
+              htmlFor={`${id}-headline`}
+              labelAction={
+                <span className={cn("text-xs num", errors.headline ? "text-critical-fg" : "text-muted-foreground")} aria-hidden>
+                  {t("count", { count: cleanLine(draft.headline).length, max: PROFILE_LIMITS.headline })}
+                </span>
+              }
+              error={errors.headline ? t("error_too_long", { max: PROFILE_LIMITS.headline }) : undefined}
+            >
+              <Input
+                id={`${id}-headline`}
+                value={draft.headline}
+                maxLength={PROFILE_LIMITS.headline + 40}
+                placeholder={t("headline_placeholder")}
+                aria-invalid={Boolean(errors.headline) || undefined}
+                onChange={(e) => set("headline", e.target.value)}
+              />
+            </FormField>
+
+            <FormField
+              label={t("location_label")}
+              htmlFor={`${id}-location`}
+              error={errors.location ? t("error_too_long", { max: PROFILE_LIMITS.location }) : undefined}
+              className="sm:max-w-sm"
+            >
+              <Input
+                id={`${id}-location`}
+                value={draft.location}
+                maxLength={PROFILE_LIMITS.location + 20}
+                autoComplete="address-level2"
+                placeholder={t("location_placeholder")}
+                aria-invalid={Boolean(errors.location) || undefined}
+                onChange={(e) => set("location", e.target.value)}
+              />
+            </FormField>
+
+            <LinksEditor
+              links={draft.links}
+              errors={errors.links ?? {}}
+              showError={showError}
+              onTouch={(key) => setTouched((x) => ({ ...x, [key]: true }))}
+              onChange={(links) => set("links", links)}
             />
-          </FormField>
 
-          <FormField
-            label={t("headline_label")}
-            htmlFor={`${id}-headline`}
-            labelAction={
-              <span className={cn("text-xs num", errors.headline ? "text-critical-fg" : "text-muted-foreground")} aria-hidden>
-                {t("count", { count: cleanLine(draft.headline).length, max: PROFILE_LIMITS.headline })}
-              </span>
-            }
-            error={errors.headline ? t("error_too_long", { max: PROFILE_LIMITS.headline }) : undefined}
-          >
-            <Input
-              id={`${id}-headline`}
-              value={draft.headline}
-              maxLength={PROFILE_LIMITS.headline + 40}
-              placeholder={t("headline_placeholder")}
-              aria-invalid={Boolean(errors.headline) || undefined}
-              onChange={(e) => set("headline", e.target.value)}
-            />
-          </FormField>
-
-          <FormField
-            label={t("location_label")}
-            htmlFor={`${id}-location`}
-            error={errors.location ? t("error_too_long", { max: PROFILE_LIMITS.location }) : undefined}
-            className="sm:max-w-sm"
-          >
-            <Input
-              id={`${id}-location`}
-              value={draft.location}
-              maxLength={PROFILE_LIMITS.location + 20}
-              autoComplete="address-level2"
-              placeholder={t("location_placeholder")}
-              aria-invalid={Boolean(errors.location) || undefined}
-              onChange={(e) => set("location", e.target.value)}
-            />
-          </FormField>
-
-          <LinksEditor
-            links={draft.links}
-            errors={errors.links ?? {}}
-            showError={showError}
-            onTouch={(key) => setTouched((x) => ({ ...x, [key]: true }))}
-            onChange={(links) => set("links", links)}
-          />
-
-          <div className="flex min-w-0 items-start justify-between gap-4 rounded-md border px-3 py-2.5">
-            <div className="min-w-0">
-              <label htmlFor={`${id}-niche`} className="text-sm font-medium">
-                {t("niche_label")}
-              </label>
-              {brandNiche ? (
-                <p className="mt-0.5 text-xs text-pretty text-muted-foreground">
-                  {t("niche_help", { niche: brandNiche })}
-                  {mainPlatform ? (
-                    <span className="whitespace-nowrap">
-                      {" · "}
-                      <PlatformIcon platform={mainPlatform} className="inline size-3 align-[-2px]" /> {PLATFORMS[mainPlatform].label}
-                    </span>
-                  ) : null}
-                </p>
-              ) : (
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {t("niche_empty")}{" "}
-                  <Link href="/strategy" className="font-medium text-foreground underline-offset-2 hover:underline">
-                    {t("niche_open_brand")}
-                  </Link>
-                </p>
-              )}
+            <div className="flex min-w-0 items-start justify-between gap-4 rounded-md border px-3 py-2.5">
+              <div className="min-w-0">
+                <label htmlFor={`${id}-niche`} className="text-sm font-medium">
+                  {t("niche_label")}
+                </label>
+                {brandNiche ? (
+                  <p className="mt-0.5 text-xs text-pretty text-muted-foreground">
+                    {t("niche_help", { niche: brandNiche })}
+                    {mainPlatform ? (
+                      <span className="whitespace-nowrap">
+                        {" · "}
+                        <PlatformIcon platform={mainPlatform} className="inline size-3 align-[-2px]" /> {PLATFORMS[mainPlatform].label}
+                      </span>
+                    ) : null}
+                  </p>
+                ) : (
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {t("niche_empty")}{" "}
+                    <Link href="/strategy" className="font-medium text-foreground underline-offset-2 hover:underline">
+                      {t("niche_open_brand")}
+                    </Link>
+                  </p>
+                )}
+              </div>
+              <Switch
+                id={`${id}-niche`}
+                checked={draft.show_niche}
+                disabled={!brandNiche && !draft.show_niche}
+                onCheckedChange={(checked) => set("show_niche", checked)}
+              />
             </div>
-            <Switch
-              id={`${id}-niche`}
-              checked={draft.show_niche}
-              disabled={!brandNiche && !draft.show_niche}
-              onCheckedChange={(checked) => set("show_niche", checked)}
-            />
-          </div>
-        </SectionCard>
-        <SaveBar
-          dirty={dirty}
-          valid={valid}
-          onDiscard={() => {
-            setDraft(draftFromProfile(me))
-            setTouched({})
-            setSubmitted(false)
-          }}
-        />
-        {saving ? <span className="sr-only" role="status">{t("crop_saving")}</span> : null}
-      </form>
+          </SectionCard>
+          <SaveBar
+            dirty={dirty}
+            valid={valid}
+            onDiscard={() => {
+              setDraft(draftFromProfile(me))
+              setTouched({})
+              setSubmitted(false)
+            }}
+          />
+          {saving ? <span className="sr-only" role="status">{t("crop_saving")}</span> : null}
+        </form>
 
-      <aside className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-4">
-        <SectionCard title={t("preview_title")} icon={Eye} description={local ? t("preview_local") : dirty ? t("preview_unsaved") : undefined}>
-          <ProfileCardBody profile={preview} name={fallbackName} photoUrl={photoUrl} />
-        </SectionCard>
-        <VisibilityCard local={local} />
-      </aside>
-    </div>
-  )
-}
-
-function LocalNote() {
-  const t = useT(profileMessages)
-  return (
-    <div role="note" className="flex items-start gap-3 rounded-lg border border-dashed bg-card/50 p-3.5">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
-        <HardDrive className="size-4 text-muted-foreground" aria-hidden />
-      </span>
-      <div className="min-w-0 text-sm">
-        <p className="font-medium">{t("local_title")}</p>
-        <p className="text-pretty text-muted-foreground">
-          {t("local_note")} {t("local_used")}
-        </p>
+        <aside className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-16">
+          <SectionCard title={t("preview_title")} info={<VisibilityInfo local={local} />}>
+            <ProfileCardBody profile={preview} name={fallbackName} photoUrl={photoUrl} />
+          </SectionCard>
+        </aside>
       </div>
     </div>
   )
 }
 
-function VisibilityCard({ local }: { local: boolean }) {
+/** Local mode, in one line; what "online" would add waits behind the ⓘ. */
+function LocalNote() {
   const t = useT(profileMessages)
-  const rows: [typeof UsersRound, "visibility_circles" | "visibility_admins" | "visibility_public" | "visibility_photo"][] = [
+  return (
+    <p role="note" className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+      <HardDrive className="size-3.5 shrink-0" aria-hidden />
+      <span className="min-w-0">{t("local_title")}</span>
+      <InfoHint title={t("local_title")}>
+        <p>{t("local_note")}</p>
+        <p>{t("local_used")}</p>
+      </InfoHint>
+    </p>
+  )
+}
+
+/** Who sees your profile — the Preview's ⓘ. */
+function VisibilityInfo({ local }: { local: boolean }) {
+  const t = useT(profileMessages)
+  const rows: [typeof UsersRound, "visibility_circles" | "visibility_names" | "visibility_admins" | "visibility_public" | "visibility_photo"][] = [
     [UsersRound, "visibility_circles"],
+    [Eye, "visibility_names"],
     [ShieldCheck, "visibility_admins"],
     [Globe, "visibility_public"],
     [Lock, "visibility_photo"],
   ]
   return (
-    <SectionCard title={t("visibility_title")} icon={Lock} description={local ? t("visibility_online") : undefined}>
-      <ul className="flex flex-col gap-2.5">
+    <>
+      <p className="text-[13px] leading-5 font-medium text-foreground">{t("visibility_title")}</p>
+      {local ? <p>{t("visibility_online")}</p> : null}
+      <ul className="flex flex-col gap-2">
         {rows.map(([Icon, key]) => (
-          <li key={key} className="flex items-start gap-2 text-xs text-pretty text-muted-foreground">
-            <Icon className="mt-px size-3.5 shrink-0" aria-hidden />
+          <li key={key} className="flex items-start gap-2">
+            <Icon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
             <span>{t(key)}</span>
           </li>
         ))}
       </ul>
-    </SectionCard>
+    </>
   )
 }
 
@@ -358,7 +360,10 @@ function PhotoField({ me, photoUrl, name, source }: { me: MyProfile; photoUrl: s
 
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      <p className="text-sm leading-5 font-medium">{t("photo_label")}</p>
+      <div className="flex items-center gap-1.5">
+        <p className="text-sm leading-5 font-medium">{t("photo_label")}</p>
+        <InfoHint title={t("photo_label")}>{t("photo_exif")}</InfoHint>
+      </div>
       <div className="flex min-w-0 flex-wrap items-center gap-4">
         <ProfileAvatar name={name} photoUrl={photoUrl} alt={photoUrl ? t("photo_alt") : ""} className="size-16" fallbackClassName="text-lg" />
         <div className="flex min-w-0 flex-col gap-2">
@@ -375,10 +380,6 @@ function PhotoField({ me, photoUrl, name, source }: { me: MyProfile; photoUrl: s
             ) : null}
           </div>
           <p className="text-xs text-muted-foreground">{t("photo_help")}</p>
-          <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
-            <ShieldCheck className="mt-px size-3.5 shrink-0 text-good-fg" aria-hidden />
-            {t("photo_exif")}
-          </p>
         </div>
       </div>
       <input
@@ -440,7 +441,6 @@ function LinksEditor({
   return (
     <fieldset className="flex min-w-0 flex-col gap-2">
       <legend className="text-sm leading-5 font-medium">{t("links_label")}</legend>
-      <p className="-mt-1 text-xs text-muted-foreground">{t("links_help", { max: PROFILE_LIMITS.links })}</p>
       {links.length ? (
         <ul className="flex flex-col gap-2">
           {links.map((link, i) => {
@@ -498,9 +498,7 @@ function LinksEditor({
             )
           })}
         </ul>
-      ) : (
-        <p className="text-xs text-muted-foreground">{t("links_empty")}</p>
-      )}
+      ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <Button
           type="button"

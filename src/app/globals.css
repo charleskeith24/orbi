@@ -226,9 +226,23 @@
     scrollbar-width: thin;
     scrollbar-color: color-mix(in oklch, var(--foreground) 18%, transparent) transparent;
   }
+  /* Sideways-scrolling rows (route tabs, chip strips) that shouldn't show a scrollbar. */
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
   /* Columns of numbers align; standalone hero numbers keep proportional figures. */
   .num {
     font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Phones: the app shell's bottom tab bar. Page content, sticky save bars and toasts sit above it via --bottom-bar. */
+@media (max-width: 767px) {
+  :root:has([data-slot="bottom-tab-bar"]) {
+    --bottom-bar: calc(3.5rem + env(safe-area-inset-bottom));
   }
 }
 

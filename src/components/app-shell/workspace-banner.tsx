@@ -45,9 +45,9 @@ function dismiss() {
 }
 
 /**
- * Honest mode indicator: local mode keeps data in this browser only. When the workspace hasn't been
- * backed up for a week, the notice becomes a gentle reminder with a one-click backup (even if the
- * notice itself was dismissed); "Remind me later" hides it for a few days.
+ * Honest mode indicator, one compact line under the top bar: local mode keeps data in this browser only.
+ * When the workspace hasn't been backed up for a week, the line becomes a gentle reminder with a one-click
+ * backup (even if the notice itself was dismissed); "Remind me later" hides it for a few days.
  */
 export function WorkspaceBanner() {
   const t = useT(workspaceBannerMessages)
@@ -68,17 +68,17 @@ export function WorkspaceBanner() {
       toast.success(t("exported"), { description: t.plural("exported_rows", count, { count: formatNumber(count) }) })
     }
     return (
-      <div data-print="hide" role="status" className="flex items-center gap-2 border-b bg-muted/50 px-4 py-1.5 text-xs text-muted-foreground">
+      <div data-print="hide" role="status" className="flex h-8 items-center gap-2 border-b bg-muted/40 px-4 text-xs text-muted-foreground">
         <TriangleAlert className="size-3.5 shrink-0 text-warning-fg" aria-hidden />
-        <p className="line-clamp-2 min-w-0 flex-1 sm:truncate">{reminder.never ? t("never") : t.plural("due", days, { count: formatNumber(days) })}</p>
-        <Button type="button" size="xs" variant="outline" className="shrink-0" onClick={backUp}>
+        <p className="min-w-0 flex-1 truncate">{reminder.never ? t("never") : t.plural("due", days, { count: formatNumber(days) })}</p>
+        <Button type="button" size="xs" variant="ghost" className="-mr-1 shrink-0 font-medium text-foreground" onClick={backUp}>
           <Download aria-hidden />
           {t("back_up_now")}
         </Button>
         <button
           type="button"
           onClick={() => snoozeBackupReminder(new Date())}
-          className="rounded p-0.5 hover:bg-accent hover:text-foreground"
+          className="relative rounded p-0.5 after:absolute after:-inset-2 hover:bg-accent hover:text-foreground"
           aria-label={t("remind_later")}
           title={t("remind_later")}
         >
@@ -91,7 +91,7 @@ export function WorkspaceBanner() {
   if (dismissed) return null
   const [before, after = ""] = t("local").split("{link}")
   return (
-    <div data-print="hide" className="flex items-center gap-2 border-b bg-muted/50 px-4 py-1.5 text-xs text-muted-foreground">
+    <div data-print="hide" className="flex h-8 items-center gap-2 border-b bg-muted/40 px-4 text-xs text-muted-foreground">
       <HardDrive className="size-3.5 shrink-0" aria-hidden />
       <p className="min-w-0 flex-1 truncate">
         {before}
@@ -100,7 +100,12 @@ export function WorkspaceBanner() {
         </Link>
         {after}
       </p>
-      <button type="button" onClick={dismiss} className="rounded p-0.5 hover:bg-accent hover:text-foreground" aria-label={t("dismiss")}>
+      <button
+        type="button"
+        onClick={dismiss}
+        className="relative rounded p-0.5 after:absolute after:-inset-2 hover:bg-accent hover:text-foreground"
+        aria-label={t("dismiss")}
+      >
         <X className="size-3.5" />
       </button>
     </div>

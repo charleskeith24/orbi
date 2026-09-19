@@ -3,12 +3,12 @@ import { defineMessages } from "@/lib/i18n/core"
 /** Settings shell: page header, section tabs, the shared save bar and the timezone picker. */
 export const settingsMessages = defineMessages({
   en: {
-    page_description: "Your profile, then the targets, thresholds, libraries, AI, integrations and data the rest of the system runs on.",
     nav_aria: "Settings sections",
     nav_unsaved: "(unsaved changes)",
 
     tab_profile_label: "Profile",
-    tab_profile_description: "You, the person using Orbi: your photo, name, headline, location and links — and who can see them.",
+    tab_profile_description:
+      "You, the person using Orbi — Brand HQ is your brand. Your photo, name, headline, location and links; circles show this profile next to your name.",
     tab_general_label: "General",
     tab_general_description:
       "App language, Simple mode, currency, posting target, week start, timezone, default owner and how strictly the content mix is checked.",
@@ -66,12 +66,12 @@ export const settingsMessages = defineMessages({
     error_task_count: "Keep it to {max} tasks or fewer — a daily list should fit on one screen.",
   },
   tl: {
-    page_description: "Ang profile mo, at ang targets, thresholds, libraries, AI, integrations at data na sinusunod ng buong system.",
     nav_aria: "Mga section ng Settings",
     nav_unsaved: "(may changes na hindi naka-save)",
 
     tab_profile_label: "Profile",
-    tab_profile_description: "Ikaw, ang gumagamit ng Orbi: photo, pangalan, headline, location at links mo — at kung sino ang nakakakita.",
+    tab_profile_description:
+      "Ikaw, ang gumagamit ng Orbi — ang Brand HQ ay ang brand mo. Photo, pangalan, headline, location at links mo; ipinapakita ng circles ang profile na 'to sa tabi ng pangalan mo.",
     tab_general_label: "General",
     tab_general_description:
       "App language, Simple mode, currency, posting target, simula ng linggo, timezone, default owner at gaano strikto ang pag-check sa content mix.",

@@ -1,6 +1,6 @@
 import { HeartPulse } from "lucide-react"
 import Link from "next/link"
-import { EmptyState, Meter, ScoreRing, SectionCard, TONE_ICON, TONE_TEXT, toneForScore } from "@/components/common"
+import { Disclosure, EmptyState, Meter, ScoreRing, SectionCard, TONE_ICON, TONE_TEXT, toneForScore } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import type { ContentHealth, HealthComponent } from "@/lib/analytics"
 import { useT, useUiLang } from "@/lib/i18n"
@@ -36,14 +36,13 @@ function HealthRow({ component }: { component: HealthComponent }) {
         size="sm"
         aria-label={t("health_row_aria", { label: component.label, score: formatPoints(component.score), max: component.max })}
       />
-      <span className="line-clamp-2 text-xs text-pretty text-muted-foreground">{component.detail}</span>
     </Link>
   )
 }
 
 /**
- * Score ring, band and the six weighted components with their explanations. Before anything is
- * published (`scored` false) a score would only measure an empty workspace, so none is shown.
+ * Score ring, band and the six weighted components; each one's explanation waits under "Details". Before anything
+ * is published (`scored` false) a score would only measure an empty workspace, so none is shown.
  */
 export function HealthCard({ health, scored = true, className }: { health: ContentHealth; scored?: boolean; className?: string }) {
   const t = useT(dashboardMessages)
@@ -93,6 +92,16 @@ export function HealthCard({ health, scored = true, className }: { health: Conte
           </li>
         ))}
       </ul>
+      <Disclosure>
+        <dl className="flex flex-col gap-1.5 text-xs">
+          {health.components.map((component) => (
+            <div key={component.key} className="min-w-0">
+              <dt className="font-medium">{component.label}</dt>
+              <dd className="text-pretty text-muted-foreground">{component.detail}</dd>
+            </div>
+          ))}
+        </dl>
+      </Disclosure>
     </SectionCard>
   )
 }

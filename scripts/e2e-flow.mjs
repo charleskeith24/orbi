@@ -176,6 +176,11 @@ await step("Calendar places the published post", async () => {
 
 await step("Dashboard still renders", async () => {
   await go("/")
+  // Home leads with "Your focus today"; the rest (Pipeline, Content Health Score, performance) is under "More on your week".
+  await page.locator('[data-slot="focus-hero"]').waitFor({ timeout: 30000 })
+  const more = page.getByRole("button", { name: /More on your week/i })
+  if ((await more.getAttribute("aria-expanded")) !== "true") await more.click()
+  await page.getByText("Content Health Score").first().waitFor({ timeout: 15000 })
   const text = await page.locator("main").innerText()
   if (!/Content Health Score/i.test(text)) throw new Error("dashboard sections missing")
 })

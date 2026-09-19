@@ -43,7 +43,7 @@ src/
     api/access-requests/       public waitlist endpoint (anonymous POST, same-origin, rate-limited in Postgres)
   components/
     ui/                        shadcn primitives (generated)
-    app-shell/                 sidebar, top bar, data gate, command palette, global dialogs
+    app-shell/                 sidebar, top bar (New menu, account menu), module tabs, phone bottom bar, data gate, ⌘K, dialogs
     common/                    shared building blocks (badges, selects, tables, empty states…)
     charts/                    chart kit (dataviz rules baked in)
     features/<feature>/        feature views & feature-private components
@@ -134,6 +134,7 @@ Use `new Date()` at the call site (`now`) and pass it into pure analytics functi
 
 - `?open=<id>` — a page opens that entity's detail sheet/dialog on load (used by ⌘K search and cross-links). Every list page **must** honor it.
 - `?tab=<key>` — select a tab on tabbed pages (e.g. `/settings?tab=data`).
+- **Sub-pages are tabs, not sidebar links.** A module's sub-pages (`NavItem.children` in `src/lib/navigation.ts`) keep their own routes and render as route-linked tabs under the top bar (`ModuleTabs` → `HubTabs`, e.g. Ideas: Idea Bank · Generator · Hooks · Angles). Each child has a full `title` (⌘K, breadcrumb) and a short `tab` label. The sidebar has one link per module, active on every sub-route. `?open=`, ⌘K, bookmarks and links keep working because tabs are plain links. Adding a sub-page = adding a child; nothing else.
 - Content item detail lives at **`/studio/<itemId>`**; campaign detail at **`/campaigns/<id>`**.
 - Entity → page map (for links): idea `/ideas?open=`, item `/studio/<id>`, hook `/ideas/hooks?open=`, angle `/ideas/angles?open=`, persona `/audience?open=`, problem `/audience/problems?open=`, question `/audience/questions?open=`, pillar `/pillars?open=`, story `/stories?open=`, research `/research?open=`, series `/series?open=`, experiment `/experiments?open=`, campaign `/campaigns/<id>`, brand deal `/money/deals?open=`, income entry `/money/income?open=`, collab `/collabs?open=` (`/collabs?new=1&campaign=<id>` or `&deal=<id>` opens the form pre-linked; `/collabs?ideas=1` opens Collab ideas). Rate cards are edited on `/money/media-kit`.
 - Settings tabs: `profile`, `general`, `performance`, `funnel`, `formats`, `tags`, `engagement`, `reminders`, `ai`, `integrations`, `data` (`settingsHref(tab)` in `features/settings/tabs.ts`). `/settings` with no tab still opens `general`; the account menu's **Profile** item opens `/settings?tab=profile`.
@@ -151,6 +152,7 @@ uiActions.openDialog({ type: "add-metrics", itemId })
 uiActions.openDialog({ type: "log-income", dealId, itemId })   // both optional: pre-link the entry
 uiActions.askStrategist("Why are my educational posts underperforming?")
 ```
+The top bar's **＋ New** menu (and the phone bar's ＋ sheet) is the one place for these: Quick Capture, New content, Log a post, Add analytics and New collab (`/collabs?new=1`) — `useNewActions()` in `app-shell/new-menu.tsx`. Pages don't repeat Capture / New content buttons.
 
 ---
 
@@ -176,6 +178,33 @@ uiActions.askStrategist("Why are my educational posts underperforming?")
 - **Feedback:** every mutation that isn't visually obvious gets a `toast.success(...)`.
 - **Responsive:** desktop-first; tablet and mobile must work. Mobile priorities: Quick Capture, Today, analytics logging, content review. Wide tables scroll inside `overflow-x-auto`; the page body never scrolls horizontally.
 - **Accessibility:** labelled inputs, `aria-label` on icon buttons, focus-visible rings, keyboard reachable menus, sufficient contrast.
+
+### Calm UI (declutter rules — brief and measurements in `docs/CALM_UI.md`)
+
+Numbers, short labels and one obvious next action; explanations exist but wait until they're asked for. Premium comes from restraint, hierarchy, spacing and consistency, not decoration.
+
+1. **Word budget.** ≤ ~120 words above the fold on desktop, ≤ ~80 on a 390px phone. Measure with `node scripts/text-budget.mjs "--routes=/x"` (add `--lang=tl --width=390 --height=844` for phones). It reports `above the fold` (every text node that starts above the fold, including Kanban columns scrolled off to the side) and `on screen` (only what is visible). Board and table data count; cut the chrome around them.
+2. **Page header:** a title and at most one subtitle of ≤ 8 words, or none. The page's explanation goes in `PageHeader info` (an ⓘ). No icon tile on new screens.
+3. **Section header:** a title of ≤ 4 words, an optional count, an optional ⓘ and one optional action — `SectionHeader`, `PageSection` or `SectionCard` with `count`/`info`. **No description line.**
+4. **Numbers over sentences.** A stat is a number, a short label and one status chip. An insight is one line with a "Why?" `Disclosure`. Never a paragraph on a card.
+5. **Progressive disclosure.** Details go in `Disclosure` ("Details"), sheets or tabs. Beginner explanations live in **empty states**, not next to data that already exists.
+6. **One primary action per region.** Capture and New content live once, in the top bar's New menu.
+7. **Fewer boxes.** Separate sections with spacing and hairlines; cards are for objects (a post, a deal, a stat), not for every paragraph.
+8. **Field help** only for format or validation ("JPG, PNG or WebP, up to 5 MB", a counter). Everything else: a good placeholder or an ⓘ.
+9. **Status** still pairs an icon with a label — one or two words.
+10. **Both languages get shorter;** Taglish is often longer, so cut it at least as much. Keep §9 terms. Remove unused keys.
+11. **No information that matters is lost:** every removed sentence becomes an ⓘ or a Disclosure, moves to an empty state or its natural page, or was redundant.
+
+**Building blocks** (`@/components/common`, on shadcn primitives):
+- `PageHeader({ title, description?, info?, infoTitle?, actions?, children? })` — `description` is the ≤ 8-word subtitle; `children` is a second row (filters).
+- `SectionHeader({ title, count?, info?, infoTitle?, action?, as?, id? })`; `PageSection` and `SectionCard` also take `count` and `info` (their `description` stays for older screens — move it to `info`).
+- `InfoHint({ children, title?, label?, side?, align? })` — an ⓘ button (Tab, Enter/Space, tap; ~36px touch target) opening a popover; `title` bolds the first line and names the button "About {title}".
+- `Disclosure({ label?, meta?, variant: "inline" | "section", defaultOpen?, open?, onOpenChange?, storageKey? })` — `inline` is a small "Details ›" toggle, `section` a full-width divider ("More on your week ────"). `aria-expanded`/`aria-controls` via Radix; closed content isn't rendered; `storageKey` remembers it per device.
+- `HubTabs({ tabs: { title, href }[], label? })` + `activeHubTab()` — route-linked tabs (`aria-current="page"`), sideways-scrolling on phones. The shell renders them for every module with sub-pages; use it directly only for a page-level set of routes.
+- `StatTile size="sm"` — the compact tile.
+- Shell: `NewMenu`/`useNewActions`, `UserMenu` (account avatar: Profile, Settings, Theme, Feedback, Install), `BottomTabBar`, `ModuleTabs`, the one-line `WorkspaceBanner`.
+
+**Shell.** Top bar: location, search (⌘K), **＋ New**, Content Strategist, account avatar. Sidebar: Home and Today; **Plan · Create · Grow · Measure** (group headers fold, remembered per device in `pbos:sidebar:collapsed`; a folded group still shows the module you're on; the icon rail lists everything); Money and Settings. Phones (below `md`): the sidebar trigger and New give way to a bottom bar — Home · Today · ＋ · Calendar · More (＋ = the New menu as a sheet, More = every module as a sheet). The bar sets `--bottom-bar` (height + safe area) on phones: the shell pads page content with it, and anything sticky to the bottom uses `bottom-[calc(var(--bottom-bar,0px)+…)]` (save bars) or `bottom-[var(--bottom-bar,0px)]`; toasts sit above it too.
 
 ## 6. Chart rules (data-viz method)
 
@@ -248,13 +277,14 @@ toast.success(translate(m, getUiLang(), "saved"))
 
 - `app_settings.simple_mode` (new workspaces: on). The sidebar shows only the `NavItem.simple` modules — Home, Today, Ideas, Content Studio, Calendar, Analytics, Money, Settings — plus the module of the current page (`sidebarSections()` in `src/lib/navigation.ts`). The footer toggle ("Show all modules (N hidden)" / "Back to Simple mode") and Settings → General flip it.
 - Simple mode only trims the sidebar: ⌘K (`ALL_PAGES`), links and URLs reach every page. Don't hide features inside pages based on it.
+- With the Calm UI groups: Simple mode leaves Home and Today, **Create** (Ideas, Content Studio, Calendar), **Measure** (Analytics), then Money and Settings; groups with nothing left disappear. A folded group and Simple mode both keep the current page's module visible. The phone **More** sheet follows the same rules and has the same toggle. Module tabs (§4) always show every sub-page — Simple mode never trims tabs.
 - Adding a module: add it to `NAV_SECTIONS`; set `simple: true` only if a new creator needs it every day.
 
 ## 13. Feedback & usage analytics (privacy rules)
 
 Both are **online-version only** (Supabase) and live in server-only tables (`feedback`, `usage_events` in `supabase/migrations/20260914000100_beta.sql`; RLS: users insert and read only their own rows; admins with 2-step verification read every row, §14). `schema-parity.test.ts` lists them in `SERVER_ONLY_TABLES` with `push_subscriptions` (Reminders) and the admin tables (§14) — tolerated outside `TABLE_NAMES`, RLS required.
 
-- **Feedback** — top-bar dialog → `POST /api/feedback` (`src/lib/telemetry/feedback.ts`: kind `bug | idea | confusing | praise`, message ≤ 4,000 chars, the page path without query string or hash, a viewport bucket). Local mode never sends anything: it says so honestly and offers "Copy feedback".
+- **Feedback** — account menu (top-bar avatar) → **Send feedback** dialog → `POST /api/feedback` (`src/lib/telemetry/feedback.ts`: kind `bug | idea | confusing | praise`, message ≤ 4,000 chars, the page path without query string or hash, a viewport bucket). Local mode never sends anything: it says so honestly and offers "Copy feedback".
 - **Usage analytics** — opt-in, **off by default, per device** (consent in this browser's localStorage `pbos:usage-analytics`, never in the workspace). `trackUsage(name, props)` from `@/lib/telemetry` is a no-op on the server, in local mode, before the workspace loads and without consent. Batches go to `POST /api/events`, which re-validates with the same rules.
 - **What an event may contain:** a name from `USAGE_EVENT_NAMES` and only the whitelisted properties for that event (`EVENT_PROPS` in `src/lib/telemetry/events.ts`) — enum-like tokens, small counts, booleans. `sanitizeProps` drops everything else; `normalizePath` strips query strings and ids from paths. **Never** put titles, notes, scripts, captions, hooks, names, handles, emails, amounts, URLs or any other text a creator typed into an event — and don't widen the whitelist to allow it.
 - **Key actions** (`idea_captured`, `content_created`, `post_published`, `metrics_logged`) are derived from workspace changes in `src/lib/telemetry/store-watch.ts` (ids, enums and booleans only; bulk changes such as imports or a reset are ignored), so domain operations and components need no tracking calls. Onboarding step events are the only explicit calls (`features/onboarding/wizard.tsx`).
@@ -349,8 +379,8 @@ Every account has a personal profile — the **person** using Orbi, not the bran
   - Deleting an account: Storage can't cascade from SQL, so the admin delete route removes the files first; dashboard deletions leave a folder only the secret key can read — ADMIN.md has the cleanup query.
 - **Client.** `ProfilesApi` (`src/lib/profiles/types.ts`) has three implementations: `features/profile/api/supabase-api.ts` (RLS, `get_profiles()`, Storage; no API routes), `src/lib/profiles/local-api.ts` (local mode) and `src/lib/profiles/fixture-api.ts` (dev only). `<ProfilesSync />` (in the app shell) picks one when the workspace loads; `features/profile/profile-store.ts` holds your profile and the caches.
   - **Shared pieces for other features** (team workspaces reuse them): `useProfiles(ids)` / `useProfile(id)` (batched `get_profiles()`; `null` = not visible), `usePhotoUrl(path)`, `<ProfileAvatar>` / `<PersonAvatar userId name>` and `<ProfilePopover>` / `<ProfileCardBody>`.
-- **Where it shows.** Settings → Profile (`/settings?tab=profile`: editor, "How your circles see you" preview, who can see it), the account menu (photo + display name; online it falls back to the sign-up name or the email's local part), circles (§15), Admin → Users (§14), and — per device, opt-in — the media kit header ("Use my profile photo in the media kit", `localStorage["pbos:media-kit-photo"]`).
-- **Local mode.** No accounts: the profile is kept on this device only (`localStorage["pbos:local-profile"]`, the photo as a ≤ 60 KB 256×256 data URL, re-encoded the same way). The tab says so ("In the online version your profile is saved to your account and shown to your circles and team."), and the account menu shows it.
+- **Where it shows.** Settings → Profile (`/settings?tab=profile`: the editor beside a compact Preview whose ⓘ says who can see it), the account menu in the top bar (photo + display name; online it falls back to the sign-up name or the email's local part), circles (§15), Admin → Users (§14), and — per device, opt-in — the media kit header ("Use my profile photo in the media kit", `localStorage["pbos:media-kit-photo"]`).
+- **Local mode.** No accounts: the profile is kept on this device only (`localStorage["pbos:local-profile"]`, the photo as a ≤ 60 KB 256×256 data URL, re-encoded the same way). The tab says so in one line ("Saved on this device only", with the online difference behind its ⓘ), and the account menu shows it.
 - **Dev fixture.** The Circles fixture (`--circles`) also gives its sample members sample profiles and illustrated sample photos; your own profile stays the local one. Same production guard as §15. The admin fixture (`--admin`) carries sample `photo_url`s.
 - **Tests.**
   - `src/lib/profiles/profiles-migration.pglite.test.ts`: every rule above on Postgres, with a stub of the `storage` schema (`src/lib/supabase/testing/pglite.ts`).

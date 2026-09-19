@@ -3,16 +3,15 @@ import { defineMessages } from "@/lib/i18n/core"
 
 export const pipelineMessages = defineMessages({
   en: {
-    description: "Every piece of content from idea to published. Drag cards between stages or open one in the Studio.",
-    add_content: "Add content",
+    info: "Every piece of content from idea to published. Drag cards between stages, or open one in the Content Studio. New content comes from New in the top bar.",
+    stages_aria: "Stages",
+    empty_short: "Empty",
     empty_title: "Nothing in production yet",
     empty_description:
       "Quick-add a working title or convert an idea from the Idea Bank. Cards move right as they're briefed, scripted, produced and published.",
     quick_add_idea: "Quick add an idea",
     open_idea_bank: "Open Idea Bank",
     // Summary
-    stage_groups: "Stage groups",
-    in_progress: "in progress",
     published_window: "Published in the last {days} days",
     show_group: "Show {group} on the board",
     content_buffer: "Content Buffer",
@@ -54,6 +53,7 @@ export const pipelineMessages = defineMessages({
     cards_other: "{count} cards",
     shown_of: "{shown} of {cards}",
     search_placeholder: "Search pipeline…",
+    filters: "Filters",
     columns: "Columns",
     expanded_columns: "Expanded columns",
     expand_all: "Expand all",
@@ -114,15 +114,14 @@ export const pipelineMessages = defineMessages({
     uses_filter: "Uses your {filters} filter",
   },
   tl: {
-    description: "Lahat ng content mula idea hanggang published. I-drag ang cards sa ibang stage o buksan sa Studio.",
-    add_content: "Magdagdag ng content",
+    info: "Lahat ng content mula idea hanggang published. I-drag ang cards sa ibang stage, o buksan sa Content Studio. Gumawa ng bagong content gamit ang Bago sa top bar.",
+    stages_aria: "Mga stage",
+    empty_short: "Wala pa",
     empty_title: "Wala pang nasa production",
     empty_description:
       "Mag-quick add ng working title o i-convert ang idea mula sa Idea Bank. Gumagalaw pa-right ang cards habang bina-brief, sinusulat, pino-produce at pinu-publish.",
     quick_add_idea: "Mag-quick add ng idea",
     open_idea_bank: "Buksan ang Idea Bank",
-    stage_groups: "Stage groups",
-    in_progress: "in progress",
     published_window: "Na-publish sa huling {days} araw",
     show_group: "Ipakita ang {group} sa board",
     content_buffer: "Content Buffer",
@@ -163,6 +162,7 @@ export const pipelineMessages = defineMessages({
     cards_other: "{count} cards",
     shown_of: "{shown} ng {cards}",
     search_placeholder: "Search sa pipeline…",
+    filters: "Filters",
     columns: "Columns",
     expanded_columns: "Mga naka-expand na column",
     expand_all: "I-expand ang lahat",

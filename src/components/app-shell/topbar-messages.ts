@@ -1,8 +1,8 @@
 import { defineMessages } from "@/lib/i18n/core"
 
 /**
- * Top bar: breadcrumbs, search and the quick actions. Product terms (Quick Capture, Content
- * Strategist, Campaign) stay in English in both languages (ARCHITECTURE §9).
+ * Top bar: where you are, search and the Content Strategist. Product terms (Content Strategist, Campaign) stay
+ * in English in both languages (ARCHITECTURE §9). The New menu has its own messages (`new-menu-messages.ts`).
  */
 export const m = defineMessages({
   en: {
@@ -11,11 +11,8 @@ export const m = defineMessages({
     crumb_campaign: "Campaign",
     crumb_details: "Details",
     strategist: "Content Strategist",
-    search_everything: "Search everything…",
+    search_everything: "Search…",
     search: "Search",
-    capture: "Capture",
-    capture_tooltip: "Quick-capture an idea",
-    new_content: "New content",
     strategist_open: "Open Content Strategist",
   },
   tl: {
@@ -24,11 +21,8 @@ export const m = defineMessages({
     crumb_campaign: "Campaign",
     crumb_details: "Detalye",
     strategist: "Content Strategist",
-    search_everything: "I-search lahat…",
+    search_everything: "I-search…",
     search: "I-search",
-    capture: "I-capture",
-    capture_tooltip: "I-capture agad ang idea",
-    new_content: "Bagong content",
     strategist_open: "Buksan ang Content Strategist",
   },
 })

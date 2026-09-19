@@ -23,7 +23,7 @@ export function PillarDistributionCard({ mix, tolerance, className }: { mix: Pil
   return (
     <SectionCard
       title={t("distribution_title")}
-      description={t("distribution_description")}
+      info={t("distribution_description")}
       action={status}
       className={className}
       contentClassName="flex flex-col gap-3"

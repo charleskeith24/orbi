@@ -18,7 +18,7 @@
  *   (`target_email` has no foreign key, so entries outlive a deleted account)
  * - export / start fresh: Settings → Data; account deletion: admin `DELETE /api/admin/users/:id` (workspace,
  *   `feedback` and `usage_events` cascade); an access request is removed by the owner in Supabase (docs/ADMIN.md)
- * - contact: `NEXT_PUBLIC_CONTACT_EMAIL` (./contact-email.ts); without it, the Feedback button (signed in only)
+ * - contact: `NEXT_PUBLIC_CONTACT_EMAIL` (./contact-email.ts); without it, Send feedback in the account menu (signed in only)
  * - AI: `/api/ai` → Anthropic only with ANTHROPIC_API_KEY, otherwise the offline engine
  */
 import { useScreenT } from "@/components/app-shell/device-ui-lang"

@@ -1,9 +1,7 @@
 "use client"
 
-import { Download } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
-import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
 import { useT } from "@/lib/i18n"
 import { InstallInstructionsDialog, type InstructionsMode } from "./install-dialog"
 import { m } from "./messages"
@@ -39,22 +37,4 @@ export function useInstallOrbi() {
     install,
     dialog: <InstallInstructionsDialog mode={dialogMode} open={dialogOpen} onOpenChange={setDialogOpen} />,
   }
-}
-
-/** The sidebar-footer entry (local mode and signed-out states, where there is no account menu). */
-export function InstallSidebarItem() {
-  const { visible, label, hint, install, dialog } = useInstallOrbi()
-  return (
-    <>
-      {visible ? (
-        <SidebarMenuItem>
-          <SidebarMenuButton size="sm" tooltip={hint} className="text-muted-foreground" onClick={() => void install()}>
-            <Download aria-hidden />
-            <span>{label}</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      ) : null}
-      {dialog}
-    </>
-  )
 }

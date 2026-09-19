@@ -106,12 +106,9 @@ export function TopPerformersCard({
   return (
     <SectionCard
       title={t("top_title")}
-      description={t("top_description", { metric: (WINNER_METRIC_MAP[winnerMetric]?.label ?? "views").toLowerCase() })}
+      info={t("top_description", { metric: (WINNER_METRIC_MAP[winnerMetric]?.label ?? "views").toLowerCase() })}
       action={
-        <CardLink href="/winners">
-          <span className="hidden sm:inline">Winning Content Library</span>
-          <span className="sm:hidden">Winners</span>
-        </CardLink>
+        <CardLink href="/winners">Winners</CardLink>
       }
       className={className}
       contentClassName={rows.length ? "p-0 pt-2" : undefined}

@@ -1,7 +1,7 @@
 "use client"
 
 import { DndContext, DragOverlay } from "@dnd-kit/core"
-import { CalendarDays, ListChecks, Plus, Target } from "lucide-react"
+import { CalendarDays, Plus, Target } from "lucide-react"
 import Link from "next/link"
 import { useCallback, useMemo, useState } from "react"
 import { PageContainer, PageHeader } from "@/components/common"
@@ -181,18 +181,6 @@ function CalendarScreen() {
         description={t("description")}
         actions={
           <>
-            <Button asChild size="sm" variant="outline">
-              <Link href="/calendar/planner">
-                <ListChecks aria-hidden />
-                Weekly Planner
-              </Link>
-            </Button>
-            <Button asChild size="sm" variant="outline">
-              <Link href="/calendar/schedule">
-                <Target aria-hidden />
-                Posting Schedule
-              </Link>
-            </Button>
             <Button type="button" size="sm" onClick={() => uiActions.openDialog({ type: "new-content" })}>
               <Plus aria-hidden />
               {t("new_content")}

@@ -108,6 +108,8 @@ export interface StatTileProps {
   href?: string
   /** Status tone for the icon (defaults to the tone's icon when none is given). */
   tone?: StatusTone
+  /** `sm`: the compact tile for dense rows (Calm UI) — tighter padding, smaller number. */
+  size?: "default" | "sm"
   className?: string
 }
 
@@ -124,6 +126,7 @@ export function StatTile({
   icon,
   href,
   tone,
+  size = "default",
   className,
 }: StatTileProps) {
   const t = useT(statTileMessages)
@@ -139,7 +142,7 @@ export function StatTile({
         {tone && tone !== "neutral" ? <span className="sr-only">{t("status", { tone: t(TONE_LABEL[tone]) })}</span> : null}
       </div>
       <div className="flex min-w-0 items-end justify-between gap-3">
-        <span className="truncate text-2xl leading-8 font-semibold tracking-tight">{value}</span>
+        <span className={cn("truncate font-semibold tracking-tight", size === "sm" ? "text-xl leading-7" : "text-2xl leading-8")}>{value}</span>
         {trend && trend.length > 1 ? <Sparkline values={trend} className="mb-1.5" /> : null}
       </div>
       {hasFooter ? (
@@ -158,7 +161,7 @@ export function StatTile({
     </>
   )
 
-  const base = "flex min-w-0 flex-col gap-1 rounded-lg border bg-card p-4 text-card-foreground"
+  const base = cn("flex min-w-0 flex-col rounded-lg border bg-card text-card-foreground", size === "sm" ? "gap-0.5 p-3" : "gap-1 p-4")
   if (href) {
     return (
       <Link

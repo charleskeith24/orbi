@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { weeklyPostingProgress } from "@/lib/analytics"
 import { createDemoDatabase, createStarterDatabase } from "@/lib/data/seed"
 import { computeDashboard } from "./dashboard-data"
-import { buildWeekDays, firstName, formatSlotTime, ideaTitleFromText, overdueLabel, strategistPrompts } from "./dashboard-utils"
+import { buildWeekDays, dayMarks, firstName, formatSlotTime, ideaTitleFromText, overdueLabel, strategistPrompts, weekRangeLabel } from "./dashboard-utils"
 
 const USER = "00000000-0000-4000-8000-000000000001"
 const NOW = new Date(2026, 8, 11, 9, 15)
@@ -16,6 +16,13 @@ describe("firstName", () => {
     expect(firstName("Maria Santos")).toBe("Maria")
     expect(firstName("(Founder) Leo Tan")).toBe("Leo")
     expect(firstName("   ")).toBe("")
+  })
+})
+
+describe("weekRangeLabel", () => {
+  it("keeps one month name within a month and both across months", () => {
+    expect(weekRangeLabel(new Date(2026, 8, 14), new Date(2026, 8, 20))).toBe("Sep 14–20")
+    expect(weekRangeLabel(new Date(2026, 8, 28), new Date(2026, 9, 4))).toBe("Sep 28 – Oct 4")
   })
 })
 
@@ -92,6 +99,15 @@ describe("buildWeekDays", () => {
         if (day.isPast) expect(status).not.toBe("open")
         else expect(status).not.toBe("missed")
       }
+    }
+  })
+
+  it("sums each day into the week strip's marks, with no missed slots before the start", () => {
+    for (const day of days) {
+      const marks = dayMarks(day)
+      expect(marks.published + marks.scheduled).toBe(day.items.length)
+      expect(marks.open + marks.missed).toBe(day.slots.filter((s) => s.status !== "filled").length)
+      expect(dayMarks(day, true)).toMatchObject({ open: 0, missed: 0 })
     }
   })
 })

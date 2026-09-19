@@ -91,12 +91,6 @@ export function StoryVaultView() {
           description={t("description")}
           actions={
             <>
-              <Button type="button" variant="outline" size="sm" asChild>
-                <Link href="/stories/experience">
-                  <Sparkles className="text-brand" aria-hidden />
-                  Experience → Content
-                </Link>
-              </Button>
               <Button type="button" size="sm" onClick={() => setCreating(true)}>
                 <Plus aria-hidden />
                 {t("new_story")}

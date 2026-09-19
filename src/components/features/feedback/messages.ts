@@ -1,12 +1,10 @@
 import { defineMessages } from "@/lib/i18n/core"
 
-/** Feedback button + dialog in the top bar, and the usage-analytics opt-in. */
+/** Feedback (account menu item + dialog), and the usage-analytics opt-in. */
 export const m = defineMessages({
   en: {
-    // Top-bar button
-    button_label: "Feedback",
-    button_aria: "Send feedback",
-    button_tooltip: "Tell the Orbi team what to fix or add",
+    // Account menu item
+    menu_label: "Send feedback",
 
     // Dialog
     title: "Send feedback",
@@ -61,9 +59,7 @@ export const m = defineMessages({
     usage_off: "Usage sharing is off.",
   },
   tl: {
-    button_label: "Feedback",
-    button_aria: "Magpadala ng feedback",
-    button_tooltip: "Sabihin sa Orbi team kung ano ang aayusin o idadagdag",
+    menu_label: "Magpadala ng feedback",
 
     title: "Magpadala ng feedback",
     description_online: "Diretso ito sa Orbi team, kasama ang page kung nasaan ka.",

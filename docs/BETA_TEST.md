@@ -5,7 +5,7 @@ learn whether creators can set Orbi up on their own, whether they come back, wha
 and whether they would pay. Five people are enough to find most usability problems. Read the
 numbers as signals, not statistics, and always pair them with what you saw and heard.
 
-- **In-app tools:** the **Feedback** button in the top bar and **opt-in usage analytics**. Both
+- **In-app tools:** **Send feedback** in the account menu (the avatar at the top right) and **opt-in usage analytics**. Both
   exist only in the online version; details in [How the beta tools work](#how-the-beta-tools-work).
 - **Data:** `public.feedback` and `public.usage_events`, created by
   `supabase/migrations/20260914000100_beta.sql`.
@@ -87,7 +87,7 @@ Handle this in line with the Philippine **Data Privacy Act of 2012 (RA 10173)**:
 what you collect and why, collect only what the test needs, and delete it when you're done. [3][4]
 
 > **Known limit — usage sharing during first setup.** The opt-in switch lives in the Feedback
-> dialog in the top bar. First-time users only reach the top bar *after* setup, so the onboarding
+> dialog (account menu → Send feedback). First-time users only reach the top bar *after* setup, so the onboarding
 > funnel only captures testers who opted in earlier on that device. Until the switch is also on
 > the setup Welcome step (requested from the lead), watch setup live in session 1. That's the
 > richer signal anyway.
@@ -347,7 +347,7 @@ select props ->> 'source'   as source,   count(*) from public.usage_events where
 
 ## How the beta tools work
 
-**Feedback button** (top bar; icon + "Feedback" on desktop, icon only on phones):
+**Send feedback** (account menu — the avatar at the top right, on desktop and phones):
 
 - Choose a kind (Bug · Idea · Confusing · Praise), write a message, and send. The page path is
   attached automatically (no query string). Language, screen-size bucket and browser are recorded

@@ -125,7 +125,7 @@ export function Composer({
       }}
       className={cn(
         "shrink-0 border-t p-3",
-        variant === "panel" ? "bg-popover" : "sticky bottom-0 z-10 rounded-b-lg bg-card lg:static"
+        variant === "panel" ? "bg-popover" : "sticky bottom-[var(--bottom-bar,0px)] z-10 rounded-b-lg bg-card lg:static"
       )}
     >
       <div className="flex flex-col rounded-lg border bg-background shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:bg-input/30">

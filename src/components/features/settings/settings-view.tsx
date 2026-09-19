@@ -1,9 +1,8 @@
 "use client"
 
-import { Settings } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useState } from "react"
-import { PageContainer, PageHeader } from "@/components/common"
+import { PageContainer, PageHeader, SectionHeader } from "@/components/common"
 import { useT } from "@/lib/i18n"
 import { ProfileTab } from "@/components/features/profile/profile-tab"
 import { RemindersTab } from "@/components/features/reminders/reminders-tab"
@@ -38,20 +37,12 @@ export function SettingsView() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Settings"
-        icon={Settings}
-        description={t("page_description")}
-      />
+      <PageHeader title="Settings" />
       <div className="grid min-w-0 gap-5 lg:grid-cols-[11.5rem_minmax(0,1fr)] lg:gap-8">
         <SettingsNav active={tab} dirty={dirty} />
         <section aria-labelledby="settings-section-title" className="flex min-w-0 flex-col gap-4">
-          <header className="min-w-0">
-            <h2 id="settings-section-title" className="text-base leading-6 font-semibold">
-              {t(`tab_${tab}_label`)}
-            </h2>
-            <p className="text-sm text-pretty text-muted-foreground">{t(`tab_${tab}_description`)}</p>
-          </header>
+          {/* Calm UI: the section's explanation waits behind its ⓘ. */}
+          <SectionHeader id="settings-section-title" title={t(`tab_${tab}_label`)} info={t(`tab_${tab}_description`)} />
           {tab === "profile" ? <ProfileTab /> : null}
           {tab === "general" ? <GeneralTab draft={general} now={now} /> : null}
           {tab === "performance" ? <PerformanceTab draft={performance} now={now} /> : null}

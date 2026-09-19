@@ -22,7 +22,7 @@ import { pipelineMessages } from "./messages"
 import { PipelineCard } from "./pipeline-card"
 import { QuickAddForm } from "./quick-add"
 
-/** One line per stage explaining what belongs there (shown when the column is empty). */
+/** One line per stage explaining what belongs there (phone empty state; the empty column's tooltip on desktop). */
 export function stageEmptyHint(t: Translator<(typeof pipelineMessages)["en"]>, stage: PipelineStage): string {
   return t(`hint_${stage}`, { days: PUBLISHED_COLUMN_DAYS })
 }
@@ -126,48 +126,46 @@ export const PipelineColumn = memo(function PipelineColumn({
             <span className="sr-only">{t("overdue")}</span>
           </span>
         ) : null}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          className="ml-auto text-muted-foreground"
-          aria-label={t("collapse_stage", { stage: meta.label })}
-          title={t("collapse_column")}
-          onClick={() => onCollapsedChange(stage, true)}
-        >
-          <ChevronsLeft aria-hidden />
-        </Button>
-      </header>
-
-      {stage === "published" ? (
-        <div className="-mt-1 flex shrink-0 items-center justify-between gap-2 px-3 pb-2 text-xs text-muted-foreground">
-          <span>{t("last_days", { days: PUBLISHED_COLUMN_DAYS })}</span>
-          <Link
-            href="/analytics/posts"
-            className="inline-flex items-center gap-0.5 rounded-sm font-medium text-foreground/80 underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            {t("all_posts")}
-            <ArrowUpRight className="size-3.5" aria-hidden />
-          </Link>
-        </div>
-      ) : null}
-
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-y-contain px-2 pb-2">
-        {canQuickAdd ? (
-          quickAddOpen ? (
-            <QuickAddForm stage={stage} defaults={quickAddDefaults} onClose={() => onQuickAdd(null)} />
-          ) : (
+        <span className="ml-auto flex shrink-0 items-center">
+          {stage === "published" ? (
+            <Button asChild variant="ghost" size="icon-xs" className="text-muted-foreground">
+              {/* The column holds the last PUBLISHED_COLUMN_DAYS days; every post is in Analytics. */}
+              <Link href="/analytics/posts" aria-label={t("all_posts")} title={`${t("last_days", { days: PUBLISHED_COLUMN_DAYS })} · ${t("all_posts")}`}>
+                <ArrowUpRight aria-hidden />
+              </Link>
+            </Button>
+          ) : null}
+          {canQuickAdd ? (
             <Button
               type="button"
               variant="ghost"
-              size="sm"
-              className="w-full shrink-0 justify-start text-muted-foreground"
-              onClick={() => onQuickAdd(stage)}
+              size="icon-xs"
+              className="text-muted-foreground"
+              aria-label={t("add_to", { stage: meta.label })}
+              title={t("add_to", { stage: meta.label })}
+              aria-expanded={quickAddOpen}
+              onClick={() => onQuickAdd(quickAddOpen ? null : stage)}
             >
               <Plus aria-hidden />
-              {t("add_to", { stage: meta.label })}
             </Button>
-          )
+          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            className="text-muted-foreground"
+            aria-label={t("collapse_stage", { stage: meta.label })}
+            title={t("collapse_column")}
+            onClick={() => onCollapsedChange(stage, true)}
+          >
+            <ChevronsLeft aria-hidden />
+          </Button>
+        </span>
+      </header>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-y-contain px-2 pb-2">
+        {canQuickAdd && quickAddOpen ? (
+          <QuickAddForm stage={stage} defaults={quickAddDefaults} onClose={() => onQuickAdd(null)} />
         ) : null}
         {items.map((item) => (
           <PipelineCard
@@ -178,18 +176,16 @@ export const PipelineColumn = memo(function PipelineColumn({
             highlighted={item.id === highlightId}
           />
         ))}
-        {!count ? (
+        {!count && !(canQuickAdd && quickAddOpen) ? (
+          // A quiet drop target; what belongs here is the header's tooltip (and the phone board's empty state).
           <div
+            title={stageEmptyHint(t, stage)}
             className={cn(
-              "flex min-h-24 shrink-0 items-center justify-center rounded-md border border-dashed px-4 py-5 text-center text-xs text-pretty text-muted-foreground",
+              "flex min-h-20 shrink-0 items-center justify-center rounded-md border border-dashed px-4 py-4 text-center text-xs text-pretty text-muted-foreground",
               dragging && "border-brand/40"
             )}
           >
-            {dragging
-              ? t("drop_here", { stage: meta.label })
-              : filtered && total
-                ? t("no_matches_column")
-                : stageEmptyHint(t, stage)}
+            {dragging ? t("drop_here", { stage: meta.label }) : filtered && total ? t("no_matches_column") : null}
           </div>
         ) : null}
       </div>

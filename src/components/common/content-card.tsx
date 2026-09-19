@@ -119,6 +119,10 @@ export interface ContentCardProps {
   showStage?: boolean
   showDate?: boolean
   showThumbnail?: boolean
+  /** Full layout: the format's name beside the platform (the thumbnail already shows its kind). */
+  showFormat?: boolean
+  /** Full layout: "High" beside the priority icon; false keeps the icon (named for screen readers). */
+  showPriorityLabel?: boolean
   /** Slot rendered top-right above the click target (e.g. a dnd-kit handle). */
   dragHandle?: React.ReactNode
   /** Slot rendered top-right for a menu button. */
@@ -139,6 +143,8 @@ export function ContentCard({
   showStage = false,
   showDate = true,
   showThumbnail = !compact,
+  showFormat = true,
+  showPriorityLabel = true,
   dragHandle,
   actions,
   href,
@@ -211,12 +217,12 @@ export function ContentCard({
           <div className="flex min-w-0 flex-wrap items-center gap-1">
             <PillarBadge pillarId={item.pillar_id} className="max-w-full" />
             {showStage ? <StageBadge stage={item.stage} /> : null}
-            {item.priority === "high" ? <PriorityBadge priority="high" /> : null}
+            {item.priority === "high" ? <PriorityBadge priority="high" showLabel={showPriorityLabel} /> : null}
             {showTier ? <TierBadge tier={tier} /> : null}
           </div>
           <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
             <PlatformIcon platform={item.platform} label className="size-3.5" />
-            <FormatLabel formatId={item.format_id} showIcon={false} emptyLabel="" className="min-w-0 shrink" />
+            {showFormat ? <FormatLabel formatId={item.format_id} showIcon={false} emptyLabel="" className="min-w-0 shrink" /> : null}
             <span className="ml-auto flex min-w-0 shrink-0 items-center gap-2">
               {dateInfo ? <DateMeta info={dateInfo} /> : null}
               <OwnerAvatar owner={item.owner} />

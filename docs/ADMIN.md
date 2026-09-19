@@ -138,7 +138,7 @@ Creators put unpublished ideas, scripts, income and brand deals into Orbi. They 
 
 ## 7. The contact email and deletion requests
 
-`/privacy` and `/terms` tell people how to reach you. Set **`NEXT_PUBLIC_CONTACT_EMAIL`** in Vercel → Project → Settings → Environment Variables (for example a support inbox — it's shown publicly), then **redeploy**. Until it's set, both pages say that no contact email is set up yet and point signed-in people to the Feedback button. People without an account then have no way to reach you, so set it before you open the waitlist.
+`/privacy` and `/terms` tell people how to reach you. Set **`NEXT_PUBLIC_CONTACT_EMAIL`** in Vercel → Project → Settings → Environment Variables (for example a support inbox — it's shown publicly), then **redeploy**. Until it's set, both pages say that no contact email is set up yet and point signed-in people to Send feedback in the account menu. People without an account then have no way to reach you, so set it before you open the waitlist.
 
 Both pages are drafts. Review them with a lawyer, especially the governing law (the Philippines) in the Terms. The open questions are listed at the top of `src/app/terms/terms-messages.ts`.
 

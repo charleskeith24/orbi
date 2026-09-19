@@ -40,7 +40,7 @@ export function SaveBar({
       aria-label={t("save_bar_label")}
       className={cn(
         "z-20 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border px-3 py-2",
-        dirty ? "sticky bottom-3 bg-card shadow-md shadow-black/5 dark:shadow-black/40" : "bg-muted/30",
+        dirty ? "sticky bottom-[calc(var(--bottom-bar,0px)+0.75rem)] bg-card shadow-md shadow-black/5 dark:shadow-black/40" : "bg-muted/30",
         className
       )}
     >

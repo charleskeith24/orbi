@@ -163,6 +163,8 @@ export function PipelineBoard({
             item={activeItem}
             now={now}
             tier={tiers.get(activeItem.id) ?? null}
+            showFormat={false}
+            showPriorityLabel={false}
             className="cursor-grabbing shadow-lg ring-1 ring-foreground/10"
           />
         ) : null}

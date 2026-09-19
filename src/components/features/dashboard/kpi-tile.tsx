@@ -1,54 +1,55 @@
+import { ArrowUpRight } from "lucide-react"
 import Link from "next/link"
-import { TONE_ICON, TONE_TEXT, type IconComponent, type StatusTone } from "@/components/common"
+import { TONE_ICON, TONE_TEXT, type StatusTone } from "@/components/common"
 import { cn } from "@/lib/utils"
 
-export interface KpiTileProps extends Omit<React.ComponentPropsWithRef<"a">, "href" | "children"> {
+export interface KpiTileProps {
   label: string
-  icon: IconComponent
   href: string
   value: React.ReactNode
-  /** Beside the value ("days", a status). */
+  /** Small text after the value ("days"). */
   unit?: React.ReactNode
-  /** Right of the value (a sparkline); hidden when the tile is too narrow. */
-  aside?: React.ReactNode
-  /** Between the value and the footer (a meter). */
+  /** One status chip after the value (ToneText); wraps under it on narrow tiles. */
+  status?: React.ReactNode
+  /** Below the status (a meter). */
   children?: React.ReactNode
-  footer?: React.ReactNode
-  iconTone?: StatusTone
+  className?: string
 }
 
 /**
- * KPI tile in the StatTile look, with slots StatTile doesn't have (meter, free-form footer)
- * and ref/prop forwarding so it can be a HoverCard trigger.
+ * Home KPI tile (Calm UI): a short label, one number and a status chip — no sentences. The whole tile links to
+ * the page with the detail; the arrow appears on hover and focus.
  */
-export function KpiTile({ label, icon: Icon, href, value, unit, aside, children, footer, iconTone, className, ...rest }: KpiTileProps) {
+export function KpiTile({ label, href, value, unit, status, children, className }: KpiTileProps) {
   return (
     <Link
       href={href}
       className={cn(
-        "@container flex min-w-0 flex-col gap-2 rounded-lg border bg-card p-4 text-card-foreground transition-colors outline-none hover:border-foreground/15 hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+        "group/kpi flex min-w-0 flex-col gap-1 rounded-lg border bg-card px-3 py-2.5 text-card-foreground transition-colors outline-none hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 @xl:px-4 @xl:py-3",
         className
       )}
-      {...rest}
     >
-      <div className="flex min-w-0 items-center justify-between gap-2">
-        <span className="truncate text-xs font-medium text-muted-foreground">{label}</span>
-        <Icon className={cn("size-4 shrink-0", iconTone ? TONE_TEXT[iconTone] : "text-muted-foreground")} aria-hidden />
-      </div>
-      <div className="flex min-w-0 items-end justify-between gap-3">
-        <div className="flex min-w-0 items-baseline gap-1.5">
-          <span className="text-2xl leading-8 font-semibold tracking-tight whitespace-nowrap num">{value}</span>
-          {unit ? <span className="min-w-0 truncate text-xs text-muted-foreground">{unit}</span> : null}
-        </div>
-        {aside ? <div className="mb-1.5 hidden shrink-0 @min-[13rem]:block">{aside}</div> : null}
-      </div>
-      {children}
-      {footer ? <div className="mt-auto flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">{footer}</div> : null}
+      <span className="flex min-w-0 items-start justify-between gap-2">
+        {/* Two lines on phone-width tiles rather than a cut-off term ("Content Buffer"). */}
+        <span className="line-clamp-2 text-xs leading-4 font-medium text-muted-foreground @xl:truncate">{label}</span>
+        <ArrowUpRight
+          className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/kpi:opacity-100 group-focus-visible/kpi:opacity-100 @max-xl:hidden"
+          aria-hidden
+        />
+      </span>
+      <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <span className="flex min-w-0 items-baseline gap-1">
+          <span className="text-xl leading-7 font-semibold tracking-tight whitespace-nowrap num @xl:text-2xl @xl:leading-8">{value}</span>
+          {unit ? <span className="truncate text-xs text-muted-foreground">{unit}</span> : null}
+        </span>
+        {status ? <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">{status}</span> : null}
+      </span>
+      {children ? <div className="mt-auto pt-0.5">{children}</div> : null}
     </Link>
   )
 }
 
-/** Status label for tile footers: tone icon + text, never colour alone. */
+/** Status label for tiles: tone icon + one or two words, never colour alone. */
 export function ToneText({ tone, children, className }: { tone: StatusTone; children: React.ReactNode; className?: string }) {
   const Icon = TONE_ICON[tone]
   return (

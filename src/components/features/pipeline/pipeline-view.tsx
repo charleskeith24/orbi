@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { computeTiers, contentBuffer, pipelineCounts } from "@/lib/analytics"
 import { getUiLang, translate, useT, useUiLang } from "@/lib/i18n"
-import { dataActions, uiActions, useDb, useSettings } from "@/lib/store"
+import { dataActions, useDb, useSettings } from "@/lib/store"
 import type { ID, PerformanceTier, PipelineStage } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import {
@@ -29,7 +29,7 @@ import { MOBILE_STAGE_LIST_ID, MobileBoard } from "./mobile-board"
 import { PipelineActionsProvider } from "./pipeline-actions"
 import { PipelineBoard } from "./pipeline-board"
 import { ColumnsMenu, PipelineFilterBar } from "./pipeline-filter-bar"
-import { PipelineSummary } from "./pipeline-summary"
+import { BufferStat, StageRail } from "./pipeline-summary"
 import { useCollapsedStages } from "./use-collapsed-stages"
 import { useNow } from "./use-now"
 import { replaceSearchParams, usePipelineFilters } from "./use-pipeline-filters"
@@ -77,7 +77,8 @@ function useBoardHeight(enabled: boolean) {
 }
 
 /**
- * Pipeline (spec §18, §55): stage-group counts, the Content Buffer and a 13-column Kanban.
+ * Pipeline (spec §18, §55; Calm UI): the title with its ⓘ, the Content Buffer as one inline stat (breakdown in
+ * its ⓘ), a quiet stage rail and the 13-column Kanban. New content comes from the top bar's New menu.
  * URL: `?open=<itemId>` reveals and highlights a card, `?stage=<stage>` jumps to a column
  * (the selected stage on phones), facet filters are `?platform=…&pillar=…&owner=…`.
  */
@@ -223,17 +224,11 @@ function PipelineScreen() {
     <PageContainer width="wide" className="gap-4">
       <PageHeader
         title="Pipeline"
-        icon={SquareKanban}
-        description={t("description")}
-        actions={
-          <Button type="button" size="sm" onClick={() => uiActions.openDialog({ type: "new-content" })}>
-            <Plus aria-hidden />
-            {t("add_content")}
-          </Button>
-        }
-      />
-
-      <PipelineSummary counts={counts} buffer={buffer} empty={items.length === 0} onJump={jumpToStage} />
+        info={t("info")}
+        actions={<BufferStat buffer={buffer} empty={items.length === 0} onJump={jumpToStage} />}
+      >
+        {isMobile || items.length === 0 ? null : <StageRail counts={counts} onJump={jumpToStage} />}
+      </PageHeader>
 
       {items.length === 0 ? (
         <EmptyState
@@ -264,6 +259,7 @@ function PipelineScreen() {
         onSearch={setQ}
         onFacet={setFacet}
         onReset={reset}
+        compact={isMobile}
         actions={
           isMobile ? null : (
             <ColumnsMenu columns={columns} collapsed={collapsed} onToggle={setCollapsed} onSetAll={setAll} />

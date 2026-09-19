@@ -129,10 +129,11 @@ export function MobileBoard({
             variant="outline"
             size="sm"
             className="w-full border-dashed text-muted-foreground"
+            aria-label={t("add_to", { stage: label(stage) })}
             onClick={() => onQuickAdd(stage)}
           >
             <Plus aria-hidden />
-            {t("add_to", { stage: label(stage) })}
+            {t("add")}
           </Button>
         )
       ) : null}
@@ -196,6 +197,8 @@ function MobileCard({
         href={`/studio/${item.id}`}
         now={now}
         tier={tier}
+        showFormat={false}
+        showPriorityLabel={false}
         actions={<CardActions item={item} />}
         className="rounded-none border-0 shadow-none hover:shadow-none"
       />

@@ -84,12 +84,9 @@ export function PillarPerformanceCard({ rows, className }: { rows: PillarAggrega
   return (
     <SectionCard
       title={t("pillar_performance_title")}
-      description={t("pillar_performance_description")}
+      info={t("pillar_performance_description")}
       action={
-        <CardLink href="/pillars">
-          <span className="hidden sm:inline">Content Pillars</span>
-          <span className="sm:hidden">Pillars</span>
-        </CardLink>
+        <CardLink href="/pillars">Pillars</CardLink>
       }
       className={className}
       contentClassName={rows.length ? "p-0 pt-2" : undefined}

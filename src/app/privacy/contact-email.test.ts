@@ -77,7 +77,7 @@ describe("legal pages with and without a contact email", () => {
       const html = renderToStaticMarkup(createElement(View, { showRequestAccess: false, contactEmail: null }))
       expect(html).not.toContain("mailto:")
       expect(html).toContain("No contact email is set up for this site yet")
-      expect(html).toContain("Feedback button")
+      expect(html).toContain("Send feedback in the account menu")
       expect(html).not.toContain('href="/signup"')
     })
   }

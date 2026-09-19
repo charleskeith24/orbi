@@ -1,16 +1,14 @@
 import { defineMessages } from "@/lib/i18n/core"
 
-/** Settings → Profile: the editor, the preview card, the visibility explainer and the local-mode note. */
+/** Settings → Profile: the editor, the Preview (its ⓘ is the visibility explainer) and the one-line local-mode note. */
 export const profileMessages = defineMessages({
   en: {
     section_title: "Your profile",
-    section_description: "This is you, the person — Brand HQ is your brand. Circles show this profile next to your name.",
     loading: "Loading your profile…",
     load_failed: "Couldn't load your profile.",
     retry: "Try again",
 
     name_label: "Display name",
-    name_help: "Your name in each circle can still be different.",
     name_placeholder: "e.g. {name}",
     name_placeholder_default: "e.g. Ana Reyes",
     headline_label: "Headline",
@@ -19,8 +17,7 @@ export const profileMessages = defineMessages({
     location_placeholder: "City or province",
     count: "{count}/{max}",
 
-    links_label: "Social handles and links",
-    links_help: "Up to {max}. Type a handle like @ana or paste a link.",
+    links_label: "Social links",
     link_platform: "Platform for link {n}",
     link_value: "Handle or link {n}",
     link_placeholder_handle: "@yourhandle or a link",
@@ -28,7 +25,6 @@ export const profileMessages = defineMessages({
     link_add: "Add link",
     link_remove: "Remove link {n}",
     link_max: "That's the most you can add.",
-    links_empty: "No links yet.",
     website: "Website",
 
     niche_label: "Show my niche and main platform",
@@ -80,30 +76,27 @@ export const profileMessages = defineMessages({
     error_not_signed_in: "Your session ended. Sign in again.",
     error_unknown: "Something went wrong. Try again.",
 
-    preview_title: "How your circles see you",
-    preview_local: "Preview — in local mode nobody else sees your profile.",
-    preview_unsaved: "Includes unsaved changes.",
+    preview_title: "Preview",
 
     visibility_title: "Who sees your profile",
     visibility_online: "In the online version:",
     visibility_circles: "Members of the circles you're in see your whole profile. Your niche shows only if you turn it on.",
+    visibility_names: "Your name in each circle can still be different.",
     visibility_admins: "Orbi's admins see only your name and photo.",
     visibility_public: "There's no public profile page, and your email is never part of your profile.",
     visibility_photo: "Your photo is private: people who can see it get a link that expires within an hour.",
 
     local_title: "Saved on this device only",
     local_note: "In the online version your profile is saved to your account and shown to your circles and team.",
-    local_used: "Here it shows in the account menu at the bottom of the sidebar.",
+    local_used: "Here it shows in the account menu at the top right.",
   },
   tl: {
     section_title: "Profile mo",
-    section_description: "Ikaw 'to, ang tao — ang Brand HQ ay ang brand mo. Ipinapakita ng circles ang profile na 'to sa tabi ng pangalan mo.",
     loading: "Nilo-load ang profile mo…",
     load_failed: "Hindi ma-load ang profile mo.",
     retry: "Subukan ulit",
 
     name_label: "Display name",
-    name_help: "Puwede pa ring iba ang pangalan mo sa bawat circle.",
     name_placeholder: "e.g. {name}",
     name_placeholder_default: "e.g. Ana Reyes",
     headline_label: "Headline",
@@ -112,8 +105,7 @@ export const profileMessages = defineMessages({
     location_placeholder: "City o province",
     count: "{count}/{max}",
 
-    links_label: "Social handles at links",
-    links_help: "Hanggang {max}. I-type ang handle tulad ng @ana o i-paste ang link.",
+    links_label: "Social links",
     link_platform: "Platform ng link {n}",
     link_value: "Handle o link {n}",
     link_placeholder_handle: "@handlemo o link",
@@ -121,7 +113,6 @@ export const profileMessages = defineMessages({
     link_add: "Magdagdag ng link",
     link_remove: "Tanggalin ang link {n}",
     link_max: "Iyan na ang pinakamarami.",
-    links_empty: "Wala pang links.",
     website: "Website",
 
     niche_label: "Ipakita ang niche at main platform ko",
@@ -173,20 +164,19 @@ export const profileMessages = defineMessages({
     error_not_signed_in: "Natapos na ang session mo. Mag-sign in ulit.",
     error_unknown: "May mali — subukan ulit.",
 
-    preview_title: "Ganito ka nakikita ng circles mo",
-    preview_local: "Preview — sa local mode, walang ibang nakakakita ng profile mo.",
-    preview_unsaved: "Kasama ang changes na hindi pa naka-save.",
+    preview_title: "Preview",
 
     visibility_title: "Sino ang nakakakita ng profile mo",
     visibility_online: "Sa online version:",
     visibility_circles: "Nakikita ng members ng circles mo ang buong profile mo. Lalabas lang ang niche mo kung i-on mo.",
+    visibility_names: "Puwede pa ring iba ang pangalan mo sa bawat circle.",
     visibility_admins: "Pangalan at photo mo lang ang nakikita ng admins ng Orbi.",
     visibility_public: "Walang public profile page, at hindi kasama kailanman ang email mo sa profile.",
     visibility_photo: "Private ang photo mo: ang may access lang ang nakakakuha ng link na mag-e-expire within an hour.",
 
     local_title: "Naka-save sa device na 'to lang",
     local_note: "Sa online version, naka-save ang profile mo sa account mo at ipinapakita sa circles at team mo.",
-    local_used: "Dito, lumalabas ito sa account menu sa baba ng sidebar.",
+    local_used: "Dito, lumalabas ito sa account menu sa kanang itaas.",
   },
 })
 

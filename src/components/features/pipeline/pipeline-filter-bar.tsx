@@ -1,7 +1,7 @@
 "use client"
 
-import { Columns3 } from "lucide-react"
-import { useMemo } from "react"
+import { Columns3, ListFilter } from "lucide-react"
+import { useId, useMemo, useState } from "react"
 import {
   ColorDot,
   FacetFilter,
@@ -126,6 +126,10 @@ function useFacetOptions(pool: ContentItem[], owners: string[], filters: Pipelin
   }, [pool, owners, filters, pillars, campaigns, formats, t])
 }
 
+/**
+ * Search, the six facets and (while filtering) how many cards match. `compact` (phones): the facets fold behind
+ * one "Filters" button, which shows how many are in use.
+ */
 export function PipelineFilterBar({
   pool,
   owners,
@@ -135,6 +139,7 @@ export function PipelineFilterBar({
   onFacet,
   onReset,
   actions,
+  compact = false,
 }: {
   /** Every card on the board, before filters. */
   pool: ContentItem[]
@@ -145,33 +150,64 @@ export function PipelineFilterBar({
   onFacet: (key: FacetKey, values: string[]) => void
   onReset: () => void
   actions?: React.ReactNode
+  compact?: boolean
 }) {
   const t = useT(pipelineMessages)
   const options = useFacetOptions(pool, owners, filters, t)
   const active = hasActiveFilters(filters)
+  const inUse = FACETS.filter((facet) => filters[facet.key].length > 0).length
+  const [open, setOpen] = useState(false)
+  const facetsId = useId()
   const cards = t.plural("cards", pool.length, { count: formatNumber(pool.length) })
+  const facets = FACETS.map((facet) => (
+    <FacetFilter
+      key={facet.key}
+      title={t(facet.title)}
+      options={options[facet.key]}
+      value={filters[facet.key]}
+      onChange={(values) => onFacet(facet.key, values)}
+    />
+  ))
+  // The count only matters while filtering; the live region stays mounted so changes are announced.
+  const count = (
+    <span className="text-xs text-muted-foreground num" aria-live="polite">
+      {active ? t("shown_of", { shown: formatNumber(shown), cards }) : null}
+    </span>
+  )
+
+  if (compact) {
+    return (
+      <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <SearchInput value={filters.q} onChange={onSearch} placeholder={t("search_placeholder")} className="min-w-0 flex-1" />
+          <Button type="button" variant="outline" size="sm" aria-expanded={open} aria-controls={facetsId} onClick={() => setOpen((value) => !value)}>
+            <ListFilter aria-hidden />
+            {t("filters")}
+            {inUse ? <span className="text-xs text-muted-foreground num">{inUse}</span> : null}
+          </Button>
+        </div>
+        {open ? (
+          <div id={facetsId} className="flex min-w-0 flex-wrap items-center gap-2">
+            {facets}
+            <ResetFiltersButton show={active} onClick={onReset} />
+          </div>
+        ) : null}
+        {active ? count : null}
+      </div>
+    )
+  }
 
   return (
     <FilterBar
       actions={
         <>
-          <span className="text-xs text-muted-foreground num" aria-live="polite">
-            {active ? t("shown_of", { shown: formatNumber(shown), cards }) : cards}
-          </span>
+          {count}
           {actions}
         </>
       }
     >
       <SearchInput value={filters.q} onChange={onSearch} placeholder={t("search_placeholder")} />
-      {FACETS.map((facet) => (
-        <FacetFilter
-          key={facet.key}
-          title={t(facet.title)}
-          options={options[facet.key]}
-          value={filters[facet.key]}
-          onChange={(values) => onFacet(facet.key, values)}
-        />
-      ))}
+      {facets}
       <ResetFiltersButton show={active} onClick={onReset} />
     </FilterBar>
   )

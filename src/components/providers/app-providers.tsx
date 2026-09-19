@@ -9,7 +9,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <TooltipProvider delayDuration={300}>
         {children}
-        <Toaster position="bottom-right" closeButton />
+        <Toaster position="bottom-right" closeButton mobileOffset={{ bottom: "calc(var(--bottom-bar, 0px) + 16px)" }} />
       </TooltipProvider>
     </ThemeProvider>
   )

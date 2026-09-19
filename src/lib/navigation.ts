@@ -24,7 +24,10 @@ import {
 } from "lucide-react"
 
 export interface NavChild {
+  /** Full page name, for ⌘K and the breadcrumb ("Hook Library"). */
   title: string
+  /** Short label on the module's tab row ("Hooks"). */
+  tab: string
   href: string
 }
 
@@ -33,22 +36,30 @@ export interface NavItem {
   href: string
   icon: LucideIcon
   description: string
+  /** Sub-pages: in-page tabs (`ModuleTabs`), never nested sidebar links. The first one is the module's own page. */
   children?: NavChild[]
   /** One of the everyday modules the sidebar keeps in Simple mode (`app_settings.simple_mode`). */
   simple?: true
 }
 
+export type NavSectionKey = "start" | "plan" | "create" | "grow" | "measure" | "end"
+
 export interface NavSection {
+  key: NavSectionKey
+  /** Group header; null for the unlabelled top and bottom groups. Labelled groups collapse. */
   label: string | null
   items: NavItem[]
 }
 
 /**
- * Primary navigation (spec §45). Every href here must resolve to a real page. Module and page names are
- * product terms (ARCHITECTURE §9) and stay English in both UI languages.
+ * Primary navigation (Calm UI): Home and Today, four collapsible groups — Plan, Create, Grow, Measure — then
+ * Money and Settings. One sidebar link per module; a module's sub-pages are tabs. Every href must resolve to
+ * a real page. Module, page and group names are product terms (ARCHITECTURE §9) and stay English in both UI
+ * languages.
  */
 export const NAV_SECTIONS: NavSection[] = [
   {
+    key: "start",
     label: null,
     items: [
       { title: "Home", href: "/", icon: House, description: "Executive dashboard", simple: true },
@@ -56,18 +67,19 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    label: "Strategy",
+    key: "plan",
+    label: "Plan",
     items: [
       {
-        title: "Strategy",
+        title: "Brand HQ",
         href: "/strategy",
         icon: Compass,
-        description: "Brand HQ, goals and platform strategy",
+        description: "Strategy: Brand HQ, goals, platforms and the system",
         children: [
-          { title: "Brand HQ", href: "/strategy" },
-          { title: "Goals", href: "/strategy/goals" },
-          { title: "Platforms", href: "/strategy/platforms" },
-          { title: "Flywheel & System", href: "/strategy/system" },
+          { title: "Brand HQ", tab: "Brand HQ", href: "/strategy" },
+          { title: "Goals", tab: "Goals", href: "/strategy/goals" },
+          { title: "Platforms", tab: "Platforms", href: "/strategy/platforms" },
+          { title: "Flywheel & System", tab: "System", href: "/strategy/system" },
         ],
       },
       {
@@ -76,9 +88,9 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: Users,
         description: "Personas, problems and questions",
         children: [
-          { title: "Personas", href: "/audience" },
-          { title: "Problem Bank", href: "/audience/problems" },
-          { title: "Question Bank", href: "/audience/questions" },
+          { title: "Personas", tab: "Personas", href: "/audience" },
+          { title: "Problem Bank", tab: "Problems", href: "/audience/problems" },
+          { title: "Question Bank", tab: "Questions", href: "/audience/questions" },
         ],
       },
       {
@@ -87,14 +99,15 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: Columns3,
         description: "Content pillars, matrix and funnel",
         children: [
-          { title: "Content Pillars", href: "/pillars" },
-          { title: "Content Matrix", href: "/pillars/matrix" },
-          { title: "Content Funnel", href: "/pillars/funnel" },
+          { title: "Content Pillars", tab: "Pillars", href: "/pillars" },
+          { title: "Content Matrix", tab: "Matrix", href: "/pillars/matrix" },
+          { title: "Content Funnel", tab: "Funnel", href: "/pillars/funnel" },
         ],
       },
     ],
   },
   {
+    key: "create",
     label: "Create",
     items: [
       {
@@ -104,10 +117,10 @@ export const NAV_SECTIONS: NavSection[] = [
         description: "Idea Bank, generator, hooks and angles",
         simple: true,
         children: [
-          { title: "Idea Bank", href: "/ideas" },
-          { title: "Idea Generator", href: "/ideas/generator" },
-          { title: "Hook Library", href: "/ideas/hooks" },
-          { title: "Angle Library", href: "/ideas/angles" },
+          { title: "Idea Bank", tab: "Idea Bank", href: "/ideas" },
+          { title: "Idea Generator", tab: "Generator", href: "/ideas/generator" },
+          { title: "Hook Library", tab: "Hooks", href: "/ideas/hooks" },
+          { title: "Angle Library", tab: "Angles", href: "/ideas/angles" },
         ],
       },
       {
@@ -125,19 +138,20 @@ export const NAV_SECTIONS: NavSection[] = [
         description: "Calendar, weekly planner and posting schedule",
         simple: true,
         children: [
-          { title: "Calendar", href: "/calendar" },
-          { title: "Weekly Planner", href: "/calendar/planner" },
-          { title: "Posting Schedule", href: "/calendar/schedule" },
+          { title: "Calendar", tab: "Calendar", href: "/calendar" },
+          { title: "Weekly Planner", tab: "Weekly Planner", href: "/calendar/planner" },
+          { title: "Posting Schedule", tab: "Posting Schedule", href: "/calendar/schedule" },
         ],
       },
     ],
   },
   {
-    label: "Organize",
+    key: "grow",
+    label: "Grow",
     items: [
-      { title: "Campaigns", href: "/campaigns", icon: Megaphone, description: "Grouped content pushes" },
       { title: "Collabs", href: "/collabs", icon: Blend, description: "Creator collaborations and whether they were worth it" },
       { title: "Circles", href: "/circles", icon: UsersRound, description: "Small creator groups: weekly check-ins, streaks and collab asks" },
+      { title: "Campaigns", href: "/campaigns", icon: Megaphone, description: "Grouped content pushes" },
       { title: "Series", href: "/series", icon: Repeat, description: "Recurring content series" },
       {
         title: "Story Vault",
@@ -145,8 +159,8 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: BookOpen,
         description: "Stories, experiences and lessons",
         children: [
-          { title: "Story Vault", href: "/stories" },
-          { title: "Experience → Content", href: "/stories/experience" },
+          { title: "Story Vault", tab: "Vault", href: "/stories" },
+          { title: "Experience → Content", tab: "Experience → Content", href: "/stories/experience" },
         ],
       },
       {
@@ -155,13 +169,14 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: Library,
         description: "References and inspiration",
         children: [
-          { title: "Research Library", href: "/research" },
-          { title: "Inspiration → Original", href: "/research/adapt" },
+          { title: "Research Library", tab: "Library", href: "/research" },
+          { title: "Inspiration → Original", tab: "Inspiration → Original", href: "/research/adapt" },
         ],
       },
     ],
   },
   {
+    key: "measure",
     label: "Measure",
     items: [
       {
@@ -171,26 +186,27 @@ export const NAV_SECTIONS: NavSection[] = [
         description: "Performance and metrics logging",
         simple: true,
         children: [
-          { title: "Overview", href: "/analytics" },
-          { title: "Post Performance", href: "/analytics/posts" },
+          { title: "Analytics", tab: "Overview", href: "/analytics" },
+          { title: "Post Performance", tab: "Posts", href: "/analytics/posts" },
         ],
       },
       { title: "Winners", href: "/winners", icon: Trophy, description: "Winning Content Library" },
-      { title: "Experiments", href: "/experiments", icon: FlaskConical, description: "Content experiments" },
       {
         title: "Reports",
         href: "/reports",
         icon: FileText,
         description: "Weekly and monthly reviews",
         children: [
-          { title: "Weekly Report", href: "/reports" },
-          { title: "Monthly Review", href: "/reports/monthly" },
+          { title: "Weekly Report", tab: "Weekly", href: "/reports" },
+          { title: "Monthly Review", tab: "Monthly", href: "/reports/monthly" },
         ],
       },
+      { title: "Experiments", href: "/experiments", icon: FlaskConical, description: "Content experiments" },
     ],
   },
   {
-    label: "Monetize",
+    key: "end",
+    label: null,
     items: [
       {
         title: "Money",
@@ -199,17 +215,12 @@ export const NAV_SECTIONS: NavSection[] = [
         description: "Brand deals, income and your media kit",
         simple: true,
         children: [
-          { title: "Overview", href: "/money" },
-          { title: "Brand Deals", href: "/money/deals" },
-          { title: "Income", href: "/money/income" },
-          { title: "Media Kit", href: "/money/media-kit" },
+          { title: "Money", tab: "Overview", href: "/money" },
+          { title: "Brand Deals", tab: "Deals", href: "/money/deals" },
+          { title: "Income", tab: "Income", href: "/money/income" },
+          { title: "Media Kit", tab: "Media Kit", href: "/money/media-kit" },
         ],
       },
-    ],
-  },
-  {
-    label: null,
-    items: [
       { title: "Settings", href: "/settings", icon: Settings, description: "Targets, thresholds, data and AI", simple: true },
     ],
   },
@@ -231,6 +242,24 @@ export function isNavActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
+/** The module a path belongs to (its sidebar link), or null (e.g. /strategist). */
+export function navModuleFor(pathname: string): NavItem | null {
+  for (const section of NAV_SECTIONS) {
+    for (const item of section.items) if (isNavActive(pathname, item.href)) return item
+  }
+  return null
+}
+
+/**
+ * The tab row for a path: its module's sub-pages, when it has them and the path is one of them. Detail pages
+ * below a module (/campaigns/<id>, /studio/<id>) get none.
+ */
+export function moduleTabsFor(pathname: string): { module: NavItem; tabs: { title: string; href: string }[] } | null {
+  const item = navModuleFor(pathname)
+  if (!item?.children?.length || !item.children.some((child) => child.href === pathname)) return null
+  return { module: item, tabs: item.children.map((child) => ({ title: child.tab, href: child.href })) }
+}
+
 /**
  * The sidebar's sections. In Simple mode only `simple` modules stay — plus the module of the page you're
  * on, so a page opened from ⌘K or a link still shows where you are. `hidden` counts the modules left out.
@@ -248,4 +277,19 @@ export function sidebarSections(
     if (items.length) visible.push({ ...section, items })
   }
   return { sections: visible, hidden }
+}
+
+/** Labelled groups the sidebar can fold. */
+export const COLLAPSIBLE_GROUPS: NavSectionKey[] = NAV_SECTIONS.filter((s) => s.label).map((s) => s.key)
+
+/** The collapsed groups remembered on this device (`pbos:sidebar:collapsed`, a comma list of keys). */
+export function parseCollapsedGroups(value: string | null): Set<NavSectionKey> {
+  const keys = (value ?? "").split(",").map((k) => k.trim())
+  return new Set(COLLAPSIBLE_GROUPS.filter((key) => keys.includes(key)))
+}
+
+/** A folded group still shows the module you're on, so the sidebar never hides where you are. */
+export function groupItems(section: NavSection, { collapsed, pathname }: { collapsed: boolean; pathname: string }): NavItem[] {
+  if (!collapsed || !section.label) return section.items
+  return section.items.filter((item) => isNavActive(pathname, item.href))
 }

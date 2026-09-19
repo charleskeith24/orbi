@@ -71,7 +71,7 @@ export function useDeletionLines(email: string | null): React.ReactNode[] {
   return [fillTemplate(t("delete_email"), { email: link }), fillTemplate(t("request_email"), { email: link })]
 }
 
-/** "Email us at …", or — while `NEXT_PUBLIC_CONTACT_EMAIL` isn't set — says so and points to the Feedback button. */
+/** "Email us at …", or — while `NEXT_PUBLIC_CONTACT_EMAIL` isn't set — says so and points to Send feedback (account menu). */
 export function ContactSection({ email }: { email: string | null }) {
   const t = useScreenT(legalMessages)
   return (

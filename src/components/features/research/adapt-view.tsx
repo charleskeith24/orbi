@@ -1,7 +1,6 @@
 "use client"
 
 import { CheckCheck, Library, X } from "lucide-react"
-import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -273,14 +272,6 @@ export function AdaptView() {
       <PageHeader
         title="Inspiration → Original"
         description={t("description")}
-        actions={
-          <Button type="button" variant="outline" size="sm" asChild>
-            <Link href="/research">
-              <Library aria-hidden />
-              Research Library
-            </Link>
-          </Button>
-        }
       />
       <NeverCopyBanner />
 

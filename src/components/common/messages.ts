@@ -480,3 +480,19 @@ export const meterMessages = defineMessages({
     out_of_100: "{score} sa 100",
   },
 })
+
+/** Calm UI building blocks: the ⓘ InfoHint, the Details disclosure and route tabs. */
+export const calmMessages = defineMessages({
+  en: {
+    info: "More info",
+    info_about: "About {title}",
+    details: "Details",
+    sections: "Sections",
+  },
+  tl: {
+    info: "Paliwanag",
+    info_about: "Tungkol sa {title}",
+    details: "Detalye",
+    sections: "Mga section",
+  },
+})

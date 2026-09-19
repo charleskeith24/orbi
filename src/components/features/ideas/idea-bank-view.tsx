@@ -173,14 +173,6 @@ export function IdeaBankView() {
         <PageHeader
           title="Idea Bank"
           description={t("description")}
-          actions={
-            <Button type="button" variant="outline" size="sm" asChild>
-              <Link href="/ideas/generator">
-                <Sparkles className="text-brand" aria-hidden />
-                Idea Generator
-              </Link>
-            </Button>
-          }
         >
           <div className="flex min-w-0 flex-col gap-3 2xl:flex-row 2xl:items-center 2xl:justify-between">
             <IdeaQuickCapture onCreated={onCaptured} className="w-full max-w-2xl 2xl:flex-1" />

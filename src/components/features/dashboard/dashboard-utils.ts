@@ -26,9 +26,11 @@ export function greetingFor(now: Date, lang: UiLang = "en"): string {
   return translate(dashboardMessages, lang, hour < 12 ? "greeting_morning" : hour < 18 ? "greeting_afternoon" : "greeting_evening")
 }
 
-/** "Sep 7 – Sep 13". */
+/** "Sep 14–20", or "Sep 28 – Oct 4" across months. */
 export function weekRangeLabel(start: Date, end: Date): string {
-  return `${format(start, "MMM d")} – ${format(end, "MMM d")}`
+  return start.getMonth() === end.getMonth()
+    ? `${format(start, "MMM d")}–${format(end, "d")}`
+    : `${format(start, "MMM d")} – ${format(end, "MMM d")}`
 }
 
 /** Posting slot time "18:30" → "6:30 PM"; null when unset or malformed. */
@@ -147,6 +149,28 @@ export function buildWeekDays(db: Database, now: Date, weekStartsOn: 0 | 1): Wee
       })
   }
   return days
+}
+
+export interface DayMarks {
+  published: number
+  scheduled: number
+  open: number
+  missed: number
+}
+
+/**
+ * What a day of the week strip shows: posts that went out, posts still scheduled, and posting slots nothing
+ * filled (open today and later, missed before). Slots from before the workspace existed were never missed.
+ */
+export function dayMarks(day: WeekDay, beforeStart = false): DayMarks {
+  const published = day.items.filter((item) => isPublishedItem(item)).length
+  const slots = beforeStart ? [] : day.slots
+  return {
+    published,
+    scheduled: day.items.length - published,
+    open: slots.filter((s) => s.status === "open").length,
+    missed: slots.filter((s) => s.status === "missed").length,
+  }
 }
 
 /* ---------------------------- Platform growth ------------------------------ */

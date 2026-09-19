@@ -50,7 +50,7 @@ export function PlatformGrowthCard({ rows, className }: { rows: PlatformGrowthRo
   return (
     <SectionCard
       title={t("growth_platform_title")}
-      description={t("growth_platform_description")}
+      info={t("growth_platform_description")}
       action={<ViewToggle value={metric} onChange={setMetric} options={METRIC_OPTIONS} aria-label={t("growth_metric_aria")} />}
       className={className}
       contentClassName="flex flex-col gap-2"

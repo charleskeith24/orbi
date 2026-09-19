@@ -64,7 +64,7 @@ export function InsightsCard({
   return (
     <SectionCard
       title={t("insights_title")}
-      description={t("insights_description")}
+      info={t("insights_description")}
       className={className}
       contentClassName="flex flex-col gap-2"
     >

@@ -6,9 +6,12 @@ export type { ControlSize, IconComponent, StatusTone } from "@/components/common
 export { TONE_FILL, TONE_ICON, TONE_SOFT, TONE_STROKE, TONE_TEXT, toneForScore } from "@/components/common/tone"
 export { chipVariants, Token, type ChipVariantProps } from "@/components/common/chip"
 
-// Layout
-export { PageContainer, PageHeader, PageSection, type PageWidth } from "@/components/common/page"
+// Layout (Calm UI: PageHeader/SectionHeader take `info`; details go in Disclosure; sub-pages are HubTabs)
+export { PageContainer, PageHeader, PageSection, SectionHeader, type PageWidth } from "@/components/common/page"
 export { SectionCard } from "@/components/common/section-card"
+export { InfoHint } from "@/components/common/info-hint"
+export { Disclosure } from "@/components/common/disclosure"
+export { activeHubTab, HubTabs, type HubTab } from "@/components/common/hub-tabs"
 export { DetailSheet } from "@/components/common/detail-sheet"
 export { DefinitionList, KeyValue, type DefinitionItem } from "@/components/common/kv"
 export { EmptyState } from "@/components/common/empty-state"

@@ -1,7 +1,6 @@
 "use client"
 
-import { BookOpen, Sparkles } from "lucide-react"
-import Link from "next/link"
+import { Sparkles } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useId, useMemo } from "react"
 import { toast } from "sonner"
@@ -111,14 +110,6 @@ export function ExperienceView() {
       <PageHeader
         title="Turn Experience Into Content"
         description={t("description")}
-        actions={
-          <Button type="button" variant="outline" size="sm" asChild>
-            <Link href="/stories">
-              <BookOpen aria-hidden />
-              Story Vault
-            </Link>
-          </Button>
-        }
       />
 
       <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">

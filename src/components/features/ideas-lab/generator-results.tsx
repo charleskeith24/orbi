@@ -138,7 +138,7 @@ export function GeneratorResults({
         <div
           role="region"
           aria-label={t("selected_ideas")}
-          className="sticky bottom-3 z-10 mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-2 rounded-lg border bg-popover px-3 py-2 text-popover-foreground shadow-lg"
+          className="sticky bottom-[calc(var(--bottom-bar,0px)+0.75rem)] z-10 mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-2 rounded-lg border bg-popover px-3 py-2 text-popover-foreground shadow-lg"
         >
           <span className="text-sm num">{t("selected", { count: selectedCount })}</span>
           <Button type="button" variant="ghost" size="sm" onClick={onClearSelection}>

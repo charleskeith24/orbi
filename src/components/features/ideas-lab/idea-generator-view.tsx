@@ -1,7 +1,6 @@
 "use client"
 
-import { Lightbulb, X } from "lucide-react"
-import Link from "next/link"
+import { X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
@@ -313,12 +312,6 @@ export function IdeaGeneratorView() {
         actions={
           <>
             <ProviderBadge provider={status.configured ? status.provider : "offline"} model={status.configured ? status.model : undefined} />
-            <Button type="button" variant="outline" size="sm" asChild>
-              <Link href="/ideas">
-                <Lightbulb aria-hidden />
-                Idea Bank
-              </Link>
-            </Button>
           </>
         }
       />

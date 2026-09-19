@@ -82,7 +82,7 @@ Environment variables are read when the app starts (and are built into the bundl
 2. Make that account the admin and turn on 2-step verification ([ADMIN.md](ADMIN.md)). From then on, people request access and you approve them in `/admin`; each approval sends a Supabase invite.
 3. A new account starts empty, so onboarding opens — unless this browser holds a local workspace (next section).
 
-The account menu sits at the bottom of the sidebar (avatar + email) and has **Settings** and **Sign out**.
+The account menu is the avatar at the top right of the top bar (photo or initials + name and email) and has **Profile**, **Settings**, **Theme**, **Send feedback** and **Sign out**.
 
 ---
 

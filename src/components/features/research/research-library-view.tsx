@@ -107,12 +107,6 @@ export function ResearchLibraryView() {
           description={t("description")}
           actions={
             <>
-              <Button type="button" variant="outline" size="sm" asChild>
-                <Link href="/research/adapt">
-                  <WandSparkles className="text-brand" aria-hidden />
-                  Inspiration → Original
-                </Link>
-              </Button>
               <Button type="button" size="sm" onClick={() => setCreating(true)}>
                 <Plus aria-hidden />
                 {t("add_reference")}

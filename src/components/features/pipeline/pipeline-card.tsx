@@ -38,6 +38,8 @@ export const PipelineCard = memo(function PipelineCard({ item, now, tier, highli
         now={now}
         tier={tier}
         selected={highlighted}
+        showFormat={false}
+        showPriorityLabel={false}
         actions={<CardActions item={item} drag={{ setActivatorNodeRef, attributes, listeners, isDragging }} />}
       />
     </div>

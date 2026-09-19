@@ -283,6 +283,10 @@ async function finishAndLand(page, lang, count, prefix, { failOnce = "" } = {}) 
   await release()
   await page.waitForURL((url) => new URL(url).pathname === "/", { timeout: 60000 })
   await settle(page, 1500)
+  // Home leads with "Your focus today"; the full first-week list (with day 4's voice step) is behind "All missions".
+  const hero = page.locator('[data-slot="focus-hero"]')
+  await hero.waitFor({ timeout: 30000 })
+  await hero.locator('[data-slot="disclosure-trigger"]').last().click()
   await page.getByText(r.checklistVoice).first().waitFor({ timeout: 30000 })
   await shot(page, `${prefix}-06-home`, true)
 }
