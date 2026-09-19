@@ -88,6 +88,7 @@ export function createHttpAdminApi(fetchImpl: typeof fetch = (...args) => fetch(
     },
     grantAdmin: (id) => request<AdminUserRow>("POST", `${BASE}/users/${seg(id)}/admin`),
     revokeAdmin: (id) => request<AdminUserRow>("DELETE", `${BASE}/users/${seg(id)}/admin`),
+    removeProfilePhoto: (id) => request<AdminUserRow>("DELETE", `${BASE}/users/${seg(id)}/photo`),
     listFeedback: (page?: number) => request<Page<AdminFeedback>>("GET", withQuery(`${BASE}/feedback`, { page })),
     listAudit: (page?: number) => request<Page<AdminAuditEntry>>("GET", withQuery(`${BASE}/audit`, { page })),
     getSettings: () => request<AdminSettings>("GET", `${BASE}/settings`),

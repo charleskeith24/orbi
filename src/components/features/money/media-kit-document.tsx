@@ -2,6 +2,7 @@
 
 import { Globe, Mail, MapPin } from "lucide-react"
 import { PlatformIcon } from "@/components/common"
+import { ProfileAvatar } from "@/components/features/profile/profile-avatar"
 import { PLATFORMS } from "@/lib/constants"
 import { formatDate } from "@/lib/dates"
 import { cn, formatCompact, formatMoney, formatNumber, formatPercent } from "@/lib/utils"
@@ -16,10 +17,13 @@ import { MEDIA_KIT_DAYS } from "./media-kit-model"
 export function MediaKitDocument({
   kit,
   renderGap,
+  photoUrl,
   className,
 }: {
   kit: MediaKitData
   renderGap?: (gap: MediaKitGap) => React.ReactNode
+  /** The creator's profile photo, when they chose to show it (Settings → Profile). */
+  photoUrl?: string | null
   className?: string
 }) {
   const gap = (key: MediaKitGap) => (kit.missing.includes(key) && renderGap ? <div className="print:hidden">{renderGap(key)}</div> : null)
@@ -39,13 +43,16 @@ export function MediaKitDocument({
     >
       {/* Identity */}
       <header className="flex min-w-0 flex-wrap items-start justify-between gap-x-8 gap-y-4 border-b pb-6">
-        <div className="min-w-0 flex-1 basis-72">
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Media kit</p>
-          {title ? <h2 className="mt-1 text-xl leading-7 font-semibold tracking-tight">{title}</h2> : null}
-          {kit.name && kit.brandName && kit.brandName !== kit.name ? <p className="text-sm text-muted-foreground">{kit.brandName}</p> : null}
-          {kit.niche ? <p className="mt-2 text-sm font-medium text-pretty">{kit.niche}</p> : null}
-          {gap("name")}
-          {gap("niche")}
+        <div className="flex min-w-0 flex-1 basis-72 items-start gap-4">
+          {photoUrl ? <ProfileAvatar name={title || "Media kit"} photoUrl={photoUrl} alt={title || "Profile photo"} className="size-16" /> : null}
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Media kit</p>
+            {title ? <h2 className="mt-1 text-xl leading-7 font-semibold tracking-tight">{title}</h2> : null}
+            {kit.name && kit.brandName && kit.brandName !== kit.name ? <p className="text-sm text-muted-foreground">{kit.brandName}</p> : null}
+            {kit.niche ? <p className="mt-2 text-sm font-medium text-pretty">{kit.niche}</p> : null}
+            {gap("name")}
+            {gap("niche")}
+          </div>
         </div>
         <ul className="flex min-w-0 flex-col gap-1.5 text-sm">
           {kit.email ? (

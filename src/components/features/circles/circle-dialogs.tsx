@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useId, useState } from "react"
 import { toast } from "sonner"
 import { CopyButton, FormField } from "@/components/common"
+import { useMyProfile } from "@/components/features/profile/profile-store"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -19,10 +20,11 @@ import { rememberInvite } from "./circle-memory"
 import { useCircles } from "./circles-client"
 import { circleFormMessages } from "./messages"
 
-/** The name to suggest for "Your name in this circle": Brand HQ's name, trimmed to fit. */
+/** The name to suggest for "Your name in this circle": your profile's display name, else Brand HQ's name, trimmed to fit. */
 export function useSuggestedDisplayName(): string {
   const brand = useBrand()
-  return brand.name.trim().slice(0, CIRCLE_LIMITS.displayName)
+  const { me } = useMyProfile()
+  return (me?.display_name.trim() || brand.name.trim()).slice(0, CIRCLE_LIMITS.displayName).trim()
 }
 
 export function isValidName(value: string, max: number): boolean {

@@ -16,6 +16,7 @@ import type { ID } from "@/lib/types"
 import { isValidName } from "./circle-dialogs"
 import { useCircleAction } from "./circle-errors"
 import { forgetInvite, recallInvite, rememberInvite } from "./circle-memory"
+import { ProfilePopover } from "@/components/features/profile/profile-card"
 import { MemberAvatar } from "./circle-ui"
 import { useCircles } from "./circles-client"
 import { circleFormMessages, circleMemberMessages } from "./messages"
@@ -81,8 +82,10 @@ export function CircleMembersSection({ snapshot, week, myContact, onChanged, onC
             <SelfRow key={row.member.user_id} member={row.member} onChanged={onChanged} />
           ) : (
             <li key={row.member.user_id} className="flex min-w-0 items-center gap-3 py-2">
-              <MemberAvatar name={row.member.display_name} />
-              <span className="min-w-0 flex-1 truncate text-sm">{row.member.display_name}</span>
+              <ProfilePopover userId={row.member.user_id} name={row.member.display_name} circleName={row.member.display_name} className="flex-1">
+                <MemberAvatar userId={row.member.user_id} name={row.member.display_name} />
+                <span className="min-w-0 flex-1 truncate text-sm">{row.member.display_name}</span>
+              </ProfilePopover>
               {row.member.role === "owner" ? <StatusPill icon={null}>{t("owner")}</StatusPill> : null}
               {isOwner ? (
                 <Button
@@ -146,7 +149,7 @@ function SelfRow({ member, onChanged }: { member: CircleMember; onChanged: () =>
     return (
       <li className="py-2">
         <form onSubmit={save} noValidate className="flex min-w-0 items-start gap-2">
-          <MemberAvatar name={name || member.display_name} className="mt-1" />
+          <MemberAvatar userId={member.user_id} name={name || member.display_name} className="mt-1" />
           <FormField label={t("rename_label")} htmlFor={`${id}-name`} error={valid ? undefined : t("error_name")} className="min-w-0 flex-1">
             <Input
               id={`${id}-name`}
@@ -189,11 +192,13 @@ function SelfRow({ member, onChanged }: { member: CircleMember; onChanged: () =>
 
   return (
     <li className="flex min-w-0 items-center gap-3 py-2">
-      <MemberAvatar name={member.display_name} />
-      <span className="min-w-0 flex-1 truncate text-sm">
-        {member.display_name}
-        <span className="text-muted-foreground"> · {t("you")}</span>
-      </span>
+      <ProfilePopover userId={member.user_id} name={member.display_name} circleName={member.display_name} className="flex-1">
+        <MemberAvatar userId={member.user_id} name={member.display_name} />
+        <span className="min-w-0 flex-1 truncate text-sm">
+          {member.display_name}
+          <span className="text-muted-foreground"> · {t("you")}</span>
+        </span>
+      </ProfilePopover>
       {member.role === "owner" ? <StatusPill icon={null}>{t("owner")}</StatusPill> : null}
       <Button size="icon-sm" variant="ghost" className="text-muted-foreground hover:text-foreground" aria-label={t("rename")} title={t("rename")} onClick={() => setEditing(true)}>
         <Pencil aria-hidden />

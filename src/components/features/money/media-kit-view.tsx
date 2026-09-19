@@ -1,10 +1,11 @@
 "use client"
 
-import { ArrowDown, ArrowUp, CircleCheck, CirclePlus, IdCard, Pencil, Plus, Printer, Trash2 } from "lucide-react"
+import { ArrowDown, ArrowUp, CircleCheck, CirclePlus, IdCard, Image as ImageIcon, Pencil, Plus, Printer, Trash2 } from "lucide-react"
 import Link from "next/link"
-import { useEffect, useId, useMemo, useState } from "react"
+import { useEffect, useId, useMemo, useState, useSyncExternalStore } from "react"
 import { toast } from "sonner"
 import { FormField, PageContainer, PageHeader, PlatformIcon, SectionCard, useConfirm } from "@/components/common"
+import { useMyProfile, usePhotoUrl } from "@/components/features/profile/profile-store"
 import { useNow } from "@/components/features/today/use-now"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,6 +21,29 @@ import { buildMediaKit, type MediaKitGap } from "./media-kit-model"
 import { RateCardDialog } from "./rate-card-dialog"
 
 const BIO_MAX = 800
+/** "Use my profile photo in the media kit" — a per-device choice (localStorage), off by default. */
+const PHOTO_KEY = "pbos:media-kit-photo"
+const photoListeners = new Set<() => void>()
+function readPhotoChoice(): boolean {
+  try {
+    return window.localStorage.getItem(PHOTO_KEY) === "on"
+  } catch {
+    return false
+  }
+}
+function writePhotoChoice(on: boolean) {
+  try {
+    if (on) window.localStorage.setItem(PHOTO_KEY, "on")
+    else window.localStorage.removeItem(PHOTO_KEY)
+  } catch {
+    // Private mode: the switch just won't be remembered.
+  }
+  photoListeners.forEach((listener) => listener())
+}
+function subscribePhotoChoice(listener: () => void) {
+  photoListeners.add(listener)
+  return () => photoListeners.delete(listener)
+}
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const DETAILS_ID = "media-kit-details"
 
@@ -64,6 +88,9 @@ export function MediaKitView() {
   const db = useDb()
   const kit = useMemo(() => buildMediaKit(db, now), [db, now])
   const [rateDialog, setRateDialog] = useState<{ open: boolean; card: RateCard | null }>({ open: false, card: null })
+  const { me } = useMyProfile()
+  const profilePhoto = usePhotoUrl(me?.avatar_path)
+  const usePhoto = useSyncExternalStore(subscribePhotoChoice, readPhotoChoice, () => false)
   useLightPrint()
 
   const openRateCard = (card: RateCard | null) => setRateDialog({ open: true, card })
@@ -136,7 +163,7 @@ export function MediaKitView() {
       <div className="grid min-w-0 grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem] print:block">
         <section aria-label={t("preview_label")} className="flex min-w-0 flex-col gap-2">
           <p className="text-xs text-muted-foreground print:hidden">{t("language_note")}</p>
-          <MediaKitDocument kit={kit} renderGap={renderGap} />
+          <MediaKitDocument kit={kit} renderGap={renderGap} photoUrl={usePhoto ? profilePhoto : null} />
         </section>
 
         <div className="flex min-w-0 flex-col gap-4 print:hidden">
@@ -144,6 +171,7 @@ export function MediaKitView() {
             <p className="text-sm font-medium">{kit.missing.length ? t.plural("missing", kit.missing.length) : t("checklist_done")}</p>
             {kit.missing.length ? <p className="mt-1 text-xs text-pretty text-muted-foreground">{t("checklist_description")}</p> : null}
           </SectionCard>
+          <PhotoChoice on={usePhoto} hasPhoto={Boolean(me?.avatar_path)} />
           <DetailsEditor bioIsFallback={kit.bioIsFallback} />
           <RateCardsManager onEdit={openRateCard} />
         </div>
@@ -151,6 +179,33 @@ export function MediaKitView() {
 
       <RateCardDialog open={rateDialog.open} card={rateDialog.card} onOpenChange={(open) => setRateDialog((s) => ({ ...s, open }))} />
     </PageContainer>
+  )
+}
+
+function PhotoChoice({ on, hasPhoto }: { on: boolean; hasPhoto: boolean }) {
+  const t = useT(mediaKitMessages)
+  const id = useId()
+  return (
+    <SectionCard title={t("photo_title")} icon={ImageIcon}>
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <label htmlFor={`${id}-photo`} className="text-sm font-medium">
+            {t("photo_label")}
+          </label>
+          {hasPhoto ? (
+            <p className="mt-0.5 text-xs text-pretty text-muted-foreground">{t("photo_help")}</p>
+          ) : (
+            <p className="mt-0.5 text-xs text-pretty text-muted-foreground">
+              {t("photo_none")}{" "}
+              <Link href="/settings?tab=profile" className="font-medium text-foreground underline-offset-2 hover:underline">
+                {t("photo_open_profile")}
+              </Link>
+            </p>
+          )}
+        </div>
+        <Switch id={`${id}-photo`} checked={on && hasPhoto} disabled={!hasPhoto} onCheckedChange={(next) => writePhotoChoice(next)} />
+      </div>
+    </SectionCard>
   )
 }
 

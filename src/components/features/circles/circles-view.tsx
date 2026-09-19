@@ -119,7 +119,7 @@ function CircleCard({ circle, overview, selfId, today }: { circle: Circle; overv
             {week.selfRole === "owner" ? <StatusPill icon={null}>{t("owner")}</StatusPill> : null}
           </p>
         </div>
-        <MemberStack names={week.rows.map((r) => r.member.display_name)} />
+        <MemberStack members={week.rows.map((r) => ({ userId: r.member.user_id, name: r.member.display_name }))} />
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -155,7 +155,7 @@ function CircleCard({ circle, overview, selfId, today }: { circle: Circle; overv
 /** What leaves your workspace, in one glance (docs/CIRCLES.md principles). */
 export function PrivacySummary() {
   const t = useT(circlesMessages)
-  const items = ["privacy_name", "privacy_checkin", "privacy_asks", "privacy_contact", "privacy_never"] as const
+  const items = ["privacy_name", "privacy_profile", "privacy_checkin", "privacy_asks", "privacy_contact", "privacy_never"] as const
   return (
     <section aria-labelledby="circles-privacy" className="rounded-lg border bg-muted/30 p-4">
       <h2 id="circles-privacy" className="flex items-center gap-2 text-sm font-medium">

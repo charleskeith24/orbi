@@ -14,6 +14,7 @@
  * - money tools: brand_deals, income_entries, rate_cards (records only)
  * - collab partner details: `collabs` partner fields are free text in the creator's workspace; Circles: docs/CIRCLES.md
  * - disable: admin `POST /api/admin/users/:id/disable` (a long ban; the workspace is untouched)
+ * - profile photos: admin `DELETE /api/admin/users/:id/photo` (moderation, audited as `profile_photo_removed`)
  * - export: Settings → Data → Export workspace; deletion + contact: ../privacy/legal-shell.tsx
  */
 import { useScreenT } from "@/components/app-shell/device-ui-lang"
@@ -60,6 +61,7 @@ export function TermsView({ showRequestAccess, contactEmail }: { showRequestAcce
             "use_collabs",
             "use_partner_details",
             "use_circles",
+            "use_profile",
           ])}
         />
       </LegalSection>

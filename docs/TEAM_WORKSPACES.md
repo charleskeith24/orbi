@@ -24,7 +24,7 @@
    - Deletes stay by id, protected by RLS.
 2. **RLS is the real guard. The UI only mirrors it.**
    - Add a membership table and a `security definer` helper, e.g. `workspace_role(owner uuid) returns text` (`owner`/`editor`/`viewer`/null) plus `has_money_access(owner uuid)`, both with `set search_path = ''`.
-   - Rewrite the policies of every workspace table in a **new migration** (`supabase/migrations/20260920000000_team.sql`, a DO-block loop over the table list is fine):
+   - Rewrite the policies of every workspace table in a **new migration** (`supabase/migrations/20260921000000_team.sql`, a DO-block loop over the table list is fine):
      - **select:** owner, or any member; money tables only with money access.
      - **insert / update / delete:** owner; editor on the editable tables (money tables only with money access); never viewers.
    - `brand_profiles` and `app_settings` are writable by the owner only.
@@ -46,6 +46,9 @@
 
    Members see these disabled, with an explanation.
 6. **Admins still see counts only.** Nothing in §14 changes. Member counts per workspace may be added to the admin Users list as numbers only; this is optional.
+
+## Profiles
+Profiles ship first (docs/PROFILES.md). Team UI shows members through `get_profiles` and the shared avatar component: the members list, workspace switcher and the "You're in …" strip. Extend `get_profiles` so people who share a workspace can see each other's profile, in the single place that rule lives, with PGlite tests.
 
 ## Invites
 - The owner invites by **email** from **Settings → Team** (a new tab).

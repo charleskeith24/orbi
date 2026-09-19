@@ -1,6 +1,6 @@
 "use client"
 
-import { Ellipsis, KeyRound, Mail, ShieldCheck, ShieldOff, Trash2, UserCheck, UserX } from "lucide-react"
+import { Ellipsis, ImageOff, KeyRound, Mail, ShieldCheck, ShieldOff, Trash2, UserCheck, UserX } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 import { useConfirm } from "@/components/common"
@@ -20,7 +20,7 @@ import { describeAdminError } from "./api/errors"
 import { useAdmin } from "./admin-context"
 import { adminMessages, usersMessages } from "./messages"
 
-type Action = "resend" | "reset" | "disable" | "enable" | "grant" | "revoke"
+type Action = "resend" | "reset" | "disable" | "enable" | "grant" | "revoke" | "photo"
 
 /**
  * Row menu on the Users table. Self rows keep the menu but disable disable/delete/remove-admin, with the
@@ -62,6 +62,14 @@ export function UserActionsMenu({
         destructive: false,
       })
       if (!ok) return
+    } else if (action === "photo") {
+      const ok = await confirm({
+        title: t("remove_photo_title", { email }),
+        description: t("remove_photo_body"),
+        confirmLabel: t("remove_photo_confirm"),
+        cancelLabel: a("cancel"),
+      })
+      if (!ok) return
     } else if (action === "revoke") {
       const ok = await confirm({
         title: t("remove_admin_title", { email }),
@@ -98,6 +106,10 @@ export function UserActionsMenu({
         case "revoke":
           onChanged(await api.revokeAdmin(user.id))
           toast.success(t("removed_admin_toast"), { description: email })
+          break
+        case "photo":
+          onChanged(await api.removeProfilePhoto(user.id))
+          toast.success(t("removed_photo_toast"), { description: email })
           break
       }
     } catch (error) {
@@ -150,6 +162,10 @@ export function UserActionsMenu({
               {t("make_admin")}
             </DropdownMenuItem>
           )}
+          <DropdownMenuItem disabled={!user.photo_url} onSelect={() => void run("photo")}>
+            <ImageOff aria-hidden />
+            {user.photo_url ? t("remove_photo") : t("no_photo")}
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" disabled={self} onSelect={() => onDelete(user)}>
             <Trash2 aria-hidden />

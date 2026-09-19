@@ -37,6 +37,7 @@ const disable = await import("./users/[id]/disable/route")
 const enable = await import("./users/[id]/enable/route")
 const reset = await import("./users/[id]/reset-password/route")
 const adminRole = await import("./users/[id]/admin/route")
+const photo = await import("./users/[id]/photo/route")
 const feedback = await import("./feedback/route")
 const audit = await import("./audit/route")
 const settings = await import("./settings/route")
@@ -97,7 +98,7 @@ beforeEach(() => {
   state.fake = fake
   fake.addUser({ id: ADMIN, email: "owner@example.com", full_name: "Olive Owner", admin: true, mfa: true, created_at: "2026-09-01T00:00:00.000Z", last_sign_in_at: "2026-09-18T09:00:00.000Z" })
   fake.addUser({ id: ADMIN2, email: "second@example.com", admin: true, mfa: true, created_at: "2026-09-02T00:00:00.000Z", last_sign_in_at: "2026-09-01T00:00:00.000Z" })
-  fake.addUser({ id: CREATOR, email: "cris@example.com", full_name: "Cris Creator", created_at: "2026-09-03T00:00:00.000Z", last_sign_in_at: "2026-09-15T00:00:00.000Z" })
+  fake.addUser({ id: CREATOR, email: "cris@example.com", full_name: "Cris Creator", photo: true, created_at: "2026-09-03T00:00:00.000Z", last_sign_in_at: "2026-09-15T00:00:00.000Z" })
   fake.addUser({ id: INVITED, email: "invited@example.com", created_at: "2026-09-04T00:00:00.000Z", invited_at: "2026-09-04T00:00:00.000Z", last_sign_in_at: null, email_confirmed_at: null })
   fake.addUser({ id: BANNED, email: "banned@example.com", created_at: "2026-09-05T00:00:00.000Z", last_sign_in_at: "2026-08-01T00:00:00.000Z", banned_until: "2126-01-01T00:00:00.000Z" })
   // Cris's workspace: content the admin must never see, only count.
@@ -141,6 +142,7 @@ const ROUTES: [string, Handler, string, Record<string, string>?][] = [
   ["DELETE", user.DELETE, "/api/admin/users/x", { id: CREATOR }],
   ["POST", adminRole.POST, "/api/admin/users/x/admin", { id: CREATOR }],
   ["DELETE", adminRole.DELETE, "/api/admin/users/x/admin", { id: ADMIN2 }],
+  ["DELETE", photo.DELETE, "/api/admin/users/x/photo", { id: CREATOR }],
   ["GET", feedback.GET, "/api/admin/feedback"],
   ["GET", audit.GET, "/api/admin/audit"],
   ["GET", settings.GET, "/api/admin/settings"],
@@ -179,8 +181,9 @@ describe("every admin route is behind requireAdmin", () => {
       await expectDenied(403, "bad_origin", "https://evil.example")
     }
 
-    // Nothing changed and no email went out.
+    // Nothing changed, no file was deleted and no email went out.
     expect(JSON.stringify(state.fake.tables)).toBe(snapshot)
+    expect(state.fake.callsTo("storage:remove")).toEqual([])
     expect(state.fake.calls.filter((c) => c.name.startsWith("auth:") && c.name !== "auth:listUsers" && c.name !== "auth:getUserById")).toEqual([])
   })
 })
@@ -332,6 +335,7 @@ describe("GET /api/admin/users", () => {
       id: CREATOR,
       email: "cris@example.com",
       name: "Cris Creator",
+      photo_url: `https://project.supabase.co/storage/v1/object/sign/avatars/${CREATOR}/${"a".repeat(32)}.webp?token=t`,
       status: "active",
       is_admin: false,
       is_self: false,
@@ -344,8 +348,10 @@ describe("GET /api/admin/users", () => {
     })
     expect(byId[ADMIN]).toMatchObject({ is_admin: true, is_self: true, mfa_enabled: true, status: "active" })
     expect(byId[INVITED]).toMatchObject({ status: "invited", invited_at: "2026-09-04T00:00:00.000Z", last_sign_in_at: null })
-    expect(byId[BANNED]).toMatchObject({ status: "disabled" })
+    expect(byId[BANNED]).toMatchObject({ status: "disabled", photo_url: null })
+    // The profile's headline and location are never read (admins see name and photo only), nor is any content.
     expect(JSON.stringify(body)).not.toMatch(/SECRET/)
+    expect(state.fake.callsTo("storage:createSignedUrls")).toEqual([["avatars", [`${CREATOR}/${"a".repeat(32)}.webp`], 3600]])
     expect(state.fake.callsTo("rpc:admin_user_stats")[0][0]).toMatchObject({ p_published_stages: ["published", "repurpose"] })
   })
 
@@ -466,17 +472,34 @@ describe("POST /api/admin/users/:id/reset-password", () => {
 })
 
 describe("DELETE /api/admin/users/:id", () => {
-  it("deletes the account after the email is repeated; the workspace cascades", async () => {
+  it("deletes the account after the email is repeated; the workspace cascades and its photos are deleted", async () => {
     expect(await call(user.DELETE, "DELETE", "/x", { params: { id: CREATOR }, body: { confirm_email: " Cris@Example.com " } })).toEqual({
       status: 200,
       body: { ok: true },
     })
     expect(authUser(CREATOR)).toBeUndefined()
+    expect(state.fake.avatars).toEqual([])
+    // Files first, then the account.
+    const order = state.fake.calls.map((c) => c.name).filter((n) => n === "storage:remove" || n === "auth:deleteUser")
+    expect(order).toEqual(["storage:remove", "auth:deleteUser"])
     expect(state.fake.tables.content_ideas).toEqual([])
     expect(state.fake.tables.feedback.map((r) => r.id)).toEqual(["fb2"])
     expect(auditRows()).toEqual([
       expect.objectContaining({ action: "user_deleted", target_user_id: CREATOR, target_email: "cris@example.com", details: { status: "active", was_admin: false } }),
     ])
+  })
+
+  it("keeps the account when its photos can't be deleted (500, nothing deleted)", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {})
+    state.fake.fail("storage:remove")
+    expect(await call(user.DELETE, "DELETE", "/x", { params: { id: CREATOR }, body: { confirm_email: "cris@example.com" } })).toMatchObject({
+      status: 500,
+      body: { error: "server_error" },
+    })
+    expect(authUser(CREATOR)).toBeDefined()
+    expect(state.fake.avatars).toHaveLength(1)
+    expect(auditRows()).toEqual([])
+    log.mockRestore()
   })
 
   it("answers 400 when the confirmation doesn't match", async () => {
@@ -510,6 +533,52 @@ describe("DELETE /api/admin/users/:id", () => {
 
   it("answers 404 for unknown accounts", async () => {
     expect(await call(user.DELETE, "DELETE", "/x", { params: { id: MISSING }, body: { confirm_email: "x@example.com" } })).toMatchObject({ status: 404 })
+  })
+})
+
+describe("DELETE /api/admin/users/:id/photo", () => {
+  const photoPath = `${CREATOR}/${"a".repeat(32)}.webp`
+
+  it("deletes the photo files, clears the profile photo and writes one audit row", async () => {
+    const { status, body } = await call(photo.DELETE, "DELETE", "/x", { params: { id: CREATOR } })
+    expect(status).toBe(200)
+    expect(body).toMatchObject({ id: CREATOR, name: "Cris Creator", photo_url: null })
+    expect(state.fake.avatars).toEqual([])
+    expect(state.fake.tables.users.find((u) => u.id === CREATOR)?.avatar_url).toBeNull()
+    expect(state.fake.callsTo("storage:remove")).toEqual([["avatars", [photoPath]]])
+    expect(auditRows()).toEqual([
+      expect.objectContaining({ action: "profile_photo_removed", admin_id: ADMIN, target_user_id: CREATOR, target_email: "cris@example.com", details: {} }),
+    ])
+    // The name and email stay; only the photo went.
+    expect(authUser(CREATOR)).toBeDefined()
+  })
+
+  it("leaves an account without a photo alone (no audit row)", async () => {
+    expect(await call(photo.DELETE, "DELETE", "/x", { params: { id: INVITED } })).toMatchObject({ status: 200, body: { id: INVITED, photo_url: null } })
+    expect(state.fake.callsTo("storage:remove")).toEqual([])
+    expect(auditRows()).toEqual([])
+  })
+
+  it("also clears a leftover file when the profile no longer points at it", async () => {
+    state.fake.tables.users.find((u) => u.id === CREATOR)!.avatar_url = null
+    expect(await call(photo.DELETE, "DELETE", "/x", { params: { id: CREATOR } })).toMatchObject({ status: 200 })
+    expect(state.fake.avatars).toEqual([])
+    expect(auditRows()).toHaveLength(1)
+  })
+
+  it("keeps the photo when Storage fails (500, no audit row)", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {})
+    state.fake.fail("storage:remove")
+    expect(await call(photo.DELETE, "DELETE", "/x", { params: { id: CREATOR } })).toMatchObject({ status: 500, body: { error: "server_error" } })
+    expect(state.fake.tables.users.find((u) => u.id === CREATOR)?.avatar_url).toBe(photoPath)
+    expect(auditRows()).toEqual([])
+    log.mockRestore()
+  })
+
+  it("answers 404 for unknown or malformed ids", async () => {
+    expect(await call(photo.DELETE, "DELETE", "/x", { params: { id: MISSING } })).toMatchObject({ status: 404, body: { error: "not_found" } })
+    expect(await call(photo.DELETE, "DELETE", "/x", { params: { id: "../etc" } })).toMatchObject({ status: 404, body: { error: "not_found" } })
+    expect(state.fake.callsTo("storage:list")).toEqual([])
   })
 })
 
@@ -644,6 +713,7 @@ describe("audit log guarantees", () => {
       [adminRole.POST, "POST", { params: { id: CREATOR } }],
       [adminRole.DELETE, "DELETE", { params: { id: CREATOR } }],
       [settings.PATCH, "PATCH", { body: { access_open: false } }],
+      [photo.DELETE, "DELETE", { params: { id: CREATOR } }],
       [user.DELETE, "DELETE", { params: { id: CREATOR }, body: { confirm_email: "cris@example.com" } }],
     ]
     for (const [index, [handler, method, options]] of steps.entries()) {
@@ -661,6 +731,7 @@ describe("audit log guarantees", () => {
       "admin_granted",
       "admin_revoked",
       "settings_updated",
+      "profile_photo_removed",
       "user_deleted",
     ])
     const details = JSON.stringify(auditRows().map((r) => r.details))

@@ -101,6 +101,16 @@ describe("admin fixture — mutations and guards", () => {
     expect(await api.inviteUser("New.Person@Example.com")).toMatchObject({ email: "new.person@example.com", status: "invited" })
   })
 
+  it("removes a profile photo once, with an audit entry", async () => {
+    const { api } = make()
+    const gio = (await api.listUsers({ query: "gio" })).items[0]
+    expect(gio.photo_url).toMatch(/^data:image\/svg\+xml/)
+    expect(await api.removeProfilePhoto(gio.id)).toMatchObject({ id: gio.id, photo_url: null })
+    expect((await api.listAudit()).items[0]).toMatchObject({ action: "profile_photo_removed", target_email: gio.email })
+    await api.removeProfilePhoto(gio.id)
+    expect((await api.listAudit()).items.filter((e) => e.action === "profile_photo_removed" && e.target_email === gio.email)).toHaveLength(1)
+  })
+
   it("returns copies, so callers can't mutate its state", async () => {
     const { api } = make()
     const page = await api.listUsers()

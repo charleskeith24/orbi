@@ -44,6 +44,7 @@ describe("HTTP admin client — routes", () => {
     await api.listAudit()
     await api.getSettings()
     await api.updateSettings({ access_open: false })
+    await api.removeProfilePhoto("u 1")
 
     expect(calls.map((c) => `${c.init.method} ${c.url}`)).toEqual([
       "GET /api/admin/overview",
@@ -65,6 +66,7 @@ describe("HTTP admin client — routes", () => {
       "GET /api/admin/audit",
       "GET /api/admin/settings",
       "PATCH /api/admin/settings",
+      "DELETE /api/admin/users/u%201/photo",
     ])
     const body = (i: number) => (calls[i].init.body ? JSON.parse(String(calls[i].init.body)) : undefined)
     expect(body(7)).toEqual({ email: "new@example.com" })

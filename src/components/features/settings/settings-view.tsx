@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { useState } from "react"
 import { PageContainer, PageHeader } from "@/components/common"
 import { useT } from "@/lib/i18n"
+import { ProfileTab } from "@/components/features/profile/profile-tab"
 import { RemindersTab } from "@/components/features/reminders/reminders-tab"
 import { AiTab } from "./ai-tab"
 import { DataTab } from "./data-tab"
@@ -51,6 +52,7 @@ export function SettingsView() {
             </h2>
             <p className="text-sm text-pretty text-muted-foreground">{t(`tab_${tab}_description`)}</p>
           </header>
+          {tab === "profile" ? <ProfileTab /> : null}
           {tab === "general" ? <GeneralTab draft={general} now={now} /> : null}
           {tab === "performance" ? <PerformanceTab draft={performance} now={now} /> : null}
           {tab === "funnel" ? <FunnelTab draft={funnel} now={now} /> : null}

@@ -93,7 +93,7 @@ People who want to join fill in **Request access** on your site. They give their
 
 ## 5. Manage accounts
 
-**Admin → Users** lists every account: email, name, status (**invited**, **active** or **disabled**), 2-step verification on or off, dates, whether setup is finished, and **counts** of ideas, content and published posts. Search by email or name, and filter by status.
+**Admin → Users** lists every account: profile photo, email, name, status (**invited**, **active** or **disabled**), 2-step verification on or off, dates, whether setup is finished, and **counts** of ideas, content and published posts. Search by email or name, and filter by status.
 
 The menu on each row:
 
@@ -104,14 +104,15 @@ The menu on each row:
 | **Enable account** | Lifts the block. |
 | **Send password reset** | Supabase emails them a link to choose a new password. Not for disabled accounts, and not for invites that haven't been accepted (resend the invite instead). |
 | **Make admin / Remove admin** | Gives or takes away access to `/admin`. New admins set up 2-step verification when they first open it. |
-| **Delete** | Deletes the account **and its whole workspace**, permanently. You type their email to confirm. Their feedback and usage events go too. |
+| **Remove profile photo** | Deletes their profile photo (moderation): use it for a photo that isn't theirs or isn't appropriate (Terms of Use). Their initials show instead; they can upload another. Written to the audit log. |
+| **Delete** | Deletes the account **and its whole workspace**, permanently. You type their email to confirm. Their profile photo, feedback and usage events go too. |
 
 **Guard rails:**
 
 - You can't disable, delete or remove admin from **your own** account. Ask another admin.
 - The **last admin** can't be removed, so the admin area never ends up with nobody in charge.
 
-**The audit log.** Every change made from the admin area is written to **Admin → Audit log**: approving, rejecting, inviting, disabling, deleting, admin changes and the Accepting requests switch. Each entry shows who did what to which email, and when. Nobody can edit or delete entries from the app, not even an admin. Entries hold small facts only, like `from: active → to: disabled`, never content.
+**The audit log.** Every change made from the admin area is written to **Admin → Audit log**: approving, rejecting, inviting, disabling, deleting, admin changes, removed profile photos and the Accepting requests switch. Each entry shows who did what to which email, and when. Nobody can edit or delete entries from the app, not even an admin. Entries hold small facts only, like `from: active → to: disabled`, never content.
 
 ## 6. What admins can't see, and why
 
@@ -119,7 +120,8 @@ Creators put unpublished ideas, scripts, income and brand deals into Orbi. They 
 
 | Admins can see | Admins can't see |
 |---|---|
-| Email, name, account status, sign-up and last sign-in dates | Ideas, scripts, captions, hooks, stories, research |
+| Email, name, profile photo, account status, sign-up and last sign-in dates | Ideas, scripts, captions, hooks, stories, research |
+| | The rest of a profile: headline, location, links, niche |
 | Whether setup is finished | Brand HQ, audience, pillars, strategy |
 | How many ideas, content items and published posts | Titles or text of any of them |
 | Feedback people sent with the Feedback button (it was written *to* you) | Brand deals, income, rate cards |
@@ -164,6 +166,13 @@ The **audit log** keeps its entries, including the email an action was about, ev
 | Invited people land on sign-in with "link invalid" | The **Invite user** email template isn't the token-hash one from DEPLOY.md step 5. |
 | `/signup` says requests are closed | **Admin → Requests → Accepting requests** is off. |
 | You need to remove an admin who can't be removed in the app (for example the last one) | SQL Editor: `delete from admin_users where user_id = (select id from auth.users where email = 'them@example.com');` |
+
+**Profile photos after deleting an account in the Supabase dashboard.** Deleting from **Admin → Users** removes the photo files first. Deleting a user from the Supabase dashboard (Authentication → Users) can't: Storage files don't cascade from the database. Nobody but you can open such a leftover (it belongs to nobody's circle any more), but to remove it: Storage → `avatars` → the folder named after the deleted user's id → delete it. To find leftovers:
+
+```sql
+select name from storage.objects
+ where bucket_id = 'avatars' and split_part(name, '/', 1) not in (select id::text from auth.users);
+```
 
 To see who is admin:
 

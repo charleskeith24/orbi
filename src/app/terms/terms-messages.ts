@@ -61,6 +61,8 @@ export const termsMessages = defineMessages({
       "Partner details you type in — names, handles, contact details and notes — are your responsibility. Only save what they'd be fine with you keeping, and delete it if they ask.",
     use_circles:
       "What members share in a Circle stays in that circle. Don't pass on anyone's check-ins, asks or contact details without their OK.",
+    use_profile:
+      "Your profile photo and details must be yours and appropriate: no one else's photo or name, and nothing misleading, hateful or explicit. Admins may remove a profile photo that breaks these rules.",
 
     account_title: "Your account",
     account_password:
@@ -126,6 +128,8 @@ export const termsMessages = defineMessages({
       "Responsibilidad mo ang partner details na tina-type mo — pangalan, handle, contact details at notes. I-save lang ang okay sa kanila na itabi mo, at burahin kapag hiniling nila.",
     use_circles:
       "Sa loob lang ng Circle ang shine-share ng members doon. Huwag ipasa ang check-ins, asks o contact details ng iba nang walang paalam sa kanila.",
+    use_profile:
+      "Dapat sa'yo at angkop ang profile photo at details mo: hindi photo o pangalan ng iba, at walang misleading, hateful o explicit. Puwedeng tanggalin ng admins ang profile photo na lumalabag dito.",
 
     account_title: "Ang account mo",
     account_password:

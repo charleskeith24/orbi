@@ -33,8 +33,13 @@ export type AdminUserStatus = "invited" | "active" | "disabled"
 export interface AdminUserRow {
   id: string
   email: string
-  /** `public.users.full_name`, may be empty. */
+  /** `public.users.full_name` (the profile's display name), may be empty. */
   name: string
+  /**
+   * The profile photo: a signed URL (about an hour) made server-side with the secret key, or null for none.
+   * Admins see a profile's name and photo only — never its headline, location or links (docs/PROFILES.md).
+   */
+  photo_url: string | null
   status: AdminUserStatus
   is_admin: boolean
   /** The signed-in admin's own row (self-guards: can't disable, delete or un-admin yourself). */
@@ -108,6 +113,7 @@ export const ADMIN_AUDIT_ACTIONS = [
   "admin_granted",
   "admin_revoked",
   "settings_updated",
+  "profile_photo_removed",
 ] as const
 export type AdminAuditAction = (typeof ADMIN_AUDIT_ACTIONS)[number]
 
@@ -156,6 +162,7 @@ export interface Page<T> {
  *   DELETE /api/admin/users/:id   { confirm_email }  → { ok: true }
  *   POST   /api/admin/users/:id/admin                → AdminUserRow
  *   DELETE /api/admin/users/:id/admin                → AdminUserRow
+ *   DELETE /api/admin/users/:id/photo                → AdminUserRow   (remove the profile photo: moderation)
  *   GET    /api/admin/feedback?page=                 → Page<AdminFeedback>
  *   GET    /api/admin/audit?page=                    → Page<AdminAuditEntry>
  *   GET    /api/admin/settings                       → AdminSettings
@@ -210,6 +217,8 @@ export interface AdminApi {
   deleteUser(id: string, confirmEmail: string): Promise<void>
   grantAdmin(id: string): Promise<AdminUserRow>
   revokeAdmin(id: string): Promise<AdminUserRow>
+  /** Moderation: deletes the account's profile photo (back to initials). */
+  removeProfilePhoto(id: string): Promise<AdminUserRow>
   listFeedback(page?: number): Promise<Page<AdminFeedback>>
   listAudit(page?: number): Promise<Page<AdminAuditEntry>>
   getSettings(): Promise<AdminSettings>

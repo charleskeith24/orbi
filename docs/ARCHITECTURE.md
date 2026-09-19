@@ -58,6 +58,8 @@ src/
     i18n/                      UI language: core (pure), useT, getUiLang, shared messages (§11)
     supabase/                  config, browser + server clients, secret-key client (admin.ts — server only)
     admin/                     admin & access (§14): contract types, form schema, gate (pages), guard (API), server/* (data access)
+    circles/                   Collab Circles (§15): client contract, pure logic, in-memory fake
+    profiles/                  Profiles (§16): client contract, link rules, crop math, local + fixture clients
     dates.ts  utils.ts  scoring.ts  navigation.ts
 supabase/migrations/           SQL schema, RLS, triggers
 docs/                          this file + setup guides
@@ -134,7 +136,7 @@ Use `new Date()` at the call site (`now`) and pass it into pure analytics functi
 - `?tab=<key>` — select a tab on tabbed pages (e.g. `/settings?tab=data`).
 - Content item detail lives at **`/studio/<itemId>`**; campaign detail at **`/campaigns/<id>`**.
 - Entity → page map (for links): idea `/ideas?open=`, item `/studio/<id>`, hook `/ideas/hooks?open=`, angle `/ideas/angles?open=`, persona `/audience?open=`, problem `/audience/problems?open=`, question `/audience/questions?open=`, pillar `/pillars?open=`, story `/stories?open=`, research `/research?open=`, series `/series?open=`, experiment `/experiments?open=`, campaign `/campaigns/<id>`, brand deal `/money/deals?open=`, income entry `/money/income?open=`, collab `/collabs?open=` (`/collabs?new=1&campaign=<id>` or `&deal=<id>` opens the form pre-linked; `/collabs?ideas=1` opens Collab ideas). Rate cards are edited on `/money/media-kit`.
-- Settings tabs: `general`, `performance`, `funnel`, `formats`, `tags`, `engagement`, `reminders`, `ai`, `integrations`, `data` (`settingsHref(tab)` in `features/settings/tabs.ts`).
+- Settings tabs: `profile`, `general`, `performance`, `funnel`, `formats`, `tags`, `engagement`, `reminders`, `ai`, `integrations`, `data` (`settingsHref(tab)` in `features/settings/tabs.ts`). `/settings` with no tab still opens `general`; the account menu's **Profile** item opens `/settings?tab=profile`.
 - Admin area (Supabase mode, admins only, §14): `/admin` (Overview), `/admin/requests`, `/admin/users`, `/admin/feedback`, `/admin/audit`, `/admin/security` (2-step verification). Never in `NAV_SECTIONS`; the entry is the account menu and ⌘K, for admins only.
 - Collab Circles (§15, online version; local mode shows a notice): `/circles` (list), `/circles/<id>` (a circle; `#asks` jumps to Collab asks), `/circles/join/<code>` (invite link; signed-out visitors go through `/login?next=`).
 - Public pages (no sign-in in Supabase mode): `/login`, `/signup` (Request access), `/privacy`, `/terms` (`PUBLIC_PAGES` in `features/auth/auth-paths.ts`). Both legal pages show `NEXT_PUBLIC_CONTACT_EMAIL` when it's set (`src/app/privacy/contact-email.ts`) and say honestly when it isn't; `?preview=contact` fakes one in development only.
@@ -262,7 +264,7 @@ Both are **online-version only** (Supabase) and live in server-only tables (`fee
 
 The online version has a platform admin (the owner, plus anyone they promote) and a waitlist: nobody gets an account without an admin's approval. The owner's guide is `docs/ADMIN.md`; the schema is `supabase/migrations/20260918000000_admin.sql`. **Local mode is unchanged**: there are no accounts, `/admin` shows an honest notice, every admin and waitlist route answers `501 not_configured`, and admin links never appear.
 
-- **The admin never sees a creator's content.** Account metadata and **counts** only (`admin_user_stats()` and `admin_onboarding_funnel()` return numbers). Never select titles or text from workspace tables in admin code. Feedback is readable in full because it was written *to* the team.
+- **The admin never sees a creator's content.** Account metadata and **counts** only (`admin_user_stats()` and `admin_onboarding_funnel()` return numbers). Never select titles or text from workspace tables in admin code. Feedback is readable in full because it was written *to* the team. Of a profile (§16) admins get the **name and photo** only: `AdminUserRow.photo_url` is a 1-hour signed URL made with the secret key; never select `headline`, `location`, `links` or `show_niche` in admin code.
 - **The role can't be self-granted.** It lives in `admin_users`, which has no grants or policies for `authenticated`. It is written only by the server with the secret key, or by the SQL line in ADMIN.md for the first admin. Never put a role column on `public.users` (users update their own row). `public.is_admin()` is `security definer`, `stable`, `set search_path = ''`, and executable by `authenticated`; the UI may call it to decide whether to show the Admin entry.
 - **Contract.** `src/lib/admin/types.ts` holds the route table, the error codes, the `AdminApi` client interface and `AdminGate`. `access-request.ts` is the form schema, shared by the form and the route. The UI's HTTP client follows the route table exactly; add to the contract, never rename.
 - **Pages.** Every `/admin` page calls `getAdminGate()` (`src/lib/admin/gate.ts`):
@@ -283,8 +285,9 @@ The online version has a platform admin (the owner, plus anyone they promote) an
 - **Guard rails.**
   - An admin can't disable, delete or un-admin themselves → `409 self_action`.
   - The last admin can't be removed → `409 last_admin`. `revoke_admin()` decides this in one serialized transaction.
-  - Deleting an account requires the body to repeat its email.
-- **Audit.** Every successful change writes **one** `admin_audit_log` row with `writeAudit()`: the action from `ADMIN_AUDIT_ACTIONS` (the CHECK list is kept in sync), the target id and email, and small content-free `details` such as `{ from: "active", to: "disabled" }`. The log is append-only: no update or delete grant, not even for the secret key.
+  - Deleting an account requires the body to repeat its email. It deletes the account's profile photos through the Storage API first (files can't cascade from SQL); if Storage fails, nothing is deleted (`500`).
+  - `DELETE /api/admin/users/:id/photo` removes a profile photo (moderation): the files in the account's `avatars` folder, then `public.users.avatar_url`. No photo → unchanged, no audit row.
+- **Audit.** Every successful change writes **one** `admin_audit_log` row with `writeAudit()`: the action from `ADMIN_AUDIT_ACTIONS` (the CHECK list is kept in sync — the latest definition is in `20260920000000_profiles.sql`, which added `profile_photo_removed`), the target id and email, and small content-free `details` such as `{ from: "active", to: "disabled" }`. The log is append-only: no update or delete grant, not even for the secret key.
 - **Reads that need 2-step verification.** Admins read the audit log, `feedback` and `usage_events` through RLS policies that require `is_admin()` **and** `auth.jwt() ->> 'aal' = 'aal2'`. A stolen password alone can't read them through the Data API.
 - **Waitlist.** `POST /api/access-requests` is the only anonymous API call the proxy lets through (`isPublicApiCall` in `features/auth/auth-paths.ts`); `/privacy` and `/terms` are the only public pages besides the auth pages. The route:
   - requires a same-origin `Origin`;
@@ -313,6 +316,7 @@ Small invite-only groups of creators (3–8) who keep each other posting and fin
   - Members write their own check-ins (this or last week only), asks (edit/close their own), interests (only in others' open asks; withdraw while pending) and their own `display_name`.
   - Everything else goes through `security definer` functions that check `auth.uid()`: `create_circle`, `preview_invite`, `join_circle` (8 members max, 10 circles per person), `rotate_invite` / `remove_member` (owner only; never the owner), `leave_circle` (the longest-standing member takes over; the last one deletes the circle — a trigger does the same when an account is deleted), `accept_interest` (the ask's author only).
   - Errors are raised as short codes (`circle_full`, `not_owner`, …) and mapped by `toCircleError`.
+- **Profiles in circles** (§16). Members, check-ins and asks show each member's profile photo (`MemberAvatar` → `PersonAvatar`, falling back to initials of the circle name); clicking a member in the Members list opens their profile card (`ProfilePopover`: headline, location, links, and the niche only if they opted in). Members see each other's profiles because `can_see_profile()` counts a shared circle as "connected". The per-circle `display_name` stays; "Your name in this circle" defaults to the profile's display name, then Brand HQ's name.
 - **Invite codes.** 43 base64url characters (244 random bits), generated by the database; only the SHA-256 is stored. An owner's browser remembers the link it last created or rotated (`circle-memory.ts`, localStorage); elsewhere the owner makes a new link.
 - **Client.** `CirclesApi` (`src/lib/circles/types.ts`) has two implementations:
   - `features/circles/api/supabase-api.ts`: the browser Supabase client, with RLS and RPCs only. There are no API routes and no secret key.
@@ -327,3 +331,29 @@ Small invite-only groups of creators (3–8) who keep each other posting and fin
 - **Tests.**
   - `src/lib/circles/circles-migration.pglite.test.ts`: every RLS rule and function on Postgres.
   - `features/circles/api/supabase-api.pglite.test.ts`: the browser client end to end through a PostgREST-like stand-in (`src/lib/circles/testing/pglite-client.ts`).
+
+## 16. Profiles
+
+Every account has a personal profile — the **person** using Orbi, not the brand (Brand HQ holds the brand; the difference matters for team workspaces, where a VA signs in as themselves). Brief: `docs/PROFILES.md`. Fields: photo, display name (≤ 80), one-line headline (≤ 160), location (≤ 80), up to 6 links (`{ platform: PlatformId | "website", value }` — a handle without "@" or an http(s) URL) and the opt-in **"Show my niche and main platform"** (read from Brand HQ at read time, never copied).
+
+- **Visibility: connected people only.** Yourself and members of a circle you're in see the whole profile (team members will too). Admins see the name and photo only. No public profile page. **Email is never part of a profile** — no new path may expose it.
+- **Schema.** `supabase/migrations/20260920000000_profiles.sql` extends `public.users` (no new table): `full_name` is the display name, `avatar_url` holds a **storage path** (`<user id>/<random>.webp|jpg`, never a URL; CHECKed), plus `headline`, `location`, `links` (jsonb, `profile_links_valid()`), `show_niche`.
+  - Only the owner selects `public.users` (it holds the email); signed-in users may update only the profile columns (column grant — never `email` or `id`).
+  - The sign-up triggers clean the display name and never copy a photo from Auth metadata; a name the person set is never overwritten from metadata.
+- **Reading other people.** `get_profiles(ids uuid[])` — `security definer`, `set search_path = ''`, at most 200 ids — returns `id, display_name, avatar_path, headline, location, links`, plus `niche` and `main_platform` only when `show_niche`, for the ids that pass `can_see_profile()`; others are simply missing. Never the email.
+  - `can_see_profile(uuid)` is **the one place** the "connected" rule lives (yourself, or a shared circle). Team workspaces add "shares a workspace" there, and both `get_profiles()` and the photo policy follow.
+- **Photos.** A **private** Storage bucket `avatars` (1 MB, `image/webp` + `image/jpeg`), created by the migration. Policies on `storage.objects`: insert/update/delete only inside your own folder with the random-name pattern; select for yourself and connected people (`can_see_profile()` on the folder).
+  - Upload in the browser (`features/profile/photo-encode.ts`): JPG/PNG/WebP ≤ 5 MB (HEIC only where the browser decodes it, otherwise an honest message) → square crop with zoom/pan (`src/lib/profiles/crop.ts`) → 512×512 WebP (JPEG fallback) through a canvas, which **strips EXIF, GPS included** ("We remove hidden location data from your photo").
+  - A new random path per upload; the old file (and any leftover) is deleted after the row points at the new one.
+  - Shown through **signed URLs** (1 hour), cached per session and re-signed 5 minutes before expiry (`usePhotoUrl`). Admins get them server-side with the secret key.
+  - Deleting an account: Storage can't cascade from SQL, so the admin delete route removes the files first; dashboard deletions leave a folder only the secret key can read — ADMIN.md has the cleanup query.
+- **Client.** `ProfilesApi` (`src/lib/profiles/types.ts`) has three implementations: `features/profile/api/supabase-api.ts` (RLS, `get_profiles()`, Storage; no API routes), `src/lib/profiles/local-api.ts` (local mode) and `src/lib/profiles/fixture-api.ts` (dev only). `<ProfilesSync />` (in the app shell) picks one when the workspace loads; `features/profile/profile-store.ts` holds your profile and the caches.
+  - **Shared pieces for other features** (team workspaces reuse them): `useProfiles(ids)` / `useProfile(id)` (batched `get_profiles()`; `null` = not visible), `usePhotoUrl(path)`, `<ProfileAvatar>` / `<PersonAvatar userId name>` and `<ProfilePopover>` / `<ProfileCardBody>`.
+- **Where it shows.** Settings → Profile (`/settings?tab=profile`: editor, "How your circles see you" preview, who can see it), the account menu (photo + display name; online it falls back to the sign-up name or the email's local part), circles (§15), Admin → Users (§14), and — per device, opt-in — the media kit header ("Use my profile photo in the media kit", `localStorage["pbos:media-kit-photo"]`).
+- **Local mode.** No accounts: the profile is kept on this device only (`localStorage["pbos:local-profile"]`, the photo as a ≤ 60 KB 256×256 data URL, re-encoded the same way). The tab says so ("In the online version your profile is saved to your account and shown to your circles and team."), and the account menu shows it.
+- **Dev fixture.** The Circles fixture (`--circles`) also gives its sample members sample profiles and illustrated sample photos; your own profile stays the local one. Same production guard as §15. The admin fixture (`--admin`) carries sample `photo_url`s.
+- **Tests.**
+  - `src/lib/profiles/profiles-migration.pglite.test.ts`: every rule above on Postgres, with a stub of the `storage` schema (`src/lib/supabase/testing/pglite.ts`).
+  - `features/profile/api/supabase-api.pglite.test.ts`: the browser client end to end, Storage through `src/lib/profiles/testing/pglite-storage.ts`.
+  - `src/lib/profiles/*.test.ts`: link rules (and their agreement with the SQL CHECK), draft validation, crop math, photo paths, the local and fixture clients.
+  - `src/app/api/admin/routes.test.ts`: photo removal, its audit row, and photo cleanup on account deletion.

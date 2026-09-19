@@ -9,7 +9,10 @@
  * The query builder covers the calls the admin code makes (select with count/head, insert/update/upsert/delete,
  * eq/in/gte/lt, order, range/limit, single/maybeSingle). The SQL functions are re-implemented here in a few lines;
  * their real behaviour is proven on Postgres in src/lib/admin/admin-migration.pglite.test.ts.
- * Failures can be injected per call with `fail("select:access_requests" | "rpc:revoke_admin" | "auth:inviteUserByEmail", …)`,
+ * `serviceClient().storage` keeps the avatars bucket as a list of paths (`list`, `remove`, `createSignedUrls`); like the
+ * real Storage, deleting an account doesn't remove its files.
+ * Failures can be injected per call with `fail("select:access_requests" | "rpc:revoke_admin" | "auth:inviteUserByEmail" |
+ * "storage:remove", …)`,
  * and `before(key, fn)` changes the data right before a call (a concurrent action).
  */
 import { randomUUID } from "node:crypto"
@@ -45,6 +48,8 @@ export interface FakeUserInput {
   banned_until?: string | null
   mfa?: boolean
   admin?: boolean
+  /** A profile photo: sets `avatar_url` and puts the file in the avatars bucket. */
+  photo?: boolean
 }
 
 const PRIMARY_KEYS: Record<string, string> = { admin_users: "user_id", platform_settings: "id" }
@@ -85,6 +90,8 @@ export class FakeSupabase {
     content_items: [],
   }
   authUsers: User[] = []
+  /** Paths in the avatars bucket. */
+  avatars: string[] = []
   /** The signed-in visitor of `sessionClient()`. */
   session: { userId: string | null; aal: "aal1" | "aal2" | null } = { userId: null, aal: null }
   calls: FakeCall[] = []
@@ -113,7 +120,9 @@ export class FakeSupabase {
       factors: input.mfa ? [{ id: `f-${id}`, factor_type: "totp", status: "verified", created_at: created, updated_at: created }] : [],
     } as unknown as User
     this.authUsers.push(user)
-    this.tables.users.push({ id, email: input.email, full_name: input.full_name ?? "" })
+    const avatar = input.photo ? `${id}/${"a".repeat(32)}.webp` : null
+    if (avatar) this.avatars.push(avatar)
+    this.tables.users.push({ id, email: input.email, full_name: input.full_name ?? "", avatar_url: avatar, headline: "SECRET headline", location: "SECRET location" })
     if (input.admin) this.tables.admin_users.push({ user_id: id, granted_by: null, created_at: created })
     return user
   }
@@ -200,6 +209,38 @@ export class FakeSupabase {
   serviceClient(): SupabaseClient {
     return {
       from: (table: string) => new Query(this, table, (rows) => rows),
+      storage: {
+        from: (bucket: string) => ({
+          list: async (prefix: string, options: { limit?: number } = {}) => {
+            this.record("storage:list", bucket, prefix)
+            const failure = this.takeFailure("storage:list")
+            if (failure) return { data: null, error: failure }
+            const files = this.avatars.filter((p) => bucket === "avatars" && p.startsWith(`${prefix}/`)).slice(0, options.limit ?? 100)
+            return { data: files.map((p) => ({ name: p.slice(prefix.length + 1), id: `obj-${p}` })), error: null }
+          },
+          remove: async (paths: string[]) => {
+            this.record("storage:remove", bucket, paths)
+            const failure = this.takeFailure("storage:remove")
+            if (failure) return { data: null, error: failure }
+            const removed = this.avatars.filter((p) => paths.includes(p))
+            this.avatars = this.avatars.filter((p) => !paths.includes(p))
+            return { data: removed.map((name) => ({ name })), error: null }
+          },
+          createSignedUrls: async (paths: string[], expiresIn: number) => {
+            this.record("storage:createSignedUrls", bucket, paths, expiresIn)
+            const failure = this.takeFailure("storage:createSignedUrls")
+            if (failure) return { data: null, error: failure }
+            return {
+              data: paths.map((path) =>
+                this.avatars.includes(path)
+                  ? { path, signedUrl: `https://project.supabase.co/storage/v1/object/sign/${bucket}/${path}?token=t`, error: null }
+                  : { path, signedUrl: null, error: "Object not found" }
+              ),
+              error: null,
+            }
+          },
+        }),
+      },
       rpc: async (name: string, args: Record<string, unknown> = {}) => {
         this.record(`rpc:${name}`, args)
         const failure = this.takeFailure(`rpc:${name}`)

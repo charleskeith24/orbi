@@ -14,7 +14,7 @@
  *
  * An effect is any of: URL change, dialog/sheet/menu/popover/listbox opened,
  * toast shown, DOM mutation inside the page, workspace data changed, focus moved
- * into an input, clipboard write, file download. Controls with NO effect are
+ * into an input, clipboard write, file download, file picker opened. Controls with NO effect are
  * listed under "noEffect" — each one is either a dead button or needs a reason.
  */
 import { chromium } from "playwright-core"
@@ -92,6 +92,9 @@ async function openPage() {
   })
   let downloads = 0
   page.on("download", () => downloads++)
+  // Listening makes Playwright intercept the native file picker (it never opens) and lets us count it.
+  let fileChoosers = 0
+  page.on("filechooser", () => fileChoosers++)
   await page.goto(BASE + route, { waitUntil: "domcontentloaded", timeout: 90000 })
   await page
     .waitForFunction(() => !document.querySelector('[aria-label="Loading workspace"]'), null, { timeout: 45000 })
@@ -103,7 +106,7 @@ async function openPage() {
       .catch(() => errors.push("timeout: admin screen never finished loading"))
   }
   await page.waitForTimeout(500)
-  return { context, page, errors, getDownloads: () => downloads }
+  return { context, page, errors, getDownloads: () => downloads, getFileChoosers: () => fileChoosers }
 }
 
 async function listControls(page) {
@@ -134,7 +137,7 @@ async function listControls(page) {
   )
 }
 
-async function probe(page, index, errors, getDownloads) {
+async function probe(page, index, errors, getDownloads, getFileChoosers = () => 0) {
   const handle = await page.evaluateHandle(
     ({ scope, CLICKABLE, index }) => {
       const roots = [...document.querySelectorAll(scope)]
@@ -181,6 +184,7 @@ async function probe(page, index, errors, getDownloads) {
     }))
   const before = await snapshot()
   const downloadsBefore = getDownloads()
+  const fileChoosersBefore = getFileChoosers()
   const errorsBefore = errors.length
   try {
     await el.scrollIntoViewIfNeeded({ timeout: 3000 })
@@ -211,6 +215,7 @@ async function probe(page, index, errors, getDownloads) {
   if (dataAfter !== before.data) effects.push("data changed")
   if (audit.clipboard) effects.push("clipboard")
   if (getDownloads() > downloadsBefore) effects.push("download")
+  if (getFileChoosers() > fileChoosersBefore) effects.push("file picker")
   if (!before.focusInput && after.focusInput) effects.push("focused input")
   if (!effects.length && audit.mutations > 0) effects.push(`dom mutations (${audit.mutations})`)
   return { effects, newErrors: errors.slice(errorsBefore) }
@@ -222,7 +227,7 @@ const results = []
 
 if (args.fast) {
   for (let i = 0; i < controls.length; i++) {
-    const r = await probe(first.page, i, first.errors, first.getDownloads)
+    const r = await probe(first.page, i, first.errors, first.getDownloads, first.getFileChoosers)
     results.push({ index: i, ...controls[i], ...r })
     await first.page.keyboard.press("Escape").catch(() => {})
     await first.page.waitForTimeout(150)
@@ -238,7 +243,7 @@ if (args.fast) {
   await first.context.close()
   for (let i = 0; i < controls.length; i++) {
     const s = await openPage()
-    const r = await probe(s.page, i, s.errors, s.getDownloads)
+    const r = await probe(s.page, i, s.errors, s.getDownloads, s.getFileChoosers)
     results.push({ index: i, ...controls[i], ...r })
     await s.context.close()
   }

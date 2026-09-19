@@ -4,6 +4,7 @@ import { Check, EyeOff, Search, ShieldCheck, UserPlus, Users, X } from "lucide-r
 import { useCallback, useEffect, useId, useMemo, useState } from "react"
 import { DataTable, EmptyState, PageHeader, StatusPill, type DataTableColumn } from "@/components/common"
 import { useScreenLang, useScreenT } from "@/components/app-shell/device-ui-lang"
+import { ProfileAvatar } from "@/components/features/profile/profile-avatar"
 import { Button } from "@/components/ui/button"
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group"
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
@@ -67,21 +68,24 @@ export function UsersView() {
       {
         id: "user",
         header: t("col_user"),
-        className: "min-w-56 max-w-80",
+        className: "min-w-64 max-w-96",
         cell: (u) => (
-          <div className="flex min-w-0 flex-col">
-            <div className="flex min-w-0 items-center gap-1.5">
-              <span className={cn("truncate font-medium", !u.name && "text-muted-foreground")}>{u.name || t("no_name")}</span>
-              {u.is_self ? (
-                <span className="shrink-0 rounded-md bg-brand-soft px-1.5 text-xs font-medium text-brand">{t("you")}</span>
-              ) : null}
-              {u.is_admin ? (
-                <StatusPill tone="neutral" icon={ShieldCheck}>
-                  {t("admin")}
-                </StatusPill>
-              ) : null}
+          <div className="flex min-w-0 items-center gap-2.5">
+            <ProfileAvatar name={u.name || u.email} photoUrl={u.photo_url} className="size-8" />
+            <div className="flex min-w-0 flex-col">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <span className={cn("truncate font-medium", !u.name && "text-muted-foreground")}>{u.name || t("no_name")}</span>
+                {u.is_self ? (
+                  <span className="shrink-0 rounded-md bg-brand-soft px-1.5 text-xs font-medium text-brand">{t("you")}</span>
+                ) : null}
+                {u.is_admin ? (
+                  <StatusPill tone="neutral" icon={ShieldCheck}>
+                    {t("admin")}
+                  </StatusPill>
+                ) : null}
+              </div>
+              <span className="truncate text-xs text-muted-foreground">{u.email}</span>
             </div>
-            <span className="truncate text-xs text-muted-foreground">{u.email}</span>
           </div>
         ),
       },

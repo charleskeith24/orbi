@@ -26,6 +26,7 @@ const ACTION_LABEL: Record<AdminAuditAction, AuditKey> = {
   admin_granted: "action_admin_granted",
   admin_revoked: "action_admin_revoked",
   settings_updated: "action_settings_updated",
+  profile_photo_removed: "action_profile_photo_removed",
 }
 
 export function AuditView() {

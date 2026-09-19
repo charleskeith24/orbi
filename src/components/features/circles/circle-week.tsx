@@ -70,7 +70,7 @@ export function CircleWeekSection({ snapshot, week, now, onChanged }: { snapshot
         <ul className="divide-y">
           {week.rows.map((row) => (
             <li key={row.member.user_id} className="flex min-w-0 items-start gap-3 py-2">
-              <MemberAvatar name={row.member.display_name} />
+              <MemberAvatar userId={row.member.user_id} name={row.member.display_name} />
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center justify-between gap-3">
                   <p className="min-w-0 truncate text-sm">

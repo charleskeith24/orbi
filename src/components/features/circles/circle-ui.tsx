@@ -1,32 +1,27 @@
 "use client"
 
 import { Flame } from "lucide-react"
-import { initialsOf } from "@/lib/circles/names"
+import { PersonAvatar, ProfileAvatar } from "@/components/features/profile/profile-avatar"
 import { useT } from "@/lib/i18n"
+import type { ID } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { circlesMessages } from "./messages"
 
-/** A neutral initials avatar (members aren't workspace entities, so no identity color). */
-export function MemberAvatar({ name, className }: { name: string; className?: string }) {
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "flex size-7 shrink-0 items-center justify-center rounded-full border bg-muted text-[10px] font-medium text-muted-foreground",
-        className
-      )}
-    >
-      {initialsOf(name)}
-    </span>
-  )
+/**
+ * A member's avatar: their profile photo when you may see it (circle-mates can — `get_profiles()`), otherwise
+ * neutral initials of their circle name (members aren't workspace entities, so no identity color).
+ */
+export function MemberAvatar({ name, userId, className }: { name: string; userId?: ID; className?: string }) {
+  const classes = cn("size-7 shrink-0", className)
+  return userId ? <PersonAvatar userId={userId} name={name} className={classes} /> : <ProfileAvatar name={name} photoUrl={null} className={classes} />
 }
 
 /** Up to five overlapping avatars. */
-export function MemberStack({ names }: { names: string[] }) {
+export function MemberStack({ members }: { members: { userId: ID; name: string }[] }) {
   return (
     <span className="flex shrink-0 -space-x-1.5" aria-hidden>
-      {names.slice(0, 5).map((name, i) => (
-        <MemberAvatar key={`${name}-${i}`} name={name} className="size-6 ring-2 ring-card" />
+      {members.slice(0, 5).map((member) => (
+        <MemberAvatar key={member.userId} userId={member.userId} name={member.name} className="size-6 ring-2 ring-card" />
       ))}
     </span>
   )

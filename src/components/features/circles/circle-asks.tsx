@@ -196,7 +196,7 @@ function AskItem({ ask, snapshot, contacts, now, onChanged }: { ask: CircleAsk }
   return (
     <article className={cn("flex flex-col gap-2.5 rounded-md border p-3", closed && "bg-muted/30")}>
       <header className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-        <MemberAvatar name={authorName} className="size-6" />
+        <MemberAvatar userId={ask.user_id} name={authorName} className="size-6" />
         <span className="min-w-0 truncate font-medium text-foreground">{mine ? t("you") : authorName}</span>
         <span aria-hidden>·</span>
         <time dateTime={ask.created_at}>{formatRelativeDay(ask.created_at, now, lang)}</time>
@@ -272,7 +272,7 @@ function AuthorFooter({
               return (
                 <li key={interest.user_id} className="flex min-w-0 flex-col gap-1.5 rounded-md bg-muted/40 px-2.5 py-2">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <MemberAvatar name={name} className="size-6" />
+                    <MemberAvatar userId={interest.user_id} name={name} className="size-6" />
                     <span className="min-w-0 flex-1 truncate text-sm">{name}</span>
                     {interest.status === "accepted" ? (
                       <StatusPill tone="good">{t("accepted")}</StatusPill>

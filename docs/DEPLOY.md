@@ -47,6 +47,7 @@ The database design lives in the project folder `supabase/migrations/`. **Run ev
 | 3 | `20260914000200_push.sql` | Push reminders on phones (`push_subscriptions`) |
 | 4 | `20260918000000_admin.sql` | The admin area and the "Request access" waitlist (`admin_users`, `access_requests`, `admin_audit_log`, `platform_settings`) |
 | 5 | `20260919000000_circles.sql` | Collab Circles: small invite-only creator groups (`circles`, `circle_members`, `circle_contacts`, `circle_checkins`, `circle_asks`, `circle_ask_interests`) |
+| 6 | `20260920000000_profiles.sql` | Profiles: photo, name, headline, location and links on each account (`public.users`), who may see them (`get_profiles()`), and the private **`avatars`** photo bucket in Storage |
 | … | any newer file | whatever that feature needs |
 
 If new files appear in that folder later (after you pull an update), run just the new ones, in order.
@@ -201,4 +202,11 @@ If you start charging other creators for Orbi, re-read both plans' terms.
 
 The database migrations are tested automatically on a real Postgres engine (PGlite, Postgres compiled to WebAssembly): every file applies cleanly in order, the whole sample workspace goes in, every delete rule matches the app, `updated_at` stamps itself, and row-level security keeps two accounts apart. Orbi's Supabase data code is also run against that database. The admin rules are tested the same way: nobody can make themselves admin, signed-in users can't read the waitlist, the audit log can't be edited, and admin read access needs 2-step verification.
 
-That proves the SQL. It does not prove the hosted parts of Supabase — the Data API (PostgREST), Auth and its emails, and your project's dashboard settings — or Vercel. Do a quick check after deploying: create an account, finish onboarding, add an idea on your phone and see it on your laptop, then delete it. For the admin area: request access from a private window, approve it in **Admin → Requests**, open the invite email and set a password.
+That proves the SQL. It does not prove the hosted parts of Supabase — the Data API (PostgREST), Auth and its emails, Storage, and your project's dashboard settings — or Vercel. Do a quick check after deploying: create an account, finish onboarding, add an idea on your phone and see it on your laptop, then delete it. For the admin area: request access from a private window, approve it in **Admin → Requests**, open the invite email and set a password.
+
+**Profile photos (Storage), once:**
+
+1. Supabase → **Storage**: an **`avatars`** bucket exists and is **not** public (the migration made it). If you already had a public bucket called `avatars`, the migration made it private.
+2. In Orbi, **Settings → Profile** → upload a photo. In Storage → `avatars` you should see one folder named after your user id with one `.webp` file. Upload another: still one file.
+3. With a second account in the same circle, open the circle: your photo shows, and clicking your name opens your profile card. Copy the photo's address (right-click → Copy image address): it's a long `…/object/sign/avatars/…?token=…` link that stops working after an hour.
+4. **Admin → Users** shows your photo; the row menu → **Remove profile photo** deletes the file and writes an audit entry.

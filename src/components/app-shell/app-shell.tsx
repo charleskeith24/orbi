@@ -7,6 +7,7 @@ import { DataGate } from "@/components/app-shell/data-gate"
 import { useRememberUiLang } from "@/components/app-shell/device-ui-lang"
 import { GlobalDialogs } from "@/components/app-shell/global-dialogs"
 import { WorkspaceBanner } from "@/components/app-shell/workspace-banner"
+import { ProfilesSync } from "@/components/features/profile/profiles-sync"
 import { StrategistPanel } from "@/components/features/strategist/strategist-panel"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
@@ -23,6 +24,7 @@ export function AppShell({ children, defaultOpen = true }: { children: React.Rea
         </div>
       </SidebarInset>
       <GlobalDialogs />
+      <ProfilesSync />
       <CommandPalette />
       <StrategistPanel />
     </SidebarProvider>

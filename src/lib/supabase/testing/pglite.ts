@@ -6,6 +6,8 @@
  * - the `auth` schema with `auth.users` (the columns the migrations use) and `auth.uid()`,
  *   `auth.role()` and `auth.jwt()` reading the request's JWT claims from the transaction-local
  *   settings PostgREST sets (`request.jwt.claims`);
+ * - the `storage` schema's `buckets` and `objects` tables (row-level security on, the platform's grants),
+ *   so storage policies can be tested as SQL;
  * - the `anon`, `authenticated` and `service_role` roles;
  * - Supabase's default privileges on `public` (every new table granted to all three roles, which is
  *   why the migrations revoke `anon` explicitly).
@@ -54,6 +56,39 @@ create function auth.role() returns text language sql stable as $$
     (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role')
   )::text
 $$;
+
+-- Supabase Storage: the two tables the migrations and policies touch (buckets, objects), with RLS on and the
+-- platform's grants. The Storage API itself (uploads, signed URLs, file bytes) isn't stubbed.
+create schema if not exists storage;
+create table storage.buckets (
+  id text primary key,
+  name text not null unique,
+  owner uuid,
+  owner_id text,
+  public boolean not null default false,
+  file_size_limit bigint,
+  allowed_mime_types text[],
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create table storage.objects (
+  id uuid primary key default gen_random_uuid(),
+  bucket_id text references storage.buckets (id),
+  name text not null,
+  owner uuid,
+  owner_id text,
+  metadata jsonb,
+  version text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  last_accessed_at timestamptz not null default now(),
+  unique (bucket_id, name)
+);
+alter table storage.buckets enable row level security;
+alter table storage.objects enable row level security;
+grant usage on schema storage to anon, authenticated, service_role;
+grant all on storage.buckets to anon, authenticated, service_role;
+grant all on storage.objects to anon, authenticated, service_role;
 
 grant usage on schema auth to anon, authenticated, service_role;
 grant execute on all functions in schema auth to anon, authenticated, service_role;

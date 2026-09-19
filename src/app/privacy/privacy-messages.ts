@@ -30,6 +30,14 @@ export const privacyMessages = defineMessages({
     stores_usage:
       "Off by default and chosen per device. When on: page names, setup step names and counts of key actions (like “an idea was captured”). Never your ideas, posts or anything else you type.",
 
+    stores_profile_title: "Your profile",
+    stores_profile:
+      "What you add in Settings → Profile: a photo, a display name, a one-line headline, your location, social handles and links, and whether to show your Brand HQ niche and main platform. Your email is never part of it. Your browser crops, resizes and re-saves the photo before it's uploaded, which removes hidden data such as GPS location.",
+    see_profile:
+      "Your profile is shown only to people you're connected with — members of the circles you're in. There's no public profile page. Photos are private files, shown through links that expire within an hour.",
+    control_profile:
+      "Your profile: change or clear any field in Settings → Profile, and “Remove photo” deletes your photo. Deleting your account deletes your profile and photo too.",
+
     stores_circles_title: "Collab Circles — only if you join one",
     stores_circles:
       "The circles you create or join, the name you use in each, your weekly check-ins (the number of posts you choose to share and an optional note), collab asks and interests, and the contact you choose to share. Leaving a circle deletes what you wrote in it.",
@@ -39,7 +47,7 @@ export const privacyMessages = defineMessages({
     see_title: "Who can see what",
     see_you: "You can see and change everything in your workspace.",
     see_admins:
-      "Orbi's admins see account details (email, name, status, join and last sign-in dates, whether setup is finished, whether 2-step verification is on) and counts (how many ideas, content items and published posts you have). They never see your ideas, scripts, posts or anything else inside your workspace.",
+      "Orbi's admins see account details (email, name, profile photo, status, join and last sign-in dates, whether setup is finished, whether 2-step verification is on) and counts (how many ideas, content items and published posts you have). They never see your ideas, scripts, posts or anything else inside your workspace, or the rest of your profile. They may remove a profile photo that breaks the Terms of Use.",
     see_admins_read: "Admins read access requests and the feedback people send, because both are written to the Orbi team.",
     see_audit:
       "Every change an admin makes to an account or an access request is recorded in an audit log, with the email it was about. Log entries stay after an account is deleted.",
@@ -61,7 +69,7 @@ export const privacyMessages = defineMessages({
 
     local_title: "The local version",
     local_body:
-      "If you use Orbi without an account (local mode), your workspace stays in this browser. There are no accounts, access requests, feedback or usage analytics sent anywhere.",
+      "If you use Orbi without an account (local mode), your workspace and your profile stay in this browser. There are no accounts, access requests, feedback or usage analytics sent anywhere.",
   },
   tl: {
     title: "Privacy notice",
@@ -85,6 +93,14 @@ export const privacyMessages = defineMessages({
     stores_usage:
       "Naka-off by default at pinipili kada device. Kapag naka-on: pangalan ng pages, pangalan ng setup steps at bilang ng mahahalagang action (gaya ng “may na-capture na idea”). Hindi kailanman ang ideas, posts o kahit anong tina-type mo.",
 
+    stores_profile_title: "Ang profile mo",
+    stores_profile:
+      "Ang inilagay mo sa Settings → Profile: photo, display name, isang linyang headline, location, social handles at links, at kung ipapakita ang niche at main platform mula sa Brand HQ mo. Hindi kailanman kasama ang email mo. Kino-crop, nire-resize at sine-save ulit ng browser mo ang photo bago i-upload, kaya natatanggal ang nakatagong data gaya ng GPS location.",
+    see_profile:
+      "Ipinapakita lang ang profile mo sa mga konektado sa'yo — ang mga miyembro ng circles mo. Walang public profile page. Private files ang photos, at ipinapakita gamit ang links na nag-e-expire within an hour.",
+    control_profile:
+      "Ang profile mo: baguhin o burahin ang kahit anong field sa Settings → Profile, at ide-delete ng “Tanggalin ang photo” ang photo mo. Kapag na-delete ang account mo, kasama nang mabubura ang profile at photo mo.",
+
     stores_circles_title: "Collab Circles — kung sasali ka lang",
     stores_circles:
       "Ang mga circle na ginawa o sinalihan mo, ang pangalang gamit mo sa bawat isa, ang weekly check-ins mo (ang bilang ng posts na pinili mong i-share at optional na note), collab asks at interests, at ang contact na pinili mong i-share. Kapag umalis ka sa circle, buburahin ang mga isinulat mo roon.",
@@ -94,7 +110,7 @@ export const privacyMessages = defineMessages({
     see_title: "Sino ang nakakakita ng ano",
     see_you: "Nakikita at nababago mo ang lahat sa workspace mo.",
     see_admins:
-      "Ang mga admin ng Orbi ay nakakakita ng account details (email, pangalan, status, petsa ng pagsali at huling sign-in, kung tapos na ang setup, kung naka-on ang 2-step verification) at counts (ilan ang ideas, content items at published posts mo). Hindi nila kailanman nakikita ang ideas, scripts, posts o kahit ano sa loob ng workspace mo.",
+      "Ang mga admin ng Orbi ay nakakakita ng account details (email, pangalan, profile photo, status, petsa ng pagsali at huling sign-in, kung tapos na ang setup, kung naka-on ang 2-step verification) at counts (ilan ang ideas, content items at published posts mo). Hindi nila kailanman nakikita ang ideas, scripts, posts o kahit ano sa loob ng workspace mo, o ang iba pang bahagi ng profile mo. Puwede nilang tanggalin ang profile photo na lumalabag sa Terms of Use.",
     see_admins_read: "Binabasa ng admins ang access requests at ang feedback na pinapadala, kasi pareho itong para sa Orbi team.",
     see_audit:
       "Nire-record sa audit log ang bawat binabago ng admin sa isang account o access request, kasama ang email na tinutukoy nito. Nananatili ang log entries kahit na-delete na ang account.",
@@ -116,6 +132,6 @@ export const privacyMessages = defineMessages({
 
     local_title: "Ang local version",
     local_body:
-      "Kung gamit mo ang Orbi nang walang account (local mode), nasa browser na 'to lang ang workspace mo. Walang accounts, access requests, feedback o usage analytics na pinapadala kahit saan.",
+      "Kung gamit mo ang Orbi nang walang account (local mode), nasa browser na 'to lang ang workspace at profile mo. Walang accounts, access requests, feedback o usage analytics na pinapadala kahit saan.",
   },
 })

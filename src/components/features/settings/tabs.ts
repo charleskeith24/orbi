@@ -1,6 +1,7 @@
-import { Bell, Database, Funnel, Gauge, MessagesSquare, Plug, Shapes, SlidersHorizontal, Sparkles, Tags, type LucideIcon } from "lucide-react"
+import { Bell, CircleUserRound, Database, Funnel, Gauge, MessagesSquare, Plug, Shapes, SlidersHorizontal, Sparkles, Tags, type LucideIcon } from "lucide-react"
 
 export const SETTINGS_TAB_KEYS = [
+  "profile",
   "general",
   "performance",
   "funnel",
@@ -22,6 +23,7 @@ export interface SettingsTabMeta {
 }
 
 export const SETTINGS_TABS: SettingsTabMeta[] = [
+  { key: "profile", icon: CircleUserRound },
   { key: "general", icon: SlidersHorizontal },
   { key: "performance", icon: Gauge },
   { key: "funnel", icon: Funnel },

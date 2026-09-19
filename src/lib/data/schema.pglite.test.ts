@@ -98,7 +98,10 @@ describe("migrations on a real Postgres engine", () => {
     const workspace = new Set<string>([...TABLE_NAMES, "users"])
     for (const table of tables.map((t) => t.relname)) {
       const { rows } = await db.query<{ role: string; privilege: string; granted: boolean }>(
-        `select r.role, p.privilege, has_table_privilege(r.role, $1, p.privilege) as granted
+        // public.users grants UPDATE per column (the profile columns, never email or id — 20260920000000_profiles.sql).
+        `select r.role, p.privilege,
+                case when $1 = 'public.users' and p.privilege = 'update' then has_any_column_privilege(r.role, $1, 'update')
+                     else has_table_privilege(r.role, $1, p.privilege) end as granted
            from unnest(array['anon', 'authenticated']) as r(role),
                 unnest(array['select', 'insert', 'update', 'delete', 'truncate', 'references', 'trigger']) as p(privilege)`,
         [`public.${table}`]

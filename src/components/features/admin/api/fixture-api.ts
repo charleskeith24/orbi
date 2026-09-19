@@ -21,6 +21,7 @@ import type {
   AdminUserRow,
   Page,
 } from "@/lib/admin/types"
+import { samplePhoto } from "@/lib/profiles/sample-photos"
 import { AdminApiError } from "./errors"
 import { MfaError, type MfaClient, type MfaFactor } from "./mfa-client"
 
@@ -61,6 +62,7 @@ function user(
     id,
     email,
     name,
+    photo_url: null,
     status: "active",
     is_admin: false,
     is_self: false,
@@ -85,6 +87,7 @@ function seed(now: number): FixtureState {
       counts: { ideas: 64, content_items: 31, published: 22 },
     }),
     user(now, "sample-u2", "Mika Dizon (sample)", "mika.sample@example.com", {
+      photo_url: samplePhoto(1),
       joinedDaysAgo: 55,
       lastSignInDaysAgo: 2,
       is_admin: true,
@@ -92,11 +95,13 @@ function seed(now: number): FixtureState {
       counts: { ideas: 18, content_items: 9, published: 6 },
     }),
     user(now, "sample-u3", "Bea Santos (sample)", "bea.sample@example.com", {
+      photo_url: samplePhoto(4),
       joinedDaysAgo: 40,
       lastSignInDaysAgo: 1,
       counts: { ideas: 42, content_items: 18, published: 11 },
     }),
     user(now, "sample-u4", "Gio Tan (sample)", "gio.sample@example.com", {
+      photo_url: samplePhoto(2),
       joinedDaysAgo: 33,
       lastSignInDaysAgo: 4,
       counts: { ideas: 12, content_items: 5, published: 2 },
@@ -128,11 +133,13 @@ function seed(now: number): FixtureState {
       counts: { ideas: 5, content_items: 1, published: 0 },
     }),
     user(now, "sample-u10", "Jo Mercado (sample)", "jo.sample@example.com", {
+      photo_url: samplePhoto(5),
       joinedDaysAgo: 19,
       lastSignInDaysAgo: 3,
       counts: { ideas: 27, content_items: 12, published: 8 },
     }),
     user(now, "sample-u11", "Kai Villanueva (sample)", "kai.sample@example.com", {
+      photo_url: samplePhoto(6),
       joinedDaysAgo: 14,
       lastSignInDaysAgo: 0,
       counts: { ideas: 9, content_items: 4, published: 1 },
@@ -218,6 +225,7 @@ function seed(now: number): FixtureState {
     ["request_approved", "gio.sample@example.com", {}, 33 * 24],
     ["request_approved", "bea.sample@example.com", {}, 40 * 24],
     ["admin_granted", "mika.sample@example.com", {}, 54 * 24],
+    ["profile_photo_removed", "eli.sample@example.com", {}, 27 * 24],
   ]
   const audit: AdminAuditEntry[] = entries.map(([action, target, details, hoursAgo], i) => ({
     id: `sample-a${i + 1}`,
@@ -427,6 +435,16 @@ export function createAdminFixture(options: FixtureOptions = {}): AdminFixture {
         if (state.users.filter((u) => u.is_admin).length <= 1) throw new AdminApiError("last_admin", 409, "The last admin can't be removed.")
         row.is_admin = false
         log("admin_revoked", row.email)
+        return row
+      }),
+
+    removeProfilePhoto: (id) =>
+      wait(() => {
+        const row = findUser(id)
+        if (row.photo_url) {
+          row.photo_url = null
+          log("profile_photo_removed", row.email)
+        }
         return row
       }),
 
