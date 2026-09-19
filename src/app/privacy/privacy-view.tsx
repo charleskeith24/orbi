@@ -4,7 +4,7 @@
  * DRAFT — the privacy notice, for the owner to review before launch (copy in `privacy-messages.ts`).
  * Sources for each section, so it stays true when the code changes:
  * - account: Supabase Auth (`auth.users`), `public.users`; admins' 2-step: `auth.mfa` factors
- * - workspace: the 32 workspace tables (supabase/migrations/20260910000000_init.sql, RLS per user)
+ * - workspace: the 33 workspace tables (supabase/migrations/20260910000000_init.sql, RLS per user)
  * - access requests: `access_requests` (src/app/api/access-requests/route.ts — no IP read or stored)
  * - feedback: `feedback` (src/app/api/feedback/route.ts: kind, message, page, ui_language, viewport, user_agent, app_version)
  * - usage analytics: `usage_events`, opt-in per device (src/lib/telemetry, ARCHITECTURE §13)

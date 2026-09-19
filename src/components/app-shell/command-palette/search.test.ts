@@ -29,6 +29,7 @@ function sources(overrides: Partial<SearchSources> = {}): SearchSources {
     research: [],
     experiments: [],
     deals: [],
+    collabs: [],
     scripts: [],
     metrics: [],
     ...overrides,
@@ -89,6 +90,23 @@ describe("searchDocs", () => {
     expect(searchDocs(hookIndex.hook, "hook")).toHaveLength(6)
     expect(searchDocs(hookIndex.hook, "hook", 3)).toHaveLength(3)
     expect(searchDocs(hookIndex.hook, "   ")).toEqual([])
+  })
+})
+
+describe("collab documents", () => {
+  it("finds collabs by partner or title and links to the collab sheet", () => {
+    const collabs = [
+      buildRow("collabs", { title: "Joint Live: COD vs prepaid", partner_handle: "@tinasells.ph", partner_name: "Tina Ramos", type: "joint_live", status: "agreed", partner_platform: "facebook" }, USER, NOW),
+      buildRow("collabs", { partner_handle: "@ate.budget", partner_niche: "Personal finance", type: "duet_stitch" }, USER, NOW),
+    ]
+    const index = buildSearchIndex(sources({ collabs }))
+    expect(searchDocs(index.collab, "tina").map((d) => d.id)).toEqual([collabs[0].id])
+    expect(searchDocs(index.collab, "COD prepaid").map((d) => d.id)).toEqual([collabs[0].id])
+    const [budget] = searchDocs(index.collab, "ate.budget")
+    expect(budget.title).toBe("Collab with @ate.budget")
+    expect(budget.href).toBe(`/collabs?open=${collabs[1].id}`)
+    expect(index.collab[0].secondary).toBe("Agreed · Joint Live · @tinasells.ph · Facebook")
+    expect(buildSearchIndex(sources({ collabs }), "tl").collab[0].secondary).toBe("Pumayag · Joint Live · @tinasells.ph · Facebook")
   })
 })
 

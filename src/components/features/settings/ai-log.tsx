@@ -50,6 +50,8 @@ const TASK_LABELS: Partial<Record<AiTaskName, string | { key: AiKey }>> = {
   strategist_chat: "Content Strategist",
   onboarding_strategy: { key: "task_onboarding_strategy" },
   niche_discovery: "Niche Discovery",
+  collab_ideas: { key: "task_collab_ideas" },
+  collab_pitch: { key: "task_collab_pitch" },
 }
 
 export function taskLabel(task: string, t: AiT): string {
@@ -83,6 +85,10 @@ function entityLink(db: Database, row: AiGeneration, t: AiT): { href: string; la
     case "content_campaigns": {
       const campaign = db.content_campaigns.find((c) => c.id === id)
       return campaign ? { href: `/campaigns/${id}`, label: campaign.name || t("entity_campaign") } : null
+    }
+    case "collabs": {
+      const collab = db.collabs.find((c) => c.id === id)
+      return collab ? { href: `/collabs?open=${id}`, label: collab.title || t("entity_collab") } : null
     }
     default:
       return null

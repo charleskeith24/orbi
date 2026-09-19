@@ -3,6 +3,7 @@
 import { defaultFilter } from "cmdk"
 import {
   ArrowUpDown,
+  Blend,
   BookOpen,
   CalendarRange,
   ChartColumn,
@@ -37,6 +38,7 @@ import {
   buildAnalyticsDocs,
   buildAngleDocs,
   buildCampaignDocs,
+  buildCollabDocs,
   buildContentDocs,
   buildDealDocs,
   buildExperimentDocs,
@@ -96,6 +98,7 @@ const RESULT_GROUPS: { kind: SearchKind; heading: string; icon: LucideIcon }[] =
   { kind: "research", heading: "Research", icon: Library },
   { kind: "experiment", heading: "Experiments", icon: FlaskConical },
   { kind: "deal", heading: "Brand deals", icon: Handshake },
+  { kind: "collab", heading: "Collabs", icon: Blend },
   { kind: "topic", heading: "Topics", icon: Hash },
   { kind: "analytics", heading: "Analytics", icon: TrendingUp },
 ]
@@ -164,6 +167,7 @@ function useSearchIndex(lang: UiLang): SearchIndex {
   const research = useTable("research_items")
   const experiments = useTable("content_experiments")
   const deals = useTable("brand_deals")
+  const collabRows = useTable("collabs")
   const scripts = useTable("content_scripts")
   const metrics = useTable("content_metrics")
 
@@ -183,6 +187,7 @@ function useSearchIndex(lang: UiLang): SearchIndex {
   const researchDocs = useMemo(() => buildResearchDocs(research, lang), [research, lang])
   const experiment = useMemo(() => buildExperimentDocs(experiments, lang), [experiments, lang])
   const deal = useMemo(() => buildDealDocs(deals, lang), [deals, lang])
+  const collab = useMemo(() => buildCollabDocs(collabRows, lang), [collabRows, lang])
   const topic = useMemo(() => buildTopicDocs(ideas, lang), [ideas, lang])
   const analytics = useMemo(() => buildAnalyticsDocs(items, metrics, lang), [items, metrics, lang])
 
@@ -202,6 +207,7 @@ function useSearchIndex(lang: UiLang): SearchIndex {
       research: researchDocs,
       experiment,
       deal,
+      collab,
       topic,
       analytics,
     }),
@@ -220,6 +226,7 @@ function useSearchIndex(lang: UiLang): SearchIndex {
       researchDocs,
       experiment,
       deal,
+      collab,
       topic,
       analytics,
     ]

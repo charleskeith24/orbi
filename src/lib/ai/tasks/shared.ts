@@ -5,6 +5,7 @@
  */
 import * as z from "zod"
 import {
+  COLLAB_TYPE_IDS,
   FUNNEL_STAGE_IDS,
   GOAL_CATEGORY_IDS,
   HOOK_CATEGORY_IDS,
@@ -14,6 +15,7 @@ import {
   SCRIPT_FORMATS,
 } from "@/lib/constants"
 import type {
+  CollabType,
   FunnelStage,
   GoalCategory,
   HookCategory,
@@ -32,6 +34,7 @@ export const hookCategorySchema = z.enum(HOOK_CATEGORY_IDS as [HookCategory, ...
 export const goalCategorySchema = z.enum(GOAL_CATEGORY_IDS as [GoalCategory, ...GoalCategory[]])
 export const scriptFormatSchema = z.enum(SCRIPT_FORMAT_IDS as [ScriptFormat, ...ScriptFormat[]])
 export const repurposeTypeSchema = z.enum(REPURPOSE_TYPE_IDS as [RepurposeType, ...RepurposeType[]])
+export const collabTypeSchema = z.enum(COLLAB_TYPE_IDS as [CollabType, ...CollabType[]])
 
 /** Output id field: a short ref from the Brand Context (e.g. "P2"), mapped back to the real id after parsing. */
 export const contextRefSchema = (what: string, example: string) =>

@@ -6,6 +6,8 @@ import type * as z from "zod"
 import { adaptReferenceTask } from "./adapt-reference"
 import { analyzeReferenceTask } from "./analyze-reference"
 import { captureIdeaTask } from "./capture-idea"
+import { collabIdeasTask } from "./collab-ideas"
+import { collabPitchTask } from "./collab-pitch"
 import { contentBriefTask } from "./content-brief"
 import { experienceToContentTask } from "./experience-to-content"
 import { generateHooksTask } from "./generate-hooks"
@@ -43,6 +45,8 @@ export const AI_TASKS = {
   strategist_chat: strategistChatTask,
   onboarding_strategy: onboardingStrategyTask,
   niche_discovery: nicheDiscoveryTask,
+  collab_ideas: collabIdeasTask,
+  collab_pitch: collabPitchTask,
 } as const
 
 export type AiTaskName = keyof typeof AI_TASKS

@@ -18,7 +18,7 @@ export const privacyMessages = defineMessages({
       "Your email, your name if you give one, your password (stored hashed by Supabase, never in plain text), when you joined and last signed in, and — for admins — whether 2-step verification is on.",
     stores_workspace_title: "Your workspace",
     stores_workspace:
-      "Everything you add in Orbi: your brand, audience, ideas, content, scripts, analytics you log, money records and settings. Row-level security in the database lets only your account read it.",
+      "Everything you add in Orbi: your brand, audience, ideas, content, scripts, analytics you log, money records, collabs and settings. For collabs, that includes the names, handles and links you type in for the creators you work with; they aren't told and can't see it. Row-level security in the database lets only your account read it.",
     stores_requests_title: "Access requests",
     stores_requests:
       "When you ask to join: your name, email, what you create and the link you share, with the date. Orbi uses them only to decide on access. No IP address is stored.",
@@ -71,7 +71,7 @@ export const privacyMessages = defineMessages({
       "Ang email mo, pangalan mo kung ibinigay mo, password mo (naka-hash sa Supabase, hindi kailanman plain text), kailan ka sumali at huling nag-sign in, at — para sa admins — kung naka-on ang 2-step verification.",
     stores_workspace_title: "Ang workspace mo",
     stores_workspace:
-      "Lahat ng idinadagdag mo sa Orbi: brand, audience, ideas, content, scripts, analytics na nilo-log mo, money records at settings. Dahil sa row-level security sa database, account mo lang ang nakakabasa nito.",
+      "Lahat ng idinadagdag mo sa Orbi: brand, audience, ideas, content, scripts, analytics na nilo-log mo, money records, collabs at settings. Sa collabs, kasama rito ang pangalan, handle at link ng mga creator na kasama mo na ikaw mismo ang nag-type; hindi sila inaabisuhan at hindi nila ito nakikita. Dahil sa row-level security sa database, account mo lang ang nakakabasa nito.",
     stores_requests_title: "Access requests",
     stores_requests:
       "Kapag nag-request kang sumali: pangalan, email, anong content mo at ang link na binigay mo, kasama ang petsa. Ginagamit lang ito ng Orbi para magdesisyon sa access. Walang IP address na sine-save.",

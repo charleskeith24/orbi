@@ -4,6 +4,7 @@ import { formatDistanceStrict } from "date-fns"
 import { ChartNoAxesColumn, GitFork, Send } from "lucide-react"
 import Link from "next/link"
 import { ContentThumbnail, InlineText } from "@/components/common"
+import { ItemCollabChip } from "@/components/features/collabs/collab-links"
 import { Button } from "@/components/ui/button"
 import { useT } from "@/lib/i18n"
 import { PLATFORMS, PUBLISHED_STAGES, REPURPOSE_TYPES } from "@/lib/constants"
@@ -63,6 +64,7 @@ export function WorkspaceHeader({ item, now, onDeleting }: { item: ContentItem; 
                   </Link>
                 </>
               ) : null}
+              <ItemCollabChip itemId={item.id} />
               {updated ? (
                 <>
                   <span aria-hidden>·</span>

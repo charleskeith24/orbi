@@ -93,4 +93,14 @@ export const INPUTS: Record<AiTaskName, unknown> = {
     audience_problems: ["Hindi alam paano mag-file ng BIR", "Walang ipon kahit malaki ang kita", "Takot sa tax penalties"],
     aims: ["clients", "products"],
   },
+  collab_ideas: { count: 5 },
+  collab_pitch: {
+    type: "joint_live",
+    title: "Joint Live: COD vs prepaid for new sellers",
+    partner_name: "Tina Ramos",
+    partner_handle: "@tinasells.ph",
+    partner_platform: "facebook",
+    partner_niche: "Seller logistics",
+    collab_date: "2026-09-24",
+  },
 }

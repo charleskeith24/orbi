@@ -7,6 +7,8 @@ import type {
   BrandTone,
   CampaignStatus,
   CategoricalColor,
+  CollabStatus,
+  CollabType,
   DealSource,
   DealStatus,
   EngagementTaskConfig,
@@ -43,6 +45,12 @@ import type {
   StoryType,
   WinnerMetric,
 } from "./types"
+import {
+  collabStatusDescriptionMessages,
+  collabStatusMessages,
+  collabTypeDescriptionMessages,
+  collabTypeMessages,
+} from "./i18n/messages/collabs"
 import {
   dealSourceMessages,
   dealStatusDescriptionMessages,
@@ -940,6 +948,26 @@ export const INCOME_SOURCE_MAP = optionMap(INCOME_SOURCES)
 export const INCOME_STATUS_IDS: IncomeStatus[] = ["received", "expected"]
 export const INCOME_STATUSES: Option<IncomeStatus>[] = INCOME_STATUS_IDS.map((id) => ({ id, label: incomeStatusMessages.en[id] }))
 export const INCOME_STATUS_MAP = optionMap(INCOME_STATUSES)
+
+/* --------------------------------- Collabs -------------------------------- */
+// English labels come from `@/lib/i18n/messages/collabs`; translated UI uses those messages directly.
+
+/** Collab statuses in board order; `declined` is the side state (shown collapsed). */
+export const COLLAB_STATUS_IDS: CollabStatus[] = ["idea", "reached_out", "agreed", "scheduled", "published", "reviewed", "declined"]
+export const COLLAB_STATUSES: Option<CollabStatus>[] = COLLAB_STATUS_IDS.map((id) => ({
+  id,
+  label: collabStatusMessages.en[id],
+  description: collabStatusDescriptionMessages.en[id],
+}))
+export const COLLAB_STATUS_MAP = optionMap(COLLAB_STATUSES)
+
+export const COLLAB_TYPE_IDS: CollabType[] = ["duet_stitch", "guesting", "joint_live", "shoutout_swap", "giveaway", "co_created", "group_brand_deal", "other"]
+export const COLLAB_TYPES: Option<CollabType>[] = COLLAB_TYPE_IDS.map((id) => ({
+  id,
+  label: collabTypeMessages.en[id],
+  description: collabTypeDescriptionMessages.en[id],
+}))
+export const COLLAB_TYPE_MAP = optionMap(COLLAB_TYPES)
 
 /** Suggestions for `income_entries.affiliate_program` (free text — any program is allowed). */
 export const AFFILIATE_PROGRAM_SUGGESTIONS = ["TikTok Shop", "Shopee", "Lazada", "Involve Asia", "Amazon"]

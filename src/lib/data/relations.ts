@@ -23,6 +23,7 @@ export const REFERENCES: Partial<Record<TableName, Reference[]>> = {
     { table: "content_ideas", column: "goal_id", onDelete: "set_null" },
     { table: "content_items", column: "goal_id", onDelete: "set_null" },
     { table: "content_campaigns", column: "goal_id", onDelete: "set_null" },
+    { table: "collabs", column: "goal_id", onDelete: "set_null" },
   ],
   audience_personas: [
     { table: "audience_problems", column: "persona_id", onDelete: "set_null" },
@@ -46,6 +47,7 @@ export const REFERENCES: Partial<Record<TableName, Reference[]>> = {
     { table: "content_series", column: "pillar_id", onDelete: "set_null" },
     { table: "stories", column: "pillar_id", onDelete: "set_null" },
     { table: "research_items", column: "pillar_id", onDelete: "set_null" },
+    { table: "collabs", column: "pillar_id", onDelete: "set_null" },
     { table: "content_platforms", column: "preferred_pillar_ids", onDelete: "array_remove" },
   ],
   content_formats: [
@@ -69,6 +71,7 @@ export const REFERENCES: Partial<Record<TableName, Reference[]>> = {
     { table: "content_ideas", column: "campaign_id", onDelete: "set_null" },
     { table: "content_items", column: "campaign_id", onDelete: "set_null" },
     { table: "brand_deals", column: "campaign_id", onDelete: "set_null" },
+    { table: "collabs", column: "campaign_id", onDelete: "set_null" },
   ],
   content_series: [
     { table: "content_ideas", column: "series_id", onDelete: "set_null" },
@@ -88,8 +91,12 @@ export const REFERENCES: Partial<Record<TableName, Reference[]>> = {
     { table: "weekly_reviews", column: "planned_item_ids", onDelete: "array_remove" },
     { table: "brand_deals", column: "content_item_ids", onDelete: "array_remove" },
     { table: "income_entries", column: "content_item_id", onDelete: "set_null" },
+    { table: "collabs", column: "content_item_ids", onDelete: "array_remove" },
   ],
-  brand_deals: [{ table: "income_entries", column: "brand_deal_id", onDelete: "set_null" }],
+  brand_deals: [
+    { table: "income_entries", column: "brand_deal_id", onDelete: "set_null" },
+    { table: "collabs", column: "brand_deal_id", onDelete: "set_null" },
+  ],
 }
 
 export const TAGGABLE_TABLES: TaggableEntity[] = [

@@ -1663,3 +1663,66 @@ create policy "Users can delete their own rate_cards" on public.rate_cards
 
 revoke all on table public.rate_cards from anon;
 grant select, insert, update, delete on table public.rate_cards to authenticated;
+
+-- ----------------------------------------------------------------------------
+-- collabs
+-- ----------------------------------------------------------------------------
+
+create table public.collabs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  title text not null default '',
+  type text not null default 'other' check (type in ('duet_stitch', 'guesting', 'joint_live', 'shoutout_swap', 'giveaway', 'co_created', 'group_brand_deal', 'other')),
+  status text not null default 'idea' check (status in ('idea', 'reached_out', 'agreed', 'scheduled', 'published', 'reviewed', 'declined')),
+  partner_name text not null default '',
+  partner_handle text not null default '',
+  partner_platform text check (partner_platform in ('facebook', 'tiktok', 'instagram', 'youtube', 'linkedin', 'x', 'threads')),
+  partner_link text not null default '',
+  partner_niche text not null default '',
+  partner_followers integer check (partner_followers >= 0),
+  pillar_id uuid references public.content_pillars (id) on delete set null,
+  goal_id uuid references public.content_goals (id) on delete set null,
+  campaign_id uuid references public.content_campaigns (id) on delete set null,
+  brand_deal_id uuid references public.brand_deals (id) on delete set null,
+  content_item_ids uuid[] not null default '{}',
+  collab_date date,
+  follow_up_on date,
+  outreach_message text not null default '',
+  notes text not null default '',
+  rating integer check (rating between 1 and 5),
+  would_repeat boolean,
+  status_changed_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+comment on table public.collabs is 'Collabs: collaborations with other creators (duets, guesting, joint Lives, shoutout swaps, giveaways, co-created posts, group brand deals) from idea to reviewed results.';
+comment on column public.collabs.partner_followers is 'Approximate followers on the partner''s main platform, typed by the creator; null when unknown.';
+comment on column public.collabs.brand_deal_id is 'Group brand deals: the brand deal this collab is part of.';
+comment on column public.collabs.content_item_ids is 'Array reference to content_items.id: the creator''s posts made for the collab. No FK (arrays cannot carry one); the app removes deleted ids (relations.ts: array_remove).';
+comment on column public.collabs.follow_up_on is 'Reached out: the day to follow up if the partner has not replied (shown on Today).';
+comment on column public.collabs.rating is 'The creator''s rating of the results, 1 to 5; null until reviewed.';
+comment on column public.collabs.status_changed_at is 'When the status last changed.';
+
+create index collabs_user_id_status_idx on public.collabs (user_id, status);
+create index collabs_pillar_id_idx on public.collabs (pillar_id);
+create index collabs_goal_id_idx on public.collabs (goal_id);
+create index collabs_campaign_id_idx on public.collabs (campaign_id);
+create index collabs_brand_deal_id_idx on public.collabs (brand_deal_id);
+
+create trigger set_updated_at before update on public.collabs
+  for each row execute function public.set_updated_at();
+
+alter table public.collabs enable row level security;
+
+create policy "Users can view their own collabs" on public.collabs
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy "Users can insert their own collabs" on public.collabs
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy "Users can update their own collabs" on public.collabs
+  for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "Users can delete their own collabs" on public.collabs
+  for delete to authenticated using ((select auth.uid()) = user_id);
+
+revoke all on table public.collabs from anon;
+grant select, insert, update, delete on table public.collabs to authenticated;

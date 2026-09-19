@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PLATFORMS } from "@/lib/constants"
 import { useT } from "@/lib/i18n"
+import { linkContentToCollab } from "@/components/features/collabs/collab-actions"
 import { useTable } from "@/lib/store"
 import type { ContentItem, ID, InsertRow } from "@/lib/types"
 import { truncate } from "@/lib/utils"
@@ -19,27 +20,30 @@ type Tab = "idea" | "scratch"
 
 /**
  * New content: from an idea in the Idea Bank (converted into one item per platform) or from scratch.
- * `ideaId` preselects an idea; `defaults` prefill the from-scratch form and carry through to every item.
+ * `ideaId` preselects an idea; `defaults` prefill the from-scratch form and carry through to every item;
+ * `collabId` links the created items to that collab.
  */
 export function NewContentDialog({
   open,
   onOpenChange,
   ideaId,
   defaults,
+  collabId,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   ideaId?: ID
   defaults?: InsertRow<"content_items">
+  collabId?: ID
 }) {
   return (
     <CaptureDialog open={open} onOpenChange={onOpenChange} size="lg">
-      <NewContentForm key={ideaId ?? "new"} ideaId={ideaId} defaults={defaults} onClose={() => onOpenChange(false)} />
+      <NewContentForm key={ideaId ?? collabId ?? "new"} ideaId={ideaId} defaults={defaults} collabId={collabId} onClose={() => onOpenChange(false)} />
     </CaptureDialog>
   )
 }
 
-function NewContentForm({ ideaId, defaults, onClose }: { ideaId?: ID; defaults?: ContentDefaults; onClose: () => void }) {
+function NewContentForm({ ideaId, defaults, collabId, onClose }: { ideaId?: ID; defaults?: ContentDefaults; collabId?: ID; onClose: () => void }) {
   const router = useRouter()
   const t = useT(newContentMessages)
   const ideas = useTable("content_ideas")
@@ -58,6 +62,7 @@ function NewContentForm({ ideaId, defaults, onClose }: { ideaId?: ID; defaults?:
 
   function created(items: ContentItem[], title: string) {
     if (!items.length) return
+    if (collabId) linkContentToCollab(collabId, items.map((item) => item.id), { silent: true })
     const platforms = items.map((item) => PLATFORMS[item.platform]?.label ?? item.platform).join(", ")
     toast.success(items.length > 1 ? t("created_many", { count: items.length }) : t("created_single"), {
       description: `${truncate(title, 60)} · ${platforms}`,

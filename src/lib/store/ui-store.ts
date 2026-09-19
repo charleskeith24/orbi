@@ -4,7 +4,8 @@ import type { ID, InsertRow } from "@/lib/types"
 /** App-wide dialogs that can be opened from anywhere (top bar, dashboard, Today, command palette). */
 export type GlobalDialog =
   | { type: "quick-capture"; initialText?: string }
-  | { type: "new-content"; ideaId?: ID; defaults?: InsertRow<"content_items"> }
+  /** `collabId` links every created item to that collab (Collabs → "Create content for this collab"). */
+  | { type: "new-content"; ideaId?: ID; defaults?: InsertRow<"content_items">; collabId?: ID }
   | { type: "log-post" }
   | { type: "add-metrics"; itemId?: ID }
   /** Log money received or expected; `dealId` / `itemId` pre-link the entry to a brand deal / content item. */

@@ -40,6 +40,7 @@ export const TABLE_NAMES: TableName[] = [
   "brand_deals",
   "income_entries",
   "rate_cards",
+  "collabs",
 ]
 
 export function emptyDatabase(): Database {
@@ -496,6 +497,29 @@ export const TABLE_DEFAULTS: Defaults = {
     is_active: true,
     sort_order: 0,
   },
+  collabs: {
+    title: "",
+    type: "other",
+    status: "idea",
+    partner_name: "",
+    partner_handle: "",
+    partner_platform: null,
+    partner_link: "",
+    partner_niche: "",
+    partner_followers: null,
+    pillar_id: null,
+    goal_id: null,
+    campaign_id: null,
+    brand_deal_id: null,
+    content_item_ids: [],
+    collab_date: null,
+    follow_up_on: null,
+    outreach_message: "",
+    notes: "",
+    rating: null,
+    would_repeat: null,
+    status_changed_at: new Date().toISOString(),
+  },
 }
 
 /** Date columns whose default is "today" in the user's local calendar, evaluated per insert. */
@@ -506,6 +530,11 @@ const LOCAL_DATE_DEFAULTS: Partial<Record<TableName, readonly string[]>> = {
   engagement_logs: ["date"],
   weekly_reviews: ["week_start"],
   income_entries: ["date"],
+}
+
+/** Timestamp columns whose default is the insert time (`now()` in Postgres). */
+const NOW_DEFAULTS: Partial<Record<TableName, readonly string[]>> = {
+  collabs: ["status_changed_at"],
 }
 
 /** Deep-ish clone for defaults so array/object defaults are never shared between rows. */
@@ -532,6 +561,9 @@ export function buildRow<T extends TableName>(
     if (value !== undefined) row[key] = value
   }
   const iso = now.toISOString()
+  for (const key of NOW_DEFAULTS[table] ?? []) {
+    if ((values as Record<string, unknown>)[key] === undefined) row[key] = iso
+  }
   row.id = (values as { id?: string }).id ?? uid()
   row.user_id = userId
   row.created_at = (values as { created_at?: string }).created_at ?? iso

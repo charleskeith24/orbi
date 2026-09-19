@@ -27,6 +27,7 @@ export function GlobalDialogs() {
         onOpenChange={onOpenChange}
         ideaId={dialog?.type === "new-content" ? dialog.ideaId : undefined}
         defaults={dialog?.type === "new-content" ? dialog.defaults : undefined}
+        collabId={dialog?.type === "new-content" ? dialog.collabId : undefined}
       />
       <LogPostDialog open={dialog?.type === "log-post"} onOpenChange={onOpenChange} />
       <AddMetricsDialog

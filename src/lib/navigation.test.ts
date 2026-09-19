@@ -17,6 +17,13 @@ describe("navigation", () => {
     expect(new Set(ALL_PAGES.map((p) => p.href)).size).toBe(ALL_PAGES.length)
   })
 
+  it("lists Collabs in Organize right after Campaigns, outside Simple mode", () => {
+    const organize = NAV_SECTIONS.find((s) => s.label === "Organize")!.items.map((i) => i.title)
+    expect(organize.slice(0, 2)).toEqual(["Campaigns", "Collabs"])
+    expect(NAV_SECTIONS.flatMap((s) => s.items).find((i) => i.href === "/collabs")?.simple).toBeUndefined()
+    expect(ALL_PAGES.find((p) => p.href === "/collabs")).toMatchObject({ title: "Collabs", section: "Organize" })
+  })
+
   it("hides the other modules in Simple mode and counts them", () => {
     const all = titles(NAV_SECTIONS)
     const simple = sidebarSections(NAV_SECTIONS, { simpleMode: true, pathname: "/" })

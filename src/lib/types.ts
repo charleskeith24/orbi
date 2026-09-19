@@ -257,6 +257,19 @@ export type DealSource = "inbound" | "outbound" | "agency" | "referral"
 export type IncomeSource = "brand_deal" | "affiliate" | "platform_payout" | "product" | "service" | "tip" | "other"
 export type IncomeStatus = "expected" | "received"
 
+/** How two creators work together (Collabs). */
+export type CollabType =
+  | "duet_stitch"
+  | "guesting"
+  | "joint_live"
+  | "shoutout_swap"
+  | "giveaway"
+  | "co_created"
+  | "group_brand_deal"
+  | "other"
+/** Collab pipeline (Collabs), in board order. `declined` is the side state. */
+export type CollabStatus = "idea" | "reached_out" | "agreed" | "scheduled" | "published" | "reviewed" | "declined"
+
 /** Categorical color slots (validated data-viz palette, see globals.css `--cat-*`). */
 export type CategoricalColor =
   | "blue"
@@ -928,6 +941,43 @@ export interface RateCard extends BaseRow {
 }
 
 /* -------------------------------------------------------------------------- */
+/*                                  Collabs                                   */
+/* -------------------------------------------------------------------------- */
+
+/** Table: `collabs` — a collaboration with another creator, from idea to reviewed results. */
+export interface Collab extends BaseRow {
+  title: string
+  type: CollabType
+  status: CollabStatus
+  partner_name: string
+  /** Their handle on `partner_platform`, e.g. "@ate.budget". */
+  partner_handle: string
+  partner_platform: PlatformId | null
+  partner_link: string
+  /** What they make content about, e.g. "Freelance skills". */
+  partner_niche: string
+  /** Approximate followers on their main platform; null when unknown. */
+  partner_followers: number | null
+  pillar_id: ID | null
+  goal_id: ID | null
+  campaign_id: ID | null
+  /** Group brand deals: the deal this collab is part of. */
+  brand_deal_id: ID | null
+  /** Your posts made for the collab. Array reference to content_items (no FK; relations.ts array_remove). */
+  content_item_ids: ID[]
+  /** When it happens or goes live. */
+  collab_date: ISODate | null
+  /** Reached out: when to follow up if they haven't replied. */
+  follow_up_on: ISODate | null
+  outreach_message: string
+  notes: string
+  /** Your rating of the results, 1–5; null until reviewed. */
+  rating: number | null
+  would_repeat: boolean | null
+  status_changed_at: ISODateTime
+}
+
+/* -------------------------------------------------------------------------- */
 /*                                  Database                                  */
 /* -------------------------------------------------------------------------- */
 
@@ -964,6 +1014,7 @@ export interface Database {
   brand_deals: BrandDeal[]
   income_entries: IncomeEntry[]
   rate_cards: RateCard[]
+  collabs: Collab[]
 }
 
 export type TableName = keyof Database

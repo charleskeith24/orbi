@@ -20,6 +20,7 @@ import {
   STORY_TYPE_MAP,
 } from "@/lib/constants"
 import { searchDocMessages } from "@/components/app-shell/command-palette-messages"
+import { collabStatusMessages, collabTypeMessages } from "@/lib/i18n/messages/collabs"
 import { contentItemDate, formatDate, formatShortDate } from "@/lib/dates"
 import { translator, type UiLang } from "@/lib/i18n/core"
 import type {
@@ -27,6 +28,7 @@ import type {
   AudienceProblem,
   AudienceQuestion,
   BrandDeal,
+  Collab,
   ContentAngle,
   ContentCampaign,
   ContentExperiment,
@@ -59,6 +61,7 @@ export type SearchKind =
   | "research"
   | "experiment"
   | "deal"
+  | "collab"
   | "topic"
   | "analytics"
 
@@ -561,6 +564,32 @@ export function buildDealDocs(deals: BrandDeal[], lang: UiLang = "en"): SearchDo
   )
 }
 
+/** Collabs → `/collabs?open=<id>`, found by title, partner name, handle and niche. */
+export function buildCollabDocs(collabs: Collab[], lang: UiLang = "en"): SearchDoc[] {
+  const t = translator(searchDocMessages, lang)
+  const status = translator(collabStatusMessages, lang)
+  const type = translator(collabTypeMessages, lang)
+  return collabs.map((collab): SearchDoc => {
+    const partner = collab.partner_handle.trim() || collab.partner_name.trim()
+    return {
+      key: `collab:${collab.id}`,
+      kind: "collab",
+      id: collab.id,
+      title: collab.title.trim() || (partner ? t("collab_with", { partner }) : t("untitled_collab")),
+      secondary: joinParts(status(collab.status), type(collab.type), partner, collab.partner_platform ? PLATFORMS[collab.partner_platform]?.label : null),
+      hint: collab.collab_date ? formatShortDate(collab.collab_date) : "",
+      href: `/collabs?open=${collab.id}`,
+      updatedAt: collab.updated_at,
+      fields: [
+        ...field(collab.title, 3),
+        ...field([collab.partner_name, collab.partner_handle].join(" "), 3),
+        ...field(collab.partner_niche, 2),
+        ...field(collab.notes, 1),
+      ],
+    }
+  })
+}
+
 export interface SearchSources {
   items: ContentItem[]
   ideas: ContentIdea[]
@@ -576,6 +605,7 @@ export interface SearchSources {
   research: ResearchItem[]
   experiments: ContentExperiment[]
   deals: BrandDeal[]
+  collabs: Collab[]
   scripts: ContentScript[]
   metrics: ContentMetric[]
 }
@@ -598,6 +628,7 @@ export function buildSearchIndex(sources: SearchSources, lang: UiLang = "en"): S
     research: buildResearchDocs(sources.research, lang),
     experiment: buildExperimentDocs(sources.experiments, lang),
     deal: buildDealDocs(sources.deals, lang),
+    collab: buildCollabDocs(sources.collabs, lang),
     topic: buildTopicDocs(sources.ideas, lang),
     analytics: buildAnalyticsDocs(sources.items, sources.metrics, lang),
   }

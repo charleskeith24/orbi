@@ -33,6 +33,7 @@ import { CAMPAIGNS, ENGAGEMENT_NOTES, EXPERIMENTS, MONTHLY_REVIEW, SERIES, WEEKL
 import { PUBLISHED_A } from "./published-a"
 import { PUBLISHED_B } from "./published-b"
 import { RESEARCH } from "./research-data"
+import { buildCollabs } from "./collabs"
 import { buildMoney } from "./money"
 import { hashString } from "./rng"
 import { angleKey, buildStarterKit, formatKey, hookTemplateKey, tagKey } from "./starter"
@@ -1053,6 +1054,21 @@ export function buildDemoWorkspace(ctx: SeedContext): Database {
   db.brand_deals = money.brand_deals
   db.income_entries = money.income_entries
   db.rate_cards = money.rate_cards
+
+  /* ----------------------------------- Collabs ----------------------------------- */
+
+  // After Money (a group brand deal links to a deal); last so earlier ids never shift.
+  db.collabs = buildCollabs(ctx, {
+    item: (ref) => {
+      const [key, index] = ref.split(":")
+      return specItems.get(key)?.find((b) => b.index === (index ? Number(index) : 0))?.row.id ?? null
+    },
+    campaign: (key) => ctx.id(`campaign:${key}`),
+    deal: (key) => ctx.id(`deal:${key}`),
+    pillar: pillarId,
+    goal: goalId,
+    workspaceStart,
+  })
 
   return db
 }

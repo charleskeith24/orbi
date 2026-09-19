@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 import { ColorDot, EmptyState, PageContainer, PageHeader, SectionCard } from "@/components/common"
+import { CampaignCollabs } from "@/components/features/collabs/collab-links"
 import { Button } from "@/components/ui/button"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { useT, useUiLang } from "@/lib/i18n"
@@ -151,7 +152,10 @@ function CampaignDetail({ campaign, onDeleting }: { campaign: ContentCampaign; o
           onAddExisting={() => setAddOpen(true)}
           onNewContent={newContent}
         />
-        <LinkedIdeas campaign={campaign} />
+        <div className="flex min-w-0 flex-col gap-4">
+          <LinkedIdeas campaign={campaign} />
+          <CampaignCollabs campaignId={campaign.id} />
+        </div>
       </div>
 
       <CampaignFormDialog open={editOpen} onOpenChange={setEditOpen} campaign={campaign} />

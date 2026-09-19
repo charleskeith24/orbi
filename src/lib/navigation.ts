@@ -1,4 +1,5 @@
 import {
+  Blend,
   BookOpen,
   CalendarCheck,
   CalendarDays,
@@ -134,6 +135,7 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "Organize",
     items: [
       { title: "Campaigns", href: "/campaigns", icon: Megaphone, description: "Grouped content pushes" },
+      { title: "Collabs", href: "/collabs", icon: Blend, description: "Creator collaborations and whether they were worth it" },
       { title: "Series", href: "/series", icon: Repeat, description: "Recurring content series" },
       {
         title: "Story Vault",

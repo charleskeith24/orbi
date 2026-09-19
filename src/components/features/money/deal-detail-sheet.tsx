@@ -4,6 +4,7 @@ import { BadgeCheck, Megaphone, Pencil, Receipt } from "lucide-react"
 import Link from "next/link"
 import { useId } from "react"
 import { ColorDot, DefinitionList, DetailSheet, KeyValue, OptionSelect, PlatformIcon } from "@/components/common"
+import { DealCollabs } from "@/components/features/collabs/collab-links"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -185,6 +186,10 @@ function DealBody({ deal }: { deal: BrandDeal }) {
 
       <Section title={t("linked_content")}>
         <DealContentSection deal={deal} />
+      </Section>
+
+      <Section title={t("collabs")}>
+        <DealCollabs dealId={deal.id} />
       </Section>
 
       <Section title={t("contact")}>

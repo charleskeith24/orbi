@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
-import { funnelMix, pillarMix } from "@/lib/analytics"
+import { collabLift, funnelMix, pillarMix } from "@/lib/analytics"
 import {
+  COLLAB_STATUS_IDS,
   DEAL_SOURCE_IDS,
   DEAL_STATUS_IDS,
   HOOK_CATEGORIES,
@@ -297,7 +298,7 @@ describe("createDemoDatabase", () => {
       }
     }
     expect(problems).toEqual([])
-  })
+  }, 30_000) // builds 28 demo workspaces; slow when the whole suite runs in parallel
 
   it("has a complete, realistic brand", () => {
     const brand = db.brand_profiles[0]
@@ -353,6 +354,25 @@ describe("createDemoDatabase", () => {
       expect(paid.map((e) => e.date), deal.brand_name).toContain(deal.paid_at)
     }
     expect(entries.some((e) => e.content_item_id !== null)).toBe(true)
+  })
+
+  it("has collabs in every status, linked to real posts, with enough data for collab lift", () => {
+    expect(new Set(db.collabs.map((c) => c.status))).toEqual(new Set(COLLAB_STATUS_IDS))
+    for (const c of db.collabs) {
+      for (const id of c.content_item_ids) expect(items.get(id)?.stage, c.title).toMatch(/published|repurpose/)
+      if (c.status === "reviewed") expect(c.rating, c.title).not.toBeNull()
+      if (c.status === "reached_out") expect(c.follow_up_on, c.title).not.toBeNull()
+      if (c.rating !== null) expect(c.rating >= 1 && c.rating <= 5, c.title).toBe(true)
+      expect(c.title.trim() || c.partner_handle.trim(), c.id).toBeTruthy()
+    }
+    expect(db.collabs.some((c) => c.brand_deal_id !== null && c.type === "group_brand_deal")).toBe(true)
+    const lift = collabLift(db, NOW)
+    expect(lift.enough).toBe(true)
+    expect(lift.followers?.lift).not.toBeNull()
+    // Today: a follow-up due and a collab happening today.
+    const today = toISODate(NOW)
+    expect(db.collabs.some((c) => c.status === "reached_out" && c.follow_up_on! <= today)).toBe(true)
+    expect(db.collabs.some((c) => c.status === "scheduled" && c.collab_date === today)).toBe(true)
   })
 
   it("has rate cards for the media kit, including a quote-only package", () => {
