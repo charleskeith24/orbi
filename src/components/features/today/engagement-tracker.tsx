@@ -1,6 +1,6 @@
 "use client"
 
-import { MessagesSquare, Minus, Plus } from "lucide-react"
+import { MessagesSquare, Minus, Plus, Settings2 } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useId, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
@@ -73,8 +73,10 @@ function TrackerLine({
         <span className="size-4 shrink-0" aria-hidden />
       )}
       <div className="min-w-0 flex-1">
+        {/* The row's hint ("Replies on your own posts") is its tooltip (Calm UI: no help line under data). */}
         <label
           htmlFor={row.kind === "task" ? id : undefined}
+          title={row.hint || undefined}
           className={cn("block text-sm leading-snug text-pretty", row.done && "text-muted-foreground")}
         >
           {row.label}
@@ -89,9 +91,7 @@ function TrackerLine({
             aria-label={t("progress_aria", { label: row.label })}
             valueText={t("of_target", { count: row.count, target: row.target })}
           />
-        ) : (
-          <p className="truncate text-xs text-muted-foreground">{row.hint}</p>
-        )}
+        ) : null}
       </div>
       {row.counter ? (
         <Stepper row={row} onStep={onStep} />
@@ -198,21 +198,23 @@ export function EngagementTracker({
   return (
     <div id="engagement" tabIndex={-1} className={cn("min-w-0 scroll-mt-16", JUMP_TARGET, className)}>
       <SectionCard
-        title="Engagement Tracker"
+        title={t("tracker_title")}
         icon={MessagesSquare}
-        description={
-          tasks.length ? (
-            <>
-              <span className="num">{done}</span> {t("daily_tasks_done", { total: tasks.length })}
-            </>
-          ) : (
-            t("no_daily_tasks")
-          )
-        }
+        info={t("tracker_info")}
         action={
-          <Button asChild variant="ghost" size="xs" className="text-muted-foreground">
-            <Link href="/settings?tab=engagement">{t("edit_tasks")}</Link>
-          </Button>
+          <>
+            {tasks.length ? (
+              <span className="px-1 text-xs text-muted-foreground num" title={t("tracker_tasks_aria", { done, total: tasks.length })}>
+                <span className="sr-only">{t("tracker_tasks_aria", { done, total: tasks.length })}</span>
+                <span aria-hidden>{`${done}/${tasks.length}`}</span>
+              </span>
+            ) : null}
+            <Button asChild variant="ghost" size="icon-xs" className="text-muted-foreground" title={t("edit_tasks")}>
+              <Link href="/settings?tab=engagement" aria-label={t("edit_tasks")}>
+                <Settings2 aria-hidden />
+              </Link>
+            </Button>
+          </>
         }
         className="h-full"
         contentClassName="flex flex-col gap-4"
@@ -231,7 +233,7 @@ export function EngagementTracker({
         </ul>
         <QuestionForm day={day} onCollected={() => step("questions_collected", 1)} />
         <NotesField value={log?.notes ?? ""} onSave={(notes) => write({ notes })} />
-        <EngagementHistory days={history} className="border-t pt-3" />
+        <EngagementHistory days={history} className="border-t pt-2" />
       </SectionCard>
     </div>
   )

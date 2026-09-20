@@ -1,7 +1,6 @@
 "use client"
 
 import { ArrowDown, ArrowUp, Copy, CopyPlus, Ellipsis, Pencil, Plus, Trash } from "lucide-react"
-import Link from "next/link"
 import { toast } from "sonner"
 import { ColorDot, FormatLabel, PlatformIcon, SectionCard, useConfirm } from "@/components/common"
 import { Button } from "@/components/ui/button"
@@ -102,49 +101,30 @@ export function ScheduleWeek({
   }
 
   return (
-    <SectionCard
-      title={t("week_title")}
-      description={t("week_description")}
-      contentClassName="p-0"
-      footer={
-        <span>
-          {t("footer_pre")}
-          <Link href="/calendar?view=week" className="font-medium text-foreground underline-offset-4 hover:underline">
-            Calendar
-          </Link>
-          {t("footer_mid")}
-          <Link href="/calendar/planner" className="font-medium text-foreground underline-offset-4 hover:underline">
-            Weekly Planner
-          </Link>
-          {t("footer_post")}
-        </span>
-      }
-    >
+    <SectionCard title={t("week_title")} info={t("week_info")} contentClassName="p-0">
       <ol className="divide-y border-t">
         {days.map((day) => {
           const list = daySlots(slots, day)
           const posts = list.filter((s) => s.is_active).reduce((n, s) => n + slotPosts(s), 0)
           return (
             <li key={day} className="grid min-w-0 gap-2 px-4 py-3 md:grid-cols-[9.5rem_minmax(0,1fr)] md:gap-4">
-              <div className="flex min-w-0 items-center justify-between gap-2 md:flex-col md:items-start md:justify-start md:gap-1">
+              <div className="flex min-w-0 items-center justify-between gap-2 md:items-start">
                 <div className="min-w-0">
                   <h3 className="text-sm font-medium">{dayName(day, t)}</h3>
                   <p className="text-xs text-muted-foreground num">
-                    {list.length
-                      ? `${t.plural("slots", list.length, { count: formatNumber(list.length) })} · ${t.plural("posts", posts, { count: formatNumber(posts) })}`
-                      : t("rest_day")}
+                    {list.length ? t.plural("posts", posts, { count: formatNumber(posts) }) : t("rest_day")}
                   </p>
                 </div>
                 <Button
                   type="button"
-                  size="xs"
+                  size="icon-xs"
                   variant="ghost"
                   onClick={() => onAdd(day)}
                   aria-label={t("add_slot_on", { day: dayName(day, t) })}
-                  className="-ml-2 text-muted-foreground max-md:ml-0"
+                  title={t("add_slot_on", { day: dayName(day, t) })}
+                  className="text-muted-foreground"
                 >
                   <Plus aria-hidden />
-                  {t("add_slot")}
                 </Button>
               </div>
               <div className="flex min-w-0 flex-col gap-1.5">
@@ -167,9 +147,8 @@ export function ScheduleWeek({
                     />
                   ))
                 ) : (
-                  <p className="flex min-h-9 items-center text-xs text-muted-foreground">
-                    {t("no_target_on", { day: dayName(day, t) })}
-                  </p>
+                  // A rest day: the day column says so; adding a slot is its ＋.
+                  <span aria-hidden className="hidden min-h-9 md:block" />
                 )}
               </div>
             </li>

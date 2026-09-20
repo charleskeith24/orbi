@@ -22,7 +22,6 @@ import { PausedPlatformCard, PlatformCard, type PlatformOptions } from "./platfo
 import { PlatformPlanSummary } from "./platform-plan"
 import { platformsMessages } from "./platforms-messages"
 import { platformLabel, platformPlan, type PlatformPlanRow } from "./platforms-model"
-import { StrategyTabs } from "./strategy-tabs"
 import { useNow } from "./use-now"
 
 type RowWithStrategy = PlatformPlanRow & { strategy: PlatformStrategy }
@@ -86,22 +85,13 @@ export function PlatformsView() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Platform Strategy"
-        icon={Radio}
-        description={t("description")}
-      >
-        <StrategyTabs />
-      </PageHeader>
+      <PageHeader title="Platform Strategy" info={t("description")} />
 
       <PlatformPlanSummary plan={plan} />
 
-      <PageSection
-        title={t("active_title")}
-        description={t("active_description")}
-      >
+      <PageSection title={t("active_title")} count={active.length} info={t("active_description")}>
         {active.length ? (
-          <div className="grid min-w-0 gap-4 xl:grid-cols-2">
+          <div className="grid min-w-0 items-start gap-4 lg:grid-cols-2">
             {active.map((row) => (
               <PlatformCard key={row.strategy.id} row={row} options={options} highlighted={openPlatform === row.platform} />
             ))}
@@ -116,10 +106,7 @@ export function PlatformsView() {
       </PageSection>
 
       {paused.length || missing.length ? (
-        <PageSection
-          title={t("paused_title")}
-          description={t("paused_description")}
-        >
+        <PageSection title={t("paused_title")} count={paused.length + missing.length} info={t("paused_description")}>
           <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {paused.map((row) => (
               <PausedPlatformCard key={row.strategy.id} row={row} />

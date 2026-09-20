@@ -66,12 +66,14 @@ function RepurposeTile({
             <span className="truncate text-sm font-medium">{spec.label}</span>
             {generating ? <Spinner className="size-3.5 text-muted-foreground" /> : null}
           </span>
+          {/* Where it goes out stays visible; what the format is, is the tooltip (and read to screen readers). */}
           <span
             id={`${id}-desc`}
             className="mt-0.5 block text-xs text-pretty text-muted-foreground"
-            title={spec.platform ? undefined : t("defaults_to", { platform: PLATFORMS[state.platform].label })}
+            title={spec.platform ? spec.description : `${spec.description} · ${t("defaults_to", { platform: PLATFORMS[state.platform].label })}`}
           >
-            {spec.description} · {where}
+            <span className="sr-only">{spec.description} · </span>
+            {where}
           </span>
         </label>
         {recommended ? (

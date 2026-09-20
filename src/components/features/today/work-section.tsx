@@ -20,12 +20,14 @@ export const JUMP_TARGET =
 
 /**
  * A Today work list: bordered card with the count next to the title, rows edge to edge, "Show all"
- * past five. `id` is the in-page anchor used by the Daily rhythm strip.
+ * past five. `id` is the in-page anchor used by the Daily rhythm strip. Calm UI: the explanation sits in the
+ * title's ⓘ (`info`; `description` is the older name for it and renders the same way), never as a line.
  */
 export function WorkSection<T>({
   id,
   title,
   icon,
+  info,
   description,
   action,
   items,
@@ -38,13 +40,16 @@ export function WorkSection<T>({
   id: string
   title: string
   icon: IconComponent
+  /** Explanation behind the ⓘ next to the title. */
+  info?: React.ReactNode
+  /** Older name for `info` (shown in the ⓘ, not as a line). */
   description?: React.ReactNode
   action?: React.ReactNode
   items: T[]
   getKey: (item: T) => string
   renderItem: (item: T) => React.ReactNode
   empty: React.ReactNode
-  /** Count in the critical tone when there are items (Overdue). */
+  /** Late work (Overdue): the header counts in the critical tone. */
   urgent?: boolean
   className?: string
 }) {
@@ -54,18 +59,13 @@ export function WorkSection<T>({
   return (
     <div id={id} tabIndex={-1} className={cn("min-w-0 scroll-mt-16", JUMP_TARGET, className)}>
       <SectionCard
-        title={
-          <span className="inline-flex items-center gap-2">
-            {title}
-            <span className={cn("text-xs num", urgent && items.length ? "font-semibold text-critical-fg" : "font-normal text-muted-foreground")}>
-              {items.length}
-            </span>
-          </span>
-        }
+        title={title}
+        count={items.length}
         icon={icon}
-        description={description}
+        info={info ?? description}
         action={action}
-        className="@container/work h-full"
+        // Late work counts in the critical tone (the count follows the title).
+        className={cn("@container/work h-full", urgent && items.length > 0 && "[&_h3+span]:font-semibold [&_h3+span]:text-critical-fg")}
         contentClassName="p-0"
         footer={
           items.length > INITIAL ? (

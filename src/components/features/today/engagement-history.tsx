@@ -1,3 +1,4 @@
+import { Disclosure } from "@/components/common"
 import { useT, type Translator } from "@/lib/i18n"
 import { cn, formatNumber } from "@/lib/utils"
 import type { EngagementDay } from "./engagement-utils"
@@ -9,20 +10,27 @@ function describe(day: EngagementDay, t: Translator<typeof todayMessages.en>, r:
   return t("history_day", { day: day.label, date: day.date, tasks, replies: r.plural("replies", day.replies, { count: formatNumber(day.replies) }) })
 }
 
-/** Seven small columns — share of engagement tasks done each day (4px rounded tops, ≤ 24px wide). */
+/**
+ * Seven small columns — share of engagement tasks done each day (4px rounded tops, ≤ 24px wide) — behind a
+ * "Last 7 days" disclosure whose meta is the week in numbers (days active · days complete).
+ */
 export function EngagementHistory({ days, className }: { days: EngagementDay[]; className?: string }) {
   const t = useT(todayMessages)
   const r = useT(rhythmMessages)
   const active = days.filter((day) => day.completed > 0 || day.replies > 0).length
   const complete = days.filter((day) => day.total > 0 && day.completed >= day.total).length
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-xs font-medium">{t("last_7")}</span>
-        <span className="text-xs text-muted-foreground">
-          <span className="num">{active}</span> {t("active")} · <span className="num">{complete}</span> {t("complete")}
+    <Disclosure
+      label={t("last_7")}
+      meta={
+        <span className="num">
+          {active} {t("active")} · {complete} {t("complete")}
         </span>
-      </div>
+      }
+      storageKey="today-engagement-history"
+      className={className}
+    >
+      <div className="flex flex-col gap-2">
       <ol className="grid grid-cols-7 gap-1.5" aria-label={t("history_aria")}>
         {days.map((day) => {
           const share = day.total ? day.completed / day.total : day.replies > 0 ? 1 : 0
@@ -42,6 +50,7 @@ export function EngagementHistory({ days, className }: { days: EngagementDay[]; 
           )
         })}
       </ol>
-    </div>
+      </div>
+    </Disclosure>
   )
 }

@@ -14,7 +14,7 @@ import {
   Trophy,
   type LucideIcon,
 } from "lucide-react"
-import { ColorDot, Meter, StatusPill, Token, type MeterTone, type StatusTone } from "@/components/common"
+import { ColorDot, Disclosure, Meter, StatusPill, Token, type MeterTone, type StatusTone } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -102,7 +102,7 @@ function GoalMenu({ name, role, active, actions }: { name: string; role: GoalRol
   )
 }
 
-/** One goal: category, focus role, progress toward its target this period and the content serving it. */
+/** One goal: category, focus role, progress toward its target this period and the content serving it (description and KPIs under "Details"). */
 export function GoalCard({ row, actions, started = true }: { row: GoalRow; actions: GoalCardActions; started?: boolean }) {
   const { goal, progress: p, role } = row
   const paceKey = goalPace(p, started)
@@ -142,7 +142,6 @@ export function GoalCard({ row, actions, started = true }: { row: GoalRow; actio
               {name}
             </button>
           </h3>
-          {goal.description ? <p className="line-clamp-2 text-xs text-pretty text-muted-foreground">{goal.description}</p> : null}
         </div>
         <GoalMenu name={name} role={role} active={goal.is_active} actions={actions} />
       </header>
@@ -196,20 +195,36 @@ export function GoalCard({ row, actions, started = true }: { row: GoalRow; actio
         </div>
       )}
 
-      <footer className="mt-auto flex flex-col gap-2 border-t pt-3 text-xs text-muted-foreground">
-        <p className="text-pretty">
-          <span className="font-medium text-foreground num">{row.published30}</span> {t.plural("footer_posts", row.published30)}
-          {row.share30 !== null ? <span className="num"> ({row.share30}%)</span> : null} ·{" "}
-          <span className="font-medium text-foreground num">{row.inProduction}</span> {t("footer_production")} ·{" "}
-          <span className="font-medium text-foreground num">{row.ideas}</span> {t.plural("footer_ideas", row.ideas)}
-        </p>
-        {goal.kpis.length ? (
-          <div className="flex flex-wrap items-center gap-1">
-            <span className="mr-0.5">KPIs</span>
-            {goal.kpis.map((kpi) => (
-              <Token key={kpi}>{kpi}</Token>
-            ))}
+      <footer className="mt-auto flex flex-col gap-2.5 border-t pt-3 text-xs text-muted-foreground">
+        <dl className="grid grid-cols-3 gap-2">
+          <div className="min-w-0">
+            <dt className="truncate">{t("footer_posts")}</dt>
+            <dd className="text-sm font-medium text-foreground num">
+              {row.published30}
+              {row.share30 !== null ? <span className="text-xs font-normal text-muted-foreground"> · {row.share30}%</span> : null}
+            </dd>
           </div>
+          <div className="min-w-0">
+            <dt className="truncate">{t("footer_production")}</dt>
+            <dd className="text-sm font-medium text-foreground num">{row.inProduction}</dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="truncate">{t("footer_ideas")}</dt>
+            <dd className="text-sm font-medium text-foreground num">{row.ideas}</dd>
+          </div>
+        </dl>
+        {goal.description || goal.kpis.length ? (
+          <Disclosure contentClassName="flex flex-col gap-2">
+            {goal.description ? <p className="text-pretty">{goal.description}</p> : null}
+            {goal.kpis.length ? (
+              <div className="flex flex-wrap items-center gap-1">
+                <span className="mr-0.5">KPIs</span>
+                {goal.kpis.map((kpi) => (
+                  <Token key={kpi}>{kpi}</Token>
+                ))}
+              </div>
+            ) : null}
+          </Disclosure>
         ) : null}
       </footer>
     </article>

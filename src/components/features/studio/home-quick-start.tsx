@@ -26,37 +26,32 @@ const ICONS: Partial<Record<ScriptFormat, LucideIcon>> = {
 }
 
 const TILE =
-  "group flex min-w-0 flex-col gap-2 rounded-lg border bg-card p-3 text-left outline-none transition-colors hover:border-foreground/20 hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:hover:bg-input/20"
+  "group flex h-11 min-w-0 items-center gap-2 rounded-lg border bg-card px-2.5 text-left outline-none transition-colors hover:border-foreground/20 hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:hover:bg-input/20"
 
-/** Format quick-starts (spec §16) plus "From scratch". */
+/**
+ * Format quick-starts (spec §16) plus "From scratch", one compact tile each (Calm UI). What each format is
+ * shows on hover and in the dialog that opens.
+ */
 export function QuickStartGrid({ onStart, onScratch }: { onStart: (format: ScriptFormat) => void; onScratch: () => void }) {
   const t = useT(studioHomeMessages)
   const brand = useBrand()
   return (
-    <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+    <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
       {QUICK_START_FORMATS.map((format) => {
         const spec = SCRIPT_FORMATS[format]
         const Icon = ICONS[format] ?? FilePlus2
         const platform = quickStartPlatform(format, brand.main_platforms)
         return (
-          <button key={format} type="button" className={TILE} onClick={() => onStart(format)}>
-            <span className="flex items-center justify-between gap-2">
-              <span className="flex size-7 items-center justify-center rounded-md border bg-background text-muted-foreground transition-colors group-hover:text-foreground dark:bg-input/30">
-                <Icon className="size-4" aria-hidden />
-              </span>
-              <PlatformIcon platform={platform} label={t("starts_on", { platform: PLATFORMS[platform].label })} className="size-3.5 text-muted-foreground" />
-            </span>
-            <span className="text-sm font-medium">{spec.label}</span>
-            <span className="line-clamp-2 text-xs text-pretty text-muted-foreground">{spec.description}</span>
+          <button key={format} type="button" className={TILE} title={spec.description} onClick={() => onStart(format)}>
+            <Icon className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" aria-hidden />
+            <span className="min-w-0 flex-1 truncate text-sm font-medium">{spec.label}</span>
+            <PlatformIcon platform={platform} label={t("starts_on", { platform: PLATFORMS[platform].label })} className="hidden size-3.5 shrink-0 text-muted-foreground sm:block" />
           </button>
         )
       })}
-      <button type="button" className={cn(TILE, "border-dashed bg-transparent")} onClick={onScratch}>
-        <span className="flex size-7 items-center justify-center rounded-md border border-dashed text-muted-foreground transition-colors group-hover:text-foreground">
-          <FilePlus2 className="size-4" aria-hidden />
-        </span>
-        <span className="text-sm font-medium">{t("from_scratch")}</span>
-        <span className="line-clamp-2 text-xs text-pretty text-muted-foreground">{t("from_scratch_description")}</span>
+      <button type="button" className={cn(TILE, "border-dashed bg-transparent")} title={t("from_scratch_description")} onClick={onScratch}>
+        <FilePlus2 className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" aria-hidden />
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">{t("from_scratch")}</span>
       </button>
     </div>
   )

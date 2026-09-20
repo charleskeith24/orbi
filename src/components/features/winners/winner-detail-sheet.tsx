@@ -161,7 +161,7 @@ export function WinnerDetailSheet({
         <PageSection
           id="winner-replication-ideas"
           title={t("replication_ideas_title")}
-          description={t("replication_ideas_description")}
+          info={t("replication_ideas_info")}
         >
           <ListEditor
             variant="lines"
@@ -176,7 +176,7 @@ export function WinnerDetailSheet({
         <PageSection
           id="winner-tree"
           title="Content Tree"
-          description={t("tree_description")}
+          info={t("tree_info")}
         >
           <ContentTree itemId={item.id} />
         </PageSection>

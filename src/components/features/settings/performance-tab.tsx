@@ -15,7 +15,7 @@ import { performanceMessages } from "./performance-messages"
 import { SaveBar } from "./save-bar"
 import { LIMITS, PERFORMANCE_DEFAULTS, performancePatch, validatePerformance, type PerformanceValues } from "./sections"
 import { SettingRow, SettingRows } from "./setting-row"
-import { formatTimes, tierFieldsFrom, TierPreview, TierScale } from "./tier-preview"
+import { tierFieldsFrom, TierPreview, TierScale } from "./tier-preview"
 import { sameValues, type SettingsDraft } from "./use-settings-draft"
 
 const METRIC_OPTIONS = WINNER_METRICS.map((m) => ({ value: m.id, label: m.label }))
@@ -44,30 +44,21 @@ export function PerformanceTab({ draft, now }: { draft: SettingsDraft<Performanc
     toast.success(t("saved"), { description: t("saved_description") })
   }
 
-  const rule = fields
-    ? t("rule", {
-        metric: values.winner_metric === "composite" ? t("metric_performance") : (metric?.label.toLowerCase() ?? t("metric_performance")),
-        window: fields.winner_window,
-        good: formatTimes(fields.tier_good),
-        winner: formatTimes(fields.tier_winner),
-        breakout: formatTimes(fields.tier_breakout),
-      })
-    : null
-
   return (
     <form onSubmit={save} noValidate className="flex min-w-0 flex-col gap-4">
       <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="flex min-w-0 flex-col gap-4">
-          <SectionCard
-            title={t("winner_title")}
-            description={t("winner_description")}
-            footer={rule ? <span className="text-pretty">{rule}</span> : undefined}
-          >
+          <SectionCard title={t("winner_title")} info={t("winner_info")}>
             <SettingRows>
               <SettingRow
                 label={t("compare_label")}
                 htmlFor="settings-winner-metric"
-                description={t("compare_description")}
+                info={
+                  <>
+                    <p>{t("compare_info")}</p>
+                    {metric?.description ? <p>{metric.description}.</p> : null}
+                  </>
+                }
               >
                 <OptionSelect
                   id="settings-winner-metric"
@@ -78,12 +69,11 @@ export function PerformanceTab({ draft, now }: { draft: SettingsDraft<Performanc
                   }}
                   className="max-w-xs"
                 />
-                {metric?.description ? <p className="text-xs text-muted-foreground">{metric.description}.</p> : null}
               </SettingRow>
               <SettingRow
                 label={t("window_label")}
                 htmlFor="settings-winner-window"
-                description={t("window_description")}
+                info={t("window_info")}
                 error={errors.winner_window}
               >
                 <NumberField
@@ -101,7 +91,7 @@ export function PerformanceTab({ draft, now }: { draft: SettingsDraft<Performanc
               <SettingRow
                 label={t("min_sample_label")}
                 htmlFor="settings-min-sample"
-                description={t("min_sample_description")}
+                info={t("min_sample_info")}
                 error={errors.winner_min_sample}
               >
                 <NumberField
@@ -119,7 +109,7 @@ export function PerformanceTab({ draft, now }: { draft: SettingsDraft<Performanc
               <SettingRow
                 label={t("thresholds_label")}
                 labelId="settings-thresholds-label"
-                description={t("thresholds_description")}
+                info={t("thresholds_info")}
                 error={thresholdError}
               >
                 <div role="group" aria-labelledby="settings-thresholds-label" className="grid max-w-md grid-cols-3 gap-2">
@@ -146,15 +136,12 @@ export function PerformanceTab({ draft, now }: { draft: SettingsDraft<Performanc
             </SettingRows>
           </SectionCard>
 
-          <SectionCard
-            title="Content Buffer"
-            description={t("buffer_description")}
-          >
+          <SectionCard title="Content Buffer" info={t("buffer_info")}>
             <SettingRows>
               <SettingRow
                 label={t("healthy_label")}
                 htmlFor="settings-buffer-healthy"
-                description={t("healthy_description")}
+                info={t("healthy_info")}
                 error={errors.buffer_healthy_days}
               >
                 <NumberField
@@ -172,7 +159,7 @@ export function PerformanceTab({ draft, now }: { draft: SettingsDraft<Performanc
               <SettingRow
                 label={t("low_label")}
                 htmlFor="settings-buffer-warning"
-                description={t("low_description")}
+                info={t("low_info")}
                 error={errors.buffer_warning_days}
               >
                 <NumberField

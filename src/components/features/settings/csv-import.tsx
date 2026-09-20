@@ -251,7 +251,7 @@ export function CsvImport({ now }: { now: Date }) {
     <div id="csv-import" className="scroll-mt-4">
       <SectionCard
         title={t("title")}
-        description={t("description")}
+        info={t("info")}
         icon={FileSpreadsheet}
         action={step !== "done" ? <StepIndicator current={step} /> : undefined}
       >
@@ -350,9 +350,6 @@ export function CsvImport({ now }: { now: Date }) {
               </Alert>
             ) : null}
             <CsvExportGuide />
-            <p className="text-xs text-pretty text-muted-foreground">
-              {t.plural("source_footer", publishedCount, { count: formatNumber(publishedCount) })}
-            </p>
           </div>
         ) : null}
 

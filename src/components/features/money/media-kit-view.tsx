@@ -1,10 +1,10 @@
 "use client"
 
-import { ArrowDown, ArrowUp, CircleCheck, CirclePlus, IdCard, Image as ImageIcon, Pencil, Plus, Printer, Trash2 } from "lucide-react"
+import { ArrowDown, ArrowUp, CircleCheck, CirclePlus, Pencil, Plus, Printer, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useId, useMemo, useState, useSyncExternalStore } from "react"
 import { toast } from "sonner"
-import { FormField, PageContainer, PageHeader, PlatformIcon, SectionCard, useConfirm } from "@/components/common"
+import { FormField, InfoHint, PageContainer, PageHeader, PlatformIcon, SectionCard, useConfirm } from "@/components/common"
 import { useMyProfile, usePhotoUrl } from "@/components/features/profile/profile-store"
 import { useNow } from "@/components/features/today/use-now"
 import { Button } from "@/components/ui/button"
@@ -81,7 +81,11 @@ function useLightPrint() {
   }, [])
 }
 
-/** `/money/media-kit` — the English one-pager for brands, with editing chrome in the UI language. */
+/**
+ * `/money/media-kit` — the English one-pager for brands, with editing chrome in the UI language (Calm UI): what's
+ * missing is the page subtitle (each gap is marked in the preview), explanations sit in ⓘs, and the side column
+ * is just the details (with the photo switch) and the rate cards.
+ */
 export function MediaKitView() {
   const t = useT(mediaKitMessages)
   const now = useNow()
@@ -150,8 +154,23 @@ export function MediaKitView() {
       <PageHeader
         className="print:hidden"
         title={t("title")}
-        icon={IdCard}
-        description={t("description")}
+        info={
+          <>
+            <p>{t("description")}</p>
+            <p>{t("language_note")}</p>
+            <p>{t("checklist_description")}</p>
+          </>
+        }
+        description={
+          <span className="inline-flex items-center gap-1.5">
+            {kit.missing.length ? (
+              <CirclePlus className="size-3.5 shrink-0" aria-hidden />
+            ) : (
+              <CircleCheck className="size-3.5 shrink-0 text-good-fg" aria-hidden />
+            )}
+            {kit.missing.length ? t.plural("missing", kit.missing.length) : t("checklist_done")}
+          </span>
+        }
         actions={
           <Button size="sm" onClick={() => window.print()}>
             <Printer aria-hidden />
@@ -162,17 +181,11 @@ export function MediaKitView() {
 
       <div className="grid min-w-0 grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem] print:block">
         <section aria-label={t("preview_label")} className="flex min-w-0 flex-col gap-2">
-          <p className="text-xs text-muted-foreground print:hidden">{t("language_note")}</p>
           <MediaKitDocument kit={kit} renderGap={renderGap} photoUrl={usePhoto ? profilePhoto : null} />
         </section>
 
         <div className="flex min-w-0 flex-col gap-4 print:hidden">
-          <SectionCard title={t("checklist_title")} icon={kit.missing.length ? CirclePlus : CircleCheck}>
-            <p className="text-sm font-medium">{kit.missing.length ? t.plural("missing", kit.missing.length) : t("checklist_done")}</p>
-            {kit.missing.length ? <p className="mt-1 text-xs text-pretty text-muted-foreground">{t("checklist_description")}</p> : null}
-          </SectionCard>
-          <PhotoChoice on={usePhoto} hasPhoto={Boolean(me?.avatar_path)} />
-          <DetailsEditor bioIsFallback={kit.bioIsFallback} />
+          <DetailsEditor bioIsFallback={kit.bioIsFallback} photo={<PhotoChoice on={usePhoto} hasPhoto={Boolean(me?.avatar_path)} />} />
           <RateCardsManager onEdit={openRateCard} />
         </div>
       </div>
@@ -182,34 +195,34 @@ export function MediaKitView() {
   )
 }
 
+/** The photo switch, first row of the details card. Without a profile photo it says where to add one. */
 function PhotoChoice({ on, hasPhoto }: { on: boolean; hasPhoto: boolean }) {
   const t = useT(mediaKitMessages)
   const id = useId()
   return (
-    <SectionCard title={t("photo_title")} icon={ImageIcon}>
-      <div className="flex min-w-0 items-start justify-between gap-3">
-        <div className="min-w-0">
+    <div className="flex min-w-0 items-start justify-between gap-3 border-b pb-3">
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-1">
           <label htmlFor={`${id}-photo`} className="text-sm font-medium">
             {t("photo_label")}
           </label>
-          {hasPhoto ? (
-            <p className="mt-0.5 text-xs text-pretty text-muted-foreground">{t("photo_help")}</p>
-          ) : (
-            <p className="mt-0.5 text-xs text-pretty text-muted-foreground">
-              {t("photo_none")}{" "}
-              <Link href="/settings?tab=profile" className="font-medium text-foreground underline-offset-2 hover:underline">
-                {t("photo_open_profile")}
-              </Link>
-            </p>
-          )}
+          <InfoHint title={t("photo_title")}>{t("photo_help")}</InfoHint>
         </div>
-        <Switch id={`${id}-photo`} checked={on && hasPhoto} disabled={!hasPhoto} onCheckedChange={(next) => writePhotoChoice(next)} />
+        {hasPhoto ? null : (
+          <p className="mt-0.5 text-xs text-pretty text-muted-foreground">
+            {t("photo_none")}{" "}
+            <Link href="/settings?tab=profile" className="font-medium text-foreground underline-offset-2 hover:underline">
+              {t("photo_open_profile")}
+            </Link>
+          </p>
+        )}
       </div>
-    </SectionCard>
+      <Switch id={`${id}-photo`} checked={on && hasPhoto} disabled={!hasPhoto} onCheckedChange={(next) => writePhotoChoice(next)} />
+    </div>
   )
 }
 
-function DetailsEditor({ bioIsFallback }: { bioIsFallback: boolean }) {
+function DetailsEditor({ bioIsFallback, photo }: { bioIsFallback: boolean; photo: React.ReactNode }) {
   const t = useT(mediaKitMessages)
   const brand = useBrand()
   const [draft, setDraft] = useState({ bio: brand.media_kit_bio, email: brand.contact_email, website: brand.website })
@@ -244,8 +257,9 @@ function DetailsEditor({ bioIsFallback }: { bioIsFallback: boolean }) {
   }
 
   return (
-    <SectionCard title={t("details_title")} description={t("details_description")}>
-      <form id={DETAILS_ID} noValidate onSubmit={submit} className="flex min-w-0 flex-col gap-3">
+    <SectionCard title={t("details_title")} info={t("details_description")}>
+      {photo}
+      <form id={DETAILS_ID} noValidate onSubmit={submit} className="mt-3 flex min-w-0 flex-col gap-3">
         <FormField
           label={t("bio")}
           htmlFor={`${DETAILS_ID}-bio`}
@@ -331,7 +345,8 @@ function RateCardsManager({ onEdit }: { onEdit: (card: RateCard | null) => void 
   return (
     <SectionCard
       title={t("rate_cards")}
-      description={t("rate_cards_description")}
+      count={cards.length || null}
+      info={t("rate_cards_description")}
       contentClassName={cards.length ? "p-0 pt-2" : undefined}
       action={
         <Button type="button" size="sm" variant="outline" onClick={() => onEdit(null)}>

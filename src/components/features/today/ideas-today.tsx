@@ -60,7 +60,7 @@ export function IdeasTodaySection({ ideas, className }: { ideas: ContentIdea[]; 
       id="ideas-today"
       title={t("ideas_title")}
       icon={Lightbulb}
-      description={t("ideas_description")}
+      info={t("ideas_info")}
       action={
         <Button asChild variant="ghost" size="xs" className="text-muted-foreground">
           <Link href="/ideas">Idea Bank</Link>

@@ -1,7 +1,7 @@
 "use client"
 
-import { LayoutGrid, List, Star } from "lucide-react"
-import { useMemo } from "react"
+import { LayoutGrid, List, ListFilter, Star } from "lucide-react"
+import { useMemo, useState } from "react"
 import {
   ColorDot,
   FacetFilter,
@@ -60,6 +60,9 @@ export function StoryFilterBar({
     [t]
   )
   const sortOptions = useMemo(() => STORY_SORTS.map((s) => ({ value: s.value, label: t(`sort_${s.value}`) })), [t])
+  // Phones: facets wait behind "Filters" (Calm UI); the badge counts the ones that are on.
+  const [showFacets, setShowFacets] = useState(false)
+  const facetCount = [filters.types.length, filters.pillars.length, filters.usage.length, filters.favorites ? 1 : 0].filter(Boolean).length
   const typeOptions = useMemo<FacetOption[]>(() => {
     const counts = new Map<string, number>()
     for (const story of stories) counts.set(story.type, (counts.get(story.type) ?? 0) + 1)
@@ -115,20 +118,27 @@ export function StoryFilterBar({
       }
     >
       <SearchInput value={filters.q} onChange={(q) => onChange({ q })} placeholder={t("search")} />
-      <FacetFilter title={t("facet_type")} options={typeOptions} value={filters.types} onChange={(value) => onChange({ type: value.join(",") })} />
-      <FacetFilter title={t("facet_pillar")} options={pillarOptions} value={filters.pillars} onChange={(value) => onChange({ pillar: value.join(",") })} />
-      <FacetFilter title={t("facet_usage")} options={usageOptions} value={filters.usage} onChange={(value) => onChange({ usage: value.join(",") })} />
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        aria-pressed={filters.favorites}
-        onClick={() => onChange({ fav: filters.favorites ? "" : "1" })}
-        className={cn(!filters.favorites && "border-dashed")}
-      >
-        <Star className={cn(filters.favorites ? "fill-current" : "text-muted-foreground")} aria-hidden />
-        {t("favourites")}
+      <Button type="button" variant="outline" size="sm" className="sm:hidden" aria-expanded={showFacets} onClick={() => setShowFacets((v) => !v)}>
+        <ListFilter className="text-muted-foreground" aria-hidden />
+        {t("filters")}
+        {facetCount ? <span className="rounded-sm bg-muted px-1 text-xs font-medium num">{facetCount}</span> : null}
       </Button>
+      <div className={cn("contents", !showFacets && "max-sm:hidden")}>
+        <FacetFilter title={t("facet_type")} options={typeOptions} value={filters.types} onChange={(value) => onChange({ type: value.join(",") })} />
+        <FacetFilter title={t("facet_pillar")} options={pillarOptions} value={filters.pillars} onChange={(value) => onChange({ pillar: value.join(",") })} />
+        <FacetFilter title={t("facet_usage")} options={usageOptions} value={filters.usage} onChange={(value) => onChange({ usage: value.join(",") })} />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          aria-pressed={filters.favorites}
+          onClick={() => onChange({ fav: filters.favorites ? "" : "1" })}
+          className={cn(!filters.favorites && "border-dashed")}
+        >
+          <Star className={cn(filters.favorites ? "fill-current" : "text-muted-foreground")} aria-hidden />
+          {t("favourites")}
+        </Button>
+      </div>
       <ResetFiltersButton show={hasStoryFilters(filters)} onClick={onReset} />
     </FilterBar>
   )

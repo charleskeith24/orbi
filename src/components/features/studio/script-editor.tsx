@@ -13,7 +13,7 @@ import { CaptionCounter } from "./brief-fields"
 import { scriptMessages } from "./script-messages"
 import { captionWithHashtags, countWords, normalizeHashtag } from "./studio-utils"
 
-/** The script as a document: one row per section — label and hint on the left, the copy on the right. */
+/** The script as a document: one row per section — label and word count on the left, the copy on the right. */
 export function SectionEditor({
   format,
   sections,
@@ -48,10 +48,10 @@ function SectionRow({
   return (
     <div className="grid min-w-0 gap-x-4 gap-y-1 px-4 py-3 sm:grid-cols-[9.5rem_minmax(0,1fr)]">
       <div className="flex min-w-0 items-baseline justify-between gap-2 sm:block sm:pt-1.5">
-        <label htmlFor={id} className="block text-xs font-semibold tracking-wide text-foreground/80 uppercase">
+        {/* The section's hint is its tooltip and the empty field's placeholder (Calm UI: no help line). */}
+        <label htmlFor={id} title={hint} className="block text-xs font-semibold tracking-wide text-foreground/80 uppercase">
           {section.label}
         </label>
-        {hint ? <p className="mt-0.5 hidden text-xs text-pretty text-muted-foreground sm:block">{hint}</p> : null}
         <p className="shrink-0 text-[11px] text-muted-foreground num sm:mt-1">{words ? t.plural("words", words, { count: formatNumber(words) }) : ""}</p>
       </div>
       <textarea
@@ -84,12 +84,15 @@ export function SlidePreview({
   return (
     <SectionCard
       title={story ? t("frame_preview") : t("slide_preview")}
+      info={story ? t("frames_hint") : t("slides_hint")}
+      // Only the warning stays on the card: slides past the word limit.
       description={
-        long
-          ? t.plural(story ? "frames_long" : "slides_long", long, { count: formatNumber(long), limit: SLIDE_WORD_LIMIT })
-          : story
-            ? t("frames_hint")
-            : t("slides_hint")
+        long ? (
+          <span className="inline-flex items-center gap-1 text-warning-fg">
+            <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
+            {t.plural(story ? "frames_long" : "slides_long", long, { count: formatNumber(long), limit: SLIDE_WORD_LIMIT })}
+          </span>
+        ) : undefined
       }
       contentClassName="px-0 pb-4"
     >
@@ -156,7 +159,7 @@ export function CaptionCard({
   return (
     <SectionCard
       title={t("caption_hashtags")}
-      description={t("posted_with", { platform: PLATFORMS[platform].label })}
+      info={t("posted_with", { platform: PLATFORMS[platform].label })}
       action={
         canUseBrief ? (
           <Button type="button" variant="ghost" size="xs" onClick={() => onCaption(briefCaption)}>

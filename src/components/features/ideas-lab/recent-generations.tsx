@@ -1,6 +1,5 @@
 "use client"
 
-import { History } from "lucide-react"
 import { SectionCard } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
@@ -34,7 +33,7 @@ export function RecentGenerations({
   const lang = useUiLang()
   if (!generations.length) return null
   return (
-    <SectionCard title={t("recent_title")} description={t("recent_description")} icon={History} contentClassName="px-0 pt-2 pb-1">
+    <SectionCard title={t("recent_title")} count={generations.length} info={t("recent_info")} contentClassName="px-0 pt-2 pb-1">
       <ul className="flex flex-col divide-y">
         {generations.map((generation) => {
           const parts = describeBrief(generation.brief, db, lang)

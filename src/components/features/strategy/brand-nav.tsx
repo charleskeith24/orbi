@@ -1,14 +1,14 @@
 "use client"
 
 import { ArrowRight, CircleCheck } from "lucide-react"
-import { Meter } from "@/components/common"
+import { InfoHint, Meter } from "@/components/common"
 import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { SECTION_ICONS, VOICE_ICON } from "./brand-icons"
 import { brandHqMessages, brandSectionMessages } from "./brand-messages"
 import { BRAND_SECTIONS, type BrandCompleteness, type BrandSectionKey, type CompletenessItem } from "./brand-model"
 
-/** "Brand HQ 86% complete — the AI writes better when this is complete", with a jump to the next gap. */
+/** "86% complete" + meter, why it matters behind the ⓘ, and a jump to the next gap. */
 export function CompletenessCard({
   completeness,
   onNext,
@@ -22,23 +22,22 @@ export function CompletenessCard({
   const t = useT(brandHqMessages)
   const ts = useT(brandSectionMessages)
   return (
-    <div className={cn("flex min-w-0 flex-col gap-2 rounded-lg border bg-card p-3", className)}>
-      <p className="flex items-center gap-1.5 text-sm font-medium">
-        {next ? null : <CircleCheck className="size-4 shrink-0 text-good-fg" aria-hidden />}
-        <span>
-          Brand HQ <span className="num">{completeness.pct}%</span> {t("complete")}
-        </span>
-      </p>
+    <div className={cn("flex min-w-0 flex-col gap-1.5 rounded-lg border bg-card px-3 py-2.5", className)}>
+      <div className="flex min-w-0 items-center gap-1.5 text-sm">
+        <span className="font-medium num">{completeness.pct}%</span>
+        <span className="truncate text-muted-foreground">{t("complete")}</span>
+        <InfoHint title="Brand HQ" className="ml-auto">
+          {next ? t("complete_hint") : t("complete_done")}
+        </InfoHint>
+      </div>
       <Meter
         value={completeness.done}
         max={completeness.total}
         tone={next ? "brand" : "good"}
+        size="sm"
         valueText={`${completeness.pct}%`}
         aria-label={t("completeness_label")}
       />
-      <p className="text-xs text-pretty text-muted-foreground">
-        {next ? t("complete_hint") : t("complete_done")}
-      </p>
       {next ? (
         <button
           type="button"
@@ -57,17 +56,22 @@ export function CompletenessCard({
 const itemClass =
   "flex h-8 min-w-0 items-center gap-2 rounded-md px-2.5 text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 
-/** Section navigation: a sticky vertical list on desktop, a horizontally scrolling row on smaller screens. */
+/**
+ * Section switcher: a sticky vertical list on desktop, a sideways-scrolling row on smaller screens. One section
+ * shows at a time (`#<key>` in the URL). "Brand Voice" (below the form until xl) scrolls to the preview.
+ */
 export function BrandSectionNav({
   active,
   completeness,
   dirtySections,
-  onJump,
+  onSelect,
+  onVoice,
 }: {
-  active: string | null
+  active: BrandSectionKey
   completeness: BrandCompleteness
   dirtySections: ReadonlySet<BrandSectionKey>
-  onJump: (id: string) => void
+  onSelect: (key: BrandSectionKey) => void
+  onVoice: () => void
 }) {
   const t = useT(brandHqMessages)
   const ts = useT(brandSectionMessages)
@@ -83,10 +87,10 @@ export function BrandSectionNav({
             <li key={section.key} className="shrink-0">
               <a
                 href={`#${section.key}`}
-                aria-current={isActive ? "location" : undefined}
+                aria-current={isActive ? "true" : undefined}
                 onClick={(event) => {
                   event.preventDefault()
-                  onJump(section.key)
+                  onSelect(section.key)
                 }}
                 className={cn(
                   itemClass,
@@ -118,17 +122,13 @@ export function BrandSectionNav({
         <li className="shrink-0 xl:hidden">
           <a
             href="#voice"
-            aria-current={active === "voice" ? "location" : undefined}
             onClick={(event) => {
               event.preventDefault()
-              onJump("voice")
+              onVoice()
             }}
-            className={cn(
-              itemClass,
-              active === "voice" ? "bg-muted font-medium text-foreground dark:bg-input/40" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-            )}
+            className={cn(itemClass, "text-muted-foreground hover:bg-muted/60 hover:text-foreground")}
           >
-            <VOICE_ICON className={cn("size-4 shrink-0", active === "voice" && "text-brand")} aria-hidden />
+            <VOICE_ICON className="size-4 shrink-0" aria-hidden />
             <span>Brand Voice</span>
           </a>
         </li>

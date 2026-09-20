@@ -17,7 +17,8 @@ export const settingsMessages = defineMessages({
     tab_funnel_label: "Funnel",
     tab_funnel_description: "The target mix of awareness, trust and conversion content.",
     tab_formats_label: "Formats",
-    tab_formats_description: "The formats you produce and the script structure Content Studio starts each one with.",
+    tab_formats_description:
+      "The formats you produce and the script structure Content Studio starts each one with. Their order here is their order in pickers, and deleting a format keeps the content that used it.",
     tab_tags_label: "Tags",
     tab_tags_description: "Tags shared by ideas, content, stories, hooks, research and campaigns.",
     tab_engagement_label: "Engagement",
@@ -80,7 +81,8 @@ export const settingsMessages = defineMessages({
     tab_funnel_label: "Funnel",
     tab_funnel_description: "Ang target na mix ng awareness, trust at conversion content.",
     tab_formats_label: "Formats",
-    tab_formats_description: "Ang mga format na ginagawa mo at ang script structure na sinisimulan ng Content Studio para sa bawat isa.",
+    tab_formats_description:
+      "Ang mga format na ginagawa mo at ang script structure na sinisimulan ng Content Studio sa bawat isa. Ang order dito ang order sa pickers, at kapag nag-delete ka ng format, naiiwan ang content na gumamit nito.",
     tab_tags_label: "Tags",
     tab_tags_description: "Tags na ginagamit sa ideas, content, stories, hooks, research at campaigns.",
     tab_engagement_label: "Engagement",

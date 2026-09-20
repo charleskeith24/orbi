@@ -1,11 +1,13 @@
 "use client"
 
 import { Grid3x3, RotateCcw, Target } from "lucide-react"
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import {
   ChipToggleGroup,
+  Disclosure,
   FormatCategoryIcon,
   FormField,
+  InfoHint,
   MultiSelect,
   PersonaSelect,
   SectionCard,
@@ -38,7 +40,10 @@ export interface DimensionCounts {
   stages: number
 }
 
-/** Pick the matrix dimensions; the footer shows the cartesian size and runs the generation. */
+/**
+ * Pick the matrix dimensions; the footer shows the cartesian size and runs the generation. The pickers wait behind
+ * "Edit dimensions" (the page opens with a ranked list already); they open by themselves when a dimension is empty.
+ */
 export function MatrixDimensions({
   data,
   value,
@@ -50,6 +55,7 @@ export function MatrixDimensions({
   total,
   stale,
   isDefault,
+  defaultOpen = false,
 }: {
   data: MatrixData
   value: MatrixSelectionIds
@@ -62,7 +68,10 @@ export function MatrixDimensions({
   /** The ranked list below was generated from a different selection. */
   stale: boolean
   isDefault: boolean
+  /** Open the pickers on arrival (e.g. a link preselected dimensions). */
+  defaultOpen?: boolean
 }) {
+  const [open, setOpen] = useState(defaultOpen)
   const t = useT(matrixMessages)
   const c = useT(commonMessages)
   const options = useMemo(() => {
@@ -102,7 +111,7 @@ export function MatrixDimensions({
   return (
     <SectionCard
       title={t("dimensions")}
-      description={t("dimensions_description")}
+      info={t("dimensions_description")}
       action={
         isDefault ? null : (
           <Button type="button" variant="ghost" size="sm" onClick={onReset}>
@@ -132,89 +141,99 @@ export function MatrixDimensions({
         </div>
       }
     >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <FormField
-          label={t("pillars")}
-          htmlFor="matrix-pillars"
-          labelAction={<SelectAll selected={value.pillars.length} all={options.pillars} onSelect={(ids) => set("pillars", ids)} />}
-        >
-          <MultiSelect
-            id="matrix-pillars"
-            options={options.pillars}
-            value={value.pillars}
-            onChange={(next) => set("pillars", next)}
-            placeholder={t("pick_pillars")}
-            emptyText={t("no_active_pillars")}
-          />
-        </FormField>
+      <Disclosure label={t("edit_dimensions")} open={open || missing.length > 0} onOpenChange={setOpen} contentClassName="pt-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <FormField
+            label={t("pillars")}
+            htmlFor="matrix-pillars"
+            labelAction={<SelectAll selected={value.pillars.length} all={options.pillars} onSelect={(ids) => set("pillars", ids)} />}
+          >
+            <MultiSelect
+              id="matrix-pillars"
+              options={options.pillars}
+              value={value.pillars}
+              onChange={(next) => set("pillars", next)}
+              placeholder={t("pick_pillars")}
+              emptyText={t("no_active_pillars")}
+            />
+          </FormField>
 
-        <FormField
-          label={t("formats")}
-          htmlFor="matrix-formats"
-          labelAction={<SelectAll selected={value.formats.length} all={options.formats} onSelect={(ids) => set("formats", ids)} />}
-        >
-          <MultiSelect
-            id="matrix-formats"
-            options={options.formats}
-            value={value.formats}
-            onChange={(next) => set("formats", next)}
-            placeholder={t("pick_formats")}
-            emptyText={t("no_formats")}
-          />
-        </FormField>
+          <FormField
+            label={t("formats")}
+            htmlFor="matrix-formats"
+            labelAction={<SelectAll selected={value.formats.length} all={options.formats} onSelect={(ids) => set("formats", ids)} />}
+          >
+            <MultiSelect
+              id="matrix-formats"
+              options={options.formats}
+              value={value.formats}
+              onChange={(next) => set("formats", next)}
+              placeholder={t("pick_formats")}
+              emptyText={t("no_formats")}
+            />
+          </FormField>
 
-        <FormField label={t("audience")} htmlFor="matrix-persona" description={t("audience_description")}>
-          <PersonaSelect
-            id="matrix-persona"
-            allowNone
-            noneLabel={t("all_personas")}
-            placeholder={t("all_personas")}
-            value={value.personaId}
-            onChange={onPersonaChange}
-          />
-        </FormField>
+          <FormField
+            label={t("audience")}
+            htmlFor="matrix-persona"
+            labelAction={
+              <InfoHint title={t("audience")} align="end">
+                {t("audience_description")}
+              </InfoHint>
+            }
+          >
+            <PersonaSelect
+              id="matrix-persona"
+              allowNone
+              noneLabel={t("all_personas")}
+              placeholder={t("all_personas")}
+              value={value.personaId}
+              onChange={onPersonaChange}
+            />
+          </FormField>
 
-        <FormField
-          label={t("audience_problems")}
-          htmlFor="matrix-problems"
-          labelAction={<SelectAll selected={counts.problems} all={options.problems} onSelect={(ids) => set("problems", ids)} />}
-        >
-          <MultiSelect
-            id="matrix-problems"
-            options={options.problems}
-            value={value.problems}
-            onChange={(next) => set("problems", next)}
-            placeholder={t("pick_problems")}
-            maxChips={2}
-            emptyText={value.personaId ? t("no_persona_problems") : t("problem_bank_empty")}
-          />
-        </FormField>
+          <FormField
+            label={t("audience_problems")}
+            htmlFor="matrix-problems"
+            labelAction={<SelectAll selected={counts.problems} all={options.problems} onSelect={(ids) => set("problems", ids)} />}
+          >
+            <MultiSelect
+              id="matrix-problems"
+              options={options.problems}
+              value={value.problems}
+              onChange={(next) => set("problems", next)}
+              placeholder={t("pick_problems")}
+              maxChips={2}
+              emptyText={value.personaId ? t("no_persona_problems") : t("problem_bank_empty")}
+            />
+          </FormField>
 
-        <FormField
-          label={t("goals")}
-          htmlFor="matrix-goals"
-          labelAction={<SelectAll selected={value.goals.length} all={options.goals} onSelect={(ids) => set("goals", ids)} />}
-        >
-          <MultiSelect
-            id="matrix-goals"
-            options={options.goals}
-            value={value.goals}
-            onChange={(next) => set("goals", next)}
-            placeholder={t("pick_goals")}
-            emptyText={t("no_active_goals")}
-          />
-        </FormField>
+          <FormField
+            label={t("goals")}
+            htmlFor="matrix-goals"
+            labelAction={<SelectAll selected={value.goals.length} all={options.goals} onSelect={(ids) => set("goals", ids)} />}
+          >
+            <MultiSelect
+              id="matrix-goals"
+              options={options.goals}
+              value={value.goals}
+              onChange={(next) => set("goals", next)}
+              placeholder={t("pick_goals")}
+              emptyText={t("no_active_goals")}
+            />
+          </FormField>
 
-        <FormField label={t("funnel_stages")}>
-          <ChipToggleGroup
-            multiple
-            options={STAGE_OPTIONS}
-            value={value.stages}
-            onChange={(next) => set("stages", next)}
-            aria-label={t("funnel_stages")}
-          />
-        </FormField>
-      </div>
+          <FormField label={t("funnel_stages")}>
+            <ChipToggleGroup
+              multiple
+              options={STAGE_OPTIONS}
+              value={value.stages}
+              onChange={(next) => set("stages", next)}
+              aria-label={t("funnel_stages")}
+            />
+          </FormField>
+        </div>
+      </Disclosure>
     </SectionCard>
   )
 }

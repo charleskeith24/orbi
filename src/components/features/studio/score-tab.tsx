@@ -196,14 +196,16 @@ export function ScoreTab({ item, onOpenScript }: { item: ContentItem; onOpenScri
 
       <SectionCard
         title={t("dimensions")}
-        description={score ? t("dimensions_scored") : t("dimensions_empty")} contentClassName="flex flex-col divide-y px-0 pt-1 pb-1">
+        info={score ? t("dimensions_scored") : t("dimensions_empty")}
+        contentClassName="flex flex-col divide-y px-0 pt-1 pb-1"
+      >
         {QUALITY_DIMENSIONS.map((d) => {
           const value = score ? score[d.key] : null
           return (
             <div key={d.key} className="grid min-w-0 items-center gap-x-4 gap-y-1.5 px-4 py-2.5 sm:grid-cols-[minmax(0,1fr)_12rem]">
-              <div className="min-w-0">
+              {/* The question each dimension asks is its tooltip. */}
+              <div className="min-w-0" title={d.question}>
                 <p className="text-sm font-medium">{d.label}</p>
-                <p className="text-xs text-pretty text-muted-foreground">{d.question}</p>
               </div>
               {value !== null ? (
                 <div className="flex items-center gap-3">
@@ -223,7 +225,7 @@ export function ScoreTab({ item, onOpenScript }: { item: ContentItem; onOpenScri
 
       {score ? (
         <div className="grid min-w-0 items-start gap-4 lg:grid-cols-2">
-          <SectionCard title={t("strengths")} icon={CircleCheck} description={t("strengths_description")}>
+          <SectionCard title={t("strengths")} icon={CircleCheck} info={t("strengths_description")}>
             {score.strengths.length ? (
               <ul className="flex flex-col gap-2">
                 {score.strengths.map((s) => (
@@ -237,7 +239,7 @@ export function ScoreTab({ item, onOpenScript }: { item: ContentItem; onOpenScri
               <p className="text-xs text-muted-foreground">{t("no_strengths")}</p>
             )}
           </SectionCard>
-          <SectionCard title={t("improvements")} icon={Lightbulb} description={t("improvements_description")}>
+          <SectionCard title={t("improvements")} icon={Lightbulb} info={t("improvements_description")}>
             {score.improvements.length ? (
               <ol className="flex flex-col gap-2.5">
                 {score.improvements.map((s, index) => (

@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { SectionCard, StatusPill } from "@/components/common"
+import { InfoHint, SectionCard, StatusPill } from "@/components/common"
 import { MixBar, type MixSegment } from "@/components/charts"
 import { useT, useUiLang } from "@/lib/i18n"
 import type { AudiencePersona } from "@/lib/types"
@@ -52,7 +52,7 @@ export function PersonaCoverage({
     <SectionCard
       className={className}
       title={t("coverage_title")}
-      description={t("coverage_description", { days: RECENT_DAYS })}
+      info={t("coverage_description", { days: RECENT_DAYS })}
     >
       <div className="flex min-w-0 flex-col gap-4">
         <MixBar
@@ -67,7 +67,7 @@ export function PersonaCoverage({
             {untargetedPct >= UNTARGETED_WARNING ? (
               <li className="flex flex-wrap items-center gap-2">
                 <StatusPill tone="warning">{t("targets_no_persona", { pct: formatPercent(untargetedPct, 0) })}</StatusPill>
-                <span className="text-muted-foreground">{t("targets_no_persona_hint")}</span>
+                <InfoHint label={t("targets_no_persona", { pct: formatPercent(untargetedPct, 0) })}>{t("targets_no_persona_hint")}</InfoHint>
               </li>
             ) : null}
             {missing.map((persona) => (

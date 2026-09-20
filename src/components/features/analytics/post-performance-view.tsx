@@ -162,7 +162,7 @@ export function PostPerformanceView() {
     <PageContainer>
       <PageHeader
         title="Post Performance"
-        description={t("description")}
+        info={t("page_info")}
         actions={
           <>
             <Button asChild variant="outline" size="sm">

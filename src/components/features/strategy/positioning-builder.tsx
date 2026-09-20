@@ -1,6 +1,6 @@
 "use client"
 
-import { CopyButton } from "@/components/common"
+import { CopyButton, InfoHint } from "@/components/common"
 import { Textarea } from "@/components/ui/textarea"
 import { positioningStatement } from "@/lib/ai"
 import { useT } from "@/lib/i18n"
@@ -35,9 +35,6 @@ export function StatementSection({ values, set }: BrandSectionProps) {
 
   return (
     <BrandSection sectionKey="statement">
-      <p className="text-xs text-muted-foreground">
-        {t("template")} <span className="font-medium text-foreground">{t("template_text")}</span>
-      </p>
       <div className="flex flex-col gap-3">
         {ROWS.map((row) => {
           const id = fieldId(row.field)
@@ -45,10 +42,13 @@ export function StatementSection({ values, set }: BrandSectionProps) {
           const limit = CONTEXT_LIMITS[row.field]
           return (
             <div key={row.field} className="grid min-w-0 gap-1.5 sm:grid-cols-[6.5rem_minmax(0,1fr)] sm:gap-x-3">
-              <label htmlFor={id} className="flex items-baseline gap-2 sm:flex-col sm:items-start sm:gap-0.5 sm:pt-1.5">
-                <span className="text-sm font-medium">{row.connector}</span>
-                <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{t(`${row.key}_label`)}</span>
-              </label>
+              <div className="flex items-center gap-1 sm:items-start sm:pt-1.5">
+                <label htmlFor={id} className="flex items-baseline gap-2 sm:flex-col sm:items-start sm:gap-0.5">
+                  <span className="text-sm font-medium">{row.connector}</span>
+                  <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{t(`${row.key}_label`)}</span>
+                </label>
+                <InfoHint title={t(`${row.key}_label`)}>{t(`${row.key}_hint`)}</InfoHint>
+              </div>
               <div className="flex min-w-0 flex-col gap-1">
                 <Textarea
                   id={id}
@@ -56,15 +56,13 @@ export function StatementSection({ values, set }: BrandSectionProps) {
                   value={value}
                   placeholder={t(`${row.key}_placeholder`)}
                   className="min-h-9 leading-relaxed"
-                  aria-describedby={`${id}-hint`}
                   onChange={(event) => set(row.field, event.target.value)}
                 />
-                <div className="flex items-start justify-between gap-2">
-                  <p id={`${id}-hint`} className="text-xs text-muted-foreground">
-                    {t(`${row.key}_hint`)}
-                  </p>
-                  {limit ? <LimitHint length={value.trim().length} limit={limit} /> : null}
-                </div>
+                {limit ? (
+                  <div className="flex justify-end">
+                    <LimitHint length={value.trim().length} limit={limit} />
+                  </div>
+                ) : null}
               </div>
             </div>
           )

@@ -20,12 +20,15 @@ export function IdeaCardsView({
   now,
   onOpen,
   empty,
+  showStatus = true,
 }: {
   ideas: ContentIdea[]
   lookups: IdeaLookups
   now: Date
   onOpen: (id: ID) => void
   empty: React.ReactNode
+  /** Off when the list shows a single status (every chip would say the same). */
+  showStatus?: boolean
 }) {
   const t = useT(ideaBankMessages)
   const c = useT(commonMessages)
@@ -43,7 +46,7 @@ export function IdeaCardsView({
               pillar={idea.pillar_id ? lookups.pillars.get(idea.pillar_id) : undefined}
               format={idea.format_id ? lookups.formats.get(idea.format_id) : undefined}
               now={now}
-              showStatus
+              showStatus={showStatus}
               onOpen={onOpen}
               actions={<IdeaActionsMenu idea={idea} />}
               className="w-full"

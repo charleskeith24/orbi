@@ -1,7 +1,7 @@
 "use client"
 
 import { Trophy } from "lucide-react"
-import { EmptyState, SectionCard, ViewToggle } from "@/components/common"
+import { EmptyState, InfoHint, SectionCard, ViewToggle } from "@/components/common"
 import { BarList, ChartFrame } from "@/components/charts"
 import { formatMultiple, type GroupAggregate, type HookCategoryAggregate } from "@/lib/analytics"
 import { useT } from "@/lib/i18n"
@@ -11,6 +11,15 @@ import { hookMessages } from "./hook-messages"
 import { formatHookMetric, HOOK_METRICS, hookMetricValue, type HookMetric, type HookStats } from "./hook-model"
 import { HookText } from "./hook-text"
 import { labMessages } from "./messages"
+
+/** The hook style whose posts beat your overall average views by ≥ 10% (two or more measured posts), or null. */
+export function bestHookStyle(styles: HookCategoryAggregate[], overall: GroupAggregate): { label: string; lift: number } | null {
+  const best = styles
+    .filter((style) => style.category && style.measured >= 2 && style.avgViews !== null)
+    .sort((a, b) => (b.avgViews ?? 0) - (a.avgViews ?? 0))[0]
+  const lift = best?.avgViews && overall.avgViews ? best.avgViews / overall.avgViews : null
+  return best && lift && lift >= 1.1 ? { label: best.label, lift } : null
+}
 
 /** "Which hook styles work best" — hookCategoryPerformance ranked by the chosen metric, with a table twin. */
 export function HookStylesCard({
@@ -43,16 +52,19 @@ export function HookStylesCard({
       },
     ]
   })
-  const best = measured.filter((style) => style.measured >= 2 && style.avgViews !== null).sort((a, b) => (b.avgViews ?? 0) - (a.avgViews ?? 0))[0]
-  const lift = best?.avgViews && overall.avgViews ? best.avgViews / overall.avgViews : null
+  const lead = bestHookStyle(styles, overall)
   const metricLabel = l(`metric_${metric}`)
-  const [footerBefore, footerAfter] = t("styles_footer", { multiple: lift ? formatMultiple(lift) : "" }).split("{style}")
+  const [footerBefore, footerAfter] = t("styles_footer", { multiple: lead ? formatMultiple(lead.lift) : "" }).split("{style}")
 
   return (
     <ChartFrame
       className={className}
       title={t("styles_title")}
-      description={l("analytics_scope", { description: l(`metric_${metric}_description`) })}
+      actions={
+        <InfoHint title={t("styles_title")} align="end">
+          {l("analytics_scope", { description: l(`metric_${metric}_description`) })}
+        </InfoHint>
+      }
       table={{
         columns: [t("col_hook_style"), l("posts"), l("avg_views"), l("retention"), l("engagement"), l("leads_per_post")],
         rows: measured.map((style) => [
@@ -65,10 +77,10 @@ export function HookStylesCard({
         ]),
       }}
       footer={
-        best && lift && lift >= 1.1 ? (
+        lead ? (
           <p className="text-xs text-muted-foreground">
             {footerBefore}
-            <span className="font-medium text-foreground">{best.label}</span>
+            <span className="font-medium text-foreground">{lead.label}</span>
             {footerAfter}
           </p>
         ) : undefined
@@ -119,13 +131,7 @@ export function TopHooksCard({
     .slice(0, 5)
 
   return (
-    <SectionCard
-      className={className}
-      title={t("top_title")}
-      description={t("top_description")}
-      icon={Trophy}
-      contentClassName="px-2 pt-2 pb-2"
-    >
+    <SectionCard className={className} title={t("top_title")} info={t("top_info")} contentClassName="px-2 pt-2 pb-2">
       {top.length ? (
         <ol className="flex flex-col">
           {top.map(({ hook, performance }, index) => (

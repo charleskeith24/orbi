@@ -85,7 +85,7 @@ export function AdaptOriginalStep({
       step={3}
       state={state}
       title={t("original_version")}
-      description={t("original_description")}
+      info={t("original_info")}
     >
       {state === "locked" ? (
         <p>{t("locked_step2")}</p>
@@ -123,12 +123,14 @@ export function AdaptOriginalStep({
               />
             </FormField>
           </div>
-          <FormField
-            label={t("what_to_say")}
-            htmlFor={field("topic")}
-            description={t("what_to_say_description")}
-          >
-            <Input id={field("topic")} value={targets.topic} maxLength={500} onChange={(event) => onTargetsChange({ topic: event.target.value })} />
+          <FormField label={t("what_to_say")} htmlFor={field("topic")}>
+            <Input
+              id={field("topic")}
+              value={targets.topic}
+              maxLength={500}
+              placeholder={t("what_to_say_placeholder")}
+              onChange={(event) => onTargetsChange({ topic: event.target.value })}
+            />
           </FormField>
           <div className="flex flex-wrap items-center gap-2">
             <AiButton

@@ -1,10 +1,19 @@
 "use client"
 
 import { TriangleAlert } from "lucide-react"
-import Link from "next/link"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
-import { FormField, FormRow, GoalSelect, MultiSelect, NumberField, PlatformIcon, type MultiSelectOption } from "@/components/common"
+import {
+  Disclosure,
+  FormField,
+  FormRow,
+  GoalSelect,
+  InfoHint,
+  MultiSelect,
+  NumberField,
+  PlatformIcon,
+  type MultiSelectOption,
+} from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group"
 import { Switch } from "@/components/ui/switch"
@@ -14,7 +23,7 @@ import { useT, useUiLang } from "@/lib/i18n"
 import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions, useTable } from "@/lib/store"
 import type { PlatformStrategy } from "@/lib/types"
-import { cn, formatCompact, formatNumber, formatPercent } from "@/lib/utils"
+import { cn, formatCompact, formatNumber } from "@/lib/utils"
 import {
   paceVsPlan,
   platformFormValues,
@@ -59,10 +68,16 @@ function CardHeader({ strategy, className }: { strategy: PlatformStrategy; class
         </span>
         <div className="min-w-0">
           <h3 className="text-sm leading-5 font-medium">{platformLabel(strategy.platform)}</h3>
-          <p className="truncate text-xs text-muted-foreground">
-            {strategy.handle ? `@${strategy.handle}` : t("no_handle")}
-            {strategy.current_followers !== null ? t("followers_suffix", { count: formatCompact(strategy.current_followers) }) : ""}
-          </p>
+          {strategy.handle || strategy.current_followers !== null ? (
+            <p className="truncate text-xs text-muted-foreground">
+              {[
+                strategy.handle ? `@${strategy.handle}` : "",
+                strategy.current_followers !== null ? t("followers_count", { count: formatCompact(strategy.current_followers) }) : "",
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          ) : null}
         </div>
       </div>
       <ActiveSwitch strategy={strategy} />
@@ -70,44 +85,26 @@ function CardHeader({ strategy, className }: { strategy: PlatformStrategy; class
   )
 }
 
-function Stat({ label, value, sub, warn }: { label: string; value: string; sub?: string; warn?: string }) {
-  return (
-    <div className="flex min-w-0 flex-col">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="text-sm font-semibold num">{value}</dd>
-      {warn ? (
-        <p className="flex items-center gap-1 text-xs text-warning-fg">
-          <TriangleAlert className="size-3 shrink-0" aria-hidden />
-          {warn}
-        </p>
-      ) : sub ? (
-        <p className="truncate text-xs text-muted-foreground">{sub}</p>
-      ) : null}
-    </div>
-  )
-}
-
-/** Paused platform: header, the note on why, and its switch. */
+/** Paused platform: header, its own note and its switch (what "paused" means is the section's ⓘ). */
 export function PausedPlatformCard({ row }: { row: PlatformPlanRow & { strategy: PlatformStrategy } }) {
   const t = useT(platformsMessages)
   return (
     <div id={`platform-${row.platform}`} className="flex min-w-0 scroll-mt-20 flex-col gap-2 rounded-lg border bg-card p-4">
       <CardHeader strategy={row.strategy} />
-      <p className="line-clamp-2 text-xs text-pretty text-muted-foreground">
-        {row.strategy.notes || t("paused_note")}
-      </p>
+      {row.strategy.notes ? <p className="line-clamp-2 text-xs text-pretty text-muted-foreground">{row.strategy.notes}</p> : null}
       {row.perf ? (
         <p className="text-xs text-muted-foreground">
-          {t("still_published_before")}
-          <span className="font-medium text-foreground num">{row.perf.posts}</span>
-          {t("still_published_after")}
+          <span className="font-medium text-foreground num">{row.perf.posts}</span> {t("still_published")}
         </p>
       ) : null}
     </div>
   )
 }
 
-/** Active platform: the editable strategy (saved per card) plus its last 30 days. */
+/**
+ * Active platform: its switch and the editable strategy (saved per card) behind "Edit strategy". Its numbers
+ * live in the "Last 30 days by platform" table above; a card only flags being behind plan.
+ */
 export function PlatformCard({
   row,
   options,
@@ -133,6 +130,13 @@ export function PlatformCard({
   // Nothing published anywhere yet: every platform is at zero by definition, not behind.
   const started = useMemo(() => hasPublishedContent(items), [items])
   const behind = started && paceVsPlan(row) === "behind"
+  // The strategy fields wait behind "Edit strategy"; a card opened by `?open=` or with unsaved edits stays open.
+  const [editing, setEditing] = useState(highlighted)
+  const [wasHighlighted, setWasHighlighted] = useState(highlighted)
+  if (highlighted !== wasHighlighted) {
+    setWasHighlighted(highlighted)
+    if (highlighted) setEditing(true)
+  }
 
   function set<K extends keyof PlatformFormValues>(key: K, value: PlatformFormValues[K]) {
     setEdits((current) => ({ ...current, [key]: value }))
@@ -160,145 +164,136 @@ export function PlatformCard({
     >
       <CardHeader strategy={strategy} className="px-4 pt-4" />
 
-      <div className="flex flex-col gap-4 p-4">
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border bg-muted/30 p-3 sm:grid-cols-4 dark:bg-input/10">
-          <Stat
-            label={t("stat_posts")}
-            value={formatNumber(perf?.posts ?? 0)}
-            sub={row.planned30 ? t("stat_plan", { count: Math.round(row.planned30) }) : t("stat_no_plan")}
-            warn={behind ? t("stat_behind", { count: Math.round(row.planned30) }) : undefined}
-          />
-          <Stat
-            label={t("stat_views")}
-            value={formatCompact(perf?.views ?? 0)}
-            sub={perf?.avgViews ? t("stat_avg", { count: formatCompact(perf.avgViews) }) : t("stat_no_analytics")}
-          />
-          <Stat
-            label={t("stat_engagement")}
-            value={formatPercent(perf?.engagementRate)}
-            sub={perf ? t("stat_leads", { count: formatNumber(perf.leads) }) : undefined}
-          />
-          <Stat label={t("stat_followers")} value={perf ? `+${formatNumber(perf.followersGained)}` : "—"} sub={t("stat_gained")} />
-        </dl>
-
-        <FormRow>
-          <FormField label={t("handle")} htmlFor={id("handle")}>
-            <InputGroup>
-              <InputGroupAddon>
-                <InputGroupText>@</InputGroupText>
-              </InputGroupAddon>
-              <InputGroupInput
-                id={id("handle")}
-                value={values.handle}
-                placeholder={t("handle_placeholder")}
-                autoComplete="off"
-                onChange={(event) => set("handle", event.target.value)}
-              />
-            </InputGroup>
-          </FormField>
-          <FormField label={t("current_followers")} htmlFor={id("followers")} error={errors.current_followers}>
-            <NumberField
-              id={id("followers")}
-              integer
-              min={0}
-              value={values.current_followers}
-              placeholder={t("followers_placeholder")}
-              suffix={t("followers_unit")}
-              aria-invalid={Boolean(errors.current_followers) || undefined}
-              onChange={(next) => set("current_followers", next)}
-            />
-          </FormField>
-        </FormRow>
-        <FormRow>
-          <FormField label={t("frequency")} htmlFor={id("frequency")} error={errors.posting_frequency}>
-            <NumberField
-              id={id("frequency")}
-              min={0}
-              max={50}
-              value={values.posting_frequency}
-              suffix={t("per_week")}
-              aria-invalid={Boolean(errors.posting_frequency) || undefined}
-              onChange={(next) => set("posting_frequency", next)}
-            />
-          </FormField>
-          <FormField label={t("primary_goal")} htmlFor={id("goal")}>
-            <GoalSelect id={id("goal")} allowNone value={values.primary_goal_id} onChange={(next) => set("primary_goal_id", next)} />
-          </FormField>
-        </FormRow>
-        <FormRow>
-          <FormField label={t("formats")} htmlFor={id("formats")}>
-            <MultiSelect
-              id={id("formats")}
-              options={options.formats}
-              value={values.preferred_format_ids}
-              placeholder={t("formats_placeholder")}
-              maxChips={2}
-              aria-label={t("formats_label", { platform: label })}
-              onChange={(next) => set("preferred_format_ids", next)}
-            />
-          </FormField>
-          <FormField label={t("pillars")} htmlFor={id("pillars")}>
-            <MultiSelect
-              id={id("pillars")}
-              options={options.pillars}
-              value={values.preferred_pillar_ids}
-              placeholder={t("pillars_placeholder")}
-              maxChips={2}
-              aria-label={t("pillars_label", { platform: label })}
-              onChange={(next) => set("preferred_pillar_ids", next)}
-            />
-          </FormField>
-        </FormRow>
-        <FormField label={t("audience")} htmlFor={id("audience")} description={t("audience_description")}>
-          <Textarea
-            id={id("audience")}
-            rows={2}
-            className="min-h-14 leading-relaxed"
-            value={values.audience}
-            placeholder={t("audience_placeholder")}
-            onChange={(event) => set("audience", event.target.value)}
-          />
-        </FormField>
-        <FormField label={t("cta")} htmlFor={id("cta")}>
-          <Textarea
-            id={id("cta")}
-            rows={2}
-            className="min-h-14 leading-relaxed"
-            value={values.cta_style}
-            placeholder={t("cta_placeholder")}
-            onChange={(event) => set("cta_style", event.target.value)}
-          />
-        </FormField>
-        <FormField label={t("notes")} htmlFor={id("notes")}>
-          <Textarea
-            id={id("notes")}
-            rows={2}
-            className="min-h-14 leading-relaxed"
-            value={values.notes}
-            placeholder={t("notes_placeholder")}
-            onChange={(event) => set("notes", event.target.value)}
-          />
-        </FormField>
-      </div>
-
-      <div className="mt-auto flex min-h-11 flex-wrap items-center justify-between gap-2 border-t bg-muted/30 px-4 py-2">
-        <p className="text-xs text-muted-foreground">
-          {t("manual_analytics")}
-          <Link href="/settings?tab=integrations" className="font-medium text-foreground underline-offset-2 hover:underline">
-            Settings → Integrations
-          </Link>
-        </p>
-        {dirty ? (
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="ghost" size="sm" onClick={() => setEdits({})}>
-              {c("discard")}
-            </Button>
-            <Button type="submit" size="sm" disabled={invalid}>
-              {t("save_platform", { platform: label })}
-            </Button>
-          </div>
+      <div className="flex flex-col gap-3 px-4 pt-3 pb-4">
+        {behind ? (
+          <p className="flex items-center gap-1.5 text-xs text-warning-fg">
+            <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
+            {t("card_behind", { posts: formatNumber(perf?.posts ?? 0), planned: Math.round(row.planned30) })}
+          </p>
         ) : null}
+
+        <Disclosure
+          label={t("edit_strategy")}
+          meta={values.posting_frequency !== null ? `· ${values.posting_frequency} ${t("per_week")}` : undefined}
+          open={editing || dirty}
+          onOpenChange={setEditing}
+          contentClassName="flex flex-col gap-4 pt-3"
+        >
+          <FormRow>
+            <FormField label={t("handle")} htmlFor={id("handle")}>
+              <InputGroup>
+                <InputGroupAddon>
+                  <InputGroupText>@</InputGroupText>
+                </InputGroupAddon>
+                <InputGroupInput
+                  id={id("handle")}
+                  value={values.handle}
+                  placeholder={t("handle_placeholder")}
+                  autoComplete="off"
+                  onChange={(event) => set("handle", event.target.value)}
+                />
+              </InputGroup>
+            </FormField>
+            <FormField label={t("current_followers")} htmlFor={id("followers")} error={errors.current_followers}>
+              <NumberField
+                id={id("followers")}
+                integer
+                min={0}
+                value={values.current_followers}
+                placeholder={t("followers_placeholder")}
+                suffix={t("followers_unit")}
+                aria-invalid={Boolean(errors.current_followers) || undefined}
+                onChange={(next) => set("current_followers", next)}
+              />
+            </FormField>
+          </FormRow>
+          <FormRow>
+            <FormField label={t("frequency")} htmlFor={id("frequency")} error={errors.posting_frequency}>
+              <NumberField
+                id={id("frequency")}
+                min={0}
+                max={50}
+                value={values.posting_frequency}
+                suffix={t("per_week")}
+                aria-invalid={Boolean(errors.posting_frequency) || undefined}
+                onChange={(next) => set("posting_frequency", next)}
+              />
+            </FormField>
+            <FormField label={t("primary_goal")} htmlFor={id("goal")}>
+              <GoalSelect id={id("goal")} allowNone value={values.primary_goal_id} onChange={(next) => set("primary_goal_id", next)} />
+            </FormField>
+          </FormRow>
+          <FormRow>
+            <FormField label={t("formats")} htmlFor={id("formats")}>
+              <MultiSelect
+                id={id("formats")}
+                options={options.formats}
+                value={values.preferred_format_ids}
+                placeholder={t("formats_placeholder")}
+                maxChips={2}
+                aria-label={t("formats_label", { platform: label })}
+                onChange={(next) => set("preferred_format_ids", next)}
+              />
+            </FormField>
+            <FormField label={t("pillars")} htmlFor={id("pillars")}>
+              <MultiSelect
+                id={id("pillars")}
+                options={options.pillars}
+                value={values.preferred_pillar_ids}
+                placeholder={t("pillars_placeholder")}
+                maxChips={2}
+                aria-label={t("pillars_label", { platform: label })}
+                onChange={(next) => set("preferred_pillar_ids", next)}
+              />
+            </FormField>
+          </FormRow>
+          <FormField
+            label={t("audience")}
+            htmlFor={id("audience")}
+            labelAction={<InfoHint title={t("audience")} align="end">{t("audience_description")}</InfoHint>}
+          >
+            <Textarea
+              id={id("audience")}
+              rows={2}
+              className="min-h-14 leading-relaxed"
+              value={values.audience}
+              placeholder={t("audience_placeholder")}
+              onChange={(event) => set("audience", event.target.value)}
+            />
+          </FormField>
+          <FormField label={t("cta")} htmlFor={id("cta")}>
+            <Textarea
+              id={id("cta")}
+              rows={2}
+              className="min-h-14 leading-relaxed"
+              value={values.cta_style}
+              placeholder={t("cta_placeholder")}
+              onChange={(event) => set("cta_style", event.target.value)}
+            />
+          </FormField>
+          <FormField label={t("notes")} htmlFor={id("notes")}>
+            <Textarea
+              id={id("notes")}
+              rows={2}
+              className="min-h-14 leading-relaxed"
+              value={values.notes}
+              placeholder={t("notes_placeholder")}
+              onChange={(event) => set("notes", event.target.value)}
+            />
+          </FormField>
+        </Disclosure>
       </div>
+
+      {dirty ? (
+        <div className="mt-auto flex min-h-11 flex-wrap items-center justify-end gap-2 border-t bg-muted/30 px-4 py-2">
+          <Button type="button" variant="ghost" size="sm" onClick={() => setEdits({})}>
+            {c("discard")}
+          </Button>
+          <Button type="submit" size="sm" disabled={invalid}>
+            {t("save_platform", { platform: label })}
+          </Button>
+        </div>
+      ) : null}
     </form>
   )
 }

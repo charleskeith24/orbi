@@ -11,7 +11,7 @@ import { useTable } from "@/lib/store"
 import { experienceMessages } from "./experience-messages"
 import { storyDay, storyTypeLabel } from "./story-model"
 
-/** The five most recently captured stories, linking into the Story Vault. */
+/** The five most recently captured stories (title and month; type and full date on hover), linking into the Story Vault. */
 export function RecentStories({ className }: { className?: string }) {
   const stories = useTable("stories")
   const t = useT(experienceMessages)
@@ -36,12 +36,11 @@ export function RecentStories({ className }: { className?: string }) {
             <li key={story.id}>
               <Link
                 href={`/stories?open=${story.id}`}
-                className="flex min-w-0 flex-col gap-0.5 rounded-md px-1.5 py-1.5 outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/60"
+                title={`${storyTypeLabel(story.type)} · ${formatDate(storyDay(story), "MMM d, yyyy")}`}
+                className="flex min-w-0 items-baseline gap-3 rounded-md px-1.5 py-1.5 outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/60"
               >
-                <span className="truncate text-sm">{story.title || t("untitled_story")}</span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {storyTypeLabel(story.type)} · {formatDate(storyDay(story), "MMM d, yyyy")}
-                </span>
+                <span className="min-w-0 flex-1 truncate text-sm">{story.title || t("untitled_story")}</span>
+                <span className="shrink-0 text-xs text-muted-foreground num">{formatDate(storyDay(story), "MMM yyyy")}</span>
               </Link>
             </li>
           ))}

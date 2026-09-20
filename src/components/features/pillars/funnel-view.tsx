@@ -15,7 +15,6 @@ import { FunnelStageCard } from "./funnel-stage-card"
 import { FunnelTargetsDialog } from "./funnel-targets-dialog"
 import { contentByStage } from "./funnel-utils"
 import { pillarMessages } from "./pillar-messages"
-import { PillarsTabs } from "./pillars-tabs"
 import { windowDays, WindowToggle, type MixWindow } from "./segmented-toggle"
 import { UnassignedItems } from "./unassigned-items"
 
@@ -57,7 +56,7 @@ export function FunnelView() {
     <PageContainer>
       <PageHeader
         title="Content Funnel"
-        description={t("description")}
+        info={t("description")}
         actions={
           <>
             <WindowToggle value={range} onChange={setRange} />
@@ -67,9 +66,7 @@ export function FunnelView() {
             </Button>
           </>
         }
-      >
-        <PillarsTabs />
-      </PageHeader>
+      />
 
       <section aria-label={t("stages_aria")} className="grid gap-4 xl:grid-cols-3">
         {FUNNEL_STAGE_IDS.map((stage) => (

@@ -57,7 +57,7 @@ export function WinnerWhy({ item }: { item: ContentItem }) {
     <PageSection
       id="winner-why"
       title={t("why_title")}
-      description={t("why_description")}
+      info={t("why_info")}
       action={
         <AiButton size="sm" pending={ai.isPending} pendingLabel={t("analyzing")} onClick={analyze}>
           {t("analyze")}

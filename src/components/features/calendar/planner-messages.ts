@@ -8,11 +8,11 @@ import { defineMessages } from "@/lib/i18n/core"
 export const plannerMessages = defineMessages({
   en: {
     // Page
-    description: "Plan the week in seven steps — review what worked, choose a focus, fill your posting slots and generate briefs.",
-    draft_with_ai: "Draft the plan with AI",
+    info: "Plan the week in seven steps — review what worked, choose a focus, fill your posting slots and generate briefs. Draft with AI fills steps 4–6 for you to review.",
+    draft_with_ai: "Draft with AI",
     draft_failed: "Couldn't draft the plan: {message}",
     retry: "Retry",
-    step_of: "Step {step} of {total} · {title}",
+    step_of_short: "Step {step} of {total}",
     next_step: "Next: {step}",
     posts_planned_of: "{planned} of {target} posts planned",
 
@@ -36,7 +36,6 @@ export const plannerMessages = defineMessages({
     hint_focus: "One sentence the whole week serves.",
     hint_ideas: "Recommended by the Content Decision Engine, or picked from the Idea Bank.",
     hint_platforms: "Where each idea goes out — one content item per platform.",
-    hint_deadlines: "Publish times fill your posting slots first; due dates leave time to produce.",
     hint_briefs: "Create the content items with their briefs and save the plan.",
 
     // Toasts and blockers
@@ -92,8 +91,9 @@ export const plannerMessages = defineMessages({
     views: "{count} views",
     nothing_went_out: "Nothing went out that week",
     nothing_went_out_hint: "No posts were published {period}. This week's plan is the way back — pick a focus and fill your posting slots.",
-    in_progress: "still in progress — changes compare the same days of the week before",
-    compared: "compared with the week before",
+    in_progress: "In progress",
+    in_progress_hint: "Changes compare the same days of the week before.",
+    compared: "vs the week before",
     stat_published: "Published",
     of_target_pct: "{pct}% of target",
     stat_views: "Views",
@@ -125,7 +125,8 @@ export const plannerMessages = defineMessages({
     insight_warning: "Warning",
     focus_too_long: "Keep it under {max} characters — one sentence the week serves.",
     focus_label: "This week's strategic focus",
-    focus_description: "It steers the AI draft and is saved with the plan · {length}/{max}",
+    focus_count: "{length}/{max}",
+    focus_steers: "The focus steers the AI draft and is saved with the plan.",
     focus_placeholder: "e.g. Bring Leadership back to its 15% share with two story-led posts, and repurpose last week's winner.",
     last_weeks_focus: "Last week's focus: “{focus}”",
     reuse_it: "Reuse it",
@@ -225,6 +226,7 @@ export const plannerMessages = defineMessages({
     save_plan: "Save plan",
     created_plan_saved: "{items} created · plan saved",
     open_calendar_week: "Open the Calendar week",
+    briefs_hint_label: "About the briefs",
     briefs_hint:
       "Each item already has a brief from its idea. Generate the full Content Brief with AI — objective, message, points, visual direction, caption, B-roll — then review and edit it before saving.",
 
@@ -252,11 +254,11 @@ export const plannerMessages = defineMessages({
   },
   tl: {
     // Page
-    description: "I-plan ang week sa pitong steps — i-review ang mga gumana, pumili ng focus, punan ang posting slots at gumawa ng briefs.",
-    draft_with_ai: "I-draft ang plan gamit ang AI",
+    info: "I-plan ang week sa pitong steps — i-review ang gumana, pumili ng focus, punan ang posting slots at gumawa ng briefs. Pinupunan ng Draft with AI ang steps 4–6 para i-review mo.",
+    draft_with_ai: "I-draft gamit ang AI",
     draft_failed: "Hindi na-draft ang plan: {message}",
     retry: "Subukan ulit",
-    step_of: "Step {step} of {total} · {title}",
+    step_of_short: "Step {step} of {total}",
     next_step: "Next: {step}",
     posts_planned_of: "{planned} ng {target} posts naka-plan",
 
@@ -280,7 +282,6 @@ export const plannerMessages = defineMessages({
     hint_focus: "Isang pangungusap na sinusunod ng buong week.",
     hint_ideas: "Recommended ng Content Decision Engine, o pinili mula sa Idea Bank.",
     hint_platforms: "Saan lalabas ang bawat idea — isang content item bawat platform.",
-    hint_deadlines: "Unang pinupuno ng publish times ang posting slots mo; nag-iiwan ng oras para produce ang due dates.",
     hint_briefs: "Gawin ang content items kasama ang briefs, tapos i-save ang plan.",
 
     // Toasts and blockers
@@ -336,8 +337,9 @@ export const plannerMessages = defineMessages({
     views: "{count} views",
     nothing_went_out: "Walang post na lumabas sa week na 'yan",
     nothing_went_out_hint: "Walang na-publish na posts {period}. Ang plan this week ang daan pabalik — pumili ng focus at punan ang posting slots mo.",
-    in_progress: "hindi pa tapos — ikinukumpara sa parehong mga araw ng week bago nito",
-    compared: "ikinumpara sa week bago nito",
+    in_progress: "Hindi pa tapos",
+    in_progress_hint: "Ikinukumpara sa parehong mga araw ng week bago nito.",
+    compared: "vs week bago nito",
     stat_published: "Published",
     of_target_pct: "{pct}% ng target",
     stat_views: "Views",
@@ -369,7 +371,8 @@ export const plannerMessages = defineMessages({
     insight_warning: "Warning",
     focus_too_long: "Panatilihin sa ilalim ng {max} characters — isang pangungusap na sinusunod ng week.",
     focus_label: "Strategic focus this week",
-    focus_description: "Ginagabayan nito ang AI draft at na-save kasama ang plan · {length}/{max}",
+    focus_count: "{length}/{max}",
+    focus_steers: "Ginagabayan ng focus ang AI draft at naka-save ito kasama ang plan.",
     focus_placeholder: "hal. Ibalik ang Leadership sa 15% share gamit ang dalawang story-led posts, at i-repurpose ang winner last week.",
     last_weeks_focus: "Focus last week: “{focus}”",
     reuse_it: "Gamitin ulit",
@@ -469,6 +472,7 @@ export const plannerMessages = defineMessages({
     save_plan: "I-save ang plan",
     created_plan_saved: "{items} nagawa · na-save ang plan",
     open_calendar_week: "Buksan ang week sa Calendar",
+    briefs_hint_label: "Tungkol sa briefs",
     briefs_hint:
       "May brief na ang bawat item mula sa idea nito. Gumawa ng buong Content Brief gamit ang AI — objective, message, points, visual direction, caption, B-roll — tapos i-review at i-edit bago i-save.",
 

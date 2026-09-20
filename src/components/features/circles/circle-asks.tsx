@@ -42,7 +42,7 @@ export function CircleAsksSection({ snapshot, contacts, now, onChanged }: AsksPr
   return (
     <SectionCard
       title={t("title")}
-      description={t("description")}
+      info={t("description")}
       action={
         composing ? null : (
           <Button size="sm" variant="outline" onClick={() => setComposing(true)}>

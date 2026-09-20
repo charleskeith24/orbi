@@ -4,7 +4,7 @@ import { ArrowRight, Link2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useId, useState } from "react"
 import { toast } from "sonner"
-import { CopyButton, FormField } from "@/components/common"
+import { CopyButton, FormField, InfoHint } from "@/components/common"
 import { useMyProfile } from "@/components/features/profile/profile-store"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -120,7 +120,7 @@ function CreateCircleForm({ onClose, onCreated }: { onClose: () => void; onCreat
       <FormField
         label={t("display_name")}
         htmlFor={`${id}-display`}
-        description={t("display_name_help")}
+        labelAction={<InfoHint title={t("display_name")}>{t("display_name_help")}</InfoHint>}
         error={touched.displayName ? errors.displayName : undefined}
         required
       >

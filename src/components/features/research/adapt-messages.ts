@@ -8,8 +8,6 @@ import { defineMessages } from "@/lib/i18n/core"
 export const adaptMessages = defineMessages({
   en: {
     // Page
-    description:
-      "Borrow the structure and psychology of content that works — never the words. Create an original version for your audience, in your voice.",
     missing_link: "The reference in this link no longer exists — paste one or pick another from your library.",
     dismiss: "Dismiss",
     hint_library: "This reference has no pasted text — add it in the Research Library to analyze it.",
@@ -34,16 +32,12 @@ export const adaptMessages = defineMessages({
     untitled_reference: "Untitled reference",
     error_url: "Use a full web address, starting with https://",
     reference: "Reference",
-    reference_description: "Paste the post, script or transcript — or pick one from your Research Library.",
     source_aria: "Reference source",
     reference_text: "Reference text",
-    reference_text_description: "Used for analysis only — it's never shown as your draft and never republished.",
     error_min: "Paste at least {min} characters.",
     reference_text_placeholder: "Paste the post, caption, script or transcript you want to learn from…",
     title: "Title",
-    title_description: "Optional — how you'll recognise it in your library.",
     creator: "Creator",
-    creator_description: "Describe them — e.g. SaaS founder, ~90k followers.",
     platform: "Platform",
     type: "Type",
     url: "URL",
@@ -55,8 +49,6 @@ export const adaptMessages = defineMessages({
 
     // Step 2
     analysis: "Analysis",
-    analysis_description:
-      "Why it works — hook, structure, angle, psychology and the patterns to borrow. Edit anything before you adapt it.",
     analyzing: "Analyzing…",
     reanalyze: "Re-analyze",
     locked_step1: "Add a reference in step 1 first.",
@@ -70,7 +62,6 @@ export const adaptMessages = defineMessages({
     // Step 3
     untitled_story: "Untitled story",
     original_version: "Original version",
-    original_description: "For your audience, from your expertise and stories, in your voice. Only the structure and psychology are borrowed.",
     locked_step2: "Analyze the reference in step 2 first.",
     content_pillar: "Content Pillar",
     persona: "Persona",
@@ -80,7 +71,6 @@ export const adaptMessages = defineMessages({
     story_placeholder: "Weave in a Story Vault story",
     story_empty: "Your Story Vault is empty.",
     what_to_say: "What do you want to say?",
-    what_to_say_description: "Optional — your point, in your own words. Leave it empty and your audience's problems lead.",
     writing: "Writing your version…",
     regenerate: "Regenerate original",
     create_original: "Create original version",
@@ -106,11 +96,21 @@ export const adaptMessages = defineMessages({
     pasted_reference: "Pasted reference",
     a_reference: "a reference",
     inspired_by: "Inspired by {credit} — structure only. {note}",
+    info:
+      "Borrow the structure and psychology of content that works — never the words. Create an original version for your audience, in your voice, in three steps: reference, analysis, original.",
+    reference_info:
+      "Paste the post, script or transcript — or pick one from your Research Library. The text is used for analysis only — it's never shown as your draft and never republished.",
+    details_optional: "Details (optional)",
+    title_placeholder: "How you'll recognise it in your library",
+    creator_placeholder: "e.g. SaaS founder, ~90k followers",
+    analysis_info:
+      "Why it works — hook, structure, angle, psychology and the patterns to borrow. Edit anything before you adapt it.",
+    original_info:
+      "For your audience, from your expertise and stories, in your voice. Only the structure and psychology are borrowed. Leave “What do you want to say?” empty and your audience's problems lead.",
+    what_to_say_placeholder: "Optional — your point, in your own words",
   },
   tl: {
     // Page
-    description:
-      "Gamitin ang structure at psychology ng content na gumagana — hindi ang mga salita. Gumawa ng original na version para sa audience mo, sa boses mo.",
     missing_link: "Wala na ang reference sa link na 'to — mag-paste ng isa o pumili ng iba sa library mo.",
     dismiss: "Isara",
     hint_library: "Walang pasted text ang reference na 'to — idagdag sa Research Library para i-analyze.",
@@ -135,16 +135,12 @@ export const adaptMessages = defineMessages({
     untitled_reference: "Reference na walang title",
     error_url: "Gumamit ng buong web address, simula sa https://",
     reference: "Reference",
-    reference_description: "I-paste ang post, script o transcript — o pumili ng isa sa Research Library mo.",
     source_aria: "Source ng reference",
     reference_text: "Text ng reference",
-    reference_text_description: "Para sa analysis lang — hindi ito lalabas bilang draft mo at hindi ire-republish.",
     error_min: "Mag-paste ng at least {min} characters.",
     reference_text_placeholder: "I-paste ang post, caption, script o transcript na gusto mong pag-aralan…",
     title: "Title",
-    title_description: "Optional — para makilala mo ito sa library.",
     creator: "Creator",
-    creator_description: "Ilarawan — hal. SaaS founder, ~90k followers.",
     platform: "Platform",
     type: "Type",
     url: "URL",
@@ -156,8 +152,6 @@ export const adaptMessages = defineMessages({
 
     // Step 2
     analysis: "Analysis",
-    analysis_description:
-      "Bakit gumagana — hook, structure, angle, psychology at mga pattern na pwedeng gamitin. I-edit ang kahit ano bago i-adapt.",
     analyzing: "Ina-analyze…",
     reanalyze: "I-analyze ulit",
     locked_step1: "Magdagdag muna ng reference sa step 1.",
@@ -171,7 +165,6 @@ export const adaptMessages = defineMessages({
     // Step 3
     untitled_story: "Story na walang title",
     original_version: "Original na version",
-    original_description: "Para sa audience mo, mula sa expertise at stories mo, sa boses mo. Ang structure at psychology lang ang ginamit.",
     locked_step2: "I-analyze muna ang reference sa step 2.",
     content_pillar: "Content Pillar",
     persona: "Persona",
@@ -181,7 +174,6 @@ export const adaptMessages = defineMessages({
     story_placeholder: "Isingit ang story mula sa Story Vault",
     story_empty: "Walang laman ang Story Vault mo.",
     what_to_say: "Anong gusto mong sabihin?",
-    what_to_say_description: "Optional — ang point mo, sa sarili mong salita. Kung iiwang blangko, ang problems ng audience mo ang mangunguna.",
     writing: "Isinusulat ang version mo…",
     regenerate: "I-regenerate ang original",
     create_original: "Gumawa ng original na version",
@@ -207,5 +199,17 @@ export const adaptMessages = defineMessages({
     pasted_reference: "Pasted na reference",
     a_reference: "isang reference",
     inspired_by: "Inspired by {credit} — structure lang. {note}",
+    info:
+      "Gamitin ang structure at psychology ng content na effective — hindi ang mga salita. Gumawa ng original na version para sa audience mo, sa boses mo, sa tatlong step: reference, analysis, original.",
+    reference_info:
+      "I-paste ang post, script o transcript — o pumili ng isa sa Research Library mo. Para sa analysis lang ang text — hindi ito lalabas bilang draft mo at hindi ire-republish.",
+    details_optional: "Detalye (optional)",
+    title_placeholder: "Para makilala mo ito sa library",
+    creator_placeholder: "hal. SaaS founder, ~90k followers",
+    analysis_info:
+      "Bakit ito effective — hook, structure, angle, psychology at mga pattern na pwedeng gamitin. I-edit ang kahit ano bago i-adapt.",
+    original_info:
+      "Para sa audience mo, mula sa expertise at stories mo, sa boses mo. Ang structure at psychology lang ang ginamit. Kung iiwang blangko ang “Anong gusto mong sabihin?”, ang problems ng audience mo ang mangunguna.",
+    what_to_say_placeholder: "Optional — ang point mo, sa sarili mong salita",
   },
 })

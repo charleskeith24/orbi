@@ -88,14 +88,12 @@ export function StoryVaultView() {
       <PageContainer>
         <PageHeader
           title="Story Vault"
-          description={t("description")}
+          info={t("info")}
           actions={
-            <>
-              <Button type="button" size="sm" onClick={() => setCreating(true)}>
-                <Plus aria-hidden />
-                {t("new_story")}
-              </Button>
-            </>
+            <Button type="button" size="sm" onClick={() => setCreating(true)}>
+              <Plus aria-hidden />
+              {t("new_story")}
+            </Button>
           }
         />
 
@@ -193,7 +191,7 @@ export function StoryVaultView() {
   )
 }
 
-/** "18 stories · 18 lessons · used in 12 ideas and 6 pieces of content · 5 not used yet". */
+/** "18 stories · used in 12 ideas · 6 posts · 5 not used yet" (the last one filters to them). */
 function StatsLine({
   stats,
   visible,
@@ -206,15 +204,13 @@ function StatsLine({
   onShowUnused?: () => void
 }) {
   const t = useT(storyVaultMessages)
-  const n = (key: "stories" | "lessons" | "ideas" | "pieces", count: number) => t.plural(key, count, { count: formatNumber(count) })
+  const n = (key: "stories" | "ideas" | "pieces", count: number) => t.plural(key, count, { count: formatNumber(count) })
   const unusedText = t("not_used_count", { count: formatNumber(stats.unused) })
   return (
     <p className="flex min-h-7 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground" aria-live="polite">
       <span className="num">
         {filtered ? t("shown_of", { visible: formatNumber(visible), stories: n("stories", stats.stories) }) : n("stories", stats.stories)}
       </span>
-      <span aria-hidden>·</span>
-      <span className="num">{n("lessons", stats.lessons)}</span>
       <span aria-hidden>·</span>
       <span className="num">
         {stats.items

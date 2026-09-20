@@ -32,6 +32,7 @@ export const matrixMessages = defineMessages({
     missing_goal: "a goal",
     missing_stage: "a funnel stage",
     dimensions: "Dimensions",
+    edit_dimensions: "Edit dimensions",
     dimensions_description:
       "Every pillar × format × problem × goal × stage you pick becomes a candidate — the strongest are ranked below.",
     combinations: "combinations",
@@ -62,6 +63,8 @@ export const matrixMessages = defineMessages({
     in_idea_bank: "In Idea Bank",
     save_as_idea: "Save as idea",
     expand_with_ai: "Expand with AI",
+    why: "Why it ranks here",
+    why_rank: "Why #{rank} ranks here",
     show_more: "Show {count} more",
     no_combinations: "No combinations yet",
     no_combinations_description:
@@ -135,6 +138,7 @@ export const matrixMessages = defineMessages({
     missing_goal: "isang goal",
     missing_stage: "isang funnel stage",
     dimensions: "Dimensions",
+    edit_dimensions: "I-edit ang dimensions",
     dimensions_description:
       "Ang bawat pillar × format × problem × goal × stage na pipiliin mo ay nagiging candidate — ang pinakamalakas ay naka-rank sa ibaba.",
     combinations: "combinations",
@@ -164,6 +168,8 @@ export const matrixMessages = defineMessages({
     in_idea_bank: "Nasa Idea Bank",
     save_as_idea: "I-save bilang idea",
     expand_with_ai: "I-expand gamit ang AI",
+    why: "Bakit nandito sa rank",
+    why_rank: "Bakit #{rank} ang rank nito",
     show_more: "Ipakita ang {count} pa",
     no_combinations: "Wala pang combinations",
     no_combinations_description:

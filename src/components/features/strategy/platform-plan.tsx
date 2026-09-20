@@ -29,7 +29,26 @@ function WeeklyPlanCard({ plan }: { plan: PlatformPlan }) {
     }))
 
   return (
-    <SectionCard title={t("plan_title")} description={t("plan_description")} contentClassName="flex flex-col gap-4">
+    <SectionCard
+      title={t("plan_title")}
+      info={
+        <>
+          <p>{t("plan_description")}</p>
+          <p>
+            {t("target_hint_1")}
+            <Link href="/settings?tab=general" className="font-medium text-foreground underline-offset-2 hover:underline">
+              Settings → General
+            </Link>
+            {t("target_hint_2")}
+            <Link href="/calendar/schedule" className="font-medium text-foreground underline-offset-2 hover:underline">
+              Posting Schedule
+            </Link>
+            {t("target_hint_3")}
+          </p>
+        </>
+      }
+      contentClassName="flex flex-col gap-4"
+    >
       <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
         <div>
           <p className="text-3xl leading-9 font-semibold tracking-tight num">{fmtFreq(plan.weeklyTotal)}</p>
@@ -51,17 +70,6 @@ function WeeklyPlanCard({ plan }: { plan: PlatformPlan }) {
         emptyMessage={t("plan_empty")}
         aria-label={t("plan_chart_label")}
       />
-      <p className="text-xs text-muted-foreground">
-        {t("target_hint_1")}
-        <Link href="/settings?tab=general" className="font-medium text-foreground underline-offset-2 hover:underline">
-          Settings → General
-        </Link>
-        {t("target_hint_2")}
-        <Link href="/calendar/schedule" className="font-medium text-foreground underline-offset-2 hover:underline">
-          Posting Schedule
-        </Link>
-        {t("target_hint_3")}
-      </p>
     </SectionCard>
   )
 }
@@ -74,7 +82,17 @@ function PerformanceCard({ plan }: { plan: PlatformPlan }) {
   return (
     <SectionCard
       title={t("perf_title")}
-      description={t("perf_description")}
+      info={
+        <>
+          <p>{t("perf_description")}</p>
+          <p>
+            {t("manual_analytics")}
+            <Link href="/settings?tab=integrations" className="font-medium text-foreground underline-offset-2 hover:underline">
+              Settings → Integrations
+            </Link>
+          </p>
+        </>
+      }
       contentClassName={anyPosts ? "px-0 pb-1" : undefined}
     >
       {anyPosts ? (

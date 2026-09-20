@@ -1,6 +1,6 @@
 "use client"
 
-import { CalendarPlus, Info } from "lucide-react"
+import { CalendarPlus } from "lucide-react"
 import { toast } from "sonner"
 import { SectionCard, StatusPill } from "@/components/common"
 import { downloadFile } from "@/components/features/settings/download"
@@ -35,28 +35,23 @@ export function CalendarCard({ unsaved }: { unsaved: boolean }) {
   return (
     <SectionCard
       title={t("calendar_title")}
-      description={t("calendar_description")}
+      info={
+        <>
+          <p>{t("calendar_info")}</p>
+          <p>{t("calendar_hint_phone")}</p>
+          <p>{t("calendar_hint_update")}</p>
+        </>
+      }
+      infoTitle={t("calendar_title")}
       action={<StatusPill tone="good">{t("calendar_badge")}</StatusPill>}
       className="h-full"
     >
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <Button type="button" size="sm" onClick={download} disabled={Boolean(blocked)}>
-            <CalendarPlus aria-hidden />
-            {t("calendar_download")}
-          </Button>
-          {blocked ? <span className="text-xs text-muted-foreground">{blocked}</span> : null}
-        </div>
-        <ul className="flex flex-col gap-1.5 text-xs text-pretty text-muted-foreground">
-          <li className="flex gap-2">
-            <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            <span>{t("calendar_hint_phone")}</span>
-          </li>
-          <li className="flex gap-2">
-            <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            <span>{t("calendar_hint_update")}</span>
-          </li>
-        </ul>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <Button type="button" size="sm" onClick={download} disabled={Boolean(blocked)}>
+          <CalendarPlus aria-hidden />
+          {t("calendar_download")}
+        </Button>
+        {blocked ? <span className="text-xs text-muted-foreground">{blocked}</span> : null}
       </div>
     </SectionCard>
   )

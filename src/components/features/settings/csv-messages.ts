@@ -7,14 +7,14 @@ import { defineMessages } from "@/lib/i18n/core"
 export const m = defineMessages({
   en: {
     title: "Import analytics from CSV",
-    description: "Works with every platform today: export your numbers, check the columns and matches, import.",
+    info: "Works with every platform today: export your numbers, check the columns and matches, import. Rows are matched to your published posts by content ID, URL or title, and nothing is written until you confirm.",
     step_file: "File",
     step_columns: "Columns",
     step_review: "Review",
     steps_label: "Import steps",
 
     drop_title: "Drop a CSV export here",
-    drop_hint: "Meta Business Suite, TikTok Studio and YouTube Studio exports are recognised automatically. Any other CSV works with manual mapping.",
+    drop_hint: "Meta, TikTok and YouTube exports are recognised; any other CSV maps by hand.",
     choose_file: "Choose file",
     choose_file_label: "Choose a CSV file",
     paste_csv: "Paste CSV",
@@ -23,8 +23,6 @@ export const m = defineMessages({
     paste_cancel: "Cancel",
     paste_read: "Read CSV",
     pasted_name: "Pasted CSV",
-    source_footer_one: "Rows are matched to your {count} published post by content ID, URL or title. Nothing is written until you confirm.",
-    source_footer_other: "Rows are matched to your {count} published posts by content ID, URL or title. Nothing is written until you confirm.",
     template_toast: "Template downloaded",
     template_toast_hint: "Your latest published posts — add the numbers and import it here.",
 
@@ -211,14 +209,14 @@ export const m = defineMessages({
   },
   tl: {
     title: "I-import ang analytics mula sa CSV",
-    description: "Gumagana sa lahat ng platform ngayon: i-export ang numbers mo, i-check ang columns at matches, tapos i-import.",
+    info: "Gumagana sa lahat ng platform ngayon: i-export ang numbers mo, i-check ang columns at matches, tapos i-import. Itutugma ang rows sa published posts mo gamit ang content ID, URL o title, at walang mase-save hangga't hindi mo kinokonfirm.",
     step_file: "File",
     step_columns: "Columns",
     step_review: "Review",
     steps_label: "Mga step ng import",
 
     drop_title: "I-drop dito ang CSV export",
-    drop_hint: "Automatic nang nakikilala ang exports ng Meta Business Suite, TikTok Studio at YouTube Studio. Puwede rin ang ibang CSV — i-map lang ang columns.",
+    drop_hint: "Kilala na ang exports ng Meta, TikTok at YouTube; i-map lang ang ibang CSV.",
     choose_file: "Pumili ng file",
     choose_file_label: "Pumili ng CSV file",
     paste_csv: "I-paste ang CSV",
@@ -227,8 +225,6 @@ export const m = defineMessages({
     paste_cancel: "Cancel",
     paste_read: "Basahin ang CSV",
     pasted_name: "Pasted CSV",
-    source_footer_one: "Itutugma ang rows sa {count} published post mo gamit ang content ID, URL o title. Walang mase-save hangga't hindi mo kinokonfirm.",
-    source_footer_other: "Itutugma ang rows sa {count} published posts mo gamit ang content ID, URL o title. Walang mase-save hangga't hindi mo kinokonfirm.",
     template_toast: "Na-download na ang template",
     template_toast_hint: "Nandito ang latest published posts mo — ilagay ang numbers at i-import dito.",
 

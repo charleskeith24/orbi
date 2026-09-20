@@ -3,21 +3,19 @@
 import { Lightbulb, SearchX, Sparkles, X } from "lucide-react"
 import Link from "next/link"
 import { useCallback, useMemo, useState } from "react"
-import { toast } from "sonner"
 import { EmptyState, PageContainer, PageHeader } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useT } from "@/lib/i18n"
-import { commonMessages } from "@/lib/i18n/messages/common"
 import { uiActions, useLookup, useTable } from "@/lib/store"
-import type { ContentIdea, ID, IdeaStatus } from "@/lib/types"
+import type { ContentIdea, ID } from "@/lib/types"
 import { formatNumber } from "@/lib/utils"
 import { IdeaActionsProvider } from "./idea-actions"
 import { IdeaBulkBar } from "./idea-bulk-bar"
 import { IdeaCardsView } from "./idea-cards-view"
 import { IdeaDetailSheet } from "./idea-detail-sheet"
-import { IdeaFilterBar } from "./idea-filter-bar"
-import { IdeaQuickCapture, IdeaStatusStrip } from "./idea-header"
+import { IdeaFilterBar, IdeaViewControls } from "./idea-filter-bar"
+import { IdeaStatusTabs } from "./idea-header"
 import { IdeaKanban } from "./idea-kanban"
 import {
   ACTIVE_STATUSES,
@@ -25,8 +23,8 @@ import {
   buildTagIndex,
   countByStatus,
   EMPTY_FACETS,
+  FACET_KEYS,
   filterIdeas,
-  isActiveStatusFilter,
   sanitizeFacets,
   sortIdeas,
   type IdeaView,
@@ -36,14 +34,14 @@ import { ideaBankMessages } from "./messages"
 import { useIdeaBankState } from "./use-idea-bank-state"
 
 /**
- * Idea Bank (spec §9, §10, §39): capture, triage and prioritise ideas in a table, card grid or
- * status Kanban; the detail sheet edits every field, scores the idea and converts it to content.
+ * Idea Bank (spec §9, §10, §39; Calm UI): triage and prioritise ideas in a table, card grid or status Kanban;
+ * the detail sheet edits every field, scores the idea and converts it to content. Capturing lives in the top
+ * bar's New menu (⌥N). The status row doubles as the count line.
  * URL: `?view=`, `?sort=`, `?status=`, facet params, `?q=` (search) and `?open=<ideaId>`.
  */
 export function IdeaBankView() {
   const { state, update } = useIdeaBankState()
   const t = useT(ideaBankMessages)
-  const c = useT(commonMessages)
   const isMobile = useIsMobile()
   const view: IdeaView = state.view ?? (isMobile ? "cards" : "table")
 
@@ -82,7 +80,8 @@ export function IdeaBankView() {
     )
   }, [matching, criteria.status, state.sort])
   const hiddenByStatus = matching.length - visible.length
-  const statusTotals = useMemo(() => countByStatus(ideas), [ideas])
+  const statusCounts = useMemo(() => countByStatus(matching), [matching])
+  const narrowed = Boolean(state.q.trim()) || FACET_KEYS.some((key) => facets[key].length > 0)
   const selected = useMemo(
     () => selectedIds.map((id) => ideaById.get(id)).filter((i): i is ContentIdea => Boolean(i)),
     [selectedIds, ideaById]
@@ -97,19 +96,6 @@ export function IdeaBankView() {
   const setOpen = useCallback((id: ID | null) => update({ open: id }), [update])
   const showAllStatuses = () => update({ status: ALL_STATUSES })
   const resetFilters = () => update({ q: "", status: ACTIVE_STATUSES, facets: EMPTY_FACETS })
-
-  function selectStatus(status: IdeaStatus) {
-    const only = state.status.length === 1 && state.status[0] === status
-    update({ status: only ? ACTIVE_STATUSES : [status] })
-  }
-
-  function onCaptured(idea: ContentIdea) {
-    const hidden = !state.status.includes("inbox")
-    toast.success(t("captured"), {
-      description: hidden ? t("captured_hidden", { title: idea.title }) : idea.title,
-      action: { label: c("open"), onClick: () => setOpen(idea.id) },
-    })
-  }
 
   const filteredEmpty = (
     <EmptyState
@@ -150,7 +136,9 @@ export function IdeaBankView() {
       />
     )
   } else if (view === "cards") {
-    content = <IdeaCardsView ideas={visible} lookups={lookups} now={now} onOpen={setOpen} empty={filteredEmpty} />
+    content = (
+      <IdeaCardsView ideas={visible} lookups={lookups} now={now} onOpen={setOpen} empty={filteredEmpty} showStatus={state.status.length !== 1} />
+    )
   } else {
     content = matching.length ? (
       <IdeaKanban
@@ -170,15 +158,7 @@ export function IdeaBankView() {
   return (
     <IdeaActionsProvider openId={state.open} onOpen={setOpen}>
       <PageContainer>
-        <PageHeader
-          title="Idea Bank"
-          description={t("description")}
-        >
-          <div className="flex min-w-0 flex-col gap-3 2xl:flex-row 2xl:items-center 2xl:justify-between">
-            <IdeaQuickCapture onCreated={onCaptured} className="w-full max-w-2xl 2xl:flex-1" />
-            <IdeaStatusStrip counts={statusTotals} value={state.status} onSelect={selectStatus} />
-          </div>
-        </PageHeader>
+        <PageHeader title="Idea Bank" info={t("info")} />
 
         {state.open && !openIdea ? (
           <div role="status" className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">
@@ -190,7 +170,7 @@ export function IdeaBankView() {
         ) : null}
 
         {ideas.length ? (
-          <section aria-label={t("ideas")} className="flex min-w-0 flex-col gap-3">
+          <section aria-label={t("ideas")} className="-mt-2 flex min-w-0 flex-col gap-3">
             <IdeaFilterBar
               ideas={ideas}
               tagIndex={tagIndex}
@@ -204,33 +184,22 @@ export function IdeaBankView() {
             {view === "table" && selected.length ? (
               <IdeaBulkBar selected={selected} onClear={() => setSelectedIds([])} />
             ) : (
-              <p className="flex min-h-7 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground" aria-live="polite">
-                <span className="num">
-                  {view === "kanban"
-                    ? `${t.plural("board_count", visible.length, { count: formatNumber(visible.length) })}${hiddenByStatus ? ` · ${t("board_collapsed", { count: formatNumber(hiddenByStatus) })}` : ""}`
-                    : visible.length === ideas.length
-                      ? t.plural("count", ideas.length, { count: formatNumber(ideas.length) })
-                      : t.plural("count_of", ideas.length, { shown: formatNumber(visible.length), count: formatNumber(ideas.length) })}
-                </span>
-                {view === "kanban" ? (
-                  <>
-                    <span aria-hidden>·</span>
-                    <span>{t("kanban_hint")}</span>
-                  </>
-                ) : hiddenByStatus ? (
-                  <>
-                    <span aria-hidden>·</span>
-                    <span className="num">
-                      {isActiveStatusFilter(state.status)
-                        ? t("hidden_inactive", { count: formatNumber(hiddenByStatus) })
-                        : t("hidden_by_status", { count: formatNumber(hiddenByStatus) })}
+              <div className="flex min-h-7 min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+                <IdeaStatusTabs
+                  counts={statusCounts}
+                  value={state.status}
+                  onChange={(status) => update({ status })}
+                  className="min-w-0 flex-1 basis-40 sm:basis-80"
+                />
+                <div className="ml-auto flex shrink-0 items-center gap-3">
+                  {narrowed ? (
+                    <span className="text-xs text-muted-foreground num" aria-live="polite">
+                      {t("shown_of", { shown: formatNumber(visible.length), total: formatNumber(ideas.length) })}
                     </span>
-                    <Button type="button" variant="link" size="xs" className="h-auto px-0 text-xs" onClick={showAllStatuses}>
-                      {t("show_all")}
-                    </Button>
-                  </>
-                ) : null}
-              </p>
+                  ) : null}
+                  <IdeaViewControls sort={state.sort} view={view} onChange={update} />
+                </div>
+              </div>
             )}
 
             {content}

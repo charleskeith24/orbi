@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { cleanLine, draftFromProfile, isDraftDirty, patchFromDraft, profileName, validateProfileDraft, type ProfileDraft } from "./profile"
+import { cleanLine, firstName, draftFromProfile, isDraftDirty, patchFromDraft, profileName, validateProfileDraft, type ProfileDraft } from "./profile"
 import { emptyProfile, publicViewOf, toProfileError, type MyProfile } from "./types"
 
 const ME: MyProfile = {
@@ -109,3 +109,14 @@ describe("helpers", () => {
     expect(toProfileError("weird").code).toBe("unknown")
   })
 })
+
+describe("firstName", () => {
+  it("takes the first word and drops a quoted nickname", () => {
+    expect(firstName("Rafael \"Raf\" Mendoza")).toBe("Rafael")
+    expect(firstName("  charles  reyes ")).toBe("charles")
+    expect(firstName("Mika")).toBe("Mika")
+    expect(firstName("@mika.sample")).toBe("@mika.sample")
+    expect(firstName("")).toBe("")
+  })
+})
+

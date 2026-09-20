@@ -76,7 +76,7 @@ export function EngagementTab({ draft, now }: { draft: SettingsDraft<EngagementV
     <form onSubmit={save} noValidate className="flex min-w-0 flex-col gap-4">
       <SectionCard
         title={t("title")}
-        description={t("description")}
+        info={t("info")}
         action={
           <Button asChild variant="ghost" size="sm">
             <Link href="/today">Engagement Tracker</Link>

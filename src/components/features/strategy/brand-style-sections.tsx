@@ -1,23 +1,17 @@
 "use client"
 
 import { Plus } from "lucide-react"
-import { chipVariants, ChipToggleGroup, FormField, FormRow, ListEditor, type ChipOption } from "@/components/common"
+import { chipVariants, ChipToggleGroup, FormRow, ListEditor, type ChipOption } from "@/components/common"
 import { EXPERTISE_SUGGESTIONS, LANGUAGES, PERSONALITY_TRAITS, TONES } from "@/lib/constants"
 import { useT } from "@/lib/i18n"
 import type { BrandLanguage, BrandTone, PersonalityTrait } from "@/lib/types"
-import { BrandSection, BrandTextField, type BrandSectionProps } from "./brand-fields"
+import { BrandFieldShell, BrandSection, BrandTextField, type BrandSectionProps } from "./brand-fields"
 import { brandFieldMessages } from "./brand-messages"
 import { fieldId, LIST_LIMITS } from "./brand-model"
 
 const PERSONALITY_OPTIONS: ChipOption<PersonalityTrait>[] = PERSONALITY_TRAITS.map((t) => ({ value: t.id, label: t.label }))
 const LANGUAGE_OPTIONS: ChipOption<BrandLanguage>[] = LANGUAGES.map((l) => ({ value: l.id, label: l.label }))
 const TONE_OPTIONS: ChipOption<BrandTone>[] = TONES.map((t) => ({ value: t.id, label: t.label }))
-
-const LANGUAGE_HINTS = {
-  english: "language_english",
-  tagalog: "language_tagalog",
-  taglish: "language_taglish",
-} as const satisfies Record<BrandLanguage, string>
 
 function Count({ children }: { children: React.ReactNode }) {
   return <span className="text-xs text-muted-foreground num">{children}</span>
@@ -34,10 +28,10 @@ export function ExpertiseSection({ values, set }: BrandSectionProps) {
 
   return (
     <BrandSection sectionKey="expertise">
-      <FormField
+      <BrandFieldShell
         label={t("expertise_label")}
         htmlFor={fieldId("expertise_areas")}
-        description={t("expertise_description", { max })}
+        hint={t("expertise_description", { max })}
         labelAction={
           <Count>
             {areas.length} / {max}
@@ -52,7 +46,7 @@ export function ExpertiseSection({ values, set }: BrandSectionProps) {
           aria-label={t("expertise_label")}
           onChange={(value) => set("expertise_areas", value)}
         />
-      </FormField>
+      </BrandFieldShell>
       {suggestions.length && !full ? (
         <div className="flex flex-col gap-1.5">
           <p className="text-xs text-muted-foreground">{t("suggestions")}</p>
@@ -82,9 +76,10 @@ export function PersonalitySection({ values, set }: BrandSectionProps) {
   const t = useT(brandFieldMessages)
   return (
     <BrandSection sectionKey="personality">
-      <FormField
+      <BrandFieldShell
         label={t("traits_label")}
-        description={count > 5 ? t("traits_too_many") : t("traits_hint")}
+        hint={t("traits_hint")}
+        description={count > 5 ? t("traits_too_many") : undefined}
         labelAction={<Count>{t("selected", { count })}</Count>}
       >
         <div id={fieldId("personality_traits")}>
@@ -96,7 +91,7 @@ export function PersonalitySection({ values, set }: BrandSectionProps) {
             aria-label={t("traits_label")}
           />
         </div>
-      </FormField>
+      </BrandFieldShell>
     </BrandSection>
   )
 }
@@ -106,7 +101,7 @@ export function CommunicationSection({ values, set }: BrandSectionProps) {
   const t = useT(brandFieldMessages)
   return (
     <BrandSection sectionKey="communication">
-      <FormField label={t("language_label")} description={LANGUAGE_HINTS[values.language] ? t(LANGUAGE_HINTS[values.language]) : undefined}>
+      <BrandFieldShell label={t("language_label")} hint={t("language_hint")}>
         <div id={fieldId("language")}>
           <ChipToggleGroup
             options={LANGUAGE_OPTIONS}
@@ -118,10 +113,10 @@ export function CommunicationSection({ values, set }: BrandSectionProps) {
             aria-label={t("language_label")}
           />
         </div>
-      </FormField>
-      <FormField
+      </BrandFieldShell>
+      <BrandFieldShell
         label={t("tone_label")}
-        description={t("tone_hint")}
+        hint={t("tone_hint")}
         labelAction={<Count>{t("selected", { count: values.tones.length })}</Count>}
       >
         <div id={fieldId("tones")}>
@@ -133,7 +128,7 @@ export function CommunicationSection({ values, set }: BrandSectionProps) {
             aria-label={t("tone_label")}
           />
         </div>
-      </FormField>
+      </BrandFieldShell>
     </BrandSection>
   )
 }
@@ -162,10 +157,10 @@ export function RulesSection({ values, set }: BrandSectionProps) {
         />
       </FormRow>
       <FormRow>
-        <FormField
+        <BrandFieldShell
           label={t("phrases_used_label")}
           htmlFor={fieldId("phrases_used")}
-          description={t("phrases_used_description")}
+          hint={t("phrases_used_description")}
           labelAction={
             <Count>
               {values.phrases_used.length} / {LIST_LIMITS.phrases_used}
@@ -180,11 +175,11 @@ export function RulesSection({ values, set }: BrandSectionProps) {
             aria-label={t("phrases_used_label")}
             onChange={(value) => set("phrases_used", value)}
           />
-        </FormField>
-        <FormField
+        </BrandFieldShell>
+        <BrandFieldShell
           label={t("phrases_avoid_label")}
           htmlFor={fieldId("phrases_avoid")}
-          description={t("phrases_avoid_description")}
+          hint={t("phrases_avoid_description")}
           labelAction={
             <Count>
               {values.phrases_avoid.length} / {LIST_LIMITS.phrases_avoid}
@@ -199,7 +194,7 @@ export function RulesSection({ values, set }: BrandSectionProps) {
             aria-label={t("phrases_avoid_label")}
             onChange={(value) => set("phrases_avoid", value)}
           />
-        </FormField>
+        </BrandFieldShell>
       </FormRow>
       <BrandTextField
         field="cta_style"

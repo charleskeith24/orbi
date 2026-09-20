@@ -77,7 +77,7 @@ export function ExperimentsView() {
     <PageContainer>
       <PageHeader
         title="Experiments"
-        description={t("description")}
+        info={t("page_info")}
         actions={newButton}
       />
 
@@ -87,25 +87,13 @@ export function ExperimentsView() {
             <StatTile
               label="Running"
               value={formatNumber(stats.running)}
-              sublabel={
-                stats.nextEnd?.end_date
-                  ? t("next_ends", { date: formatDate(stats.nextEnd.end_date, "MMM d") })
-                  : stats.running
-                    ? t("no_end_dates")
-                    : t("nothing_running")
-              }
+              sublabel={stats.nextEnd?.end_date ? t("next_ends", { date: formatDate(stats.nextEnd.end_date, "MMM d") }) : undefined}
               href={stats.nextEnd ? `/experiments?open=${stats.nextEnd.id}` : undefined}
             />
             <StatTile
               label="Planned"
               value={formatNumber(stats.planned)}
-              sublabel={
-                stats.nextStart?.start_date
-                  ? t("next_starts", { date: formatDate(stats.nextStart.start_date, "MMM d") })
-                  : stats.planned
-                    ? t("no_start_dates")
-                    : t("nothing_planned")
-              }
+              sublabel={stats.nextStart?.start_date ? t("next_starts", { date: formatDate(stats.nextStart.start_date, "MMM d") }) : undefined}
               href={stats.nextStart ? `/experiments?open=${stats.nextStart.id}` : undefined}
             />
             <StatTile
@@ -114,13 +102,14 @@ export function ExperimentsView() {
               sublabel={
                 stats.completed
                   ? `${t("with_winner", { count: formatNumber(stats.decided) })}${stats.completed > stats.decided ? t("inconclusive_count", { count: formatNumber(stats.completed - stats.decided) }) : ""}`
-                  : t("no_results_yet")
+                  : undefined
               }
             />
             <StatTile
               label={t("lessons_learned")}
               value={formatNumber(stats.lessons)}
-              sublabel={stats.lessons ? t("lessons_ideas", { count: formatNumber(stats.lessonIdeas) }) : t("lessons_hint")}
+              sublabel={stats.lessons ? t("lessons_ideas", { count: formatNumber(stats.lessonIdeas) }) : undefined}
+              info={t("lessons_info")}
             />
           </div>
 
@@ -142,8 +131,9 @@ export function ExperimentsView() {
                 <PageSection
                   key={group.status}
                   id={`experiments-${group.status}`}
-                  title={`${EXPERIMENT_STATUS_MAP[group.status]?.label ?? group.status} · ${group.experiments.length}`}
-                  description={statusCopy(group.status, lang)}
+                  title={EXPERIMENT_STATUS_MAP[group.status]?.label ?? group.status}
+                  count={group.experiments.length}
+                  info={statusCopy(group.status, lang)}
                 >
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {group.experiments.map((experiment) => (

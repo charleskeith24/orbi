@@ -33,12 +33,12 @@ function MixGroup({ label, note, children }: { label: string; note?: string; chi
 export function ContentMixCard({
   pillars,
   funnel,
-  description,
+  info,
   className,
 }: {
   pillars: PillarMix
   funnel: FunnelMix
-  description?: string
+  info?: string
   className?: string
 }) {
   const t = useT(reportMessages)
@@ -74,7 +74,7 @@ export function ContentMixCard({
   const WarningIcon = TONE_ICON.warning
 
   return (
-    <ChartFrame title="Content Mix" description={description} table={table} className={cn("print:break-inside-avoid", className)}>
+    <ChartFrame title="Content Mix" info={info} table={table} className={cn("print:break-inside-avoid", className)}>
       <div className="flex flex-col gap-5">
         <MixGroup label={t("pillars")} note={pillars.unassigned ? t("without_pillar", { count: formatNumber(pillars.unassigned) }) : undefined}>
           <MixBar

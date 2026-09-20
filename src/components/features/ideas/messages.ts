@@ -1,5 +1,5 @@
 /**
- * Idea Bank screens: the page, Quick Capture bar, filters, table, cards, Kanban, bulk bar and the idea
+ * Idea Bank screens: the page, status row, filters, table, cards, Kanban, bulk bar and the idea
  * actions (menu, toasts, delete confirmation). The detail sheet, score panel and convert dialog live in
  * `idea-detail-messages.ts`. Status, priority, source and funnel labels come from constants and stay English.
  */
@@ -7,41 +7,22 @@ import { defineMessages } from "@/lib/i18n/core"
 
 export const ideaBankMessages = defineMessages({
   en: {
-    description: "Capture every idea the moment it appears, score it against your strategy, then turn the best into content.",
-    captured: "Saved to your Inbox",
-    captured_hidden: "{title} · hidden by the current status filter",
     nomatch_title: "No ideas match",
-    nomatch_hidden_one: "{count} idea with another status matches — widen the status filter to see it.",
-    nomatch_hidden_other: "{count} ideas with another status match — widen the status filter to see them.",
+    nomatch_hidden_one: "{count} idea with another status matches.",
+    nomatch_hidden_other: "{count} ideas with another status match.",
     nomatch_description: "Try a different search or fewer filters.",
     show_all_statuses: "Show all statuses",
     reset_filters: "Reset filters",
-    missing_link: "The idea in this link no longer exists — it may have been deleted.",
+    missing_link: "This idea no longer exists — it may have been deleted.",
     dismiss: "Dismiss",
     ideas: "Ideas",
-    count_one: "{count} idea",
-    count_other: "{count} ideas",
-    count_of_one: "{shown} of {count} idea",
-    count_of_other: "{shown} of {count} ideas",
-    board_count_one: "{count} idea on the board",
-    board_count_other: "{count} ideas on the board",
-    board_collapsed: "{count} in collapsed columns",
-    kanban_hint: "Drag a card to change its status — drop on Converted to Content to create content.",
-    hidden_inactive: "{count} converted or archived hidden",
-    hidden_by_status: "{count} hidden by the status filter",
-    show_all: "Show all",
     empty_title: "Your Idea Bank is empty",
     empty_description:
-      "Every piece of content starts here. Capture ideas as they come — then score them against your strategy and convert the best into content.",
+      "Every piece of content starts here. Capture ideas as they come, score them, and convert the best.",
     generate_ideas: "Generate ideas",
     capture_idea: "Capture an idea",
 
-    // Quick Capture bar + status strip
-    capture_placeholder: "Capture an idea, a hook, a question someone asked…",
-    enter_title: "Press Enter to save",
-    enter_saves: "Enter saves",
-    transform_title: "Turn the text into a complete idea with the Quick Capture assistant",
-    transform: "Transform with AI",
+    // Status row
     by_status: "Ideas by status",
 
     // Filter bar
@@ -72,14 +53,7 @@ export const ideaBankMessages = defineMessages({
     // Status filter
     status_active: "Active",
     status_all: "All",
-    status_count: "{count} statuses",
-    status_label: "Status: {summary}",
-    status_show: "Show",
     status_active_description: "Hides converted and archived",
-    status_all_statuses: "All statuses",
-    status_statuses: "Statuses",
-    // aria-label of the options list (cmdk's default, kept so English doesn't change)
-    status_list: "Suggestions",
 
     // Table, cards, badges
     col_captured: "Captured",
@@ -134,42 +108,29 @@ export const ideaBankMessages = defineMessages({
     bulk_pillar: "Pillar",
     restore: "Restore",
     archive: "Archive",
+    info:
+      "Every idea you capture lands here. Score it, then turn the best into content. Capture with ＋ New (⌥N). On the Kanban, drag a card to change its status — drop it on Converted to Content to create content.",
+    shown_of: "{shown} of {total}",
+    more: "More",
+    less: "Less",
+    more_filters: "More filters",
+    fewer_filters: "Fewer filters",
   },
   tl: {
-    description: "I-capture ang bawat idea sa sandaling dumating, i-score ayon sa strategy mo, tapos gawing content ang mga best.",
-    captured: "Na-save sa Inbox mo",
-    captured_hidden: "{title} · nakatago dahil sa status filter",
     nomatch_title: "Walang idea na match",
-    nomatch_hidden_one: "{count} idea na may ibang status ang match — lawakin ang status filter para makita.",
-    nomatch_hidden_other: "{count} ideas na may ibang status ang match — lawakin ang status filter para makita ang mga ito.",
+    nomatch_hidden_one: "May {count} idea na match sa ibang status.",
+    nomatch_hidden_other: "May {count} ideas na match sa ibang status.",
     nomatch_description: "Subukan ang ibang search o bawasan ang filters.",
     show_all_statuses: "Ipakita ang lahat ng status",
     reset_filters: "I-reset ang filters",
-    missing_link: "Wala na ang idea sa link na 'to — baka na-delete.",
+    missing_link: "Wala na ang idea na 'to — baka na-delete.",
     dismiss: "I-dismiss",
     ideas: "Ideas",
-    count_one: "{count} idea",
-    count_other: "{count} ideas",
-    count_of_one: "{shown} ng {count} idea",
-    count_of_other: "{shown} ng {count} ideas",
-    board_count_one: "{count} idea sa board",
-    board_count_other: "{count} ideas sa board",
-    board_collapsed: "{count} sa mga naka-collapse na column",
-    kanban_hint: "I-drag ang card para palitan ang status — i-drop sa Converted to Content para gumawa ng content.",
-    hidden_inactive: "{count} converted o archived na nakatago",
-    hidden_by_status: "{count} nakatago dahil sa status filter",
-    show_all: "Ipakita ang lahat",
     empty_title: "Walang laman ang Idea Bank mo",
-    empty_description:
-      "Dito nagsisimula ang bawat content. I-capture ang ideas pag dumating — tapos i-score ayon sa strategy mo at gawing content ang mga best.",
+    empty_description: "Dito nagsisimula ang bawat content. I-capture ang ideas, i-score, at i-convert ang mga best.",
     generate_ideas: "Mag-generate ng ideas",
     capture_idea: "Mag-capture ng idea",
 
-    capture_placeholder: "Isulat ang idea, hook, o tanong na may nagtanong sa'yo…",
-    enter_title: "Pindutin ang Enter para i-save",
-    enter_saves: "Enter para i-save",
-    transform_title: "Gawing kumpletong idea ang text gamit ang Quick Capture assistant",
-    transform: "I-transform gamit ang AI",
     by_status: "Ideas ayon sa status",
 
     sort_by: "I-sort ayon sa",
@@ -198,13 +159,7 @@ export const ideaBankMessages = defineMessages({
 
     status_active: "Active",
     status_all: "Lahat",
-    status_count: "{count} status",
-    status_label: "Status: {summary}",
-    status_show: "Ipakita",
     status_active_description: "Nakatago ang converted at archived",
-    status_all_statuses: "Lahat ng status",
-    status_statuses: "Mga status",
-    status_list: "Mga option",
 
     col_captured: "Na-capture",
     col_actions: "Mga action",
@@ -256,6 +211,13 @@ export const ideaBankMessages = defineMessages({
     bulk_pillar: "Pillar",
     restore: "I-restore",
     archive: "I-archive",
+    info:
+      "Dito napupunta ang bawat idea na na-capture mo. I-score, tapos gawing content ang mga best. Mag-capture sa ＋ New (⌥N). Sa Kanban, i-drag ang card para palitan ang status — i-drop sa Converted to Content para gumawa ng content.",
+    shown_of: "{shown} ng {total}",
+    more: "Iba pa",
+    less: "Bawasan",
+    more_filters: "Iba pang filters",
+    fewer_filters: "Bawasan ang filters",
   },
 })
 

@@ -202,7 +202,7 @@ export function BriefTab({ item }: { item: ContentItem }) {
         </div>
       ) : null}
 
-      <SectionCard title={t("strategy")} description={t("strategy_description")} contentClassName="flex flex-col gap-4">
+      <SectionCard title={t("strategy")} info={t("strategy_description")} contentClassName="flex flex-col gap-4">
         <TitleField item={item} onSaved={markSaved} />
         <BriefTextField
           label={t("label_objective")}
@@ -266,7 +266,7 @@ export function BriefTab({ item }: { item: ContentItem }) {
         </div>
       </SectionCard>
 
-      <SectionCard title={t("message")} description={t("message_description")} contentClassName="flex flex-col gap-4">
+      <SectionCard title={t("message")} info={t("message_description")} contentClassName="flex flex-col gap-4">
         <HookField item={item} mainMessage={draft.main_message} onSaved={markSaved} />
         <BriefTextField
           label={t("label_main_message")}
@@ -293,7 +293,7 @@ export function BriefTab({ item }: { item: ContentItem }) {
         />
       </SectionCard>
 
-      <SectionCard title={t("production")} description={t("production_description")} contentClassName="flex flex-col gap-4">
+      <SectionCard title={t("production")} info={t("production_description")} contentClassName="flex flex-col gap-4">
         <BriefTextField
           label={t("label_visual_direction")}
           value={draft.visual_direction}
@@ -335,7 +335,7 @@ export function BriefTab({ item }: { item: ContentItem }) {
         />
       </SectionCard>
 
-      <SectionCard title={t("caption")} description={t("caption_description", { platform: PLATFORMS[item.platform].label })} contentClassName="flex flex-col gap-4">
+      <SectionCard title={t("caption")} info={t("caption_description", { platform: PLATFORMS[item.platform].label })} contentClassName="flex flex-col gap-4">
         <BriefTextField
           label={t("label_caption")}
           value={draft.caption}

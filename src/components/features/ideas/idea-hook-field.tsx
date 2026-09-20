@@ -4,7 +4,7 @@ import { BookmarkPlus, Check, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useId, useState } from "react"
 import { toast } from "sonner"
-import { AiButton, FormField, ProviderBadge } from "@/components/common"
+import { AiButton, FormField, InfoHint, ProviderBadge } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { useAiTask, type AiTaskOutput } from "@/lib/ai"
@@ -41,7 +41,6 @@ export function IdeaHookField({ idea }: { idea: ContentIdea }) {
       <FormField
         label={t("hook")}
         htmlFor={`${id}-hook`}
-        description={t("hook_help")}
         labelAction={
           <AiButton
             type="button"
@@ -71,6 +70,7 @@ export function IdeaHookField({ idea }: { idea: ContentIdea }) {
         <section aria-label={t("suggested_hooks")} className="flex flex-col gap-1 rounded-lg border bg-muted/30 p-3 dark:bg-muted/15">
           <div className="flex items-center gap-2">
             <h4 className="text-xs font-medium">{t("suggested_hooks")}</h4>
+            <InfoHint title={t("suggested_hooks")}>{t("suggestions_note")}</InfoHint>
             <ProviderBadge provider={hooks.provider ?? "offline"} model={hooks.model ?? undefined} />
             <Button
               type="button"
@@ -88,7 +88,6 @@ export function IdeaHookField({ idea }: { idea: ContentIdea }) {
               <HookSuggestion key={`${index}-${hook.text}`} idea={idea} hook={hook} />
             ))}
           </ul>
-          <p className="text-xs text-muted-foreground">{t("suggestions_note")}</p>
         </section>
       ) : null}
     </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { CircleCheck, Download, Plus, Receipt } from "lucide-react"
+import { CircleCheck, Download, FileText, Handshake, Hourglass, Plus, Receipt } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
@@ -143,50 +143,45 @@ export function IncomeView() {
         ),
         sortValue: (e) => e.description.toLowerCase(),
       },
+      // Calm UI: the platform rides with the source, and the deal and the post share one "Linked to" column,
+      // so sparse columns don't fill the table with dashes.
       {
         id: "source",
         header: t("col_source"),
-        cell: (e) => <span className="whitespace-nowrap">{sourceLabel(e.source)}</span>,
+        cell: (e) => (
+          <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+            {e.platform ? <PlatformIcon platform={e.platform} label={PLATFORMS[e.platform].label} className="size-3.5 text-muted-foreground" /> : null}
+            {sourceLabel(e.source)}
+          </span>
+        ),
         sortValue: (e) => sourceLabel(e.source),
         hideBelow: "sm",
       },
       {
-        id: "platform",
-        header: t("col_platform"),
-        cell: (e) =>
-          e.platform ? <PlatformIcon platform={e.platform} label={PLATFORMS[e.platform].label} className="size-3.5 text-muted-foreground" /> : "—",
-        sortValue: (e) => e.platform,
-        hideBelow: "md",
-      },
-      {
-        id: "deal",
-        header: t("col_deal"),
+        id: "linked",
+        header: t("col_linked"),
         cell: (e) => {
           const deal = e.brand_deal_id ? deals.get(e.brand_deal_id) : undefined
-          return deal ? (
-            <Link href={`/money/deals?open=${deal.id}`} className="block max-w-36 truncate underline-offset-2 hover:underline">
-              {deal.brand_name || m("untitled_deal")}
-            </Link>
-          ) : (
-            "—"
-          )
-        },
-        sortValue: (e) => (e.brand_deal_id ? deals.get(e.brand_deal_id)?.brand_name : null),
-        hideBelow: "lg",
-      },
-      {
-        id: "content",
-        header: t("col_content"),
-        cell: (e) => {
           const item = e.content_item_id ? items.get(e.content_item_id) : undefined
-          return item ? (
-            <Link href={`/studio/${item.id}`} className="block max-w-40 truncate underline-offset-2 hover:underline" title={item.title}>
-              {truncate(item.title.trim() || m("untitled_content"), 60)}
-            </Link>
-          ) : (
-            "—"
+          if (!deal && !item) return null
+          return (
+            <span className="flex min-w-0 max-w-48 flex-col">
+              {deal ? (
+                <Link href={`/money/deals?open=${deal.id}`} className="inline-flex min-w-0 items-center gap-1.5 underline-offset-2 hover:underline">
+                  <Handshake className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                  <span className="truncate">{deal.brand_name || m("untitled_deal")}</span>
+                </Link>
+              ) : null}
+              {item ? (
+                <Link href={`/studio/${item.id}`} className="inline-flex min-w-0 items-center gap-1.5 underline-offset-2 hover:underline" title={item.title}>
+                  <FileText className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                  <span className="truncate">{truncate(item.title.trim() || m("untitled_content"), 60)}</span>
+                </Link>
+              ) : null}
+            </span>
           )
         },
+        sortValue: (e) => (e.brand_deal_id ? (deals.get(e.brand_deal_id)?.brand_name ?? null) : e.content_item_id ? (items.get(e.content_item_id)?.title ?? null) : null),
         hideBelow: "lg",
       },
       {
@@ -211,8 +206,7 @@ export function IncomeView() {
     <PageContainer>
       <PageHeader
         title={t("title")}
-        icon={Receipt}
-        description={t("description")}
+        info={t("description")}
         actions={
           <>
             {income.length ? (
@@ -233,17 +227,20 @@ export function IncomeView() {
 
       {income.length ? (
         <>
-          <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+          <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-3">
             <StatTile
+              size="sm"
               label={t("received_total")}
               value={received.value}
-              sublabel={received.others ?? (filtering ? t("totals_filtered") : t("totals_all"))}
+              sublabel={received.others ?? (filtering ? t("totals_filtered") : undefined)}
               icon={CircleCheck}
             />
             <StatTile
+              size="sm"
               label={t("expected_total")}
               value={expected.value}
-              sublabel={expected.others ?? (filtering ? t("totals_filtered") : t("totals_all"))}
+              sublabel={expected.others ?? (filtering ? t("totals_filtered") : undefined)}
+              icon={Hourglass}
             />
           </div>
 

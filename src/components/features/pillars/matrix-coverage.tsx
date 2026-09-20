@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { ChartFrame, Heatmap, type ChartTable } from "@/components/charts"
-import { SectionCard } from "@/components/common"
+import { InfoHint, SectionCard } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { useT, useUiLang } from "@/lib/i18n"
 import type { ID } from "@/lib/types"
@@ -44,7 +44,11 @@ export function MatrixCoverage({ data, onPlan }: { data: MatrixData; onPlan: (pi
     <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       <ChartFrame
         title={t("coverage_title")}
-        description={scope === "all" ? t("coverage_all") : t("coverage_published")}
+        actions={
+          <InfoHint title={t("coverage_title")} align="end">
+            {scope === "all" ? t("coverage_all") : t("coverage_published")}
+          </InfoHint>
+        }
         table={view.table}
       >
         {/* Scope switch lives in the body so the header title keeps its width on narrow screens. */}
@@ -67,7 +71,7 @@ export function MatrixCoverage({ data, onPlan }: { data: MatrixData; onPlan: (pi
 
       <SectionCard
         title={t("gaps_title")}
-        description={t("gaps_description")}
+        info={t("gaps_description")}
         contentClassName={view.gaps.length ? "p-0" : undefined}
       >
         {view.gaps.length ? (

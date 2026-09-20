@@ -40,16 +40,11 @@ export function AngleCard({
             {angle.name || t("untitled_angle")}
           </button>
         </h3>
-        <Token className="font-normal text-muted-foreground">{angle.is_default ? t("kind_default") : t("kind_custom")}</Token>
+        {angle.is_default ? null : <Token className="font-normal text-muted-foreground">{t("kind_custom")}</Token>}
       </div>
-      {angle.description ? (
-        <p className="line-clamp-2 text-sm text-pretty text-muted-foreground">{angle.description}</p>
-      ) : (
-        <p className="text-sm text-muted-foreground">{t("no_description")}</p>
-      )}
-      {angle.example ? <p className="line-clamp-2 text-xs text-pretty text-foreground/80">{t("example_quote", { example: angle.example })}</p> : null}
-      <div className="mt-auto flex min-w-0 flex-col gap-2.5 border-t pt-3">
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+      {angle.description ? <p className="line-clamp-2 text-sm text-pretty text-muted-foreground">{angle.description}</p> : null}
+      <div className="mt-auto flex min-w-0 items-center gap-2 pt-1">
+        <p className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
           <span className="num">{t.plural("ideas", stats.ideaIds.length, { count: formatNumber(stats.ideaIds.length) })}</span>
           <span aria-hidden>·</span>
           <span className="num">{t.plural("pieces", stats.itemIds.length, { count: formatNumber(stats.itemIds.length) })}</span>
@@ -63,10 +58,16 @@ export function AngleCard({
             </>
           ) : null}
         </p>
-        <Button type="button" size="xs" variant="outline" className="relative z-10 self-start" asChild>
-          <Link href={generatorHref(angle.id)}>
+        <Button
+          type="button"
+          size="icon-xs"
+          variant="ghost"
+          className="relative z-10 shrink-0"
+          title={t("generate_with_name", { name: angle.name || t("untitled_angle") })}
+          asChild
+        >
+          <Link href={generatorHref(angle.id)} aria-label={t("generate_with_name", { name: angle.name || t("untitled_angle") })}>
             <Sparkles className="text-brand" aria-hidden />
-            {t("generate_ideas")}
           </Link>
         </Button>
       </div>

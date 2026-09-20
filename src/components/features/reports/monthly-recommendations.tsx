@@ -136,7 +136,7 @@ export function MonthlyRecommendations({
   return (
     <SectionCard
       title={t("recommendations")}
-      description={t("recommendations_description")}
+      info={t("recommendations_info")}
       icon={Compass}
       className={className}
       action={
@@ -186,7 +186,6 @@ export function MonthlyRecommendations({
                     {list.label}
                     {items.length ? <span className="font-normal normal-case num">· {items.length}</span> : null}
                   </Label>
-                  <span className="text-xs text-muted-foreground">{t(`description_${list.key}`)}</span>
                 </div>
                 {list.key === "experiment" ? (
                   <ExperimentList

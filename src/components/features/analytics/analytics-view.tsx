@@ -83,7 +83,7 @@ export function AnalyticsView() {
   const header = (
     <PageHeader
       title="Analytics"
-      description={t("description")}
+      info={t("page_info")}
       actions={
         <>
           <Button asChild variant="outline" size="sm">
@@ -112,7 +112,6 @@ export function AnalyticsView() {
           />
           <p className="text-xs text-muted-foreground">
             {t.plural("scope", rows.length, { count: formatNumber(rows.length), range: describeRange(range, lang) })}
-            {previousRange ? t("scope_compare", { range: describeRange(previousRange, lang) }) : null}
           </p>
         </div>
       ) : null}

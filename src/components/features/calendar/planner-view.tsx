@@ -1,7 +1,7 @@
 "use client"
 
 import { addDays, addWeeks } from "date-fns"
-import { ChevronLeft, ChevronRight, CircleAlert, ListChecks } from "lucide-react"
+import { ChevronLeft, ChevronRight, CircleAlert } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
@@ -62,6 +62,20 @@ import { planTotals, WeeklyPlanDocument } from "./weekly-plan-document"
 
 const LEAD_DAYS = 2
 const LAST_STEP = PLANNER_STEPS.length - 1
+
+/** What the current step is for — and how it works — behind the step title's ⓘ (Calm UI). */
+function StepInfo({ step }: { step: number }) {
+  const t = useT(plannerMessages)
+  const id = PLANNER_STEPS[step].id
+  const more = id === "ideas" ? t("ranked_by") : id === "platforms" ? t("platforms_hint") : id === "focus" ? t("focus_steers") : null
+  return (
+    <>
+      <p className="font-medium text-foreground num">{t("step_of_short", { step: step + 1, total: PLANNER_STEPS.length })}</p>
+      <p>{id === "deadlines" ? t("deadlines_hint") : t(`hint_${id}`)}</p>
+      {more ? <p>{more}</p> : null}
+    </>
+  )
+}
 
 /** `?week=` (any day of that week) → its week start; past weeks and a missing value fall back to this / next week. */
 function resolveWeek(param: string | null, thisKey: string, weekStartsOn: 0 | 1): string {
@@ -323,8 +337,7 @@ function PlannerWorkspace({ weekKey, thisKey, liveNow, onWeekChange }: { weekKey
       <div className="flex min-w-0 flex-col gap-4 print:hidden">
         <PageHeader
           title="Weekly Planner"
-          icon={ListChecks}
-          description={t("description")}
+          info={t("info")}
           actions={
             <>
               <WeekSwitcher weekKey={weekKey} thisKey={thisKey} onChange={onWeekChange} />
@@ -348,8 +361,8 @@ function PlannerWorkspace({ weekKey, thisKey, liveNow, onWeekChange }: { weekKey
 
       <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_19rem] print:hidden">
         <SectionCard
-          title={t("step_of", { step: step + 1, total: PLANNER_STEPS.length, title: t(`step_${PLANNER_STEPS[step].id}_title`) })}
-          description={t(`hint_${PLANNER_STEPS[step].id}`)}
+          title={t(`step_${PLANNER_STEPS[step].id}_title`)}
+          info={<StepInfo step={step} />}
           footer={
             <div className="flex w-full min-w-0 items-center justify-between gap-2">
               <Button type="button" size="sm" variant="outline" className="text-foreground" disabled={step === 0} onClick={() => setStep(step - 1)}>
@@ -369,7 +382,7 @@ function PlannerWorkspace({ weekKey, thisKey, liveNow, onWeekChange }: { weekKey
         >
           {content}
         </SectionCard>
-        <SummaryCard weekText={weekText} focus={draft.focus} doc={doc} target={target} planSaved={planSaved} />
+        <SummaryCard focus={draft.focus} doc={doc} target={target} planSaved={planSaved} />
       </div>
 
       <WeeklyPlanDocument weekStart={weekStart} doc={doc} focus={draft.focus} target={target} pillars={pillars} savedAt={planSaved} onPrint={printPlan} />

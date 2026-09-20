@@ -1,6 +1,6 @@
 "use client"
 
-import { AlarmClock, CalendarClock, Handshake, Hourglass, MessagesSquare, Plus, Receipt, Wallet } from "lucide-react"
+import { AlarmClock, Handshake, Hourglass, MessagesSquare, Plus, Receipt, Wallet } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
@@ -32,7 +32,10 @@ import { DealStatusBadge, MoneyTotals, useSplitTotals } from "./money-ui"
 
 const LIST_LIMIT = 5
 
-/** `/money` — this month vs last, what's expected, income by source, top-earning content, deals due and money coming in. */
+/**
+ * `/money` (Calm UI) — four compact tiles (this month vs last, expected, booked, in talks; what each counts is in the
+ * page ⓘ), income by source, deals due, top-earning content and money coming in (their scope in each ⓘ).
+ */
 export function MoneyOverviewView() {
   const t = useT(moneyOverviewMessages)
   const m = useT(moneyMessages)
@@ -97,7 +100,16 @@ export function MoneyOverviewView() {
 
   return (
     <PageContainer>
-      <PageHeader title={t("title")} icon={Wallet} description={t("description")} actions={actions} />
+      <PageHeader
+        title={t("title")}
+        info={
+          <>
+            <p>{t("description")}</p>
+            <p>{t("tiles_info")}</p>
+          </>
+        }
+        actions={actions}
+      />
       {empty ? (
         <EmptyState
           icon={Wallet}
@@ -118,34 +130,35 @@ export function MoneyOverviewView() {
         />
       ) : (
         <>
-          <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
             <StatTile
+              size="sm"
               label={t("received_month")}
               value={thisMonth.value}
               icon={Receipt}
               href="/money/income"
               delta={change}
-              deltaLabel={change !== null ? t("vs_last_month") : undefined}
-              sublabel={
-                thisMonth.others ??
-                (previous > 0 ? t("last_month", { amount: formatMoney(previous, leadCurrency) }) : t("nothing_last_month"))
-              }
+              deltaLabel={change !== null ? t("vs_last_month_amount", { amount: formatMoney(previous, leadCurrency) }) : undefined}
+              sublabel={thisMonth.others ?? (previous > 0 ? undefined : t("nothing_last_month"))}
             />
             <StatTile
+              size="sm"
               label={t("expected")}
               value={expected.value}
               icon={Hourglass}
               href="/money/income"
-              sublabel={expected.others ?? (summary.expected.length ? t("expected_sub") : t("expected_none"))}
+              sublabel={expected.others ?? (summary.expected.length ? undefined : t("expected_none"))}
             />
             <StatTile
+              size="sm"
               label={t("booked")}
               value={String(summary.bookedCount)}
               icon={Handshake}
               href="/money/deals"
-              sublabel={summary.awaitingPaymentCount ? t.plural("booked_sub", summary.awaitingPaymentCount) : t("booked_none")}
+              sublabel={summary.awaitingPaymentCount ? t.plural("booked_sub", summary.awaitingPaymentCount) : undefined}
             />
             <StatTile
+              size="sm"
               label={t("in_talks")}
               value={summary.inTalks.length ? inTalks.value : String(summary.inTalksCount)}
               icon={MessagesSquare}
@@ -182,8 +195,7 @@ export function MoneyOverviewView() {
 
             <SectionCard
               title={t("due_title")}
-              description={t("due_description")}
-              icon={CalendarClock}
+              info={t("due_description")}
               contentClassName={due.length ? "p-0 pt-2" : undefined}
               action={
                 <Button asChild variant="ghost" size="xs" className="text-muted-foreground">
@@ -208,7 +220,7 @@ export function MoneyOverviewView() {
           <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-3">
             <SectionCard
               title={t("top_title")}
-              description={t("top_description")}
+              info={t("top_description")}
               className="lg:col-span-2"
               contentClassName={top.length ? "p-0 pt-2" : undefined}
             >
@@ -246,8 +258,7 @@ export function MoneyOverviewView() {
 
             <SectionCard
               title={t("coming_title")}
-              description={t("coming_description")}
-              icon={Hourglass}
+              info={t("coming_description")}
               contentClassName={coming.length ? "p-0 pt-2" : undefined}
               action={
                 <Button asChild variant="ghost" size="xs" className="text-muted-foreground">

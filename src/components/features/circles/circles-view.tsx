@@ -3,7 +3,7 @@
 import { CircleCheck, CircleDashed, Link2, LogIn, Plus, ShieldCheck, UsersRound } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState } from "react"
-import { EmptyState, PageContainer, PageHeader, StatusPill } from "@/components/common"
+import { EmptyState, InfoHint, PageContainer, PageHeader, StatusPill } from "@/components/common"
 import { useAdminResource as useResource } from "@/components/features/admin/use-admin-resource"
 import { useNow } from "@/components/features/today/use-now"
 import { Button } from "@/components/ui/button"
@@ -13,12 +13,16 @@ import { circleWeek } from "@/lib/circles/streak"
 import type { Circle, CirclesOverview } from "@/lib/circles/types"
 import { toISODate } from "@/lib/dates"
 import { useT } from "@/lib/i18n"
+import { cn } from "@/lib/utils"
 import { CreateCircleDialog, JoinCircleDialog } from "./circle-dialogs"
 import { MemberStack, StreakLabel } from "./circle-ui"
 import { CirclesFrame, CirclesLoadError, SampleDataNote, useCircles } from "./circles-client"
 import { circlesMessages } from "./messages"
 
-/** `/circles` — your circles as cards, "Create a circle" and "Join with a link". */
+/**
+ * `/circles` (Calm UI) — your circles as cards, "Create a circle" and "Join with a link", and the privacy promise
+ * as one line with the full list behind its ⓘ.
+ */
 export function CirclesView() {
   return (
     <CirclesFrame>
@@ -53,7 +57,9 @@ function CirclesList() {
 
   return (
     <PageContainer>
-      <PageHeader title={t("title")} icon={UsersRound} description={t("description")} actions={actions} />
+      <PageHeader title={t("title")} info={t("description")} actions={actions}>
+        <PrivacySummary />
+      </PageHeader>
       <SampleDataNote />
 
       {overview.error && !overview.data ? (
@@ -91,8 +97,6 @@ function CirclesList() {
         />
       )}
 
-      <PrivacySummary />
-
       <CreateCircleDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={overview.reload} />
       <JoinCircleDialog open={joinOpen} onOpenChange={setJoinOpen} />
     </PageContainer>
@@ -123,7 +127,9 @@ function CircleCard({ circle, overview, selfId, today }: { circle: Circle; overv
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <span className="text-xs text-muted-foreground num">{progressLabel}</span>
+        <span className="text-xs text-muted-foreground num" aria-hidden>
+          {t("checked_in_short", { done: week.checkedIn, total: week.total })}
+        </span>
         <Progress value={week.total ? (week.checkedIn / week.total) * 100 : 0} aria-label={progressLabel} className="h-1.5" />
       </div>
 
@@ -152,24 +158,27 @@ function CircleCard({ circle, overview, selfId, today }: { circle: Circle; overv
   )
 }
 
-/** What leaves your workspace, in one glance (docs/CIRCLES.md principles). */
-export function PrivacySummary() {
+/**
+ * What leaves your workspace (docs/CIRCLES.md principles), Calm UI: the promise in one line — never your ideas,
+ * scripts, analytics or income — and the full list of what circles see behind the ⓘ.
+ */
+export function PrivacySummary({ className }: { className?: string }) {
   const t = useT(circlesMessages)
   const items = ["privacy_name", "privacy_profile", "privacy_checkin", "privacy_asks", "privacy_contact", "privacy_never"] as const
   return (
-    <section aria-labelledby="circles-privacy" className="rounded-lg border bg-muted/30 p-4">
-      <h2 id="circles-privacy" className="flex items-center gap-2 text-sm font-medium">
-        <ShieldCheck className="size-4 text-muted-foreground" aria-hidden />
-        {t("privacy_title")}
-      </h2>
-      <ul className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
-        {items.map((key) => (
-          <li key={key} className="flex gap-2">
-            <span aria-hidden className="mt-1.5 size-1 shrink-0 rounded-full bg-muted-foreground/60" />
-            {t(key)}
-          </li>
-        ))}
-      </ul>
-    </section>
+    <p className={cn("flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground", className)}>
+      <ShieldCheck className="size-3.5 shrink-0" aria-hidden />
+      <span className="min-w-0 text-pretty">{t("privacy_line")}</span>
+      <InfoHint title={t("privacy_title")}>
+        <ul className="flex flex-col gap-1">
+          {items.map((key) => (
+            <li key={key} className="flex gap-2">
+              <span aria-hidden className="mt-1.5 size-1 shrink-0 rounded-full bg-muted-foreground/60" />
+              {t(key)}
+            </li>
+          ))}
+        </ul>
+      </InfoHint>
+    </p>
   )
 }

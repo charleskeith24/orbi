@@ -1,7 +1,7 @@
 "use client"
 
 import { Plus } from "lucide-react"
-import { ColorDot, PageSection } from "@/components/common"
+import { ColorDot, Disclosure } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { GOAL_CATEGORIES, GOAL_CATEGORY_IDS } from "@/lib/constants"
 import { useT, useUiLang } from "@/lib/i18n"
@@ -9,12 +9,24 @@ import type { ContentGoal, GoalCategory } from "@/lib/types"
 import { goalFocusMessages } from "./goals-messages"
 import { CATEGORY_COLORS } from "./goals-model"
 
-/** The five goal categories with their KPIs, goal counts and an "add goal" shortcut each. */
-export function GoalCategoryTiles({ goals, onAdd }: { goals: ContentGoal[]; onAdd: (category: GoalCategory) => void }) {
+/**
+ * The five goal categories with their KPIs, goal counts and an "add goal" shortcut each — reference material,
+ * folded under a divider once goals exist (open by default before the first one).
+ */
+export function GoalCategoryTiles({
+  goals,
+  onAdd,
+  defaultOpen = false,
+}: {
+  goals: ContentGoal[]
+  onAdd: (category: GoalCategory) => void
+  defaultOpen?: boolean
+}) {
   const t = useT(goalFocusMessages)
   const lang = useUiLang()
   return (
-    <PageSection title={t("categories_title")} description={t("categories_description")}>
+    <Disclosure variant="section" label={t("categories_title")} meta={GOAL_CATEGORY_IDS.length} defaultOpen={defaultOpen}>
+      <p className="mb-3 text-xs text-pretty text-muted-foreground">{t("categories_description")}</p>
       <ul className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {GOAL_CATEGORY_IDS.map((category) => {
           const meta = GOAL_CATEGORIES[category]
@@ -48,6 +60,6 @@ export function GoalCategoryTiles({ goals, onAdd }: { goals: ContentGoal[]; onAd
           )
         })}
       </ul>
-    </PageSection>
+    </Disclosure>
   )
 }

@@ -23,7 +23,6 @@ export const reportMessages = defineMessages({
     hint_planned: "Planned",
 
     // Header and shared actions
-    ranked_by: " · posts ranked by {metric}",
     print: "Print",
     highest_by: "Highest by {metric}",
     no_analytics_yet: "No analytics logged yet",
@@ -124,7 +123,6 @@ export const reportMessages = defineMessages({
     hint_planned: "Naka-plan",
 
     // Header and shared actions
-    ranked_by: " · posts naka-rank ayon sa {metric}",
     print: "I-print",
     highest_by: "Pinakamataas sa {metric}",
     no_analytics_yet: "Wala pang naka-log na analytics",

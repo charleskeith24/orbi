@@ -104,18 +104,15 @@ export function ResearchLibraryView() {
       <PageContainer>
         <PageHeader
           title="Research Library"
-          description={t("description")}
+          info={t("info")}
+          description={<NeverCopyBanner />}
           actions={
-            <>
-              <Button type="button" size="sm" onClick={() => setCreating(true)}>
-                <Plus aria-hidden />
-                {t("add_reference")}
-              </Button>
-            </>
+            <Button type="button" size="sm" onClick={() => setCreating(true)}>
+              <Plus aria-hidden />
+              {t("add_reference")}
+            </Button>
           }
         />
-
-        <NeverCopyBanner />
 
         {url.open && !openItem ? (
           <div role="status" className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">

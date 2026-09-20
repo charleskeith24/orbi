@@ -60,17 +60,11 @@ function buildColumns(lookups: IdeaLookups, now: Date, t: IdeaBankT): DataTableC
       className: "w-full max-w-0",
       headerClassName: "w-full",
       sortValue: (idea) => idea.title.toLowerCase(),
+      // One line per idea (Calm UI): the hook is in the Cards view and the detail sheet.
       cell: (idea) => (
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="truncate font-medium" title={idea.title.length > 60 ? idea.title : undefined}>
-            {idea.title || t("untitled_idea")}
-          </span>
-          {idea.hook ? (
-            <span className="truncate text-xs text-muted-foreground" title={idea.hook.length > 70 ? idea.hook : undefined}>
-              {idea.hook}
-            </span>
-          ) : null}
-        </div>
+        <span className="block truncate font-medium" title={idea.title.length > 60 ? idea.title : undefined}>
+          {idea.title || t("untitled_idea")}
+        </span>
       ),
     },
     {

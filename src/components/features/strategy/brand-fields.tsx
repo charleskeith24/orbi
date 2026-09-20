@@ -1,12 +1,13 @@
 "use client"
 
 import { TriangleAlert } from "lucide-react"
-import { FormField, SectionCard } from "@/components/common"
+import { InfoHint, SectionCard } from "@/components/common"
+import { formMessages } from "@/components/common/messages"
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
-import { SECTION_ICONS } from "./brand-icons"
 import { brandFieldMessages, brandSectionMessages } from "./brand-messages"
 import { CONTEXT_LIMITS, fieldId, type BrandErrors, type BrandFormValues, type BrandSectionKey, type BrandTextField, type SetBrandValue } from "./brand-model"
 
@@ -16,7 +17,7 @@ export interface BrandSectionProps {
   errors: BrandErrors
 }
 
-/** One Brand HQ section: an anchored SectionCard (the sticky nav scrolls to `#<key>`). */
+/** One Brand HQ section (the section nav shows one at a time); what it's for sits behind the ⓘ. */
 export function BrandSection({
   sectionKey,
   action,
@@ -31,14 +32,66 @@ export function BrandSection({
     <div id={sectionKey} className="scroll-mt-16">
       <SectionCard
         title={t(`${sectionKey}_title`)}
-        description={t(`${sectionKey}_description`)}
-        icon={SECTION_ICONS[sectionKey]}
+        info={t(`${sectionKey}_description`)}
         action={action}
-        contentClassName="flex flex-col gap-4"
+        contentClassName="flex flex-col gap-5"
       >
         {children}
       </SectionCard>
     </div>
+  )
+}
+
+/**
+ * Label row + control + error for Brand HQ fields. Guidance that used to sit under the field goes in `hint`
+ * (an ⓘ beside the label, outside the `<label>` so it doesn't join the control's name); `description` is
+ * only for format or validation text (Calm UI rule 8). `labelAction` sits on the right (a counter).
+ */
+export function BrandFieldShell({
+  label,
+  htmlFor,
+  hint,
+  description,
+  error,
+  required = false,
+  labelAction,
+  children,
+  className,
+}: {
+  label: React.ReactNode
+  htmlFor?: string
+  hint?: React.ReactNode
+  description?: React.ReactNode
+  error?: React.ReactNode
+  required?: boolean
+  labelAction?: React.ReactNode
+  children: React.ReactNode
+  className?: string
+}) {
+  const tf = useT(formMessages)
+  return (
+    <Field className={cn("min-w-0 gap-1.5", className)}>
+      <div className="flex min-h-5 items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1">
+          <FieldLabel htmlFor={htmlFor} className="gap-0.5 leading-5">
+            {label}
+            {required ? (
+              <>
+                <span aria-hidden className="text-muted-foreground">
+                  *
+                </span>
+                <span className="sr-only">{tf("required")}</span>
+              </>
+            ) : null}
+          </FieldLabel>
+          {hint ? <InfoHint title={typeof label === "string" ? label : undefined}>{hint}</InfoHint> : null}
+        </div>
+        {labelAction ? <div className="-my-1 flex shrink-0 items-center">{labelAction}</div> : null}
+      </div>
+      {children}
+      {description ? <FieldDescription className="text-xs">{description}</FieldDescription> : null}
+      {error ? <FieldError className="text-xs">{error}</FieldError> : null}
+    </Field>
   )
 }
 
@@ -71,7 +124,7 @@ export function BrandTextField({
   multiline = false,
   wrap = false,
   placeholder,
-  description,
+  hint,
   required,
   error,
   autoComplete,
@@ -84,7 +137,8 @@ export function BrandTextField({
   multiline?: boolean
   wrap?: boolean
   placeholder?: string
-  description?: React.ReactNode
+  /** Guidance behind an ⓘ next to the label. */
+  hint?: React.ReactNode
   required?: boolean
   error?: string
   autoComplete?: string
@@ -94,10 +148,10 @@ export function BrandTextField({
   const limit = CONTEXT_LIMITS[field]
   const invalid = Boolean(error) || undefined
   return (
-    <FormField
+    <BrandFieldShell
       label={label}
       htmlFor={id}
-      description={description}
+      hint={hint}
       error={error}
       required={required}
       labelAction={limit ? <LimitHint length={value.trim().length} limit={limit} /> : undefined}
@@ -137,6 +191,6 @@ export function BrandTextField({
           onChange={(event) => onChange(event.target.value)}
         />
       )}
-    </FormField>
+    </BrandFieldShell>
   )
 }

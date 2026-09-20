@@ -18,7 +18,8 @@ export function RecommendedPillars({ presets, onAdd }: { presets: PillarPreset[]
     <SectionCard
       icon={Sparkles}
       title={t("recommended_title")}
-      description={t("recommended_description")}
+      count={presets.length}
+      info={t("recommended_description")}
       action={
         presets.length > 1 ? (
           <Button type="button" size="sm" variant="outline" onClick={() => onAdd(presets)}>
@@ -38,8 +39,8 @@ export function RecommendedPillars({ presets, onAdd }: { presets: PillarPreset[]
                 {preset.name}
                 <span className="num font-normal text-muted-foreground"> · {t("pct_target", { pct: preset.target_percentage })}</span>
               </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {preset.description} — {preset.examples.slice(0, 3).join(", ")}
+              <p className="truncate text-xs text-muted-foreground" title={`${preset.description} — ${preset.examples.slice(0, 3).join(", ")}`}>
+                {preset.description}
               </p>
             </div>
             <Button type="button" size="sm" variant="ghost" onClick={() => onAdd([preset])} aria-label={t("add_preset", { name: preset.name })}>

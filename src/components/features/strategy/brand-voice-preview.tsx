@@ -3,7 +3,7 @@
 import { ChevronDown, PenLine } from "lucide-react"
 import Link from "next/link"
 import { Fragment, useDeferredValue, useMemo, useState } from "react"
-import { StatusPill, Token } from "@/components/common"
+import { InfoHint, StatusPill, Token } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { buildBrandContext } from "@/lib/ai"
 import { LANGUAGE_MAP } from "@/lib/constants"
@@ -13,8 +13,7 @@ import { useDb } from "@/lib/store"
 import { cn, formatNumber } from "@/lib/utils"
 import { VOICE_ICON } from "./brand-icons"
 import { brandVoiceMessages } from "./brand-messages"
-import { brandPatch, CONTEXT_LIMITS, fieldId, type BrandField, type BrandFormValues, type BrandTextField } from "./brand-model"
-import { focusControl } from "./use-scroll-spy"
+import { brandPatch, CONTEXT_LIMITS, type BrandField, type BrandFormValues, type BrandTextField } from "./brand-model"
 
 type VoiceT = Translator<(typeof brandVoiceMessages)["en"]>
 
@@ -29,11 +28,13 @@ function VoiceRow({
   empty,
   trimmedAt,
   clamp,
+  onEdit,
   children,
 }: {
   label: string
   field: BrandField
   empty: boolean
+  onEdit: (field: BrandField) => void
   /** The AI only reads this many characters of the field. */
   trimmedAt?: number
   clamp?: boolean
@@ -52,7 +53,7 @@ function VoiceRow({
           className="text-muted-foreground/70 hover:text-foreground"
           aria-label={t("edit_row", { label: label.toLowerCase() })}
           title={c("edit")}
-          onClick={() => focusControl(fieldId(field))}
+          onClick={() => onEdit(field)}
         >
           <PenLine aria-hidden />
         </Button>
@@ -79,17 +80,20 @@ function Tokens({ values, strike = false }: { values: string[]; strike?: boolean
 
 /**
  * Read-only Brand Voice: what every AI generation is told about the brand (spec §29), derived from
- * `buildBrandContext` with the current — possibly unsaved — Brand HQ values.
+ * `buildBrandContext` with the current — possibly unsaved — Brand HQ values. The first rows show; the rest
+ * wait behind "Show more". ✎ opens the field's section (`onEdit`).
  */
 export function BrandVoicePreview({
   values,
   dirty,
   now,
+  onEdit,
   className,
 }: {
   values: BrandFormValues
   dirty: boolean
   now: Date
+  onEdit: (field: BrandField) => void
   className?: string
 }) {
   const db = useDb()
@@ -127,7 +131,7 @@ export function BrandVoicePreview({
     { label: count("stories", context.stories.length), href: "/stories" },
     { label: count("winners", context.winners.length), href: "/winners" },
   ]
-  const clamp = !expanded
+  const row = { onEdit }
 
   return (
     <section
@@ -135,74 +139,89 @@ export function BrandVoicePreview({
       aria-labelledby="voice-heading"
       className={cn("flex min-w-0 scroll-mt-16 flex-col overflow-hidden rounded-lg border bg-card text-card-foreground", className)}
     >
-      <div className="flex items-start justify-between gap-3 px-4 pt-3.5">
-        <div className="flex min-w-0 items-start gap-2">
-          <VOICE_ICON className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-          <div className="min-w-0">
-            <h3 id="voice-heading" className="text-sm leading-5 font-medium">
-              {t("title")}
-            </h3>
-            <p className="mt-0.5 text-xs text-pretty text-muted-foreground">{t("description")}</p>
-          </div>
+      <div className="flex min-h-6 items-center justify-between gap-3 px-4 pt-3.5">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <VOICE_ICON className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <h3 id="voice-heading" className="text-sm leading-5 font-medium">
+            {t("title")}
+          </h3>
+          <InfoHint title={t("title")}>
+            <p>{t("description")}</p>
+            <p>
+              {t("also_sent")}{" "}
+              {alsoSent.map((item, index) => (
+                <Fragment key={item.href}>
+                  {index ? " · " : ""}
+                  <Link href={item.href} className="text-foreground underline-offset-2 hover:underline">
+                    {item.label}
+                  </Link>
+                </Fragment>
+              ))}
+              {primary ? t("primary_goal", { name: primary.name }) : "."}
+            </p>
+            <Link href="/settings?tab=ai" className="w-fit font-medium text-foreground underline-offset-2 hover:underline">
+              {t("see_context")}
+            </Link>
+          </InfoHint>
         </div>
         {dirty ? (
-          <StatusPill tone="neutral" icon={PenLine} className="mt-0.5">
+          <StatusPill tone="neutral" icon={PenLine}>
             {t("unsaved_edits")}
           </StatusPill>
         ) : null}
       </div>
 
       <dl className="flex flex-col gap-3 px-4 pt-3 pb-4">
-        <VoiceRow label={t("row_niche")} field="niche" empty={!niche && !interests.length}>
+        <VoiceRow {...row} label={t("row_niche")} field="niche" empty={!niche && !interests.length}>
           {niche ? <span className="font-medium">{niche}</span> : <span className="text-muted-foreground italic">{t("no_niche")}</span>}
-          {interests.length ? (
+          {interests.length && (expanded || !niche) ? (
             <span className="mt-1.5 block">
               <Tokens values={interests} />
             </span>
           ) : null}
         </VoiceRow>
-        <VoiceRow label={t("row_writes_as")} field="name" empty={!b.name}>
+        <VoiceRow {...row} label={t("row_writes_as")} field="name" empty={!b.name}>
           <span className="font-medium">{b.name}</span>
           {writesAs ? <span className="text-muted-foreground"> — {writesAs}</span> : null}
-          {b.industry ? <span className="block text-xs text-muted-foreground">{b.industry}</span> : null}
+          {b.industry && expanded ? <span className="block text-xs text-muted-foreground">{b.industry}</span> : null}
         </VoiceRow>
-        <VoiceRow label={t("row_positioning")} field="positioning_audience" empty={!b.positioning_statement}>
+        <VoiceRow {...row} label={t("row_positioning")} field="positioning_audience" empty={!b.positioning_statement} clamp={!expanded}>
           {b.positioning_statement}
         </VoiceRow>
-        <VoiceRow label={t("row_language")} field="tones" empty={false}>
+        <VoiceRow {...row} label={t("row_language")} field="tones" empty={false}>
           {LANGUAGE_MAP[b.language]?.label ?? b.language}
           {b.tones.length ? <span className="text-muted-foreground"> · {b.tones.join(", ")}</span> : null}
         </VoiceRow>
-        <VoiceRow label={t("row_personality")} field="personality_traits" empty={!b.personality.length}>
-          <Tokens values={b.personality} />
-        </VoiceRow>
-        <VoiceRow label={t("row_expertise")} field="expertise_areas" empty={!b.expertise_areas.length}>
-          <Tokens values={b.expertise_areas} />
-        </VoiceRow>
-        <VoiceRow label={t("row_known_for")} field="known_for" empty={!b.known_for} clamp={clamp} trimmedAt={trimmed("known_for")}>
-          {b.known_for}
-        </VoiceRow>
-        <VoiceRow label={t("row_point_of_view")} field="point_of_view" empty={!b.point_of_view} clamp={clamp} trimmedAt={trimmed("point_of_view")}>
-          {b.point_of_view}
-        </VoiceRow>
         {expanded ? (
           <>
-            <VoiceRow label={t("row_always")} field="always_do" empty={!b.always_do} trimmedAt={trimmed("always_do")}>
+            <VoiceRow {...row} label={t("row_personality")} field="personality_traits" empty={!b.personality.length}>
+              <Tokens values={b.personality} />
+            </VoiceRow>
+            <VoiceRow {...row} label={t("row_expertise")} field="expertise_areas" empty={!b.expertise_areas.length}>
+              <Tokens values={b.expertise_areas} />
+            </VoiceRow>
+            <VoiceRow {...row} label={t("row_known_for")} field="known_for" empty={!b.known_for} trimmedAt={trimmed("known_for")}>
+              {b.known_for}
+            </VoiceRow>
+            <VoiceRow {...row} label={t("row_point_of_view")} field="point_of_view" empty={!b.point_of_view} trimmedAt={trimmed("point_of_view")}>
+              {b.point_of_view}
+            </VoiceRow>
+            <VoiceRow {...row} label={t("row_always")} field="always_do" empty={!b.always_do} trimmedAt={trimmed("always_do")}>
               {b.always_do}
             </VoiceRow>
-            <VoiceRow label={t("row_never")} field="never_do" empty={!b.never_do} trimmedAt={trimmed("never_do")}>
+            <VoiceRow {...row} label={t("row_never")} field="never_do" empty={!b.never_do} trimmedAt={trimmed("never_do")}>
               {b.never_do}
             </VoiceRow>
-            <VoiceRow label={t("row_says")} field="phrases_used" empty={!b.phrases_used.length}>
+            <VoiceRow {...row} label={t("row_says")} field="phrases_used" empty={!b.phrases_used.length}>
               <Tokens values={b.phrases_used} />
             </VoiceRow>
-            <VoiceRow label={t("row_never_says")} field="phrases_avoid" empty={!b.phrases_avoid.length}>
+            <VoiceRow {...row} label={t("row_never_says")} field="phrases_avoid" empty={!b.phrases_avoid.length}>
               <Tokens values={b.phrases_avoid} strike />
             </VoiceRow>
-            <VoiceRow label={t("row_cta")} field="cta_style" empty={!b.cta_style} trimmedAt={trimmed("cta_style")}>
+            <VoiceRow {...row} label={t("row_cta")} field="cta_style" empty={!b.cta_style} trimmedAt={trimmed("cta_style")}>
               {b.cta_style}
             </VoiceRow>
-            <VoiceRow label={t("row_storytelling")} field="storytelling_style" empty={!b.storytelling_style} trimmedAt={trimmed("storytelling_style")}>
+            <VoiceRow {...row} label={t("row_storytelling")} field="storytelling_style" empty={!b.storytelling_style} trimmedAt={trimmed("storytelling_style")}>
               {b.storytelling_style}
             </VoiceRow>
           </>
@@ -216,27 +235,9 @@ export function BrandVoicePreview({
           onClick={() => setExpanded((v) => !v)}
         >
           <ChevronDown className={cn("transition-transform", expanded && "rotate-180")} aria-hidden />
-          {expanded ? c("show_less") : t("show_more")}
+          {expanded ? c("show_less") : c("show_more")}
         </Button>
       </dl>
-
-      <div className="flex flex-col gap-1.5 border-t bg-muted/30 px-4 py-2.5 text-xs text-muted-foreground">
-        <p className="text-pretty">
-          {t("also_sent")}{" "}
-          {alsoSent.map((item, index) => (
-            <Fragment key={item.href}>
-              {index ? " · " : ""}
-              <Link href={item.href} className="text-foreground underline-offset-2 hover:underline">
-                {item.label}
-              </Link>
-            </Fragment>
-          ))}
-          {primary ? t("primary_goal", { name: primary.name }) : "."}
-        </p>
-        <Link href="/settings?tab=ai" className="w-fit font-medium text-foreground underline-offset-2 hover:underline">
-          {t("see_context")}
-        </Link>
-      </div>
     </section>
   )
 }

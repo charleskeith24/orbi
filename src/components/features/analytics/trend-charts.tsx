@@ -44,7 +44,7 @@ export function TrendCharts({
       <ChartFrame
         className="lg:col-span-2"
         title={t("views_reach_title")}
-        description={t("views_reach_description", { unit })}
+        info={t("views_reach_info", { unit })}
         table={{
           columns: [firstColumn, "Posts", "Views", "Reach"],
           rows: points.map((point) => [periodLabel(point, bucket, true), point.posts, formatNumber(point.views), formatNumber(point.reach)]),
@@ -65,7 +65,7 @@ export function TrendCharts({
       </ChartFrame>
       <ChartFrame
         title={t("follower_title")}
-        description={t("follower_description")}
+        info={t("follower_info")}
         table={{
           columns: [firstColumn, t("col_gained"), t("col_running")],
           rows: points.map((point) => [periodLabel(point, bucket, true), formatNumber(point.followers), formatNumber(point.cumulativeFollowers)]),

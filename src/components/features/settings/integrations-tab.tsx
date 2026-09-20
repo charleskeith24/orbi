@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { InfoHint, SectionHeader } from "@/components/common"
 import { useT, useUiLang } from "@/lib/i18n"
 import {
   INTEGRATION_CATEGORIES,
@@ -43,23 +44,29 @@ export function IntegrationsTab({ now }: { now: Date }) {
       <CsvImport now={now} />
 
       <section aria-labelledby="settings-connections" className="flex min-w-0 flex-col gap-4">
-        <div className="min-w-0">
-          <h3 id="settings-connections" className="text-sm leading-6 font-semibold">
-            {t("connections")}
-          </h3>
-          <p className="text-xs text-pretty text-muted-foreground">
-            {t("connections_description", { connected, total: INTEGRATIONS.length })}
-          </p>
-        </div>
+        <SectionHeader
+          id="settings-connections"
+          as="h3"
+          title={t("connections")}
+          info={t("connections_info")}
+          infoTitle={t("connections")}
+          action={
+            <span className="text-xs text-muted-foreground num">
+              {t("connections_count", { connected, total: INTEGRATIONS.length })}
+            </span>
+          }
+        />
         {INTEGRATION_CATEGORIES.map((category) => {
           const adapters = integrationsIn(category.id)
           if (!adapters.length) return null
           const text = labels.category(category.id)
           return (
             <div key={category.id} className="flex min-w-0 flex-col gap-2">
-              <div>
+              <div className="flex min-w-0 items-center gap-1">
                 <h4 className="text-xs font-medium text-foreground">{text.label}</h4>
-                <p className="text-xs text-muted-foreground">{text.description}</p>
+                <InfoHint title={text.label} label={t("category_info", { name: text.label })}>
+                  {text.description}
+                </InfoHint>
               </div>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {adapters.map((adapter) => (

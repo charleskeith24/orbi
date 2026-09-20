@@ -1,6 +1,6 @@
 "use client"
 
-import { Clock, FileText, ListOrdered, Plus, Printer, Trophy } from "lucide-react"
+import { FileText, ListOrdered, Plus, Printer, Trophy } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useMemo } from "react"
 import { EmptyState, PageContainer, PageHeader } from "@/components/common"
@@ -80,7 +80,7 @@ export function MonthlyReviewView() {
   if (!hasPublishedContent(db.content_items) && !reviews.length) {
     return (
       <PageContainer>
-        <PageHeader icon={FileText} title="Monthly Review" description={t("empty_page_description")} />
+        <PageHeader title="Monthly Review" />
         <EmptyState
           icon={FileText}
           title={t("empty_title")}
@@ -99,15 +99,20 @@ export function MonthlyReviewView() {
   return (
     <PageContainer>
       <PageHeader
-        icon={FileText}
         title="Monthly Review"
         description={
-          <>
-            <span className="num">{period.label}</span>
+          <span className="num">
+            {period.label}
             {period.isCurrent ? t("month_to_date") : ""}
-            {r("ranked_by", { metric: rankedBy })}
+          </span>
+        }
+        info={
+          <>
+            <p>{t("page_info", { metric: rankedBy })}</p>
+            {period.isCurrent ? <p>{t("in_progress_note")}</p> : null}
           </>
         }
+        infoTitle="Monthly Review"
         actions={
           <div className="flex flex-wrap items-center gap-2 print:hidden">
             <PeriodNav unit="month" options={options} value={period.key} prev={prev} next={next} onChange={goToMonth} />
@@ -119,13 +124,6 @@ export function MonthlyReviewView() {
         }
       />
 
-      {period.isCurrent ? (
-        <p className="-mt-3 flex items-start gap-1.5 text-xs text-pretty text-muted-foreground">
-          <Clock className="mt-px size-3.5 shrink-0" aria-hidden />
-          {t("in_progress_note")}
-        </p>
-      ) : null}
-
       <MonthlyKpis report={report} now={now} />
 
       <div className="grid items-start gap-4 lg:grid-cols-3">
@@ -136,7 +134,7 @@ export function MonthlyReviewView() {
       <div className="grid items-start gap-4 xl:grid-cols-3">
         <PostHighlightCard
           title={t("best_content")}
-          description={r("highest_by", { metric: rankedBy })}
+          info={r("highest_by", { metric: rankedBy })}
           icon={Trophy}
           row={report.bestContent}
           empty={
@@ -162,7 +160,7 @@ export function MonthlyReviewView() {
         <ReportPostsTable
           rows={report.top10}
           title={t("top_10")}
-          description={t("measured_ranked", { metric: rankedBy })}
+          info={t("measured_ranked_info", { metric: rankedBy })}
           icon={ListOrdered}
           emptyTitle={published ? t("no_measured") : t("nothing_published")}
           emptyDescription={published ? t("appear_when_logged") : t("log_to_build")}
@@ -189,7 +187,7 @@ export function MonthlyReviewView() {
         <MonthlyRecommendations key={period.key} db={db} report={report} period={period} saved={saved} now={now} />
         <ReviewHistory
           title={r("saved_reviews")}
-          description={t("history_description")}
+          info={t("history_info")}
           entries={history}
           emptyTitle={r("no_saved_reviews")}
           emptyDescription={t("history_empty")}

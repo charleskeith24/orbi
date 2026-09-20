@@ -8,33 +8,29 @@ import { defineMessages } from "@/lib/i18n/core"
 export const experimentsMessages = defineMessages({
   en: {
     // Page
-    description: "Test one variable at a time — hook length, video length, language, CTA — and turn every result into a rule you reuse.",
+    page_info: "Test one variable at a time — hook length, video length, language, CTA — and turn every result into a rule you reuse.",
     new_experiment: "New experiment",
     duplicate_name: "{name} (again)",
     duplicated: "Experiment duplicated",
     duplicated_description: "Set new dates and link fresh posts to run it again.",
     next_ends: "Next ends {date}",
-    no_end_dates: "No end dates set",
-    nothing_running: "Nothing running",
+
     next_starts: "Next starts {date}",
-    no_start_dates: "No start dates set",
-    nothing_planned: "Nothing planned",
+
     with_winner: "{count} with a winner",
     inconclusive_count: " · {count} inconclusive",
-    no_results_yet: "No results yet",
     lessons_learned: "Lessons learned",
     lessons_ideas: "{count} turned into ideas",
-    lessons_hint: "Record a lesson when a test ends",
+    lessons_info: "What each finished test taught you. A lesson can be saved as an idea.",
     count_one: "{count} experiment",
     count_other: "{count} experiments",
     shown_of: "{shown} of {total}",
     search_placeholder: "Search experiments…",
     nomatch_title: "No experiments match",
-    nomatch_description: "Try a different word — search covers names, hypotheses, variants, results and lessons.",
+    nomatch_description: "Search covers names, hypotheses, variants, results and lessons.",
     clear_search: "Clear search",
     empty_title: "No experiments yet",
-    empty_description:
-      "An experiment compares two versions of one variable — short vs long hooks, Taglish vs English — across real posts, so you stop guessing what works.",
+    empty_description: "Compare two versions of one variable — short vs long hooks, Taglish vs English — across real posts.",
 
     // Status groups
     group_running: "Collecting posts and analytics now",
@@ -97,33 +93,29 @@ export const experimentsMessages = defineMessages({
   },
   tl: {
     // Page
-    description: "Mag-test ng isang variable at a time — haba ng hook, haba ng video, language, CTA — at gawing rule ang bawat resulta para gamitin ulit.",
+    page_info: "Mag-test ng isang variable lang — haba ng hook, haba ng video, language, CTA — at gawing rule ang bawat resulta.",
     new_experiment: "Bagong experiment",
     duplicate_name: "{name} (ulit)",
     duplicated: "Na-duplicate ang experiment",
     duplicated_description: "Mag-set ng bagong dates at mag-link ng bagong posts para patakbuhin ulit.",
     next_ends: "Unang tatapos: {date}",
-    no_end_dates: "Walang end date",
-    nothing_running: "Walang tumatakbo",
+
     next_starts: "Unang magsisimula: {date}",
-    no_start_dates: "Walang start date",
-    nothing_planned: "Walang naka-plan",
+
     with_winner: "{count} may winner",
     inconclusive_count: " · {count} inconclusive",
-    no_results_yet: "Wala pang resulta",
     lessons_learned: "Mga lesson",
     lessons_ideas: "{count} ginawang ideas",
-    lessons_hint: "Isulat ang lesson pag natapos ang test",
+    lessons_info: "Ang natutunan sa bawat tapos na test. Pwedeng i-save bilang idea ang lesson.",
     count_one: "{count} experiment",
     count_other: "{count} experiments",
     shown_of: "{shown} ng {total}",
     search_placeholder: "I-search ang experiments…",
     nomatch_title: "Walang experiment na match",
-    nomatch_description: "Subukan ang ibang salita — sakop ng search ang names, hypotheses, variants, results at lessons.",
+    nomatch_description: "Sakop ng search ang names, hypotheses, variants, results at lessons.",
     clear_search: "I-clear ang search",
     empty_title: "Wala pang experiments",
-    empty_description:
-      "Ang experiment ay nagko-compare ng dalawang version ng isang variable — short vs long hooks, Taglish vs English — sa mga totoong post, para hindi na manghula kung ano ang gumagana.",
+    empty_description: "Ikumpara ang dalawang version ng isang variable — short vs long hooks, Taglish vs English — sa totoong posts.",
 
     // Status groups
     group_running: "Nangongolekta ng posts at analytics ngayon",

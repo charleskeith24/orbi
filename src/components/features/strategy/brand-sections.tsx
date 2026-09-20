@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { FormField, FormRow, NumberField, PlatformToggleGroup } from "@/components/common"
+import { FormRow, NumberField, PlatformToggleGroup } from "@/components/common"
 import { useT } from "@/lib/i18n"
-import { BrandSection, BrandTextField, type BrandSectionProps } from "./brand-fields"
+import { BrandFieldShell, BrandSection, BrandTextField, type BrandSectionProps } from "./brand-fields"
 import { brandFieldMessages } from "./brand-messages"
 import { fieldId } from "./brand-model"
 
@@ -55,11 +55,11 @@ export function IdentitySection({ values, set, errors }: BrandSectionProps) {
         multiline
         value={values.expertise_summary}
         placeholder={t("expertise_summary_placeholder")}
-        description={t("expertise_summary_description")}
+        hint={t("expertise_summary_description")}
         onChange={(value) => set("expertise_summary", value)}
       />
       <FormRow>
-        <FormField label={t("years_label")} htmlFor={fieldId("years_experience")} error={errors.years_experience}>
+        <BrandFieldShell label={t("years_label")} htmlFor={fieldId("years_experience")} error={errors.years_experience}>
           <NumberField
             id={fieldId("years_experience")}
             value={values.years_experience}
@@ -70,7 +70,7 @@ export function IdentitySection({ values, set, errors }: BrandSectionProps) {
             aria-invalid={Boolean(errors.years_experience) || undefined}
             onChange={(value) => set("years_experience", value)}
           />
-        </FormField>
+        </BrandFieldShell>
         <BrandTextField
           field="location"
           label={t("location_label")}
@@ -81,16 +81,16 @@ export function IdentitySection({ values, set, errors }: BrandSectionProps) {
           onChange={(value) => set("location", value)}
         />
       </FormRow>
-      <FormField
+      <BrandFieldShell
         label={t("platforms_label")}
-        description={
-          <>
+        hint={
+          <p>
             {t("platforms_hint_before")}
             <Link href="/strategy/platforms" className="font-medium text-foreground underline-offset-2 hover:underline">
               {t("platforms_hint_link")}
             </Link>
             {t("platforms_hint_after")}
-          </>
+          </p>
         }
       >
         <div id={fieldId("main_platforms")}>
@@ -100,7 +100,7 @@ export function IdentitySection({ values, set, errors }: BrandSectionProps) {
             aria-label={t("platforms_label")}
           />
         </div>
-      </FormField>
+      </BrandFieldShell>
     </BrandSection>
   )
 }
@@ -122,7 +122,7 @@ export function PositioningSection({
         multiline
         value={values.who_am_i}
         placeholder={t("who_am_i_placeholder")}
-        description={t("who_am_i_description")}
+        hint={t("who_am_i_description")}
         onChange={(value) => set("who_am_i", value)}
       />
       <BrandTextField

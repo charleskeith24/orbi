@@ -19,7 +19,7 @@ export function FollowerGrowthCard({ report, className }: { report: MonthlyRepor
   return (
     <ChartFrame
       title={t("follower_growth")}
-      description={t("follower_growth_description")}
+      info={t("follower_growth_info")}
       table={table}
       className={cn("print:break-inside-avoid", className)}
     >

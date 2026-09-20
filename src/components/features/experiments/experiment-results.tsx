@@ -72,7 +72,7 @@ export function ExperimentResultsPanel({ experiment, results }: { experiment: Co
     <PageSection
       id="experiment-results"
       title={t("results")}
-      description={t("results_description", { metric: lower })}
+      info={t("results_info", { metric: lower })}
     >
       <Verdict experiment={experiment} results={results} />
       <div className="grid grid-cols-3 gap-2">

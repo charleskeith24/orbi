@@ -1,7 +1,7 @@
 "use client"
 
-import { LayoutGrid, Table2 } from "lucide-react"
-import { useMemo } from "react"
+import { LayoutGrid, ListFilter, Table2 } from "lucide-react"
+import { useMemo, useState } from "react"
 import {
   ColorDot,
   FacetFilter,
@@ -13,9 +13,11 @@ import {
   type FacetOption,
   type ViewOption,
 } from "@/components/common"
+import { Button } from "@/components/ui/button"
 import { PLATFORM_IDS, PLATFORMS, RESEARCH_STATUSES, RESEARCH_TYPES } from "@/lib/constants"
 import { useT } from "@/lib/i18n"
 import type { ContentPillar, ID, ResearchItem } from "@/lib/types"
+import { cn } from "@/lib/utils"
 import { RESEARCH_STATUS_ICONS, RESEARCH_TYPE_ICONS } from "./research-badges"
 import { researchMessages } from "./messages"
 import { hasResearchFilters, NONE, type ResearchFilters, type ResearchUrlState, type ResearchView } from "./research-model"
@@ -46,6 +48,7 @@ export function ResearchFilterBar({
   onReset: () => void
 }) {
   const t = useT(researchMessages)
+  const [showFacets, setShowFacets] = useState(false)
   const viewOptions = useMemo<ViewOption<ResearchView>[]>(
     () => [
       { value: "table", label: t("view_table"), icon: Table2 },
@@ -91,13 +94,23 @@ export function ResearchFilterBar({
     return options
   }, [items, pillars, t])
 
+  const facetCount = [filters.types, filters.statuses, filters.platforms, filters.pillars].filter((v) => v.length).length
+
   return (
     <FilterBar actions={<ViewToggle value={view} onChange={(next) => onChange({ view: next })} options={viewOptions} aria-label={t("view_aria")} />}>
       <SearchInput value={filters.q} onChange={(q) => onChange({ q })} placeholder={t("search_placeholder")} />
-      <FacetFilter title={t("type")} options={typeOptions} value={filters.types} onChange={(value) => onChange({ type: value.join(",") })} />
-      <FacetFilter title={t("status")} options={statusOptions} value={filters.statuses} onChange={(value) => onChange({ status: value.join(",") })} />
-      <FacetFilter title={t("platform")} options={platformOptions} value={filters.platforms} onChange={(value) => onChange({ platform: value.join(",") })} />
-      <FacetFilter title={t("pillar")} options={pillarOptions} value={filters.pillars} onChange={(value) => onChange({ pillar: value.join(",") })} />
+      {/* Phones: facets wait behind "Filters" (Calm UI). */}
+      <Button type="button" variant="outline" size="sm" className="sm:hidden" aria-expanded={showFacets} onClick={() => setShowFacets((v) => !v)}>
+        <ListFilter className="text-muted-foreground" aria-hidden />
+        {t("filters")}
+        {facetCount ? <span className="rounded-sm bg-muted px-1 text-xs font-medium num">{facetCount}</span> : null}
+      </Button>
+      <div className={cn("contents", !showFacets && "max-sm:hidden")}>
+        <FacetFilter title={t("type")} options={typeOptions} value={filters.types} onChange={(value) => onChange({ type: value.join(",") })} />
+        <FacetFilter title={t("status")} options={statusOptions} value={filters.statuses} onChange={(value) => onChange({ status: value.join(",") })} />
+        <FacetFilter title={t("platform")} options={platformOptions} value={filters.platforms} onChange={(value) => onChange({ platform: value.join(",") })} />
+        <FacetFilter title={t("pillar")} options={pillarOptions} value={filters.pillars} onChange={(value) => onChange({ pillar: value.join(",") })} />
+      </div>
       <ResetFiltersButton show={hasResearchFilters(filters)} onClick={onReset} />
     </FilterBar>
   )

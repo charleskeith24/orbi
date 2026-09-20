@@ -306,7 +306,9 @@ describe("joining, reading and the member cap", () => {
       await expect(user(JUN, "insert into public.circle_checkins (circle_id, week_start, posts) values ($1, $2, 2)", [circle, await mondayOffset(-2)])).rejects.toThrow(
         /row-level security/
       )
-      await expect(user(JUN, "insert into public.circle_checkins (circle_id, week_start, posts) values ($1, $2, 2)", [circle, await mondayOffset(1)])).rejects.toThrow(
+      // The policy ends at `current_date + 1`, so a client a day ahead of UTC can still check in for its own week.
+      // Next Monday is inside that window when today is Sunday, so the "too far ahead" case uses the week after.
+      await expect(user(JUN, "insert into public.circle_checkins (circle_id, week_start, posts) values ($1, $2, 2)", [circle, await mondayOffset(2)])).rejects.toThrow(
         /row-level security/
       )
     })

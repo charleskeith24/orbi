@@ -48,7 +48,7 @@ export function BestOfWeekCard({ report, className }: { report: WeeklyReport; cl
   return (
     <SectionCard
       title={t("best_of_week")}
-      description={t("top_group_by", { metric: rankedByLabel(report.rankedBy) })}
+      info={t("top_group_info", { metric: rankedByLabel(report.rankedBy) })}
       icon={Award}
       className={cn("print:break-inside-avoid", className)}
     >

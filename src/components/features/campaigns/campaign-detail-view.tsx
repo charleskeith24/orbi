@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, ListPlus, Megaphone, Pencil, Plus } from "lucide-react"
+import { ArrowLeft, FilePlus2, ListPlus, Megaphone } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
@@ -9,7 +9,6 @@ import { CampaignCollabs } from "@/components/features/collabs/collab-links"
 import { Button } from "@/components/ui/button"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { useT, useUiLang } from "@/lib/i18n"
-import { commonMessages } from "@/lib/i18n/messages/common"
 import { uiActions, useDb, useRow, useSettings } from "@/lib/store"
 import type { ContentCampaign, ID, InsertRow, PerformanceTier } from "@/lib/types"
 import { AddItemsDialog } from "./add-items-dialog"
@@ -56,7 +55,6 @@ function CampaignNotFound() {
 function CampaignDetail({ campaign, onDeleting }: { campaign: ContentCampaign; onDeleting: () => void }) {
   const router = useRouter()
   const t = useT(campaignDetailMessages)
-  const c = useT(commonMessages)
   const lang = useUiLang()
   const db = useDb()
   const settings = useSettings()
@@ -100,28 +98,25 @@ function CampaignDetail({ campaign, onDeleting }: { campaign: ContentCampaign; o
               onChange={(status) => setCampaignStatus(campaign, status)}
               className="w-36"
             />
-            <Button type="button" variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-              <Pencil aria-hidden />
-              {c("edit")}
-            </Button>
+            {/* Edit sits on the brief card; new and existing content in Content pieces — and here, in the menu. */}
             <CampaignActionsMenu
               campaign={campaign}
-              showEdit={false}
+              onEdit={() => setEditOpen(true)}
               showStatus={false}
               onBeforeDelete={() => {
                 onDeleting()
                 router.replace("/campaigns")
               }}
             >
+              <DropdownMenuItem onSelect={newContent}>
+                <FilePlus2 aria-hidden />
+                {t("new_content_in_campaign")}
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setAddOpen(true)}>
                 <ListPlus aria-hidden />
                 {t("add_existing_menu")}
               </DropdownMenuItem>
             </CampaignActionsMenu>
-            <Button type="button" size="sm" onClick={newContent}>
-              <Plus aria-hidden />
-              {t("new_content")}
-            </Button>
           </>
         }
       />
@@ -133,11 +128,7 @@ function CampaignDetail({ campaign, onDeleting }: { campaign: ContentCampaign; o
 
       <CampaignPerformanceSection perf={summary.perf} />
 
-      <SectionCard
-        title={t("timeline_title")}
-        description={t("timeline_description")}
-        contentClassName="px-0 pb-4"
-      >
+      <SectionCard title={t("timeline_title")} info={t("timeline_description")} contentClassName="px-0 pb-4">
         <CampaignTimeline campaign={campaign} items={summary.perf.items} now={now} />
       </SectionCard>
 

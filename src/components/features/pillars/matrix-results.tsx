@@ -3,7 +3,7 @@
 import { Check, Grid3x3, Plus, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
-import { EmptyState, FunnelBadge, SectionCard } from "@/components/common"
+import { EmptyState, FunnelBadge, InfoHint, SectionCard } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { useT } from "@/lib/i18n"
 import { useLookup } from "@/lib/store"
@@ -50,7 +50,8 @@ export function MatrixResults({
   return (
     <SectionCard
       title={t("results_title")}
-      description={combos?.length ? t("results_description", { shown: combos.length, total: formatNumber(total) }) : undefined}
+      count={combos?.length ? combos.length : null}
+      info={combos?.length ? t("results_description", { shown: combos.length, total: formatNumber(total) }) : undefined}
       contentClassName={combos?.length ? "p-0" : undefined}
     >
       {combos?.length ? (
@@ -76,10 +77,17 @@ export function MatrixResults({
                         severity={combo.problem.severity}
                         persona={combo.problem.personaId ? (personas.get(combo.problem.personaId)?.name ?? null) : null}
                       />
+                      {combo.reasons.length ? (
+                        <InfoHint label={t("why_rank", { rank: combo.rank })} title={t("why")} className="ml-0.5">
+                          <ul className="flex list-disc flex-col gap-0.5 pl-4">
+                            {combo.reasons.map((reason) => (
+                              <li key={reason}>{reason}</li>
+                            ))}
+                          </ul>
+                        </InfoHint>
+                      ) : null}
                     </div>
-                    {combo.reasons.length ? (
-                      <p className="mt-1.5 text-xs text-pretty text-muted-foreground">{combo.reasons.join(" · ")}</p>
-                    ) : null}
+
                   </div>
                   <div className="flex flex-wrap items-start gap-1.5 md:justify-end">
                     {savedId ? (
@@ -95,10 +103,9 @@ export function MatrixResults({
                         {t("save_as_idea")}
                       </Button>
                     )}
-                    <Button asChild variant="ghost" size="sm">
-                      <Link href={generatorHref(combo)}>
+                    <Button asChild variant="ghost" size="icon-sm" title={t("expand_with_ai")}>
+                      <Link href={generatorHref(combo)} aria-label={t("expand_with_ai")}>
                         <Sparkles className="text-brand" aria-hidden />
-                        {t("expand_with_ai")}
                       </Link>
                     </Button>
                   </div>

@@ -8,6 +8,7 @@ import {
   FormField,
   FormRow,
   GoalSelect,
+  InfoHint,
   NumberField,
   OptionSelect,
   PillarSelect,
@@ -182,7 +183,7 @@ function CollabForm({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 scrollbar-thin">
         <div className="flex flex-col gap-4">
-          <FormField label={t("collab_title")} htmlFor={field("title")} description={t("collab_title_help")} error={shown("title")}>
+          <FormField label={t("collab_title")} htmlFor={field("title")} error={shown("title")}>
             <Input
               id={field("title")}
               value={values.title}
@@ -231,7 +232,7 @@ function CollabForm({
                   onChange={(next) => set("partnerPlatform", next)}
                 />
               </FormField>
-              <FormField label={t("partner_followers")} htmlFor={field("followers")} description={t("followers_help")} error={shown("followers")}>
+              <FormField label={t("partner_followers")} htmlFor={field("followers")} error={shown("followers")}>
                 <NumberField
                   id={field("followers")}
                   min={0}
@@ -268,7 +269,7 @@ function CollabForm({
             <FormField label={t("collab_date")} htmlFor={field("date")}>
               <DatePicker id={field("date")} value={values.date} onChange={(next) => set("date", next)} />
             </FormField>
-            <FormField label={t("follow_up_on")} htmlFor={field("follow-up")} description={t("follow_up_help")}>
+            <FormField label={t("follow_up_on")} htmlFor={field("follow-up")} labelAction={<InfoHint title={t("follow_up_on")}>{t("follow_up_help")}</InfoHint>}>
               <DatePicker id={field("follow-up")} value={values.followUp} onChange={(next) => set("followUp", next)} />
             </FormField>
           </FormRow>
@@ -286,7 +287,7 @@ function CollabForm({
             <FormField label={t("campaign")} htmlFor={field("campaign")}>
               <CampaignSelect id={field("campaign")} allowNone noneLabel={t("none")} placeholder={t("none")} value={values.campaignId} onChange={(next) => set("campaignId", next)} />
             </FormField>
-            <FormField label={t("brand_deal")} htmlFor={field("deal")} description={t("brand_deal_help")}>
+            <FormField label={t("brand_deal")} htmlFor={field("deal")}>
               <OptionSelect
                 id={field("deal")}
                 options={dealOptions}

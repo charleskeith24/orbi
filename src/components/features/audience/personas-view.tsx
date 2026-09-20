@@ -101,7 +101,7 @@ export function PersonasView() {
     <PageContainer>
       <PageHeader
         title="Audience HQ"
-        description={t("description")}
+        info={t("description")}
         actions={
           <Button type="button" size="sm" onClick={() => setCreating(true)}>
             <Plus aria-hidden />
@@ -130,6 +130,7 @@ export function PersonasView() {
             <PersonaCoverage className="lg:col-span-2" personas={sorted} share={share} />
             <div className="grid min-w-0 content-start gap-4 sm:grid-cols-2 lg:grid-cols-1">
               <StatTile
+                size="sm"
                 label="Problem Bank"
                 icon={Crosshair}
                 value={formatNumber(problems.length)}
@@ -137,6 +138,7 @@ export function PersonasView() {
                 href="/audience/problems"
               />
               <StatTile
+                size="sm"
                 label="Question Bank"
                 icon={MessageCircleQuestion}
                 value={formatNumber(questions.length)}

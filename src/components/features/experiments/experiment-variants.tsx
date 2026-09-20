@@ -127,7 +127,7 @@ export function ExperimentVariants({ experiment, results }: { experiment: Conten
     <PageSection
       id="experiment-posts"
       title={t("linked_posts")}
-      description={t("linked_description")}
+      info={t("linked_info")}
     >
       <div className="flex flex-col gap-3">
         <VariantPosts

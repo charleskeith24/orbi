@@ -80,7 +80,7 @@ export function ExperimentConclusion({ experiment, results }: { experiment: Cont
     <PageSection
       id="experiment-conclusion"
       title={t("conclusion")}
-      description={t("conclusion_description")}
+      info={t("conclusion_info")}
       action={
         canUseSuggestion ? (
           <Button type="button" size="sm" variant="outline" onClick={useSuggestion}>
@@ -91,7 +91,7 @@ export function ExperimentConclusion({ experiment, results }: { experiment: Cont
       }
     >
       <div className="flex flex-col gap-4">
-        <FormField label={t("winner")} description={experiment.status === "completed" ? undefined : t("winner_description")}>
+        <FormField label={t("winner")} info={experiment.status === "completed" ? undefined : t("winner_info")}>
           <ChipToggleGroup
             options={winnerOptions}
             value={draft.winner}

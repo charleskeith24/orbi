@@ -11,7 +11,7 @@ import { defineMessages } from "@/lib/i18n/core"
 export const strategistMessages = defineMessages({
   en: {
     // Page + panel
-    description: "Strategy answers grounded in your Brand HQ, audience and live analytics — not generic advice.",
+    page_info: "Strategy answers grounded in your Brand HQ, audience and live analytics — not generic advice.",
     clear: "Clear conversation",
     knows_label: "What the strategist knows",
     conversation_label: "Conversation",
@@ -28,12 +28,11 @@ export const strategistMessages = defineMessages({
     still_answering_description: "Your new question is waiting in the composer.",
     // Empty conversation
     empty_title: "Ask your Content Strategist",
-    empty_description: "Every answer uses your Brand HQ, audience, pillars, goals and live analytics — specific to you, never generic advice.",
+    empty_description: "Every answer uses your Brand HQ, audience, pillars, goals and live analytics — never generic advice.",
     try_asking: "Try asking",
     add_details: "Add details",
-    pick_prompt: "Pick a quick prompt on the left, or ask your own question below.",
     offline_notice:
-      "Offline mode: answers are assembled by templates from your workspace numbers — no AI model is involved. Set ANTHROPIC_API_KEY on the server to use Claude.",
+      "Offline mode: answers are built by templates from your own numbers — no AI model is involved. Set ANTHROPIC_API_KEY on the server to use Claude.",
     // Suggested prompts (display only — the English question is what gets sent)
     prompt_week: "What should I post this week?",
     prompt_underperforming: "Why are my educational posts underperforming?",
@@ -67,7 +66,7 @@ export const strategistMessages = defineMessages({
     edit_question: "Edit question",
   },
   tl: {
-    description: "Strategy answers na nakabase sa Brand HQ, audience at live analytics mo — hindi generic na payo.",
+    page_info: "Strategy answers na nakabase sa Brand HQ, audience at live analytics mo — hindi generic na payo.",
     clear: "I-clear ang conversation",
     knows_label: "Anong alam ng strategist",
     conversation_label: "Conversation",
@@ -82,13 +81,11 @@ export const strategistMessages = defineMessages({
     still_answering: "Sinasagot pa ang huling tanong mo",
     still_answering_description: "Naghihintay sa composer ang bagong tanong mo.",
     empty_title: "Magtanong sa Content Strategist mo",
-    empty_description:
-      "Gumagamit ang bawat sagot ng Brand HQ, audience, pillars, goals at live analytics mo — specific sa'yo, hindi generic na payo.",
+    empty_description: "Gumagamit ang bawat sagot ng Brand HQ, audience, pillars, goals at live analytics mo — hindi generic na payo.",
     try_asking: "Subukang itanong",
     add_details: "Magdagdag ng detalye",
-    pick_prompt: "Pumili ng quick prompt sa kaliwa, o itanong ang sarili mong tanong sa baba.",
     offline_notice:
-      "Offline mode: binubuo ang mga sagot gamit ang templates mula sa numbers ng workspace mo — walang AI model. I-set ang ANTHROPIC_API_KEY sa server para gamitin ang Claude.",
+      "Offline mode: binubuo ang sagot ng templates mula sa sarili mong numbers — walang AI model. I-set ang ANTHROPIC_API_KEY sa server para gamitin ang Claude.",
     prompt_week: "Anong dapat i-post this week?",
     prompt_underperforming: "Bakit underperform ang educational posts ko?",
     prompt_ideas: "Bigyan ako ng 20 ideas tungkol sa leadership.",
@@ -157,7 +154,7 @@ export const strategistIdeasMessages = defineMessages({
 export const knowledgeMessages = defineMessages({
   en: {
     title: "What the strategist knows",
-    description: "Sent with every question, along with your audience problems, stories and schedule",
+    info: "Sent with every question, along with your audience problems, stories and schedule.",
     your_brand: "Your brand",
     no_positioning: "No positioning yet — add it in Brand HQ so answers sound like you.",
     pillars_one: "{count} pillar",
@@ -204,12 +201,11 @@ export const knowledgeMessages = defineMessages({
     winner_word_other: "winners",
     from_numbers: "From your numbers",
     quick_title: "Quick prompts",
-    quick_description: "One click asks the strategist",
     mobile_summary: "Health {score} · Buffer {days} days · {winners}",
   },
   tl: {
     title: "Anong alam ng strategist",
-    description: "Ipinapadala sa bawat tanong, kasama ang audience problems, stories at schedule mo",
+    info: "Ipinapadala sa bawat tanong, kasama ang audience problems, stories at schedule mo.",
     your_brand: "Ang brand mo",
     no_positioning: "Wala pang positioning — idagdag sa Brand HQ para tunog ikaw ang mga sagot.",
     pillars_one: "{count} pillar",
@@ -256,7 +252,6 @@ export const knowledgeMessages = defineMessages({
     winner_word_other: "winners",
     from_numbers: "Mula sa numbers mo",
     quick_title: "Quick prompts",
-    quick_description: "Isang click para magtanong sa strategist",
     mobile_summary: "Health {score} · Buffer {days} araw · {winners}",
   },
 })

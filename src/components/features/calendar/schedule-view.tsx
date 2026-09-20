@@ -1,11 +1,12 @@
 "use client"
 
-import { Plus, RotateCcw, Target } from "lucide-react"
+import { Ellipsis, Plus, RotateCcw, Target } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { EmptyState, PageContainer, PageHeader, useConfirm } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useT, useUiLang } from "@/lib/i18n"
 import { dataActions, useBrand, useSettings, useTable } from "@/lib/store"
 import type { PostingSlot } from "@/lib/types"
@@ -20,7 +21,8 @@ import { replaceSearchParams } from "./use-calendar-nav"
 
 /**
  * Posting Schedule (spec §19, §49): fully customisable weekly posting slots with capacity, pillar-mix and
- * platform summaries, and a reset to the recommended weekly strategy. `?open=<slotId>` opens a slot's editor.
+ * platform summaries, and a reset to the recommended weekly strategy (header ⋯ menu; the empty state offers it
+ * first). `?open=<slotId>` opens a slot's editor.
  */
 export function ScheduleView() {
   const searchParams = useSearchParams()
@@ -103,19 +105,27 @@ export function ScheduleView() {
     <PageContainer>
       <PageHeader
         title="Posting Schedule"
-        icon={Target}
-        description={t("description")}
+        info={t("info")}
         actions={
           slots.length ? (
             <>
-              <Button type="button" size="sm" variant="outline" onClick={() => void resetToRecommended()}>
-                <RotateCcw aria-hidden />
-                {t("reset_to_recommended")}
-              </Button>
               <Button type="button" size="sm" onClick={() => add(firstRestDay)}>
                 <Plus aria-hidden />
                 {t("add_slot")}
               </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" size="icon-sm" variant="ghost" aria-label={t("more")} className="text-muted-foreground">
+                    <Ellipsis aria-hidden />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onSelect={() => void resetToRecommended()}>
+                    <RotateCcw aria-hidden />
+                    {t("reset_to_recommended")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </>
           ) : null
         }

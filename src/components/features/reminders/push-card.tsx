@@ -123,7 +123,7 @@ export function PushCard() {
   return (
     <SectionCard
       title={t("push_title")}
-      description={t("push_description")}
+      info={t("push_info")}
       action={<StatusPill tone="neutral" icon={Smartphone}>{t("push_badge")}</StatusPill>}
       className="h-full"
     >

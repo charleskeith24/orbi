@@ -222,15 +222,17 @@ export function ScriptTab({ item }: { item: ContentItem }) {
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
-        <OptionSelect
-          value={format}
-          onChange={(next) => next && studioActions.setFormat(item.id, next)}
-          options={formatOptions}
-          size="sm"
-          aria-label={t("script_format")}
-          className="w-auto max-w-80 font-medium"
-        />
-        <span className="hidden text-xs text-muted-foreground lg:inline">{SCRIPT_FORMATS[format].description}</span>
+        {/* What the format is ("7-slide carousel") is the picker's tooltip. */}
+        <span title={SCRIPT_FORMATS[format].description} className="inline-flex min-w-0">
+          <OptionSelect
+            value={format}
+            onChange={(next) => next && studioActions.setFormat(item.id, next)}
+            options={formatOptions}
+            size="sm"
+            aria-label={t("script_format")}
+            className="w-auto max-w-80 font-medium"
+          />
+        </span>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <Button type="button" variant="ghost" size="sm" disabled={!versions.length} onClick={() => setHistoryOpen(true)}>
             <History aria-hidden />
@@ -266,8 +268,9 @@ export function ScriptTab({ item }: { item: ContentItem }) {
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border bg-muted/30 p-2 dark:bg-input/10">
-        <span className="pl-1 text-xs text-muted-foreground">{t("story")}</span>
+      {/* Story for the AI draft + generate: one quiet row (no box). */}
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <span className="text-xs text-muted-foreground">{t("story")}</span>
         <OptionSelect
           value={storyId}
           onChange={(id) => studioActions.setStory(item.id, id)}
@@ -278,7 +281,7 @@ export function ScriptTab({ item }: { item: ContentItem }) {
           emptyText={t("story_vault_empty")}
           size="sm"
           aria-label={t("story_aria")}
-          className="w-auto max-w-72 min-w-0 flex-1 bg-card sm:flex-none"
+          className="w-auto max-w-72 min-w-0 flex-1 sm:flex-none"
         />
         <AiButton type="button" size="sm" variant="default" pending={ai.isPending} className="ml-auto" onClick={() => void generate()}>
           {saved || draft ? t("regenerate") : t("generate")}

@@ -4,7 +4,7 @@ import { Check, LogOut, Pencil, RefreshCw, UserMinus, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useId, useState } from "react"
 import { toast } from "sonner"
-import { CopyButton, FormField, SectionCard, StatusPill, useConfirm } from "@/components/common"
+import { CopyButton, FormField, InfoHint, SectionCard, StatusPill, useConfirm } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
@@ -75,7 +75,14 @@ export function CircleMembersSection({ snapshot, week, myContact, onChanged, onC
   }
 
   return (
-    <SectionCard title={t("title")} description={t("count", { count: week.total, max: CIRCLE_LIMITS.members })} contentClassName="flex flex-col gap-4">
+    <SectionCard
+      title={
+        <>
+          {t("title")} <span className="font-normal text-muted-foreground num">{t("count", { count: week.total, max: CIRCLE_LIMITS.members })}</span>
+        </>
+      }
+      contentClassName="flex flex-col gap-4"
+    >
       <ul className="divide-y">
         {week.rows.map((row) =>
           row.isSelf ? (
@@ -230,7 +237,13 @@ function ContactField({ circleId, saved, onSaved }: { circleId: ID; saved: strin
 
   return (
     <form onSubmit={submit} noValidate>
-      <FormField label={t("contact_label")} htmlFor={`${id}-contact`} description={t("contact_help")} error={tooLong ? t("error_contact") : undefined}>
+      <FormField
+        label={t("contact_label")}
+        htmlFor={`${id}-contact`}
+        labelAction={<InfoHint title={t("contact_label")}>{t("contact_info")}</InfoHint>}
+        description={t("contact_help")}
+        error={tooLong ? t("error_contact") : undefined}
+      >
         <div className="flex min-w-0 gap-2">
           <Input
             id={`${id}-contact`}
@@ -280,11 +293,15 @@ function InviteLink({ circleId, full }: { circleId: ID; full: boolean }) {
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-md border p-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+    <div className="flex flex-col gap-2 border-t pt-4">
+      <div className="flex min-h-8 items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1">
           <h4 className="text-sm font-medium">{t("invite_title")}</h4>
-          <p className="text-xs text-muted-foreground">{full ? t("full_note") : t("invite_help")}</p>
+          <InfoHint title={t("invite_title")}>
+            <p>{t("invite_help")}</p>
+            {link ? null : <p>{t("invite_unknown")}</p>}
+          </InfoHint>
+          {full ? <span className="ml-1 text-xs text-muted-foreground">{t("full_note")}</span> : null}
         </div>
         {link ? (
           <Button size="sm" variant="ghost" className="shrink-0" disabled={pending !== null} onClick={() => void rotate()}>
@@ -306,13 +323,10 @@ function InviteLink({ circleId, full }: { circleId: ID; full: boolean }) {
           <CopyButton text={link} label={f("copy_link")} successMessage={f("link_copied")} variant="outline" />
         </div>
       ) : (
-        <>
-          <p className="text-xs text-pretty text-muted-foreground">{t("invite_unknown")}</p>
-          <Button size="sm" variant="outline" className="self-start" disabled={pending !== null} onClick={() => void rotate()}>
-            {pending ? <Spinner /> : <RefreshCw aria-hidden />}
-            {t("make_link")}
-          </Button>
-        </>
+        <Button size="sm" variant="outline" className="self-start" disabled={pending !== null} onClick={() => void rotate()}>
+          {pending ? <Spinner /> : <RefreshCw aria-hidden />}
+          {t("make_link")}
+        </Button>
       )}
       {confirmDialog}
     </div>

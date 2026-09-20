@@ -68,7 +68,7 @@ function StatusBar({ experiment, now }: { experiment: ContentExperiment; now: Da
 function Design({ experiment }: { experiment: ContentExperiment }) {
   const t = useT(experimentSheetMessages)
   return (
-    <PageSection id="experiment-design" title={t("design")} description={t("design_description")}>
+    <PageSection id="experiment-design" title={t("design")} info={t("design_info")}>
       {experiment.hypothesis ? (
         <p className="text-sm text-pretty">{experiment.hypothesis}</p>
       ) : (

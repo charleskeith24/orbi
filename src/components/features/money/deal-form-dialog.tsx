@@ -7,6 +7,7 @@ import {
   DatePicker,
   FormField,
   FormRow,
+  InfoHint,
   ListEditor,
   NumberField,
   OptionSelect,
@@ -314,11 +315,11 @@ function DealForm({
           </FormField>
 
           <div className="flex items-center justify-between gap-4 rounded-lg border px-3 py-2.5">
-            <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-1">
               <Label htmlFor={field("media-kit")} className="text-sm">
                 {t("show_in_media_kit")}
               </Label>
-              <p className="text-xs text-muted-foreground">{t("show_in_media_kit_help")}</p>
+              <InfoHint title={t("show_in_media_kit")}>{t("show_in_media_kit_help")}</InfoHint>
             </div>
             <Switch id={field("media-kit")} checked={values.mediaKit} onCheckedChange={(next) => set("mediaKit", next)} />
           </div>

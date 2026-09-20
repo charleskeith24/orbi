@@ -243,7 +243,7 @@ export function QuestionBankView() {
     <PageContainer>
       <PageHeader
         title="Question Bank"
-        description={t("description")}
+        info={t("description")}
         actions={
           <Button type="button" size="sm" onClick={() => update({ new: "1" })}>
             <Plus aria-hidden />
@@ -256,25 +256,29 @@ export function QuestionBankView() {
 
       {questions.length ? (
         <>
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatTile
+              size="sm"
               label={t("open_questions")}
               icon={MessageCircleQuestion}
               value={formatNumber(stats.open)}
               sublabel={t("asked_five", { count: formatNumber(stats.highOpen) })}
             />
             <StatTile
+              size="sm"
               label={t("asked_week")}
               value={formatNumber(stats.recent)}
               sublabel={t("asks_total", { count: formatNumber(stats.asks) })}
             />
             <StatTile
+              size="sm"
               label={t("turned_into_ideas")}
               icon={Lightbulb}
               value={formatNumber(stats.ideas)}
               sublabel={t("share_of_questions", { pct: shareOf(stats.ideas) })}
             />
             <StatTile
+              size="sm"
               label={t("answered")}
               icon={CircleCheck}
               value={formatNumber(stats.answered)}
@@ -298,8 +302,8 @@ export function QuestionBankView() {
             <FilterBar
               actions={
                 <span className="text-xs text-muted-foreground num" aria-live="polite">
-                  {visible.length === questions.length
-                    ? t.plural("questions_count", questions.length, { count: formatNumber(questions.length) })
+                  {!filtering
+                    ? null
                     : a("shown_of", {
                         shown: formatNumber(visible.length),
                         total: t.plural("questions_count", questions.length, { count: formatNumber(questions.length) }),

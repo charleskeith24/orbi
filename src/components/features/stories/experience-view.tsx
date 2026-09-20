@@ -107,16 +107,10 @@ export function ExperienceView() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Turn Experience Into Content"
-        description={t("description")}
-      />
+      <PageHeader title="Turn Experience Into Content" info={t("info")} />
 
       <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <SectionCard
-          title={t("what_happened")}
-          description={t("what_happened_description")}
-        >
+        <SectionCard title={t("what_happened")} info={t("what_happened_info")}>
           <form
             onSubmit={(event) => {
               event.preventDefault()
@@ -141,9 +135,7 @@ export function ExperienceView() {
               }}
             />
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-foreground">
-              <span>
-                {length > 0 && !ready ? t("keep_going", { count: MIN_EXPERIENCE_CHARS }) : t("hint")}
-              </span>
+              <span>{length > 0 && !ready ? t("keep_going", { count: MIN_EXPERIENCE_CHARS }) : null}</span>
               <span className="num">
                 {formatNumber(text.length)} / {formatNumber(MAX_CHARS)}
               </span>

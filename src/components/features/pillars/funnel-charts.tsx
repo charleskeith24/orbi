@@ -3,6 +3,7 @@
 import { CircleCheck, Scale, TriangleAlert } from "lucide-react"
 import { useState } from "react"
 import { ChartFrame, FunnelBars, MixBar, type ChartTable } from "@/components/charts"
+import { InfoHint } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { MIN_MIX_SAMPLE, type FunnelAggregate, type FunnelMix } from "@/lib/analytics"
 import { FUNNEL_STAGES } from "@/lib/constants"
@@ -41,7 +42,6 @@ export function FunnelDistributionCard({
     ]),
   }
   const description = [
-    p("mix_window", { window: windowLabel }),
     p.plural("items", mix.total, { count: formatNumber(mix.total) }),
     mix.unassigned ? t("without_stage", { count: mix.unassigned }) : null,
   ]
@@ -49,7 +49,16 @@ export function FunnelDistributionCard({
     .join(" · ")
 
   return (
-    <ChartFrame title={t("distribution_title")} description={description} table={table}>
+    <ChartFrame
+      title={t("distribution_title")}
+      actions={
+        <InfoHint title={t("distribution_title")} align="end">
+          {p("mix_window", { window: windowLabel })}.
+        </InfoHint>
+      }
+      description={description}
+      table={table}
+    >
       <div className="flex flex-col gap-4">
         <MixBar
           segments={mix.rows.map((r) => ({ id: r.stage, label: `${r.label} · ${FUNNEL_STAGES[r.stage].name}`, value: r.count, color: FUNNEL_COLORS[r.stage] }))}
@@ -138,11 +147,14 @@ export function FunnelPerformanceCard({ perf, windowLabel }: { perf: FunnelAggre
   return (
     <ChartFrame
       title={t("performance_title")}
-      description={`${t("performance_description", { window: windowLabel })}${
-        unassigned ? ` · ${t.plural("posts_without_stage", unassigned.posts, { count: formatNumber(unassigned.posts) })}` : ""
-      }`}
+      actions={
+        <InfoHint title={t("performance_title")} align="end">
+          <p>{t("performance_description", { window: windowLabel })}.</p>
+          <p>{t("engagement_footer")}</p>
+        </InfoHint>
+      }
+      description={unassigned ? t.plural("posts_without_stage", unassigned.posts, { count: formatNumber(unassigned.posts) }) : undefined}
       table={table}
-      footer={metric === "engagement" ? t("engagement_footer") : undefined}
     >
       {/* Metric switch lives in the body so the header title keeps its width on narrow screens. */}
       <div className="flex flex-col gap-4">

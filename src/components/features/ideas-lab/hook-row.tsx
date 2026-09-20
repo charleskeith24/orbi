@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { HOOK_CATEGORIES } from "@/lib/constants"
-import { useT } from "@/lib/i18n"
+import { useT, type Translator } from "@/lib/i18n"
 import { commonMessages } from "@/lib/i18n/messages/common"
 import { dataActions } from "@/lib/store"
 import type { ContentPillar, Hook } from "@/lib/types"
@@ -87,24 +87,63 @@ export function HookMenu({
   )
 }
 
-function HookRowStats({ stats, className }: { stats: HookStats; className?: string }) {
+const STATS_GRID = "grid grid-cols-4 gap-x-4"
+/** Shared by the rows and the list header so the numbers line up under their labels. */
+const ROW_GRID = "min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2 px-2 sm:px-3 lg:grid-cols-[auto_minmax(0,1fr)_20rem_6rem] lg:gap-x-4"
+
+/** Column labels for the numbers, once above the list on wide screens (rows show only the numbers). */
+export function HookListHeader() {
   const t = useT(hookMessages)
+  return (
+    <li aria-hidden className={cn(ROW_GRID, "hidden bg-muted/30 py-1.5 text-[11px] text-muted-foreground lg:grid")}>
+      <span className="w-6" />
+      <span />
+      <span className={STATS_GRID}>
+        {[t("uses"), t("avg_views"), t("engagement"), t("leads_post")].map((label) => (
+          <span key={label} className="truncate text-right">
+            {label}
+          </span>
+        ))}
+      </span>
+      <span />
+    </li>
+  )
+}
+
+function statCells(stats: HookStats, t: Translator<(typeof hookMessages)["en"]>) {
   const performance = stats.performance
-  const cells = [
+  return [
     { label: t("uses"), value: formatNumber(stats.uses) },
     { label: t("avg_views"), value: performance ? formatHookMetric(performance.avgViews, "views") : "—" },
     { label: t("engagement"), value: performance ? formatHookMetric(performance.engagementRate, "engagement") : "—" },
     { label: t("leads_post"), value: performance ? formatHookMetric(performance.leadsPerPost, "leads") : "—" },
   ]
+}
+
+/** Wide screens: numbers under the list header (labels for screen readers only). */
+function HookRowStats({ stats, className }: { stats: HookStats; className?: string }) {
+  const t = useT(hookMessages)
   return (
-    <dl className={cn("grid grid-cols-4 gap-x-4", className)}>
-      {cells.map((cell) => (
-        <div key={cell.label} className="min-w-0 lg:text-right">
-          <dt className="truncate text-[11px] text-muted-foreground">{cell.label}</dt>
+    <dl className={cn(STATS_GRID, className)}>
+      {statCells(stats, t).map((cell) => (
+        <div key={cell.label} className="min-w-0 text-right">
+          <dt className="sr-only">{cell.label}</dt>
           <dd className={cn("text-sm num", cell.value === "—" && "text-muted-foreground")}>{cell.value}</dd>
         </div>
       ))}
     </dl>
+  )
+}
+
+/** Phones and tablets: uses and average views inline; the rest is in the detail sheet. */
+function HookRowStatsInline({ stats, className }: { stats: HookStats; className?: string }) {
+  const t = useT(hookMessages)
+  const views = stats.performance ? formatHookMetric(stats.performance.avgViews, "views") : null
+  return (
+    <p className={cn("text-xs text-muted-foreground num", className)}>
+      {t.plural("uses_inline", stats.uses, { count: formatNumber(stats.uses) })}
+      {views && views !== "—" ? ` · ${t("views_inline", { views })}` : ""}
+    </p>
   )
 }
 
@@ -128,7 +167,7 @@ export function HookRow({
 }) {
   const t = useT(hookMessages)
   return (
-    <li className="relative grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2 px-2 py-2.5 hover:bg-muted/40 sm:px-3 lg:grid-cols-[auto_minmax(0,1fr)_minmax(16rem,auto)_auto] lg:gap-x-4">
+    <li className={cn(ROW_GRID, "relative grid py-2.5 hover:bg-muted/40")}>
       <FavoriteButton hook={hook} className="relative z-10 mt-px" />
       <div className="min-w-0">
         <button
@@ -140,25 +179,21 @@ export function HookRow({
         </button>
         <p className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
           <span>{HOOK_CATEGORIES[hook.category]?.label ?? "Custom"}</span>
-          <span aria-hidden>·</span>
-          <span>{t(`source_${hook.source}`)}</span>
-          {countBlanks(hook.text) ? (
-            <>
-              <span aria-hidden>·</span>
-              <span>{t("template")}</span>
-            </>
-          ) : null}
           {pillar ? (
             <>
               <span aria-hidden>·</span>
               <PillarBadge pillar={pillar} variant="plain" />
             </>
           ) : null}
+          <span className="sr-only">
+            {t(`source_${hook.source}`)}
+            {countBlanks(hook.text) ? `, ${t("template")}` : ""}
+          </span>
         </p>
-        <HookRowStats stats={stats} className="mt-2 max-w-sm lg:hidden" />
+        <HookRowStatsInline stats={stats} className="mt-1 lg:hidden" />
       </div>
       <HookRowStats stats={stats} className="hidden lg:grid" />
-      <div className="relative z-10 flex items-center gap-0.5">
+      <div className="relative z-10 flex items-center justify-end gap-0.5">
         <Button type="button" variant="outline" size="xs" onClick={() => onUse(hook)}>
           {t("use")}
         </Button>

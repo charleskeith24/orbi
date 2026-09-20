@@ -39,7 +39,7 @@ export function TierDistribution({ summary, settings, postsHref }: { summary: Ti
   return (
     <ChartFrame
       title={t("tier_title")}
-      description={t("tier_description", { metric, window: settings.winner_window })}
+      info={t("tier_info", { metric, window: settings.winner_window })}
       actions={
         <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
           <Link href="/winners">

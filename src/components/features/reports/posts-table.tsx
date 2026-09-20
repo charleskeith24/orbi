@@ -61,7 +61,7 @@ function ContentCell({ row }: { row: TieredRow }) {
 export function ReportPostsTable({
   rows,
   title,
-  description,
+  info,
   icon,
   emptyTitle,
   emptyDescription,
@@ -70,7 +70,7 @@ export function ReportPostsTable({
 }: {
   rows: TieredRow[]
   title: string
-  description?: string
+  info?: string
   icon?: IconComponent
   emptyTitle: string
   emptyDescription: string
@@ -153,7 +153,8 @@ export function ReportPostsTable({
   return (
     <SectionCard
       title={title}
-      description={description}
+      count={rows.length}
+      info={info}
       icon={icon}
       className={cn("print:break-inside-avoid", className)}
       contentClassName={rows.length ? "p-0 pt-2" : undefined}

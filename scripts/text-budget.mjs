@@ -7,6 +7,8 @@
  *
  *   node scripts/text-budget.mjs                                  (the main screens, English, desktop)
  *   node scripts/text-budget.mjs --routes=/,/pipeline --lang=tl --width=390 --height=844
+ *   node scripts/text-budget.mjs --routes=/circles --circles      (the dev-only Circles fixture)
+ *   node scripts/text-budget.mjs --routes=/campaigns/{campaign}    ({campaign} = the demo workspace's first campaign)
  *   node scripts/text-budget.mjs --budget=100                     (exit 1 if any screen goes over the fold budget)
  *   node scripts/text-budget.mjs --json=/tmp/budget.json          (also write the numbers as JSON)
  *
@@ -40,12 +42,34 @@ await context.addInitScript(
   ({ seed, lang }) => {
     if (!localStorage.getItem("pbos:dev-seed")) localStorage.setItem("pbos:dev-seed", seed)
     if (lang && !localStorage.getItem("pbos:dev-ui-lang")) localStorage.setItem("pbos:dev-ui-lang", lang)
+    if (circles) localStorage.setItem("pbos:dev-circles", "fixture")
   },
-  { seed, lang }
+  { seed, lang, circles: Boolean(args.circles) }
 )
 const page = await context.newPage()
+
+/** `{campaign}` / `{item}` in a route are replaced by the first id in the seeded workspace. */
+async function resolveRoute(route) {
+  if (!route.includes("{")) return route
+  await page.goto(BASE + "/", { waitUntil: "domcontentloaded" })
+  await page.waitForFunction(() => !document.querySelector('[aria-label="Loading workspace"]'), null, { timeout: 45000 }).catch(() => {})
+  const ids = await page.evaluate(() => {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (!key?.startsWith("pbos:workspace")) continue
+      try {
+        const db = JSON.parse(localStorage.getItem(key)).db ?? {}
+        return { campaign: db.content_campaigns?.[0]?.id ?? "", item: db.content_items?.[0]?.id ?? "" }
+      } catch {}
+    }
+    return { campaign: "", item: "" }
+  })
+  return route.replace("{campaign}", ids.campaign).replace("{item}", ids.item)
+}
+
 const rows = []
-for (const route of routes) {
+for (const raw of routes) {
+  const route = await resolveRoute(raw)
   await page.goto(BASE + route, { waitUntil: "domcontentloaded" })
   await page.waitForFunction(() => !document.querySelector('[aria-label="Loading workspace"]'), null, { timeout: 45000 }).catch(() => {})
   await page.waitForTimeout(800)

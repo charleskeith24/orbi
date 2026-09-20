@@ -59,7 +59,7 @@ function PerformanceChart({
       .map((g) => [g.label, g.posts, formatNumber(g.views), formatNumber(g.avgViews), formatPercent(g.engagementRate), g.leads]),
   }
   return (
-    <ChartFrame title={title} description={t("by_dimension", { metric: def.label, dimension: dimension.toLowerCase() })} table={table} className="print:break-inside-avoid">
+    <ChartFrame title={title} info={t("by_dimension", { metric: def.label, dimension: dimension.toLowerCase() })} table={table} className="print:break-inside-avoid">
       <BarList
         items={items}
         valueFormatter={def.format}
@@ -80,7 +80,7 @@ export function PerformanceBreakdowns({ report, className }: { report: MonthlyRe
   return (
     <PageSection
       title={t("performance")}
-      description={t("performance_description")}
+      info={t("performance_info")}
       className={className}
       action={
         <ToggleGroup

@@ -2,8 +2,8 @@
 
 import { ClipboardPaste, ExternalLink, Info, Library } from "lucide-react"
 import Link from "next/link"
-import { useId, useMemo } from "react"
-import { FormField, FormRow, OptionSelect, PlatformSelect, ViewToggle, type SelectOption, type ViewOption } from "@/components/common"
+import { useId, useMemo, useState } from "react"
+import { Disclosure, FormField, FormRow, OptionSelect, PlatformSelect, ViewToggle, type SelectOption, type ViewOption } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -62,13 +62,15 @@ export function AdaptReferenceStep({
   )
   const chars = pasted.content.trim().length
   const urlError = pasted.url.trim() && !isHttpUrl(pasted.url) ? t("error_url") : undefined
+  // Optional details start open when a pasted reference already has some (e.g. restored after a trip away).
+  const [detailsOpen, setDetailsOpen] = useState(() => Boolean(pasted.title || pasted.creator || pasted.url || pasted.platform))
 
   return (
     <StepCard
       step={1}
       state={state}
       title={t("reference")}
-      description={t("reference_description")}
+      info={t("reference_info")}
       action={<ViewToggle value={mode} onChange={onModeChange} options={modeOptions} aria-label={t("source_aria")} />}
     >
       {mode === "paste" ? (
@@ -77,7 +79,6 @@ export function AdaptReferenceStep({
             label={t("reference_text")}
             htmlFor={field("content")}
             required
-            description={t("reference_text_description")}
             error={chars > 0 && chars < MIN_REFERENCE_CHARS ? t("error_min", { min: MIN_REFERENCE_CHARS }) : undefined}
           >
             <Textarea
@@ -90,41 +91,60 @@ export function AdaptReferenceStep({
               onChange={(event) => onPastedChange({ content: event.target.value })}
             />
           </FormField>
-          <FormRow>
-            <FormField label={t("title")} htmlFor={field("title")} description={t("title_description")}>
-              <Input id={field("title")} value={pasted.title} maxLength={300} onChange={(event) => onPastedChange({ title: event.target.value })} />
-            </FormField>
-            <FormField label={t("creator")} htmlFor={field("creator")} description={t("creator_description")}>
-              <Input id={field("creator")} value={pasted.creator} maxLength={120} onChange={(event) => onPastedChange({ creator: event.target.value })} />
-            </FormField>
-          </FormRow>
-          <FormRow>
-            <FormField label={t("platform")} htmlFor={field("platform")}>
-              <PlatformSelect id={field("platform")} allowNone value={pasted.platform} onChange={(platform) => onPastedChange({ platform })} />
-            </FormField>
-            <FormField label={t("type")} htmlFor={field("type")}>
-              <OptionSelect
-                id={field("type")}
-                options={RESEARCH_TYPE_OPTIONS}
-                value={pasted.type}
-                onChange={(type) => {
-                  if (type) onPastedChange({ type })
-                }}
+          <Disclosure
+            label={t("details_optional")}
+            open={detailsOpen || Boolean(urlError)}
+            onOpenChange={setDetailsOpen}
+            contentClassName="flex min-w-0 flex-col gap-4 pt-3"
+          >
+            <FormRow>
+              <FormField label={t("title")} htmlFor={field("title")}>
+                <Input
+                  id={field("title")}
+                  value={pasted.title}
+                  maxLength={300}
+                  placeholder={t("title_placeholder")}
+                  onChange={(event) => onPastedChange({ title: event.target.value })}
+                />
+              </FormField>
+              <FormField label={t("creator")} htmlFor={field("creator")}>
+                <Input
+                  id={field("creator")}
+                  value={pasted.creator}
+                  maxLength={120}
+                  placeholder={t("creator_placeholder")}
+                  onChange={(event) => onPastedChange({ creator: event.target.value })}
+                />
+              </FormField>
+            </FormRow>
+            <FormRow>
+              <FormField label={t("platform")} htmlFor={field("platform")}>
+                <PlatformSelect id={field("platform")} allowNone value={pasted.platform} onChange={(platform) => onPastedChange({ platform })} />
+              </FormField>
+              <FormField label={t("type")} htmlFor={field("type")}>
+                <OptionSelect
+                  id={field("type")}
+                  options={RESEARCH_TYPE_OPTIONS}
+                  value={pasted.type}
+                  onChange={(type) => {
+                    if (type) onPastedChange({ type })
+                  }}
+                />
+              </FormField>
+            </FormRow>
+            <FormField label={t("url")} htmlFor={field("url")} error={urlError}>
+              <Input
+                id={field("url")}
+                type="url"
+                inputMode="url"
+                value={pasted.url}
+                maxLength={2000}
+                placeholder="https://…"
+                aria-invalid={Boolean(urlError) || undefined}
+                onChange={(event) => onPastedChange({ url: event.target.value })}
               />
             </FormField>
-          </FormRow>
-          <FormField label={t("url")} htmlFor={field("url")} error={urlError}>
-            <Input
-              id={field("url")}
-              type="url"
-              inputMode="url"
-              value={pasted.url}
-              maxLength={2000}
-              placeholder="https://…"
-              aria-invalid={Boolean(urlError) || undefined}
-              onChange={(event) => onPastedChange({ url: event.target.value })}
-            />
-          </FormField>
+          </Disclosure>
         </div>
       ) : (
         <div className="flex min-w-0 flex-col gap-3">

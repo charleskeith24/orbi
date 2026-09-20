@@ -1,14 +1,14 @@
 "use client"
 
 import { DndContext, DragOverlay } from "@dnd-kit/core"
-import { CalendarDays, Plus, Target } from "lucide-react"
+import { CalendarDays, Target } from "lucide-react"
 import Link from "next/link"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useId, useMemo, useState } from "react"
 import { PageContainer, PageHeader } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { workspaceStartKey } from "@/components/features/dashboard/first-run"
-import { uiActions, useBrand, useLookup, useSettings, useTable } from "@/lib/store"
+import { useBrand, useLookup, useSettings, useTable } from "@/lib/store"
 import type { ContentItem } from "@/lib/types"
 import { useT, type Translator } from "@/lib/i18n"
 import { formatNumber } from "@/lib/utils"
@@ -34,7 +34,7 @@ import {
   type PeriodStats,
   type TrayGroupId,
 } from "./calendar-model"
-import { CalendarFilterBar, CalendarToolbar } from "./calendar-toolbar"
+import { CalendarFilterBar, CalendarNav, CalendarViewControls, FiltersToggle } from "./calendar-toolbar"
 import { UnscheduledTray, type TrayGroup } from "./unscheduled-tray"
 import { PREF_KEYS, useCalendarNav, usePref, writePref } from "./use-calendar-nav"
 import { calendarMessages } from "./messages"
@@ -54,6 +54,8 @@ function statsText(stats: PeriodStats, t: Translator<typeof calendarMessages.en>
 /**
  * Calendar (spec §19): Month / Week / Day with posting slots as lanes, drag-and-drop rescheduling and the
  * Unscheduled tray. URL: `?view=&date=YYYY-MM-DD&open=<itemId>` (open reveals and highlights an item).
+ * Calm UI: the title's ⓘ explains the page (lanes, dragging, the tray); view controls sit in the header, then one
+ * toolbar row — period, facets (behind "Filters" on phones) and the period in numbers. New content is in ＋ New.
  */
 export function CalendarView() {
   return (
@@ -77,6 +79,8 @@ function CalendarScreen() {
   const showSlots = usePref(PREF_KEYS.slots) !== "off"
   const trayPref = usePref(PREF_KEYS.tray)
   const [filters, setFilters] = useState<CalendarFilters>(EMPTY_FILTERS)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const filtersId = useId()
   const { view, anchor } = nav
   const weekStartsOn = settings.week_starts_on
   const filtering = hasFilters(filters)
@@ -137,6 +141,14 @@ function CalendarScreen() {
   const draggedPillar = draggedItem?.pillar_id ? pillars.get(draggedItem.pillar_id) : undefined
   const weekdays = weekdayOrder(weekStartsOn)
   const hasActiveSlots = slots.some((s) => s.is_active)
+  const viewControls = (
+    <CalendarViewControls
+      view={view}
+      showSlots={showSlots}
+      onShowSlotsChange={(show) => writePref(PREF_KEYS.slots, show ? "on" : "off")}
+      onViewChange={nav.setView}
+    />
+  )
 
   const grid =
     view === "month" ? (
@@ -175,58 +187,48 @@ function CalendarScreen() {
 
   return (
     <PageContainer className="gap-4">
-      <PageHeader
-        title="Calendar"
-        icon={CalendarDays}
-        description={t("description")}
-        actions={
-          <>
-            <Button type="button" size="sm" onClick={() => uiActions.openDialog({ type: "new-content" })}>
-              <Plus aria-hidden />
-              {t("new_content")}
-            </Button>
-          </>
-        }
-      />
-
-      <div className="flex min-w-0 flex-col gap-3">
-        <CalendarToolbar
-          view={view}
-          label={periodLabel(view, anchor, weekStartsOn)}
-          anchor={anchor}
-          isTodayAnchor={nav.isTodayAnchor}
-          weekStartsOn={weekStartsOn}
-          showSlots={showSlots}
-          onShowSlotsChange={(show) => writePref(PREF_KEYS.slots, show ? "on" : "off")}
-          onViewChange={nav.setView}
-          onShift={nav.shift}
-          onToday={nav.goToday}
-          onPick={nav.setAnchor}
-        />
-        <CalendarFilterBar
-          filters={filters}
-          options={facetOptions}
-          onChange={setFilters}
-          summary={<span className="text-xs text-muted-foreground num">{statsText(stats, t)}</span>}
-        />
-      </div>
+      <PageHeader title="Calendar" info={t("info")} actions={isMobile ? undefined : viewControls}>
+        <div className="flex min-w-0 flex-col gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+            <CalendarNav
+              view={view}
+              label={periodLabel(view, anchor, weekStartsOn)}
+              anchor={anchor}
+              isTodayAnchor={nav.isTodayAnchor}
+              weekStartsOn={weekStartsOn}
+              onShift={nav.shift}
+              onToday={nav.goToday}
+              onPick={nav.setAnchor}
+            />
+            {isMobile ? (
+              // Phones: Filters and the view controls share one row under the period.
+              <div className="flex w-full min-w-0 items-center justify-between gap-2">
+                <FiltersToggle filters={filters} open={filtersOpen} onOpenChange={setFiltersOpen} controls={filtersId} />
+                {viewControls}
+              </div>
+            ) : (
+              <CalendarFilterBar filters={filters} options={facetOptions} onChange={setFilters} />
+            )}
+            <span className="text-xs text-muted-foreground num lg:ml-auto">{statsText(stats, t)}</span>
+          </div>
+          {isMobile && filtersOpen ? (
+            <CalendarFilterBar id={filtersId} filters={filters} options={facetOptions} onChange={setFilters} className="pt-1" />
+          ) : null}
+        </div>
+      </PageHeader>
 
       {!hasActiveSlots && showSlots ? (
-        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-dashed bg-card/50 px-3 py-2.5 text-sm">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-dashed bg-card/50 px-3 py-2 text-sm">
           <Target className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-          <p className="min-w-0 flex-1 text-pretty text-muted-foreground">
-            {t("no_targets")}
-          </p>
+          <p className="min-w-0 flex-1 text-pretty text-muted-foreground">{t("no_targets")}</p>
           <Button asChild size="sm" variant="outline">
             <Link href="/calendar/schedule">{t("setup_schedule")}</Link>
           </Button>
         </div>
       ) : !items.length && showSlots ? (
-        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-dashed bg-card/50 px-3 py-2.5 text-sm">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-dashed bg-card/50 px-3 py-2 text-sm">
           <CalendarDays className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-          <p className="min-w-0 flex-1 text-pretty text-muted-foreground">
-            {t("nothing_yet")}
-          </p>
+          <p className="min-w-0 flex-1 text-pretty text-muted-foreground">{t("nothing_yet")}</p>
           <Button asChild size="sm" variant="outline">
             <Link href="/calendar/planner">{t("plan_week")}</Link>
           </Button>

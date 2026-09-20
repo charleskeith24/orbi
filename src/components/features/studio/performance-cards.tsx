@@ -54,7 +54,7 @@ export function TierCard({ row, settings }: { row: TieredRow; settings: AppSetti
   return (
     <SectionCard
       title={t("winner_detection")}
-      description={t("compared_with", { metric, window: settings.winner_window, platform })}
+      info={t("compared_with", { metric, window: settings.winner_window, platform })}
       action={
         <Button type="button" variant="ghost" size="xs" asChild>
           <Link href="/settings?tab=performance">{t("thresholds")}</Link>
@@ -189,18 +189,16 @@ function rateInputs(key: RateKey, r: TieredRow, t: PerformanceT): string {
 export function RatesCard({ row }: { row: TieredRow }) {
   const t = useT(performanceMessages)
   return (
-    <SectionCard title={t("rates")} description={t("rates_description")} contentClassName="px-0 pt-2 pb-1">
+    <SectionCard title={t("rates")} info={t("rates_info")} contentClassName="px-0 pt-2 pb-1">
       <ul className="divide-y">
         {RATE_FIELDS.map((field) => {
           const value = row.rates[field.key]
           return (
             <li key={field.key} className="flex items-start justify-between gap-4 px-4 py-2">
-              <div className="min-w-0">
+              {/* The formula is the row's tooltip; this post's own inputs stay visible. */}
+              <div className="min-w-0" title={field.formula}>
                 <p className="text-sm">{field.label}</p>
-                <p className="text-xs text-pretty text-muted-foreground">
-                  {field.formula}
-                  <span className="text-foreground/70 num"> · {rateInputs(field.key, row, t)}</span>
-                </p>
+                <p className="text-xs text-pretty text-muted-foreground num">{rateInputs(field.key, row, t)}</p>
               </div>
               <span className="shrink-0 pt-px text-sm font-medium num">{value === null ? "—" : formatPercent(value)}</span>
             </li>
@@ -234,11 +232,12 @@ export function LatestSnapshot({ metric }: { metric: ContentMetric }) {
   return (
     <SectionCard
       title={t("latest_snapshot")}
-      description={t("snapshot_description", {
+      info={t("snapshot_description", {
         date: formatDate(metric.recorded_at, "EEE, MMM d, yyyy"),
         source: sourceLabel(t, metric.source),
         notes: metric.notes ? ` · ${metric.notes}` : "",
       })}
+      action={<span className="text-xs text-muted-foreground num">{formatDate(metric.recorded_at, "MMM d")}</span>}
     >
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4 xl:grid-cols-7">
         {cells.map((cell) => (
@@ -269,7 +268,8 @@ export function SnapshotHistory({ snapshots, itemId, onAdd }: { snapshots: Conte
   return (
     <SectionCard
       title={t("snapshot_history")}
-      description={t.plural("snapshots", snapshots.length, { count: formatNumber(snapshots.length) })}
+      count={snapshots.length}
+      info={t("snapshots_info")}
       action={
         <>
           <Button type="button" variant="ghost" size="sm" asChild className="hidden sm:inline-flex">

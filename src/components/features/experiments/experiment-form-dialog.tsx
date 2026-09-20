@@ -115,7 +115,7 @@ function ExperimentForm({
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4 scrollbar-thin">
         {experiment ? null : (
-          <FormField label={t("template")} description={t("template_description")}>
+          <FormField label={t("template")} info={t("template_info")}>
             <ChipToggleGroup options={TEMPLATE_OPTIONS} value={template} onChange={applyTemplate} size="xs" aria-label={t("templates_aria")} />
           </FormField>
         )}
@@ -133,7 +133,7 @@ function ExperimentForm({
           />
         </FormField>
 
-        <FormField label={t("hypothesis")} htmlFor="experiment-hypothesis" description={t("hypothesis_description")}>
+        <FormField label={t("hypothesis")} htmlFor="experiment-hypothesis" info={t("hypothesis_info")}>
           <Textarea
             id="experiment-hypothesis"
             value={values.hypothesis}
@@ -169,7 +169,7 @@ function ExperimentForm({
           </FormField>
         </FormRow>
 
-        <FormField label={t("metric")} htmlFor="experiment-metric" description={t("metric_description")}>
+        <FormField label={t("metric")} htmlFor="experiment-metric" info={t("metric_info")}>
           <OptionSelect<ExperimentMetric>
             id="experiment-metric"
             value={values.metric}

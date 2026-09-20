@@ -107,20 +107,21 @@ export function ReviewStep({ report, previousFocus, now }: { report: WeeklyRepor
 
   return (
     <div className="grid min-w-0 gap-4">
-      <p className="text-sm text-muted-foreground">
-        {period} · {inProgress ? tr("in_progress") : tr("compared")}
+      <p className="text-sm text-muted-foreground num">
+        {period} · <span title={inProgress ? tr("in_progress_hint") : undefined}>{inProgress ? tr("in_progress") : tr("compared")}</span>
       </p>
-      <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3 2xl:grid-cols-5">
+      <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         <StatTile
+          size="sm"
           label={tr("stat_published")}
           value={`${report.published} / ${report.target}`}
           sublabel={tr("of_target_pct", { pct: report.consistencyPct })}
           tone={report.published >= report.target ? "good" : report.consistencyPct >= 80 ? "warning" : "serious"}
         />
-        <StatTile label={tr("stat_views")} value={formatCompact(t.views)} delta={d.views} />
-        <StatTile label={tr("stat_engagement")} value={formatPercent(t.engagementRate)} delta={d.engagementRate} />
-        <StatTile label={tr("stat_followers")} value={formatNumber(t.followers)} delta={d.followers} />
-        <StatTile label={tr("stat_leads")} value={formatNumber(t.leads)} delta={d.leads} />
+        <StatTile size="sm" label={tr("stat_views")} value={formatCompact(t.views)} delta={d.views} />
+        <StatTile size="sm" label={tr("stat_engagement")} value={formatPercent(t.engagementRate)} delta={d.engagementRate} />
+        <StatTile size="sm" label={tr("stat_followers")} value={formatNumber(t.followers)} delta={d.followers} />
+        <StatTile size="sm" label={tr("stat_leads")} value={formatNumber(t.leads)} delta={d.leads} />
       </div>
       <div className="grid min-w-0 gap-3 md:grid-cols-2">
         <PostHighlight label={tr("best_post")} row={report.bestPost} />
@@ -259,7 +260,7 @@ export function FocusStep({
       <FormField
         label={t("focus_label")}
         htmlFor="planner-focus"
-        description={t("focus_description", { length, max: FOCUS_MAX })}
+        description={<span className="num">{t("focus_count", { length, max: FOCUS_MAX })}</span>}
         error={error}
       >
         <Textarea

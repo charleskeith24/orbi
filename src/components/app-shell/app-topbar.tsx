@@ -33,8 +33,12 @@ export function getBreadcrumbs(pathname: string, t: Translator<(typeof m)["en"]>
   const item = navModuleFor(pathname)
   if (!item) return []
   const crumbs: Crumb[] = [{ title: item.title, href: item.href }]
-  const isSubPage = item.children?.some((child) => child.href === pathname) ?? false
-  if (pathname !== item.href && !isSubPage) {
+  const child = item.children?.find((c) => c.href === pathname)
+  if (child) {
+    // The tabs below already show the sub-page, but the crumb keeps the answer to "where am I?" in one place.
+    // A first tab named after its module (Brand HQ › Brand HQ) would just repeat it.
+    if (child.title !== item.title) crumbs.push({ title: child.title, href: child.href })
+  } else if (pathname !== item.href) {
     const detail: Record<string, string> = { "/studio": t("crumb_workspace"), "/campaigns": t("crumb_campaign") }
     crumbs.push({ title: detail[item.href] ?? t("crumb_details"), href: pathname })
   }

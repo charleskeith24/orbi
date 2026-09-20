@@ -1,7 +1,7 @@
 "use client"
 
 import { memo } from "react"
-import { FormatLabel, FunnelBadge, PillarBadge, PriorityBadge } from "@/components/common"
+import { FormatCategoryIcon, FunnelBadge, PillarBadge, PriorityBadge } from "@/components/common"
 import { useT } from "@/lib/i18n"
 import type { ContentFormat, ContentIdea, ContentPillar, ID } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -79,7 +79,12 @@ export const IdeaCard = memo(function IdeaCard({
 
       <div className="mt-auto flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
         {idea.platforms.length ? <PlatformIcons platforms={idea.platforms} /> : null}
-        {format ? <FormatLabel format={format} showIcon={false} className="min-w-0 shrink" /> : null}
+        {format ? (
+          <span title={format.name} className="inline-flex">
+            <FormatCategoryIcon category={format.category} className="size-3.5" />
+            <span className="sr-only">{format.name}</span>
+          </span>
+        ) : null}
         <span className="ml-auto flex shrink-0 items-center gap-2.5">
           <IdeaScoreBadge score={idea.score} />
           <CapturedDate value={idea.created_at} now={now} />

@@ -308,12 +308,8 @@ export function IdeaGeneratorView() {
     <PageContainer>
       <PageHeader
         title="Idea Generator"
-        description={t("description")}
-        actions={
-          <>
-            <ProviderBadge provider={status.configured ? status.provider : "offline"} model={status.configured ? status.model : undefined} />
-          </>
-        }
+        info={t("info")}
+        actions={<ProviderBadge provider={status.configured ? status.provider : "offline"} model={status.configured ? status.model : undefined} />}
       />
 
       {ignored.length ? (

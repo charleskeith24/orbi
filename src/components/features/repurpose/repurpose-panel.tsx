@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useId, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
-import { AiButton, AiNotice, EmptyState, useConfirm } from "@/components/common"
+import { AiButton, AiNotice, EmptyState, InfoHint, useConfirm } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { buildRepurposeInput, useAiTask } from "@/lib/ai"
 import { computeTiers, isPublishedItem, isWinnerTier, latestMetricsByItem } from "@/lib/analytics"
@@ -328,21 +328,22 @@ function RepurposeWorkbench({ item, onCreated }: { item: ContentItem; onCreated?
 
       <section aria-labelledby={`${headingId}-formats`} className="flex min-w-0 flex-col gap-3">
         <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-          <div className="min-w-0 flex-1 basis-64">
+          {/* Calm UI: title, ⓘ and the counts — the intro sentence is the ⓘ. */}
+          <div className="flex min-w-0 flex-1 basis-64 flex-wrap items-center gap-x-2 gap-y-0.5">
             <h3 id={`${headingId}-formats`} className="text-sm leading-6 font-medium">
               {t("repurpose_into")}
             </h3>
-            <p className="text-xs text-pretty text-muted-foreground">
-              {t("repurpose_intro")}
-              {createdTypes || suggestedTypes
-                ? ` ${[
-                    createdTypes ? t("created_count", { count: createdTypes }) : "",
-                    suggestedTypes ? t("suggested_count", { count: suggestedTypes }) : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}.`
-                : ""}
-            </p>
+            <InfoHint title={t("repurpose_into")}>{t("repurpose_intro")}</InfoHint>
+            {createdTypes || suggestedTypes ? (
+              <span className="text-xs text-muted-foreground num">
+                {[
+                  createdTypes ? t("created_count", { count: createdTypes }) : "",
+                  suggestedTypes ? t("suggested_count", { count: suggestedTypes }) : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             <Button type="button" variant="ghost" size="sm" onClick={() => setSelected(new Set(recommended))} disabled={!recommended.length || sameSelection || ai.isPending}>
@@ -374,14 +375,12 @@ function RepurposeWorkbench({ item, onCreated }: { item: ContentItem; onCreated?
       {drafts.length || pendingNew.length ? (
         <section ref={draftsRef} aria-labelledby={`${headingId}-drafts`} className="flex min-w-0 scroll-mt-4 flex-col gap-3">
           <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-            <div className="min-w-0 flex-1 basis-64">
+            <div className="flex min-w-0 flex-1 basis-64 items-center gap-1.5">
               <h3 id={`${headingId}-drafts`} className="flex items-center gap-1.5 text-sm leading-6 font-medium">
                 {t("drafts")}
                 <span className="font-normal text-muted-foreground num">{openDrafts.length + pendingNew.length}</span>
               </h3>
-              <p className="text-xs text-pretty text-muted-foreground">
-                {t("drafts_intro")}
-              </p>
+              <InfoHint title={t("drafts")}>{t("drafts_intro")}</InfoHint>
             </div>
             {openDrafts.length > 1 ? (
               <Button type="button" variant="outline" size="sm" onClick={onCreateAll} disabled={!readyDrafts.length || ai.isPending}>

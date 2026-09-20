@@ -61,11 +61,7 @@ export function PostSummary({ row, className }: { row: TieredRow; className?: st
         <Figure label={t("leads")} value={measured ? formatNumber(row.leads) : "—"} />
         <Figure label={t("vs_baseline")} value={formatRatio(row.ratio)} />
       </dl>
-      {hook ? (
-        <p className="line-clamp-2 text-xs text-pretty text-muted-foreground">
-          <span className="font-medium text-foreground/80">{t("hook")}</span> “{hook}”
-        </p>
-      ) : null}
+      {hook ? <p className="line-clamp-2 text-xs text-pretty text-muted-foreground">“{hook}”</p> : null}
     </div>
   )
 }
@@ -73,21 +69,21 @@ export function PostSummary({ row, className }: { row: TieredRow; className?: st
 /** A titled card around one post (Best post, Worst post, Best content) with an empty state. */
 export function PostHighlightCard({
   title,
-  description,
+  info,
   icon,
   row,
   empty,
   className,
 }: {
   title: string
-  description?: string
+  info?: string
   icon: IconComponent
   row: TieredRow | null
   empty: React.ReactNode
   className?: string
 }) {
   return (
-    <SectionCard title={title} description={description} icon={icon} className={cn("print:break-inside-avoid", className)}>
+    <SectionCard title={title} info={info} icon={icon} className={cn("print:break-inside-avoid", className)}>
       {row ? <PostSummary row={row} /> : empty}
     </SectionCard>
   )

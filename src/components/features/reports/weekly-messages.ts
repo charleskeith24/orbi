@@ -8,27 +8,25 @@ export const weeklyReportMessages = defineMessages({
   en: {
     // Page
     focus: "Focus: {focus}",
-    empty_page_description: "What went out each week, how it performed and what to do next.",
     empty_title: "No weekly report yet",
-    empty_description:
-      "Your first weekly report appears after your first published week — posting consistency, your best and worst posts, the content mix and an AI-drafted review, all from the posts and analytics you log.",
+    empty_description: "After your first published week: consistency, best and worst posts, the mix and an AI-drafted review — all from the analytics you log.",
     plan_this_week: "Plan this week",
     week_to_date: " · week to date",
     plan_next_week: "Plan next week",
-    in_progress_note: "This week is still in progress — totals run through today and changes compare the same days of last week.",
+    page_info: "Posts are ranked by {metric}. Changes compare with the previous week.",
+    in_progress_note: "This week is still in progress: totals run through today and changes compare the same days last week.",
     best_post: "Best post",
     nothing_published: "Nothing published this week",
-    log_this_week: "Log views and engagement for this week's posts to see what worked.",
+    log_this_week: "Log this week's views and engagement to see what worked.",
     worst_post: "Worst post",
     lowest_by: "Lowest by {metric}",
     not_enough_measured: "Not enough measured posts",
-    worst_needs_two: "The worst post needs at least two posts with analytics this week.",
-    mix_description: "Published this week vs your pillar and funnel targets",
+    worst_needs_two: "Needs at least two posts with analytics this week.",
+    mix_info: "Published this week vs your pillar and funnel targets.",
     posts_this_week: "Posts this week",
-    posts_ranked_one: "{count} post · ranked by {metric}",
-    posts_ranked_other: "{count} posts · ranked by {metric}",
+    posts_ranked_info: "Ranked by {metric}; posts without analytics come last.",
     log_to_build: "Log what you published to build the report.",
-    history_description: "Weekly reviews, newest first",
+    history_info: "Weekly reviews, newest first.",
     history_empty: "Save this week's review to start your history.",
 
     // KPI tiles
@@ -38,7 +36,6 @@ export const weeklyReportMessages = defineMessages({
     close_to_target: "Close to target",
     short_one: "{count} post short",
     short_other: "{count} posts short",
-    vs_last_week: "vs last week",
     content_published: "Content published",
     posting_consistency: "Posting consistency",
     total_views: "Total views",
@@ -48,7 +45,7 @@ export const weeklyReportMessages = defineMessages({
     new_followers: "New followers",
     leads: "Leads",
     winners: "Winners",
-    winners_sublabel: "Winner or Breakout posts",
+    winners_info: "Posts that reached the Winner or Breakout tier this week.",
 
     // Best of the week
     row_platform: "Platform",
@@ -57,7 +54,7 @@ export const weeklyReportMessages = defineMessages({
     row_format: "Format",
     row_hook: "Hook style",
     best_of_week: "Best of the week",
-    top_group_by: "Top measured group by {metric}",
+    top_group_info: "Top measured group by {metric}.",
     not_enough_data: "Not enough data",
 
     // Weekly review editor
@@ -66,7 +63,7 @@ export const weeklyReportMessages = defineMessages({
     hint_empty: "Draft it from this week's numbers with AI, or write it yourself.",
     hint_final: "Saved as final, with this week's numbers frozen alongside.",
     review_title: "Weekly review",
-    review_description: "What worked, what didn't, what we learned — and what to double down on, stop and test next week.",
+    review_info: "What worked, what didn't, what you learned — and what to double down on, stop and test next week.",
     review_error: "Couldn't draft the review.",
     label_what_worked: "What worked",
     placeholder_what_worked: "Which posts, hooks or formats beat your average — and by how much?",
@@ -84,28 +81,25 @@ export const weeklyReportMessages = defineMessages({
   tl: {
     // Page
     focus: "Focus: {focus}",
-    empty_page_description: "Ano ang na-publish kada linggo, paano nag-perform at anong susunod na gagawin.",
     empty_title: "Wala pang weekly report",
-    empty_description:
-      "Lalabas ang una mong weekly report pagkatapos ng una mong linggo ng pag-publish — consistency sa pag-post, ang best at worst posts mo, ang content mix at review na drafted ng AI, mula sa posts at analytics na ni-log mo.",
+    empty_description: "After ng una mong linggo ng pag-publish: consistency, best at worst posts, ang mix at AI-drafted na review — galing sa analytics na ni-log mo.",
     plan_this_week: "I-plan ang linggong 'to",
     week_to_date: " · linggo hanggang ngayon",
     plan_next_week: "I-plan ang susunod na linggo",
-    in_progress_note:
-      "Hindi pa tapos ang linggong 'to — ang totals ay hanggang ngayon, at ang changes ay ikinukumpara sa parehong mga araw ng nakaraang linggo.",
+    page_info: "Naka-rank ang posts ayon sa {metric}. Ikinukumpara ang changes sa nakaraang linggo.",
+    in_progress_note: "Hindi pa tapos ang linggong 'to: hanggang ngayon ang totals, at parehong araw ng nakaraang linggo ang kumparahan.",
     best_post: "Best post",
     nothing_published: "Walang na-publish sa linggong 'to",
-    log_this_week: "I-log ang views at engagement ng posts sa linggong 'to para makita ang gumana.",
+    log_this_week: "I-log ang views at engagement ng linggong 'to para makita ang gumana.",
     worst_post: "Worst post",
     lowest_by: "Pinakamababa sa {metric}",
     not_enough_measured: "Hindi enough ang measured posts",
-    worst_needs_two: "Kailangan ng at least dalawang post na may analytics sa linggong 'to para sa worst post.",
-    mix_description: "Na-publish sa linggong 'to vs ang pillar at funnel targets mo",
+    worst_needs_two: "Kailangan ng at least dalawang post na may analytics sa linggong 'to.",
+    mix_info: "Na-publish sa linggong 'to vs ang pillar at funnel targets mo.",
     posts_this_week: "Posts sa linggong 'to",
-    posts_ranked_one: "{count} post · naka-rank ayon sa {metric}",
-    posts_ranked_other: "{count} posts · naka-rank ayon sa {metric}",
+    posts_ranked_info: "Naka-rank ayon sa {metric}; nasa huli ang walang analytics.",
     log_to_build: "I-log ang mga na-publish para buuin ang report.",
-    history_description: "Weekly reviews, pinakabago sa taas",
+    history_info: "Weekly reviews, pinakabago sa taas.",
     history_empty: "I-save ang review ng linggong 'to para simulan ang history mo.",
 
     // KPI tiles
@@ -115,7 +109,6 @@ export const weeklyReportMessages = defineMessages({
     close_to_target: "Malapit sa target",
     short_one: "Kulang ng {count} post",
     short_other: "Kulang ng {count} posts",
-    vs_last_week: "vs nakaraang linggo",
     content_published: "Na-publish",
     posting_consistency: "Consistency",
     total_views: "Total views",
@@ -125,7 +118,7 @@ export const weeklyReportMessages = defineMessages({
     new_followers: "Bagong followers",
     leads: "Leads",
     winners: "Winners",
-    winners_sublabel: "Winner o Breakout posts",
+    winners_info: "Mga post na umabot sa Winner o Breakout tier sa linggong 'to.",
 
     // Best of the week
     row_platform: "Platform",
@@ -134,7 +127,7 @@ export const weeklyReportMessages = defineMessages({
     row_format: "Format",
     row_hook: "Hook style",
     best_of_week: "Best sa linggong 'to",
-    top_group_by: "Top measured group ayon sa {metric}",
+    top_group_info: "Top measured group ayon sa {metric}.",
     not_enough_data: "Hindi enough ang data",
 
     // Weekly review editor
@@ -143,7 +136,7 @@ export const weeklyReportMessages = defineMessages({
     hint_empty: "I-draft gamit ang AI mula sa numbers ng linggong 'to, o isulat ito mismo.",
     hint_final: "Naka-save bilang final, kasama ang naka-freeze na numbers ng linggong 'to.",
     review_title: "Weekly review",
-    review_description: "Ano ang gumana, ano ang hindi, ano ang natutunan — at ano ang dapat i-double down, itigil at i-test sa susunod na linggo.",
+    review_info: "Ano ang gumana, ano ang hindi, ano ang natutunan — at ano ang i-double down, itigil at i-test next week.",
     review_error: "Hindi na-draft ang review.",
     label_what_worked: "Ano ang gumana",
     placeholder_what_worked: "Anong posts, hooks o formats ang lumampas sa average mo — at gaano?",

@@ -278,13 +278,21 @@ const CollabColumn = memo(function CollabColumn({
           </li>
         ))}
         {!collabs.length ? (
+          // A quiet drop target; what belongs here is its tooltip on desktop, a line on touch screens.
           <li
+            title={statusDescription(status)}
             className={cn(
-              "flex min-h-24 flex-1 items-center justify-center rounded-md border border-dashed px-3 py-4 text-center text-xs text-pretty text-muted-foreground",
+              "flex min-h-20 flex-1 items-center justify-center rounded-md border border-dashed px-3 py-4 text-center text-xs text-pretty text-muted-foreground",
               dragging && "border-brand/40"
             )}
           >
-            {dragging ? t("drop_here", { status: statusLabel(status) }) : filtered && total ? t("no_matches_column") : statusDescription(status)}
+            {dragging ? (
+              t("drop_here", { status: statusLabel(status) })
+            ) : filtered && total ? (
+              t("no_matches_column")
+            ) : (
+              <span className="md:hidden">{statusDescription(status)}</span>
+            )}
           </li>
         ) : null}
       </ul>

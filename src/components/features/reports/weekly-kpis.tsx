@@ -26,7 +26,6 @@ export function WeeklyKpis({ report, period }: { report: WeeklyReport; period: R
   const r = useT(reportMessages)
   const t = report.totals
   const d = report.deltas
-  const vs = w("vs_last_week")
   const status = consistencyStatus(report, period.isCurrent, w)
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 print:grid-cols-4">
@@ -40,7 +39,6 @@ export function WeeklyKpis({ report, period }: { report: WeeklyReport; period: R
           </>
         }
         delta={d.posts}
-        deltaLabel={vs}
       />
       <StatTile
         label={w("posting_consistency")}
@@ -49,30 +47,28 @@ export function WeeklyKpis({ report, period }: { report: WeeklyReport; period: R
         icon={status.icon}
         sublabel={status.label}
       />
-      <StatTile label={w("total_views")} icon={Eye} value={formatNumber(t.views)} delta={d.views} deltaLabel={vs} />
-      <StatTile label={w("total_reach")} icon={Users} value={formatNumber(t.reach)} delta={d.reach} deltaLabel={vs} />
+      <StatTile label={w("total_views")} icon={Eye} value={formatNumber(t.views)} delta={d.views} />
+      <StatTile label={w("total_reach")} icon={Users} value={formatNumber(t.reach)} delta={d.reach} />
       <StatTile
         label={w("total_engagement")}
         icon={Heart}
         value={formatNumber(t.engagements)}
         delta={d.engagements}
-        deltaLabel={vs}
         sublabel={t.engagementRate === null ? undefined : w("rate", { rate: formatPercent(t.engagementRate) })}
       />
-      <StatTile label={w("new_followers")} icon={UserPlus} value={formatNumber(t.followers)} delta={d.followers} deltaLabel={vs} />
+      <StatTile label={w("new_followers")} icon={UserPlus} value={formatNumber(t.followers)} delta={d.followers} />
       <StatTile
         label={w("leads")}
         icon={Magnet}
         value={formatNumber(t.leads)}
         delta={d.leads}
-        deltaLabel={vs}
         sublabel={t.sales ? r.plural("sales", t.sales, { count: formatNumber(t.sales) }) : undefined}
       />
       <StatTile
         label={w("winners")}
         icon={Trophy}
         value={formatNumber(report.winners)}
-        sublabel={w("winners_sublabel")}
+        info={w("winners_info")}
         href="/winners"
       />
     </div>

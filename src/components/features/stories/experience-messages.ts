@@ -8,13 +8,9 @@ import { defineMessages } from "@/lib/i18n/core"
 
 export const experienceMessages = defineMessages({
   en: {
-    description:
-      "Describe something that really happened. Get a Story Vault entry and eight content angles — hooks, outlines and drafts in your voice.",
     what_happened: "What happened today?",
-    what_happened_description: "A few honest sentences are enough — what happened, what you did, how it turned out and what you learned.",
     placeholder: "Today I had to talk to my team because deadlines were being missed.",
     keep_going: "Keep going — at least {count} characters.",
-    hint: "Real details beat polish: numbers, names of things, how it felt. ⌘/Ctrl + Enter generates.",
     pillar_optional: "Content Pillar (optional)",
     let_ai_choose: "Let the AI choose",
     turn_into_content: "Turn into content",
@@ -23,7 +19,7 @@ export const experienceMessages = defineMessages({
       "Every angle comes from what you wrote. Edit the drafts until they sound like you, then save the ones you would actually post.",
     empty_title: "One real moment, eight pieces of content",
     empty_description:
-      "Leadership lesson, management framework, personal reflection, storytelling post, educational video, contrarian opinion, LinkedIn post and Facebook post — each with a hook, an outline and a draft, plus a Story Vault entry you can keep.",
+      "Eight content angles, each with a hook, an outline and a draft — plus a Story Vault entry you can keep.",
     try_example: "Try an example",
     story_saved: "Saved to your Story Vault",
     story_saved_linked: "{title} · linked to the {ideas} you saved",
@@ -54,23 +50,22 @@ export const experienceMessages = defineMessages({
     // Story sheet → angles tab
     story_empty_title: "Turn this story into content ideas",
     story_empty_description:
-      "Eight angles from one real story — leadership lesson, management framework, personal reflection, storytelling post, educational video, contrarian opinion, LinkedIn and Facebook posts — each with a hook, outline and draft.",
+      "Eight angles from one real story — lessons, frameworks, opinions, LinkedIn and Facebook posts — each with a hook, an outline and a draft.",
     generate_angles: "Generate angles",
     story_too_thin: "Add the situation, what you did or the lesson first — the AI needs a few sentences to work with.",
     story_too_thin_toast: "Add a little more to this story first",
     story_too_thin_toast_description: "The AI needs the situation, what you did or the lesson.",
     story_notice: "Built only from this story. Edit each draft until it sounds like you, then save the angles you would actually post.",
     retry: "Retry",
+    info:
+      "Describe something that really happened. You get a Story Vault entry and eight content angles — leadership lesson, management framework, personal reflection, storytelling post, educational video, contrarian opinion, LinkedIn post and Facebook post — each with a hook, an outline and a draft in your voice.",
+    what_happened_info:
+      "A few honest sentences are enough — what happened, what you did, how it turned out and what you learned. Real details beat polish: numbers, names of things, how it felt. ⌘/Ctrl + Enter generates.",
   },
   tl: {
-    description:
-      "Ikwento ang isang totoong nangyari. Kumuha ng Story Vault entry at walong content angles — hooks, outlines at drafts sa boses mo.",
     what_happened: "Anong nangyari ngayon?",
-    what_happened_description:
-      "Sapat na ang ilang honest na sentence — anong nangyari, anong ginawa mo, anong kinahinatnan at anong natutunan mo.",
     placeholder: "Ngayon kinausap ko ang team ko kasi hindi naaabot ang mga deadline.",
     keep_going: "Magpatuloy — at least {count} characters.",
-    hint: "Mas panalo ang totoong detalye kaysa polish: numbers, pangalan ng mga bagay, anong naramdaman. ⌘/Ctrl + Enter para i-generate.",
     pillar_optional: "Content Pillar (optional)",
     let_ai_choose: "Hayaang pumili ang AI",
     turn_into_content: "Gawing content",
@@ -79,7 +74,7 @@ export const experienceMessages = defineMessages({
       "Ang bawat angle ay mula sa isinulat mo. I-edit ang drafts hanggang tunog ikaw, tapos i-save ang mga talagang ipo-post mo.",
     empty_title: "Isang totoong moment, walong content",
     empty_description:
-      "Leadership lesson, management framework, personal reflection, storytelling post, educational video, contrarian opinion, LinkedIn post at Facebook post — bawat isa may hook, outline at draft, plus Story Vault entry na pwede mong itabi.",
+      "Walong content angles, bawat isa may hook, outline at draft — plus Story Vault entry na pwede mong itabi.",
     try_example: "Subukan ang example",
     story_saved: "Na-save sa Story Vault mo",
     story_saved_linked: "{title} · naka-link sa {ideas} na na-save mo",
@@ -107,7 +102,7 @@ export const experienceMessages = defineMessages({
     save_to_vault: "I-save sa Story Vault",
     story_empty_title: "Gawing content ideas ang story na 'to",
     story_empty_description:
-      "Walong angles mula sa isang totoong story — leadership lesson, management framework, personal reflection, storytelling post, educational video, contrarian opinion, LinkedIn at Facebook posts — bawat isa may hook, outline at draft.",
+      "Walong angles mula sa isang totoong story — lessons, frameworks, opinions, LinkedIn at Facebook posts — bawat isa may hook, outline at draft.",
     generate_angles: "I-generate ang angles",
     story_too_thin: "Idagdag muna ang situation, anong ginawa mo o ang lesson — kailangan ng AI ng ilang sentence.",
     story_too_thin_toast: "Magdagdag muna ng kaunting detalye sa story",
@@ -115,6 +110,10 @@ export const experienceMessages = defineMessages({
     story_notice:
       "Binuo mula sa story na 'to lang. I-edit ang bawat draft hanggang tunog ikaw, tapos i-save ang angles na talagang ipo-post mo.",
     retry: "Subukan ulit",
+    info:
+      "Ikwento ang isang totoong nangyari. Makakakuha ka ng Story Vault entry at walong content angles — leadership lesson, management framework, personal reflection, storytelling post, educational video, contrarian opinion, LinkedIn post at Facebook post — bawat isa may hook, outline at draft sa boses mo.",
+    what_happened_info:
+      "Sapat na ang ilang honest na sentence — anong nangyari, anong ginawa mo, anong kinalabasan at anong natutunan mo. Mas panalo ang totoong detalye kaysa polish: numbers, pangalan ng mga bagay, anong naramdaman. ⌘/Ctrl + Enter para i-generate.",
   },
 })
 

@@ -9,6 +9,7 @@ import {
   EmptyState,
   FormatLabel,
   FunnelBadge,
+  InfoHint,
   PillarBadge,
   PlatformLabel,
   TierBadge,
@@ -142,7 +143,7 @@ export function PostDetailSheet({
 
       {row?.metric ? (
         <>
-          <Section title={t("rates")} description={t("rates_description")}>
+          <Section title={t("rates")} info={t("rates_info")}>
             <RateList row={row} />
           </Section>
           <Section title={t("tier")}>
@@ -151,7 +152,7 @@ export function PostDetailSheet({
         </>
       ) : null}
 
-      <Section title={t("history")} description={t("history_description")}>
+      <Section title={t("history")} info={t("history_info")}>
         {snapshots.length ? (
           <SnapshotHistory snapshots={snapshots} onEdit={openEdit} onDelete={(s) => void remove(s)} />
         ) : (
@@ -184,11 +185,25 @@ export function PostDetailSheet({
   )
 }
 
-function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+function Section({
+  title,
+  description,
+  info,
+  children,
+}: {
+  title: string
+  /** Data line under the title (a date) — explanations go in `info` (Calm UI). */
+  description?: string
+  info?: string
+  children: React.ReactNode
+}) {
   return (
     <section className="flex flex-col gap-2.5">
       <div>
-        <h3 className="text-sm font-medium">{title}</h3>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <h3 className="min-w-0 text-sm font-medium">{title}</h3>
+          {info ? <InfoHint title={title}>{info}</InfoHint> : null}
+        </div>
         {description ? <p className="text-xs text-pretty text-muted-foreground">{description}</p> : null}
       </div>
       {children}

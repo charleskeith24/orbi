@@ -48,7 +48,7 @@ export function PlatformBreakdown({ groups, hrefFor }: { groups: PlatformAggrega
   return (
     <ChartFrame
       title={t("by_platform")}
-      description={t("by_platform_description")}
+      info={t("by_platform_info")}
       table={{ columns: [t("platform"), ...GROUP_COLUMNS], rows: groups.map((g) => groupRow(g.label, g)) }}
     >
       <BarList
@@ -73,7 +73,7 @@ export function PillarBreakdown({ groups, hrefFor }: { groups: PillarAggregate[]
   return (
     <ChartFrame
       title={t("by_pillar")}
-      description={t("avg_per_measured")}
+      info={t("avg_per_measured")}
       table={{ columns: [t("pillar"), ...GROUP_COLUMNS], rows: groups.map((g) => groupRow(g.label, g)) }}
     >
       <BarList
@@ -98,7 +98,7 @@ export function FormatBreakdown({ groups, hrefFor }: { groups: FormatAggregate[]
   return (
     <ChartFrame
       title={t("by_format")}
-      description={t("avg_per_measured")}
+      info={t("avg_per_measured")}
       table={{ columns: ["Format", ...GROUP_COLUMNS], rows: groups.map((g) => groupRow(g.label, g)) }}
     >
       <BarList
@@ -124,7 +124,7 @@ export function FunnelBreakdown({ groups }: { groups: FunnelAggregate[] }) {
   return (
     <ChartFrame
       title={t("by_funnel")}
-      description={t("by_funnel_description")}
+      info={t("by_funnel_info")}
       table={{
         columns: [t("col_stage"), ...GROUP_COLUMNS, "Leads / post"],
         rows: groups.map((g) => [

@@ -5,14 +5,14 @@ export const funnelMessages = defineMessages({
   en: {
     saved: "Funnel targets saved",
     mix_title: "Target mix",
-    mix_description:
+    mix_info:
       "What share of your content should serve each stage. Content Funnel, the dashboard and AI recommendations compare your recent mix with these targets.",
     total: "Total {total}%",
     must_total: "Targets must add up to 100%.",
     normalize: "Normalize to 100%",
     preview_title: "Last 30 days vs target",
-    preview_saved: "Showing your saved targets until the edited ones add up to 100%.",
-    preview_live: "Published and upcoming content with a funnel stage, against the targets above.",
+    preview_saved: "Saved targets until the edited ones add up to 100%.",
+    preview_info: "Published and upcoming content with a funnel stage, against the targets above.",
     value_label: "Posts",
     preview_empty: "No content with a funnel stage in the last 30 days.",
     preview_aria: "Funnel mix in the last 30 days against targets",
@@ -25,14 +25,14 @@ export const funnelMessages = defineMessages({
   tl: {
     saved: "Na-save ang funnel targets",
     mix_title: "Target mix",
-    mix_description:
+    mix_info:
       "Ilang bahagi ng content mo para sa bawat stage. Ikinukumpara ng Content Funnel, dashboard at AI recommendations ang recent mix mo sa mga target na ito.",
     total: "Total {total}%",
     must_total: "Dapat 100% ang total ng targets.",
     normalize: "I-normalize sa 100%",
     preview_title: "Huling 30 araw vs target",
-    preview_saved: "Ipinapakita ang naka-save na targets hanggang 100% ang total ng mga binago.",
-    preview_live: "Published at paparating na content na may funnel stage, laban sa targets sa itaas.",
+    preview_saved: "Naka-save na targets muna hanggang maging 100% ang binago.",
+    preview_info: "Published at paparating na content na may funnel stage, laban sa targets sa itaas.",
     value_label: "Posts",
     preview_empty: "Walang content na may funnel stage sa huling 30 araw.",
     preview_aria: "Funnel mix sa huling 30 araw laban sa targets",

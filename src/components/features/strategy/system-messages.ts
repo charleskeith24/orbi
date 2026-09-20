@@ -50,7 +50,7 @@ export const systemMessages = defineMessages({
     no_history: "Hindi pa sapat ang history para ikumpara",
     period_compare: "Huling 30 araw vs ang 30 bago nito",
     step_sr: "Step {n}: ",
-    next_cycle: "Pinapakain ang susunod na cycle — balik sa Expertise.",
+    next_cycle: "Susunod na cycle — balik sa Expertise.",
     strongest: "Pinakamalakas:",
     weakest: "Pinakamahinang link:",
     principles_title: "Ang 10 principles",

@@ -93,7 +93,7 @@ export function BusinessOpportunitiesCard({ report, className }: { report: Month
   return (
     <SectionCard
       title={t("business")}
-      description={t("business_description")}
+      info={t("business_info")}
       icon={Briefcase}
       className={cn("print:break-inside-avoid", className)}
     >

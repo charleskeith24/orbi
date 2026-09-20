@@ -76,9 +76,6 @@ export function CampaignTable({
               <p className="text-xs text-pretty whitespace-normal text-muted-foreground xl:hidden">
                 {dateRangeLabel(r.campaign, lang)} · {timeLabel(r.window, lang)}
               </p>
-              <p className="hidden truncate text-xs text-muted-foreground xl:block" title={r.campaign.objective || undefined}>
-                {r.campaign.objective || r.campaign.message || t("no_objective")}
-              </p>
               <CampaignStatusPill status={r.campaign.status} className="mt-1.5 sm:hidden" />
             </div>
           </div>

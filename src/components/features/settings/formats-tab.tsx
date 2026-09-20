@@ -326,9 +326,6 @@ export function FormatsTab({ openId, now }: { openId: string | null; now: Date }
               />
             }
           />
-          <p className="text-xs text-muted-foreground">
-            {t("order_note")}
-          </p>
         </>
       ) : (
         <EmptyState

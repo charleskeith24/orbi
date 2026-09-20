@@ -2,6 +2,7 @@
 
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react"
 import Link from "next/link"
+import { InfoHint } from "@/components/common/info-hint"
 import { statTileMessages } from "@/components/common/messages"
 import { TONE_ICON, TONE_TEXT } from "@/components/common/tone"
 import type { IconComponent, StatusTone } from "@/components/common/types"
@@ -106,6 +107,10 @@ export interface StatTileProps {
   trend?: number[]
   icon?: IconComponent
   href?: string
+  /** Calm UI: the explanation that used to be a sublabel, behind an ⓘ (rendered outside `href`'s link). */
+  info?: React.ReactNode
+  /** Popover heading and the ⓘ's accessible name; defaults to `label` when it's a string. */
+  infoTitle?: string
   /** Status tone for the icon (defaults to the tone's icon when none is given). */
   tone?: StatusTone
   /** `sm`: the compact tile for dense rows (Calm UI) — tighter padding, smaller number. */
@@ -125,6 +130,8 @@ export function StatTile({
   trend,
   icon,
   href,
+  info,
+  infoTitle,
   tone,
   size = "default",
   className,
@@ -136,6 +143,11 @@ export function StatTile({
     <>
       <div className="flex min-w-0 items-center justify-between gap-2">
         <span className="truncate text-xs font-medium text-muted-foreground">{label}</span>
+        {info && !href ? (
+          <InfoHint title={infoTitle ?? (typeof label === "string" ? label : undefined)} className="-my-1 mr-auto">
+            {info}
+          </InfoHint>
+        ) : null}
         {Icon ? (
           <Icon className={cn("size-4 shrink-0", tone ? TONE_TEXT[tone] : "text-muted-foreground")} aria-hidden />
         ) : null}
@@ -163,17 +175,31 @@ export function StatTile({
 
   const base = cn("flex min-w-0 flex-col rounded-lg border bg-card text-card-foreground", size === "sm" ? "gap-0.5 p-3" : "gap-1 p-4")
   if (href) {
-    return (
+    const link = (
       <Link
         href={href}
         className={cn(
           base,
           "transition-colors outline-none hover:border-foreground/15 hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
-          className
+          info ? "size-full" : className
         )}
       >
         {body}
       </Link>
+    )
+    // The ⓘ sits outside the link: a button inside an anchor is invalid and unreachable by keyboard.
+    return info ? (
+      <div className={cn("relative min-w-0", className)}>
+        {link}
+        <InfoHint
+          title={infoTitle ?? (typeof label === "string" ? label : undefined)}
+          className={cn("absolute z-10", size === "sm" ? "top-2" : "top-3", Icon ? "right-8" : "right-2")}
+        >
+          {info}
+        </InfoHint>
+      </div>
+    ) : (
+      link
     )
   }
   return <div className={cn(base, className)}>{body}</div>

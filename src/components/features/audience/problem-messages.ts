@@ -5,7 +5,7 @@ export const problemMessages = defineMessages({
   en: {
     // Page
     description:
-      "What your audience struggles with, by category and severity. Each problem can become a content idea — start with the severe ones nothing addresses yet.",
+      "What your audience struggles with, by category and severity. Each problem can become a content idea — start with the severe, untapped ones (no idea or content yet).",
     add_problem: "Add problem",
     added: "Problem added to the bank",
     problems: "Problems",
@@ -16,9 +16,8 @@ export const problemMessages = defineMessages({
     categories_count_one: "{count} category",
     categories_count_other: "{count} categories",
     untapped: "Untapped",
-    untapped_sublabel: "No idea or content yet",
     severity_high: "Severity 4–5",
-    severe_untapped: "{count} of them untapped",
+    severe_untapped: "{count} untapped",
     addressed: "Addressed in content",
     share_of_bank: "{pct} of the bank",
     categories_aria: "Problem categories",
@@ -80,7 +79,7 @@ export const problemMessages = defineMessages({
   },
   tl: {
     description:
-      "Mga pinagdadaanan ng audience mo, ayon sa category at severity. Ang bawat problem ay pwedeng maging content idea — simulan sa mga severe na wala pang content.",
+      "Mga pinagdadaanan ng audience mo, ayon sa category at severity. Pwedeng maging content idea ang bawat problem — unahin ang severe at untapped (wala pang idea o content).",
     add_problem: "Magdagdag ng problem",
     added: "Idinagdag ang problem sa bank",
     problems: "Problems",
@@ -91,9 +90,8 @@ export const problemMessages = defineMessages({
     categories_count_one: "{count} category",
     categories_count_other: "{count} categories",
     untapped: "Untapped",
-    untapped_sublabel: "Wala pang idea o content",
     severity_high: "Severity 4–5",
-    severe_untapped: "{count} ay untapped",
+    severe_untapped: "{count} untapped",
     addressed: "Na-address sa content",
     share_of_bank: "{pct} ng bank",
     categories_aria: "Mga category ng problem",

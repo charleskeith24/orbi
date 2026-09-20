@@ -83,16 +83,25 @@ export function TodaysContentSection({ data, className }: { data: TodayData; cla
   ]
   const slot = slots[0]
   const time = slot ? slotTime(slot.time) : null
-  const description = slot
+  const slotLine = slot
     ? `${t("todays_slot", { slot: slot.label.trim() || t("posting_slot") })}${time ? ` · ${time}` : ""}${slots.length > 1 ? t("slot_more", { count: slots.length - 1 }) : ""}`
-    : t("todays_description")
+    : null
 
   return (
     <WorkSection
       id="today-content"
       title={t("todays_title")}
       icon={CalendarCheck}
-      description={description}
+      info={
+        slotLine ? (
+          <>
+            <p className="font-medium text-foreground">{slotLine}</p>
+            <p>{t("todays_info")}</p>
+          </>
+        ) : (
+          t("todays_info")
+        )
+      }
       action={<SectionLink href="/calendar">Calendar</SectionLink>}
       items={rows}
       getKey={(row) => row.item.id}
@@ -117,7 +126,8 @@ export function TodaysContentSection({ data, className }: { data: TodayData; cla
                   {t("due_today")}
                 </span>
               )}
-              {live ? null : <StageBadge stage={item.stage} />}
+              {/* A time already says "scheduled"; due-today rows show where production stands. */}
+              {live || (scheduledIds.has(item.id) && item.stage === "scheduled") ? null : <StageBadge stage={item.stage} />}
               <Pillar item={item} />
             </>
           }
@@ -156,7 +166,7 @@ export function TodaysContentSection({ data, className }: { data: TodayData; cla
             </Button>
           }
         >
-          {t("todays_empty")}
+          {slotLine ? `${t("todays_empty")} ${slotLine}` : t("todays_empty")}
         </InlineEmpty>
       }
     />
@@ -178,7 +188,7 @@ export function OverdueSection({ data, className }: { data: TodayData; className
       title={t("overdue_title")}
       icon={count ? CriticalAlarm : AlarmClock}
       urgent
-      description={count ? t("overdue_description") : t("overdue_description_empty")}
+      info={t("overdue_info")}
       items={today.overdue}
       getKey={(item) => item.id}
       className={className}
@@ -232,7 +242,7 @@ export function ToPostSection({ data, className }: { data: TodayData; className?
       id="to-post"
       title={t("to_post_title")}
       icon={Send}
-      description={t("to_post_description")}
+      info={t("to_post_info")}
       action={<SectionLink href="/pipeline">Pipeline</SectionLink>}
       items={today.toPost}
       getKey={(item) => item.id}
@@ -282,7 +292,7 @@ export function ToReviewSection({ data, className }: { data: TodayData; classNam
       id="to-review"
       title={t("to_review_title")}
       icon={ClipboardCheck}
-      description={t("to_review_description")}
+      info={t("to_review_info")}
       action={<SectionLink href="/pipeline">Pipeline</SectionLink>}
       items={today.toReview}
       getKey={(item) => item.id}
@@ -334,7 +344,7 @@ export function ToRecordSection({ data, className }: { data: TodayData; classNam
       id="to-record"
       title={t("to_record_title")}
       icon={Clapperboard}
-      description={t("to_record_description")}
+      info={t("to_record_info")}
       action={<SectionLink href="/pipeline">Pipeline</SectionLink>}
       items={today.toRecord}
       getKey={(item) => item.id}

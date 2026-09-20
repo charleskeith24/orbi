@@ -29,7 +29,7 @@ export function InsightsCard({ insights, className }: { insights: StrategicInsig
     <SectionCard
       className={className}
       title={t("insights_title")}
-      description={t("insights_description")}
+      info={t("insights_info")}
       action={
         <Button variant="ghost" size="sm" onClick={() => uiActions.askStrategist(t("strategist_prompt"))}>
           <MessageSquareText aria-hidden />

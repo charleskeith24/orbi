@@ -94,7 +94,7 @@ export function SampleDataNote() {
   const { source } = useCircles()
   if (source !== "fixture") return null
   return (
-    <p role="note" className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+    <p role="note" className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
       <StatusPill tone="warning" icon={FlaskConical}>
         {t("sample_badge")}
       </StatusPill>

@@ -2,10 +2,10 @@
 
 import { Compass } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { FormField, ListEditor, useConfirm } from "@/components/common"
+import { ListEditor, useConfirm } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { useT } from "@/lib/i18n"
-import { BrandSection, BrandTextField, type BrandSectionProps } from "./brand-fields"
+import { BrandFieldShell, BrandSection, BrandTextField, type BrandSectionProps } from "./brand-fields"
 import { brandFieldMessages } from "./brand-messages"
 import { fieldId, LIST_LIMITS } from "./brand-model"
 import { NicheAlignmentPanel } from "./niche-alignment-panel"
@@ -50,13 +50,13 @@ export function NicheSection({ values, set, dirty, now }: BrandSectionProps & { 
         wrap
         value={values.niche}
         placeholder={t("niche_placeholder")}
-        description={t("niche_description")}
+        hint={t("niche_description")}
         onChange={(value) => set("niche", value)}
       />
-      <FormField
+      <BrandFieldShell
         label={t("interests_label")}
         htmlFor={fieldId("interests")}
-        description={t("interests_description")}
+        hint={t("interests_description")}
         labelAction={
           <span className="text-xs text-muted-foreground num">
             {interests.length} / {max}
@@ -71,14 +71,14 @@ export function NicheSection({ values, set, dirty, now }: BrandSectionProps & { 
           aria-label={t("interests_label")}
           onChange={(value) => set("interests", value)}
         />
-      </FormField>
+      </BrandFieldShell>
       <BrandTextField
         field="niche_fit"
         label={t("niche_fit_label")}
         multiline
         value={values.niche_fit}
         placeholder={t("niche_fit_placeholder")}
-        description={t("niche_fit_description")}
+        hint={t("niche_fit_description")}
         onChange={(value) => set("niche_fit", value)}
       />
       <NicheAlignmentPanel niche={values.niche} interests={values.interests} now={now} />

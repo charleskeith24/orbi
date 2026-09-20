@@ -1,5 +1,6 @@
 "use client"
 
+import { InfoHint } from "@/components/common/info-hint"
 import { formMessages } from "@/components/common/messages"
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { useT } from "@/lib/i18n"
@@ -15,6 +16,8 @@ export function FormField({
   description,
   error,
   required = false,
+  info,
+  infoTitle,
   labelAction,
   children,
   className,
@@ -24,6 +27,10 @@ export function FormField({
   description?: React.ReactNode
   error?: React.ReactNode
   required?: boolean
+  /** Calm UI: field guidance behind an ⓘ next to the label (outside the label, so it stays out of the control's name). */
+  info?: React.ReactNode
+  /** Popover heading and the ⓘ's accessible name; defaults to `label` when it's a string. */
+  infoTitle?: string
   /** Small control aligned right of the label (e.g. an AI "Suggest" button). */
   labelAction?: React.ReactNode
   children: React.ReactNode
@@ -44,6 +51,11 @@ export function FormField({
             </>
           ) : null}
         </FieldLabel>
+        {info ? (
+          <InfoHint title={infoTitle ?? (typeof label === "string" ? label : undefined)} className="-my-1 -ml-1 mr-auto">
+            {info}
+          </InfoHint>
+        ) : null}
         {labelAction ? <div className="-my-1 flex shrink-0 items-center">{labelAction}</div> : null}
       </div>
       {children}

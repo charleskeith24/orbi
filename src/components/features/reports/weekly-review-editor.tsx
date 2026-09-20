@@ -127,7 +127,7 @@ export function WeeklyReviewEditor({
   return (
     <SectionCard
       title={t("review_title")}
-      description={t("review_description")}
+      info={t("review_info")}
       icon={NotebookPen}
       className={className}
       action={

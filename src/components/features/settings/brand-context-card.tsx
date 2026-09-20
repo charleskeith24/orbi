@@ -42,7 +42,7 @@ export function BrandContextCard({ now }: { now: Date }) {
   return (
     <SectionCard
       title="Brand Context"
-      description={t("context_description")}
+      info={t("context_info")}
       action={
         <Button asChild variant="ghost" size="sm">
           <Link href="/strategy">Brand HQ</Link>

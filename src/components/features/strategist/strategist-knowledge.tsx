@@ -175,7 +175,7 @@ export function KnowledgeCard({ data }: { data: StrategistKnowledge }) {
   return (
     <SectionCard
       title={t("title")}
-      description={t("description")}
+      info={t("info")}
       contentClassName="px-0 pt-3 pb-0"
     >
       <KnowledgeBody data={data} />
@@ -225,7 +225,7 @@ export function QuickPromptsCard({ extra }: { extra: DataPrompt[] }) {
   const t = useT(knowledgeMessages)
   const prompts = suggestedPrompts(useUiLang())
   return (
-    <SectionCard title={t("quick_title")} description={t("quick_description")} contentClassName="flex flex-col gap-3">
+    <SectionCard title={t("quick_title")} contentClassName="flex flex-col gap-3">
       <ul className="-mx-2 flex flex-col">
         {prompts.map((prompt) => (
           <li key={prompt.text}>

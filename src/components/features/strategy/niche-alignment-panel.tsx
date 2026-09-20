@@ -3,7 +3,7 @@
 import { Info, TriangleAlert } from "lucide-react"
 import Link from "next/link"
 import { Fragment, useDeferredValue, useMemo } from "react"
-import { Meter, StatusPill, Token, type MeterTone, type StatusTone } from "@/components/common"
+import { InfoHint, Meter, StatusPill, Token, type MeterTone, type StatusTone } from "@/components/common"
 import { useT, useUiLang } from "@/lib/i18n"
 import { useDb, useSettings } from "@/lib/store"
 import { formatNumber } from "@/lib/utils"
@@ -61,7 +61,7 @@ function AlignmentStat({
             valueText={t("value_text", { aligned: group.aligned, total: group.total })}
           />
           <p className="text-xs text-muted-foreground num">
-            {t.plural(noun, group.total, { aligned: group.aligned, count: formatNumber(group.total) })}
+            {t(noun, { aligned: group.aligned, count: formatNumber(group.total) })}
           </p>
         </>
       ) : (
@@ -110,13 +110,13 @@ export function NicheAlignmentPanel({ niche, interests, now }: { niche: string; 
   const meta = STATUS[status]
 
   return (
-    <section aria-labelledby="niche-alignment-heading" className="flex min-w-0 flex-col gap-3 rounded-lg border bg-muted/20 p-3 dark:bg-input/10">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0 flex-1 basis-56">
+    <section aria-labelledby="niche-alignment-heading" className="flex min-w-0 flex-col gap-3 border-t pt-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1">
           <h4 id="niche-alignment-heading" className="text-sm font-medium">
             {t("title")}
           </h4>
-          <p className="mt-0.5 text-xs text-pretty text-muted-foreground">{t("description")}</p>
+          <InfoHint title={t("title")}>{t("description")}</InfoHint>
         </div>
         <StatusPill tone={meta.tone}>{t(meta.label)}</StatusPill>
       </div>

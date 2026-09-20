@@ -3,7 +3,7 @@
 import { CircleCheck, Pencil } from "lucide-react"
 import { useId, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { FormField, NumberField, SectionCard } from "@/components/common"
+import { FormField, InfoHint, NumberField, SectionCard } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
@@ -19,7 +19,10 @@ import { MemberAvatar, StreakLabel } from "./circle-ui"
 import { useCircles } from "./circles-client"
 import { circleWeekMessages } from "./messages"
 
-/** "This week": your check-in (pre-computed from your workspace, editable) and everyone's, sorted by name. */
+/**
+ * "This week" (Calm UI): your check-in (pre-computed from your workspace, editable; what's shared in one line) and
+ * everyone's, sorted by name. The week's start and how check-ins and streaks work sit in the title's ⓘ.
+ */
 export function CircleWeekSection({ snapshot, week, now, onChanged }: { snapshot: CircleSnapshot; week: CircleWeek; now: Date; onChanged: () => void }) {
   const t = useT(circleWeekMessages)
   const settings = useSettings()
@@ -32,11 +35,12 @@ export function CircleWeekSection({ snapshot, week, now, onChanged }: { snapshot
   return (
     <SectionCard
       title={t("week_title")}
-      description={`${t("week_of", { date: formatDate(draft.weekStart, "MMM d") })} · ${t("checked_in_count", { done: week.checkedIn, total: week.total })}`}
+      info={`${t("week_of", { date: formatDate(draft.weekStart, "MMM d") })} ${t("week_info")}`}
+      action={<span className="text-xs text-muted-foreground num">{t("checked_in_count", { done: week.checkedIn, total: week.total })}</span>}
       contentClassName="flex flex-col gap-4"
     >
       {mine && !editing ? (
-        <div className="flex flex-wrap items-start justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2.5">
+        <div className="flex flex-wrap items-start justify-between gap-3 rounded-md bg-muted/40 px-3 py-2.5">
           <div className="min-w-0">
             <p className="flex items-center gap-1.5 text-sm font-medium">
               <CircleCheck className="size-4 shrink-0 text-good-fg" aria-hidden />
@@ -131,11 +135,11 @@ function CheckinForm({
   }
 
   return (
-    <form onSubmit={submit} noValidate aria-label={t("your_checkin")} className="flex flex-col gap-3 rounded-md border bg-muted/30 p-3">
-      <div>
-        <p className="text-sm font-medium">{t.plural("published", published)}</p>
-        <p className="mt-0.5 text-xs text-pretty text-muted-foreground">{t("published_help")}</p>
-      </div>
+    <form onSubmit={submit} noValidate aria-label={t("your_checkin")} className="flex flex-col gap-3 rounded-md bg-muted/40 p-3">
+      <p className="flex min-w-0 items-center gap-1 text-sm font-medium">
+        {t.plural("published", published)}
+        <InfoHint label={t("published_how")}>{t("published_help")}</InfoHint>
+      </p>
       <div className="grid gap-3 sm:grid-cols-[11rem_1fr]">
         <FormField label={t("posts_label")} htmlFor={`${id}-posts`} error={errors.posts ? t("error_posts") : undefined}>
           <NumberField
@@ -162,8 +166,11 @@ function CheckinForm({
         </FormField>
       </div>
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <span className={cn("mr-auto text-xs num text-muted-foreground", note.trim().length > CIRCLE_LIMITS.note && "text-critical-fg")}>
-          {note.trim().length}/{CIRCLE_LIMITS.note}
+        <span className="mr-auto flex min-w-0 flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+          <span className={cn("num", note.trim().length > CIRCLE_LIMITS.note && "text-critical-fg")}>
+            {note.trim().length}/{CIRCLE_LIMITS.note}
+          </span>
+          <span className="text-pretty">{t("shared_note")}</span>
         </span>
         {onCancel ? (
           <Button type="button" size="sm" variant="outline" onClick={onCancel}>

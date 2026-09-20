@@ -1,6 +1,7 @@
 "use client"
 
 import { Circle, CircleCheck } from "lucide-react"
+import { SectionHeader } from "@/components/common"
 import { useT } from "@/lib/i18n"
 import { uiActions } from "@/lib/store"
 import { cn } from "@/lib/utils"
@@ -16,7 +17,7 @@ const ANCHORS: Record<Exclude<RhythmKey, "capture">, string> = {
 }
 
 const ITEM =
-  "flex w-full min-w-0 flex-col gap-0.5 rounded-md px-1.5 py-1.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50 @xl:px-2"
+  "flex w-full min-w-0 flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 @xl:flex-row @xl:justify-center @xl:gap-1.5 @xl:px-2.5"
 
 /** Scroll to the section, move focus there for keyboard users and ring it briefly so the eye lands on it. */
 function jumpTo(event: React.MouseEvent<HTMLAnchorElement>, hash: string) {
@@ -38,52 +39,57 @@ function RhythmItem({ step }: { step: RhythmStep }) {
   const Icon = step.done ? CircleCheck : Circle
   const body = (
     <>
-      <span className="flex min-w-0 flex-col items-center gap-1 @xl:flex-row @xl:gap-1.5">
-        <Icon className={cn("size-4 shrink-0", step.done ? "text-good-fg" : "text-muted-foreground/60")} aria-hidden />
-        <span className="max-w-full truncate text-[11px] font-medium @xl:text-sm">{step.label}</span>
-        <span className="sr-only">{step.done ? t("rhythm_sr_done") : t("rhythm_sr_not_yet")}</span>
+      <Icon className={cn("size-4 shrink-0", step.done ? "text-good-fg" : "text-muted-foreground/60")} aria-hidden />
+      <span className="max-w-full truncate text-[11px] font-medium @xl:text-sm">{step.label}</span>
+      <span className="text-xs text-muted-foreground num" aria-hidden>
+        {step.count}
       </span>
-      <span className="hidden truncate text-xs text-muted-foreground @xl:block @xl:pl-5.5">{step.detail}</span>
-      <span className="sr-only @xl:hidden">{step.detail}</span>
+      {/* The number in words, for screen readers; hover shows it with the habit's description. */}
+      <span className="sr-only">
+        {step.done ? t("rhythm_sr_done") : t("rhythm_sr_not_yet")}
+        {step.detail}
+      </span>
     </>
   )
   const title = `${step.description} — ${step.detail}`
+  const className = cn(ITEM, "bg-muted/40 hover:bg-muted dark:bg-muted/25")
   if (step.key === "capture") {
     return (
-      <button type="button" title={title} className={ITEM} onClick={() => uiActions.openDialog({ type: "quick-capture" })}>
+      <button type="button" title={title} className={className} onClick={() => uiActions.openDialog({ type: "quick-capture" })}>
         {body}
       </button>
     )
   }
   const hash = ANCHORS[step.key]
   return (
-    <a href={hash} title={title} className={ITEM} onClick={(event) => jumpTo(event, hash)}>
+    <a href={hash} title={title} className={className} onClick={(event) => jumpTo(event, hash)}>
       {body}
     </a>
   )
 }
 
-/** Capture · Create · Review · Publish · Engage — each ticked when today's activity proves it (spec §52). */
+/**
+ * Capture · Create · Review · Publish · Engage — each ticked when today's activity proves it (spec §52). Calm UI:
+ * one quiet row of numbers; what each number means is in its tooltip, the screen-reader text and the ⓘ.
+ */
 export function RhythmStrip({ steps, className }: { steps: RhythmStep[]; className?: string }) {
   const t = useT(todayMessages)
   const done = steps.filter((step) => step.done).length
   return (
-    <section
-      aria-labelledby="daily-rhythm"
-      className={cn(
-        "flex min-w-0 flex-col gap-2 rounded-lg border bg-card px-3 py-3 @3xl:flex-row @3xl:items-center @3xl:gap-4 @3xl:px-4",
-        className
-      )}
-    >
-      <div className="flex shrink-0 items-baseline justify-between gap-2 px-1 @3xl:w-36 @3xl:flex-col @3xl:items-start @3xl:justify-start @3xl:gap-0">
-        <h2 id="daily-rhythm" className="text-sm font-medium">
-          {t("rhythm_title")}
-        </h2>
-        <p className="text-xs text-muted-foreground">
-          <span className="num">{done}</span> {t("rhythm_done", { total: steps.length })}
-        </p>
-      </div>
-      <ol className="grid min-w-0 flex-1 grid-cols-5 gap-1">
+    <section aria-labelledby="daily-rhythm" className={cn("flex min-w-0 flex-col gap-2 @3xl:flex-row @3xl:items-center @3xl:gap-4", className)}>
+      <SectionHeader
+        id="daily-rhythm"
+        title={
+          <>
+            {t("rhythm_title")}
+            <span className="ml-1.5 font-normal text-muted-foreground num">{`${done}/${steps.length}`}</span>
+          </>
+        }
+        info={t("rhythm_info")}
+        infoTitle={t("rhythm_title")}
+        className="shrink-0"
+      />
+      <ol className="grid min-w-0 flex-1 grid-cols-5 gap-1 @xl:gap-2">
         {steps.map((step) => (
           <li key={step.key} className="min-w-0">
             <RhythmItem step={step} />

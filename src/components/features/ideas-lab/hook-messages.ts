@@ -7,8 +7,7 @@ import { defineMessages } from "@/lib/i18n/core"
 
 export const hookMessages = defineMessages({
   en: {
-    description: "Proven opening lines — templates with ___ blanks and hooks from your own content, ranked by how the posts that used them performed.",
-    generate_ai: "Generate hooks with AI",
+    generate_ai: "Generate hooks",
     new_hook: "New hook",
     duplicated: "Hook duplicated",
     duplicated_description: "Edit the copy to make a variation.",
@@ -141,17 +140,22 @@ export const hookMessages = defineMessages({
     styles_empty: "Log analytics on published posts to see which hook styles win.",
     ranked_by: "Hook styles ranked by {metric}",
     top_title: "Your best-performing hooks",
-    top_description: "Average views of published posts that used each hook",
     top_engagement: "{rate} engagement",
     top_vs_average: "{multiple} avg",
     top_avg_views: "avg views",
     top_empty_title: "No hook performance yet",
     top_empty_description: "Pick hooks from the library in a content brief, publish, and log analytics — the best lines rise to the top here.",
+    info:
+      "Proven opening lines — templates with ___ blanks and hooks from your own content, ranked by how the posts that used them performed. “Use” fills in the blanks and starts an idea.",
+    insights: "Hook insights",
+    insight_meta: "{style} leads · {multiple} views",
+    top_info: "Average views of published posts that used each hook.",
+    uses_inline_one: "{count} use",
+    uses_inline_other: "{count} uses",
+    views_inline: "{views} avg views",
   },
   tl: {
-    description:
-      "Mga subok na opening line — templates na may ___ blanks at hooks mula sa content mo, naka-rank ayon sa performance ng posts na ginamitan.",
-    generate_ai: "Mag-generate ng hooks gamit ang AI",
+    generate_ai: "Mag-generate",
     new_hook: "Bagong hook",
     duplicated: "Na-duplicate ang hook",
     duplicated_description: "I-edit ang kopya para gumawa ng variation.",
@@ -278,11 +282,18 @@ export const hookMessages = defineMessages({
     styles_empty: "I-log ang analytics ng published posts para makita anong hook style ang panalo.",
     ranked_by: "Hook styles ayon sa {metric}",
     top_title: "Ang top-performing hooks mo",
-    top_description: "Average views ng published posts na gumamit ng bawat hook",
     top_engagement: "{rate} engagement",
     top_vs_average: "{multiple} avg",
     top_avg_views: "avg views",
     top_empty_title: "Wala pang hook performance",
     top_empty_description: "Pumili ng hooks mula sa library sa Content Brief, i-publish, at i-log ang analytics — dito aakyat ang mga best line.",
+    info:
+      "Mga subok na opening line — templates na may ___ blanks at hooks mula sa content mo, naka-rank ayon sa performance ng posts na gumamit nito. Ang “Gamitin” ay pupunan ang blanks at magsisimula ng idea.",
+    insights: "Hook insights",
+    insight_meta: "Panalo ang {style} · {multiple} views",
+    top_info: "Average views ng published posts na gumamit ng bawat hook.",
+    uses_inline_one: "{count} gamit",
+    uses_inline_other: "{count} gamit",
+    views_inline: "{views} avg views",
   },
 })

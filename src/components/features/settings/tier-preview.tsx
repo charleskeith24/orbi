@@ -75,7 +75,8 @@ export function TierPreview({ fields, dirty, now, className }: { fields: TierFie
   return (
     <SectionCard
       title={t("preview_title")}
-      description={!fields ? t("preview_invalid") : dirty ? t("preview_dirty") : t("preview_saved")}
+      description={!fields ? t("preview_invalid") : dirty ? t("preview_dirty") : undefined}
+      info={dirty ? t("preview_info_dirty") : t("preview_info_saved")}
       className={className}
     >
       {!published.length ? (

@@ -49,7 +49,6 @@ export function EmptyConversation({ variant }: { variant: "panel" | "page" }) {
           })}
         </ul>
       </div>
-      {page ? <p className="hidden text-sm text-muted-foreground lg:block">{t("pick_prompt")}</p> : null}
       {!ai.loading && !ai.configured ? (
         <AiNotice>{t("offline_notice")}</AiNotice>
       ) : null}

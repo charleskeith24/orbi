@@ -161,7 +161,6 @@ export function CampaignPieces({
   const [view, setView] = useState<PiecesView>("stage")
   const stageGroups = useMemo(() => byStage(items), [items])
   const weekGroups = useMemo(() => byWeek(items, settings.week_starts_on, now, t), [items, settings.week_starts_on, now, t])
-  const published = items.filter((i) => PUBLISHED_STAGES.includes(i.stage)).length
   const pieces = (count: number) => t.plural("pieces", count, { count: formatNumber(count) })
   const viewOptions = [
     { value: "stage" as const, label: t("by_stage"), icon: Columns3 },
@@ -172,11 +171,8 @@ export function CampaignPieces({
     <SectionCard
       className={className}
       title={t("pieces_title")}
-      description={
-        items.length
-          ? t("pieces_description", { pieces: pieces(items.length), published, planned: items.length - published })
-          : t("pieces_description_empty")
-      }
+      count={items.length || null}
+      info={t("pieces_description_empty")}
       action={
         items.length ? (
           <>

@@ -1,6 +1,7 @@
 "use client"
 
 import { X } from "lucide-react"
+import { InfoHint } from "@/components/common/info-hint"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
 import { useT } from "@/lib/i18n"
@@ -22,6 +23,8 @@ export function DetailSheet({
   onOpenChange,
   title,
   description,
+  info,
+  infoTitle,
   actions,
   footer,
   children,
@@ -35,6 +38,10 @@ export function DetailSheet({
   onOpenChange: (open: boolean) => void
   title: React.ReactNode
   description?: React.ReactNode
+  /** Calm UI: the explanation that used to be `description`, behind an ⓘ next to the title. */
+  info?: React.ReactNode
+  /** Popover heading and the ⓘ's accessible name; defaults to `title` when it's a string. */
+  infoTitle?: string
   /** Header buttons (edit, menu…) placed before the close button. */
   actions?: React.ReactNode
   footer?: React.ReactNode
@@ -60,7 +67,14 @@ export function DetailSheet({
       >
         <header className="flex shrink-0 items-start gap-3 border-b px-4 py-3">
           <div className="min-w-0 flex-1 py-0.5">
-            <SheetTitle className="text-base leading-6 font-semibold break-words">{title}</SheetTitle>
+            <div className="flex min-w-0 items-start gap-1">
+              <SheetTitle className="min-w-0 text-base leading-6 font-semibold break-words">{title}</SheetTitle>
+              {info ? (
+                <InfoHint title={infoTitle ?? (typeof title === "string" ? title : undefined)} className="mt-0.5">
+                  {info}
+                </InfoHint>
+              ) : null}
+            </div>
             {description ? <SheetDescription className="mt-0.5 text-xs">{description}</SheetDescription> : null}
           </div>
           <div className="-mr-1 flex shrink-0 items-center gap-1">

@@ -1,6 +1,6 @@
 "use client"
 
-import { Sparkles, Trash2 } from "lucide-react"
+import { Trash2 } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useRef } from "react"
 import { PageContainer, PageHeader, ProviderBadge } from "@/components/common"
@@ -47,9 +47,8 @@ export function StrategistView() {
   return (
     <PageContainer className="gap-4 md:gap-5">
       <PageHeader
-        icon={Sparkles}
         title="Content Strategist"
-        description={t("description")}
+        info={t("page_info")}
         actions={
           <>
             {ai.loading ? null : <ProviderBadge provider={ai.provider} model={ai.model || undefined} />}

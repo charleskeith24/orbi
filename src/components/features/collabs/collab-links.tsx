@@ -69,7 +69,8 @@ export function CampaignCollabs({ campaignId, className }: { campaignId: ID; cla
     <SectionCard
       className={className}
       title={t("campaign_title")}
-      description={linked.length ? t.plural("campaign_count", linked.length) : t("campaign_empty")}
+      count={linked.length || null}
+      info={t("campaign_info")}
       action={
         <Button type="button" variant="ghost" size="sm" asChild>
           <Link href={`/collabs?new=1&campaign=${campaignId}`}>
@@ -78,7 +79,7 @@ export function CampaignCollabs({ campaignId, className }: { campaignId: ID; cla
           </Link>
         </Button>
       }
-      contentClassName={linked.length ? "p-0 pt-2" : undefined}
+      contentClassName={linked.length ? "p-0 pt-2" : "pt-1"}
     >
       {linked.length ? (
         <ul className="divide-y border-t">
@@ -86,7 +87,9 @@ export function CampaignCollabs({ campaignId, className }: { campaignId: ID; cla
             <CollabRow key={collab.id} collab={collab} />
           ))}
         </ul>
-      ) : null}
+      ) : (
+        <p className="text-xs text-muted-foreground">{t("campaign_empty")}</p>
+      )}
     </SectionCard>
   )
 }

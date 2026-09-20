@@ -33,7 +33,7 @@ export function ScheduleCard({ draft, errors, timeZone }: { draft: SettingsDraft
   return (
     <SectionCard
       title={t("schedule_title")}
-      description={t("schedule_description")}
+      info={t("schedule_info")}
       footer={
         <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           <Globe className="size-3.5 shrink-0" aria-hidden />
@@ -45,7 +45,7 @@ export function ScheduleCard({ draft, errors, timeZone }: { draft: SettingsDraft
       }
     >
       <SettingRows>
-        <SettingRow label={t("daily_label")} description={t("daily_description")} labelId="reminders-daily-label" error={errorText(errors.reminders_daily_time)}>
+        <SettingRow label={t("daily_label")} info={t("daily_info")} labelId="reminders-daily-label" error={errorText(errors.reminders_daily_time)}>
           <div className="flex flex-wrap items-center gap-3">
             <Switch
               checked={values.reminders_daily_enabled}
@@ -63,7 +63,7 @@ export function ScheduleCard({ draft, errors, timeZone }: { draft: SettingsDraft
 
         <SettingRow
           label={t("slot_label")}
-          description={t("slot_description")}
+          info={t("slot_info")}
           labelId="reminders-slot-label"
           error={errorText(errors.reminders_slot_lead_minutes)}
         >
@@ -101,7 +101,7 @@ export function ScheduleCard({ draft, errors, timeZone }: { draft: SettingsDraft
           </div>
         </SettingRow>
 
-        <SettingRow label={t("review_label")} description={t("review_description")} labelId="reminders-review-label" error={errorText(errors.reminders_review_time)}>
+        <SettingRow label={t("review_label")} info={t("review_info")} labelId="reminders-review-label" error={errorText(errors.reminders_review_time)}>
           <div className="flex flex-wrap items-center gap-3">
             <Switch
               checked={values.reminders_review_enabled}

@@ -141,7 +141,7 @@ export function WinnersView() {
     <PageContainer>
       <PageHeader
         title="Winning Content Library"
-        description={t("description")}
+        info={t("page_info")}
         actions={addAnalytics}
       >
         <DetectionRule settings={settings} />
@@ -167,7 +167,7 @@ export function WinnersView() {
             <StatTile
               label={t("not_repurposed_stat")}
               value={formatNumber(stats.notRepurposed)}
-              sublabel={!stats.total ? t("nothing_period") : stats.notRepurposed ? t("safest") : t("every_repurposed")}
+              info={t("not_repurposed_info")}
             />
           </div>
 

@@ -4,7 +4,7 @@ import { BookmarkPlus, Check, Compass, Lightbulb } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
-import { AiButton, AiNotice, DetailSheet, PillarBadge, PlatformIcon, ProviderBadge } from "@/components/common"
+import { AiButton, AiNotice, DetailSheet, InfoHint, PillarBadge, PlatformIcon, ProviderBadge } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -61,10 +61,23 @@ export function CollabIdeasSheet({ open, onOpenChange, onOpenCollab }: { open: b
   }
 
   return (
-    <DetailSheet open={open} onOpenChange={onOpenChange} width="lg" title={t("title")} description={t("description")}>
+    <DetailSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      width="lg"
+      title={
+        <span className="inline-flex items-center gap-1.5">
+          {t("title")}
+          <InfoHint title={t("title")}>
+            <p>{t("description")}</p>
+            <p>{t("how")}</p>
+          </InfoHint>
+        </span>
+      }
+    >
       <div className="flex min-w-0 flex-col gap-4" aria-busy={ai.isPending || undefined}>
         <form
-          className="flex min-w-0 flex-col gap-2 rounded-lg border bg-muted/30 p-3 dark:bg-muted/15"
+          className="flex min-w-0 flex-col gap-1.5"
           onSubmit={(event) => {
             event.preventDefault()
             void generate()
@@ -79,7 +92,6 @@ export function CollabIdeasSheet({ open, onOpenChange, onOpenCollab }: { open: b
               {session ? t("regenerate") : t("generate")}
             </AiButton>
           </div>
-          <p className="text-xs text-pretty text-muted-foreground">{t("how")}</p>
         </form>
 
         {nicheMissing ? (

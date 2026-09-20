@@ -13,7 +13,6 @@ export const researchMessages = defineMessages({
     never_copy_detail: "Pasted text is used for analysis only and is never republished.",
 
     // Page
-    description: "Save the posts, videos and trends that caught your attention — then study why they work.",
     add_reference: "Add reference",
     nomatch_title: "No references match",
     nomatch_archived: "Archived references are hidden — include them, or try fewer filters.",
@@ -155,6 +154,11 @@ export const researchMessages = defineMessages({
     patterns_description: "Structure, not words — reusable with your own substance.",
     add_pattern: "Add pattern",
     pattern_placeholder: "e.g. Put a specific moment before the advice",
+    info:
+      "Save the posts, videos and trends that caught your attention — then study why they work and adapt the pattern in Inspiration → Original.",
+    never_copy_short: "Study why it works — never copy.",
+    never_copy_title: "Never copy",
+    filters: "Filters",
   },
   tl: {
     // Never-copy banner
@@ -162,7 +166,6 @@ export const researchMessages = defineMessages({
     never_copy_detail: "Ang text na i-paste ay para sa analysis lang at hinding-hindi ire-republish.",
 
     // Page
-    description: "I-save ang mga post, video at trend na nakakuha ng atensyon mo — tapos alamin bakit gumagana ang mga ito.",
     add_reference: "Magdagdag ng reference",
     nomatch_title: "Walang reference na match",
     nomatch_archived: "Nakatago ang archived references — isama ang mga ito, o bawasan ang filters.",
@@ -305,5 +308,10 @@ export const researchMessages = defineMessages({
     patterns_description: "Structure, hindi mga salita — reusable gamit ang sarili mong substance.",
     add_pattern: "Magdagdag ng pattern",
     pattern_placeholder: "hal. Maglagay ng specific na moment bago ang advice",
+    info:
+      "I-save ang posts, videos at trends na nakakuha ng atensyon mo — tapos alamin kung bakit effective, at i-adapt ang pattern sa Inspiration → Original.",
+    never_copy_short: "Alamin kung bakit effective — bawal mangopya.",
+    never_copy_title: "Bawal mangopya",
+    filters: "Filters",
   },
 })

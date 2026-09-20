@@ -121,6 +121,8 @@ export interface RhythmStep {
   /** Today's activity proves the habit happened. */
   done: boolean
   detail: string
+  /** The step's number at a glance ("4", "0/5"); `detail` says it in words. */
+  count: string
 }
 
 const RHYTHM_KEYS: RhythmKey[] = ["capture", "create", "review", "publish", "engage"]
@@ -167,20 +169,34 @@ export function dailyRhythm({
   const tasksDone = tasks.filter((task) => completed.has(task.key)).length
   const replies = log ? log.comments_replied + log.dms_replied + log.creator_comments : 0
 
-  const checks: Record<RhythmKey, { done: boolean; detail: string }> = {
-    capture: { done: captured > 0, detail: captured ? t.plural("ideas_captured", captured, n(captured)) : t("no_ideas") },
+  const checks: Record<RhythmKey, { done: boolean; detail: string; count: string }> = {
+    capture: {
+      done: captured > 0,
+      detail: captured ? t.plural("ideas_captured", captured, n(captured)) : t("no_ideas"),
+      count: formatNumber(captured),
+    },
     create: {
       done: worked.size > 0,
       detail: worked.size ? t.plural("moved", worked.size, n(worked.size)) : t("nothing_moved"),
+      count: formatNumber(worked.size),
     },
-    review: { done: waiting === 0, detail: waiting ? t.plural("waiting", waiting, n(waiting)) : t("queue_clear") },
+    review: {
+      done: waiting === 0,
+      detail: waiting ? t.plural("waiting", waiting, n(waiting)) : t("queue_clear"),
+      count: formatNumber(waiting),
+    },
     publish: {
       done: published > 0,
       detail: published ? t.plural("out", published, n(published)) : goingOut ? t("going_out", { count: goingOut }) : t("nothing_out"),
+      count: published || !goingOut ? formatNumber(published) : `0/${formatNumber(goingOut)}`,
     },
     engage: tasks.length
-      ? { done: tasksDone === tasks.length, detail: t("tasks", { done: tasksDone, total: tasks.length }) }
-      : { done: replies > 0, detail: replies ? t.plural("replies", replies, n(replies)) : t("no_tasks") },
+      ? {
+          done: tasksDone === tasks.length,
+          detail: t("tasks", { done: tasksDone, total: tasks.length }),
+          count: `${formatNumber(tasksDone)}/${formatNumber(tasks.length)}`,
+        }
+      : { done: replies > 0, detail: replies ? t.plural("replies", replies, n(replies)) : t("no_tasks"), count: formatNumber(replies) },
   }
   return RHYTHM_KEYS.map((key, index) => ({
     key,

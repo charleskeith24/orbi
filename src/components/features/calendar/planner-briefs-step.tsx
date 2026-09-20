@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
-import { AiButton, AiNotice, FormField, PlatformIcon, ProviderBadge, StatusPill } from "@/components/common"
+import { AiButton, AiNotice, FormField, InfoHint, PlatformIcon, ProviderBadge, StatusPill } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -314,9 +314,12 @@ export function BriefsStep({
       {createdItems.length ? (
         <div className="grid min-w-0 gap-3">
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-            <StatusPill tone="good">
-              {t("created_plan_saved", { items: t.plural("content_items", createdItems.length, { count: formatNumber(createdItems.length) }) })}
-            </StatusPill>
+            <span className="flex min-w-0 items-center gap-1.5">
+              <StatusPill tone="good">
+                {t("created_plan_saved", { items: t.plural("content_items", createdItems.length, { count: formatNumber(createdItems.length) }) })}
+              </StatusPill>
+              <InfoHint label={t("briefs_hint_label")}>{t("briefs_hint")}</InfoHint>
+            </span>
             <div className="flex gap-2">
               <Button asChild size="sm" variant="outline">
                 <Link href={calendarHref}>{t("open_calendar_week")}</Link>
@@ -326,7 +329,6 @@ export function BriefsStep({
               </Button>
             </div>
           </div>
-          <p className="text-xs text-pretty text-muted-foreground">{t("briefs_hint")}</p>
           <ul className="grid min-w-0 gap-2">
             {createdItems.map((item) => (
               <BriefAiRow key={item.id} item={item} />

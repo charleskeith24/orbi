@@ -269,11 +269,7 @@ export function AdaptView() {
 
   return (
     <PageContainer className="max-w-4xl">
-      <PageHeader
-        title="Inspiration → Original"
-        description={t("description")}
-      />
-      <NeverCopyBanner />
+      <PageHeader title="Inspiration → Original" info={t("info")} description={<NeverCopyBanner />} />
 
       {missingFrom && mode === "paste" ? (
         <div role="status" className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">

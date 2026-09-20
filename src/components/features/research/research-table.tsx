@@ -36,13 +36,15 @@ export function ResearchTable({
         id: "title",
         header: t("col_reference"),
         sortValue: (r) => r.title.toLowerCase(),
+        // One line per reference (Calm UI): creator and source are in the tooltip, the Cards view and the sheet.
         cell: (r) => (
-          <div className="flex max-w-[20rem] min-w-48 flex-col">
+          <div className="flex max-w-[22rem] min-w-48 items-center gap-2" title={[r.creator, r.source].filter(Boolean).join(" · ") || undefined}>
+            {r.platform ? (
+              <PlatformIcon platform={r.platform} label={PLATFORMS[r.platform].label} className="size-3.5 shrink-0 text-muted-foreground" />
+            ) : (
+              <span aria-hidden className="size-3.5 shrink-0" />
+            )}
             <span className="truncate font-medium">{r.title || t("untitled")}</span>
-            <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-              {r.platform ? <PlatformIcon platform={r.platform} label={PLATFORMS[r.platform].label} className="size-3 shrink-0" /> : null}
-              <span className="truncate">{[r.creator, r.source].filter(Boolean).join(" · ") || "—"}</span>
-            </span>
           </div>
         ),
       },

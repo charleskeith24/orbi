@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowRight, CircleCheck, FileStack, Lightbulb, Plus, Send } from "lucide-react"
+import { ArrowRight, CircleCheck, FileStack, Gauge, Lightbulb, Plus, Send } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
@@ -31,7 +31,7 @@ import { CONTINUE_STAGES, wordsIn } from "./studio-utils"
 
 const ROW = "-mx-2 flex min-w-0 items-center gap-3 rounded-md px-2 py-2 outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50 dark:hover:bg-input/20"
 
-/** One content item as a row: thumbnail, title, platform · pillar · script status, score, stage and date. */
+/** One content item as a row: thumbnail, title (script status in its tooltip), platform · pillar, score, stage and date. */
 export function ContentRow({
   item,
   script,
@@ -48,6 +48,7 @@ export function ContentRow({
   const date = contentDateInfo(item, now, lang)
   const DateIcon = date?.icon
   const words = script ? wordsIn(script.sections) : 0
+  // Script format, version and length are the title's tooltip (the thumbnail shows the format).
   const scriptLabel = script
     ? `${SCRIPT_FORMATS[script.format].label} v${script.version} · ${t.plural("words", words, { count: formatNumber(words) })}`
     : t("no_script")
@@ -68,19 +69,23 @@ export function ContentRow({
     <Link href={`/studio/${item.id}`} className={ROW}>
       <ContentThumbnail item={item} size="sm" />
       <span className="min-w-0 flex-1">
-        <span className="line-clamp-2 text-sm font-medium sm:line-clamp-1" title={item.title}>
+        <span className="line-clamp-2 text-sm font-medium sm:line-clamp-1" title={`${item.title} — ${scriptLabel}`}>
           {item.title.trim() || t("untitled_content")}
         </span>
         <span className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
           <PlatformIcon platform={item.platform} label className="size-3.5 shrink-0" />
           <PillarBadge pillarId={item.pillar_id} variant="plain" className="max-w-40 min-w-0 shrink" />
-          <span className="hidden min-w-0 truncate sm:inline">{scriptLabel}</span>
           {dateNode ? <span className="flex min-w-0 shrink sm:hidden">{dateNode}</span> : null}
         </span>
       </span>
       {item.quality_score ? (
-        <span className="hidden shrink-0 text-xs text-muted-foreground num md:inline" title={t("score_title")}>
-          {t("score")} <span className="font-medium text-foreground">{item.quality_score.total}</span>
+        <span
+          className="hidden shrink-0 items-center gap-1 text-xs font-medium num md:inline-flex"
+          title={t("score_title")}
+          aria-label={`${t("score_title")}: ${item.quality_score.total}`}
+        >
+          <Gauge className="size-3.5 text-muted-foreground" aria-hidden />
+          {item.quality_score.total}
         </span>
       ) : null}
       {showStage ? <StageBadge stage={item.stage} className="hidden sm:inline-flex" /> : null}
@@ -92,6 +97,10 @@ export function ContentRow({
 }
 
 type ContinueFilter = "all" | PipelineStage
+
+/** Rows before "Show all" (Calm UI: the soonest few, the rest one click away). */
+const INITIAL_ROWS = 6
+const INITIAL_IDEAS = 4
 
 /** Items in Brief, Scripting, Review and Revision, soonest deadline first. */
 export function ContinueCreating({
@@ -112,9 +121,9 @@ export function ContinueCreating({
   const [expanded, setExpanded] = useState(false)
   const counts = useMemo(() => new Map(CONTINUE_STAGES.map((stage) => [stage, items.filter((i) => i.stage === stage).length])), [items])
   const shown = filter === "all" ? items : items.filter((i) => i.stage === filter)
-  const visible = expanded ? shown : shown.slice(0, 8)
+  const visible = expanded ? shown : shown.slice(0, INITIAL_ROWS)
   const options = [
-    { value: "all" as const, label: t("all_count", { count: items.length }) },
+    { value: "all" as const, label: t("all") },
     ...CONTINUE_STAGES.filter((stage) => counts.get(stage)).map((stage) => ({
       value: stage,
       label: `${PIPELINE_STAGE_MAP[stage].label} ${counts.get(stage)}`,
@@ -125,7 +134,8 @@ export function ContinueCreating({
     <SectionCard
       className={className}
       title={t("continue_title")}
-      description={t("continue_description")}
+      count={items.length || null}
+      info={t("continue_info")}
       action={
         items.length ? (
           <ViewToggle value={filter} onChange={(v) => setFilter(v)} options={options} aria-label={t("filter_by_stage")} className="hidden sm:inline-flex" />
@@ -154,7 +164,7 @@ export function ContinueCreating({
               </li>
             ))}
           </ul>
-          {shown.length > 8 ? (
+          {shown.length > INITIAL_ROWS ? (
             <Button type="button" variant="ghost" size="sm" className="mt-2 text-muted-foreground" onClick={() => setExpanded((v) => !v)}>
               {expanded ? t("show_less") : t("show_all", { count: shown.length })}
             </Button>
@@ -169,12 +179,13 @@ export function ContinueCreating({
 export function IdeaStarts({ ideas, className }: { ideas: ContentIdea[]; className?: string }) {
   const t = useT(studioHomeMessages)
   const [expanded, setExpanded] = useState(false)
-  const visible = expanded ? ideas : ideas.slice(0, 6)
+  const visible = expanded ? ideas : ideas.slice(0, INITIAL_IDEAS)
   return (
     <SectionCard
       className={className}
       title={t("ideas_title")}
-      description={t("ideas_description")}
+      count={ideas.length || null}
+      info={t("ideas_info")}
       action={
         <Button type="button" variant="ghost" size="xs" asChild>
           <Link href="/ideas">{t("idea_bank")}</Link>
@@ -200,7 +211,7 @@ export function IdeaStarts({ ideas, className }: { ideas: ContentIdea[]; classNa
               <IdeaStartRow key={idea.id} idea={idea} />
             ))}
           </ul>
-          {ideas.length > 6 ? (
+          {ideas.length > INITIAL_IDEAS ? (
             <Button type="button" variant="ghost" size="sm" className="mt-2 text-muted-foreground" onClick={() => setExpanded((v) => !v)}>
               {expanded ? t("show_less") : t("show_all", { count: ideas.length })}
             </Button>
@@ -249,7 +260,13 @@ function IdeaStartRow({ idea }: { idea: ContentIdea }) {
               <span className="truncate">{pillar.name}</span>
             </span>
           ) : null}
-          {idea.score !== null ? <span className="num">{t("idea_score", { score: idea.score })}</span> : null}
+          {idea.score !== null ? (
+            <span className="inline-flex items-center gap-1 num" title={t("idea_score", { score: idea.score })}>
+              <Gauge className="size-3.5" aria-hidden />
+              <span className="sr-only">{t("idea_score", { score: idea.score })}</span>
+              <span aria-hidden>{idea.score}</span>
+            </span>
+          ) : null}
           <span className="inline-flex items-center gap-1">
             {idea.platforms.slice(0, 4).map((p) => (
               <PlatformIcon key={p} platform={p} label className="size-3.5" />
@@ -298,7 +315,7 @@ export function RecentlyPublished({ entries, className }: { entries: PublishedEn
     <SectionCard
       className={className}
       title={t("published_title")}
-      description={t("published_description")}
+      info={t("published_info")}
       action={
         <Button type="button" variant="ghost" size="xs" asChild>
           <Link href="/analytics/posts">{t("post_performance")}</Link>

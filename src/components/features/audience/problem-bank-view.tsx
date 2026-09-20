@@ -239,7 +239,7 @@ export function ProblemBankView() {
     <PageContainer>
       <PageHeader
         title="Problem Bank"
-        description={t("description")}
+        info={t("description")}
         actions={
           <Button type="button" size="sm" onClick={() => update({ new: "1" })}>
             <Plus aria-hidden />
@@ -252,26 +252,29 @@ export function ProblemBankView() {
 
       {problems.length ? (
         <>
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatTile
+              size="sm"
               label={t("problems")}
               value={formatNumber(problems.length)}
               sublabel={`${t.plural("personas_count", stats.personas, { count: formatNumber(stats.personas) })} · ${t.plural("categories_count", stats.categories, { count: formatNumber(stats.categories) })}`}
             />
             <StatTile
+              size="sm"
               label={t("untapped")}
               icon={Lightbulb}
               value={formatNumber(stats.untapped)}
-              sublabel={t("untapped_sublabel")}
               href="/audience/problems?untapped=1"
             />
             <StatTile
+              size="sm"
               label={t("severity_high")}
               value={formatNumber(stats.severe)}
               sublabel={t("severe_untapped", { count: formatNumber(stats.severeUntapped) })}
               href="/audience/problems?severity=4,5"
             />
             <StatTile
+              size="sm"
               label={t("addressed")}
               value={formatNumber(stats.addressed)}
               sublabel={t("share_of_bank", { pct: formatPercent((stats.addressed / problems.length) * 100, 0) })}
@@ -298,9 +301,10 @@ export function ProblemBankView() {
 
             <FilterBar
               actions={
+                // The "All" tab already counts the bank; the count only speaks up while something narrows it.
                 <span className="text-xs text-muted-foreground num" aria-live="polite">
-                  {visibleCount === problems.length
-                    ? t.plural("problems_count", problems.length, { count: formatNumber(problems.length) })
+                  {!filtering
+                    ? null
                     : a("shown_of", {
                         shown: formatNumber(visibleCount),
                         total: t.plural("problems_count", problems.length, { count: formatNumber(problems.length) }),

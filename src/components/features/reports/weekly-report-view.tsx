@@ -1,6 +1,6 @@
 "use client"
 
-import { CalendarRange, Clock, FileText, ListOrdered, Plus, Printer, TrendingDown, Trophy } from "lucide-react"
+import { CalendarRange, FileText, ListOrdered, Plus, Printer, TrendingDown, Trophy } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useMemo } from "react"
@@ -11,7 +11,6 @@ import { rankRows, scopedRows, weeklyReport } from "@/lib/analytics"
 import { parseDate } from "@/lib/dates"
 import { useT, useUiLang } from "@/lib/i18n"
 import { uiActions, useDb, useSettings } from "@/lib/store"
-import { formatNumber } from "@/lib/utils"
 import { BestOfWeekCard } from "./best-of-week"
 import { ContentMixCard } from "./content-mix-card"
 import { reportMessages } from "./messages"
@@ -102,7 +101,7 @@ export function WeeklyReportView() {
   if (!hasPublishedContent(db.content_items) && !reviews.length) {
     return (
       <PageContainer>
-        <PageHeader icon={FileText} title="Weekly Content Report" description={t("empty_page_description")} />
+        <PageHeader title="Weekly Content Report" />
         <EmptyState
           icon={FileText}
           title={t("empty_title")}
@@ -126,15 +125,20 @@ export function WeeklyReportView() {
   return (
     <PageContainer>
       <PageHeader
-        icon={FileText}
         title="Weekly Content Report"
         description={
-          <>
-            <span className="num">{period.label}</span>
+          <span className="num">
+            {period.label}
             {period.isCurrent ? t("week_to_date") : ""}
-            {r("ranked_by", { metric: rankedBy })}
+          </span>
+        }
+        info={
+          <>
+            <p>{t("page_info", { metric: rankedBy })}</p>
+            {period.isCurrent ? <p>{t("in_progress_note")}</p> : null}
           </>
         }
+        infoTitle="Weekly Content Report"
         actions={
           <div className="flex flex-wrap items-center gap-2 print:hidden">
             <PeriodNav unit="week" options={options} value={period.key} prev={prev} next={next} onChange={goToWeek} />
@@ -152,19 +156,12 @@ export function WeeklyReportView() {
         }
       />
 
-      {period.isCurrent ? (
-        <p className="-mt-3 flex items-start gap-1.5 text-xs text-pretty text-muted-foreground">
-          <Clock className="mt-px size-3.5 shrink-0" aria-hidden />
-          {t("in_progress_note")}
-        </p>
-      ) : null}
-
       <WeeklyKpis report={report} period={period} />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <PostHighlightCard
           title={t("best_post")}
-          description={r("highest_by", { metric: rankedBy })}
+          info={r("highest_by", { metric: rankedBy })}
           icon={Trophy}
           row={report.bestPost}
           empty={
@@ -189,7 +186,7 @@ export function WeeklyReportView() {
         />
         <PostHighlightCard
           title={t("worst_post")}
-          description={t("lowest_by", { metric: rankedBy })}
+          info={t("lowest_by", { metric: rankedBy })}
           icon={TrendingDown}
           row={report.worstPost}
           empty={
@@ -208,13 +205,13 @@ export function WeeklyReportView() {
         <ContentMixCard
           pillars={report.contentMix.pillars}
           funnel={report.contentMix.funnel}
-          description={t("mix_description")}
+          info={t("mix_info")}
           className="xl:col-span-2"
         />
         <ReportPostsTable
           rows={posts}
           title={t("posts_this_week")}
-          description={t.plural("posts_ranked", posts.length, { count: formatNumber(posts.length), metric: rankedBy })}
+          info={t("posts_ranked_info", { metric: rankedBy })}
           icon={ListOrdered}
           emptyTitle={t("nothing_published")}
           emptyDescription={t("log_to_build")}
@@ -226,7 +223,7 @@ export function WeeklyReportView() {
         <WeeklyReviewEditor key={period.key} db={db} report={report} period={period} saved={saved} now={now} />
         <ReviewHistory
           title={r("saved_reviews")}
-          description={t("history_description")}
+          info={t("history_info")}
           entries={history}
           emptyTitle={r("no_saved_reviews")}
           emptyDescription={t("history_empty")}

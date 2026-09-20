@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import {
   AiButton,
   chipVariants,
+  Disclosure,
   EmptyState,
   FacetFilter,
   FilterBar,
@@ -18,7 +19,7 @@ import {
   type SelectOption,
 } from "@/components/common"
 import { Button } from "@/components/ui/button"
-import { hookCategoryPerformance } from "@/lib/analytics"
+import { formatMultiple, hookCategoryPerformance } from "@/lib/analytics"
 import { HOOK_CATEGORIES, HOOK_CATEGORY_IDS } from "@/lib/constants"
 import { useT, useUiLang } from "@/lib/i18n"
 import { dataActions, useDb, useLookup } from "@/lib/store"
@@ -28,7 +29,7 @@ import { HookDetailSheet } from "./hook-detail-sheet"
 import { HookFormDialog } from "./hook-form-dialog"
 import { HookGenerateDialog } from "./hook-generate-dialog"
 import { hookMessages } from "./hook-messages"
-import { HookStylesCard, TopHooksCard } from "./hook-insights"
+import { bestHookStyle, HookStylesCard, TopHooksCard } from "./hook-insights"
 import {
   EMPTY_HOOK_FILTERS,
   emptyHookStats,
@@ -45,7 +46,7 @@ import {
   type HookMetric,
   type HookSort,
 } from "./hook-model"
-import { HookRow } from "./hook-row"
+import { HookListHeader, HookRow } from "./hook-row"
 import { HookUseDialog } from "./hook-use-dialog"
 import { labMessages } from "./messages"
 import { useOpenParam } from "./use-open-param"
@@ -75,6 +76,7 @@ export function HookLibraryView() {
   const stats = useMemo(() => hookStats(db, now), [db, now])
   const overall = useMemo(() => overallPerformance(db, now), [db, now])
   const styles = useMemo(() => hookCategoryPerformance(db, now, { lang }), [db, now, lang])
+  const lead = useMemo(() => bestHookStyle(styles, overall), [styles, overall])
   const sortOptions = useMemo<SelectOption<HookSort>[]>(() => HOOK_SORTS.map((id) => ({ value: id, label: l(`sort_${id}`) })), [l])
   const visible = useMemo(() => sortHooks(filterHooks(hooks, filters), sort, stats), [hooks, filters, sort, stats])
   const categoryCounts = useMemo(() => hookFacetCounts(hooks, filters, "categories"), [hooks, filters])
@@ -118,7 +120,7 @@ export function HookLibraryView() {
     <PageContainer>
       <PageHeader
         title="Hook Library"
-        description={t("description")}
+        info={t("info")}
         actions={
           <>
             <AiButton type="button" size="sm" onClick={() => setGenerateOpen(true)}>
@@ -141,10 +143,19 @@ export function HookLibraryView() {
         </div>
       ) : null}
 
-      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-        <HookStylesCard styles={styles} overall={overall} metric={metric} onMetricChange={setMetric} />
-        <TopHooksCard hooks={hooks} stats={stats} overall={overall} onOpen={setOpenId} />
-      </div>
+      {hooks.length ? (
+        <Disclosure
+          variant="section"
+          label={t("insights")}
+          meta={lead ? t("insight_meta", { style: lead.label, multiple: formatMultiple(lead.lift) }) : undefined}
+          storageKey="hook-insights"
+        >
+          <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+            <HookStylesCard styles={styles} overall={overall} metric={metric} onMetricChange={setMetric} />
+            <TopHooksCard hooks={hooks} stats={stats} overall={overall} onOpen={setOpenId} />
+          </div>
+        </Disclosure>
+      ) : null}
 
       <section aria-label={t("hooks_label")} className="flex min-w-0 flex-col gap-3">
         {hooks.length ? (
@@ -188,6 +199,7 @@ export function HookLibraryView() {
 
             {visible.length ? (
               <ul className="flex min-w-0 flex-col divide-y overflow-hidden rounded-lg border bg-card">
+                <HookListHeader />
                 {visible.map((hook) => (
                   <HookRow
                     key={hook.id}

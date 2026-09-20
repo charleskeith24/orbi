@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowDownUp, Columns3, LayoutGrid, ListFilter, Rows3, Target } from "lucide-react"
+import { ArrowDownUp, ChevronDown, Columns3, LayoutGrid, ListFilter, Rows3, Target } from "lucide-react"
 import { useMemo, useState } from "react"
 import {
   ColorDot,
@@ -30,11 +30,9 @@ import type { ContentIdea, ID } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import {
   ACTIVE_STATUSES,
-  countByStatus,
   EMPTY_FACETS,
   FACET_KEYS,
   facetCounts,
-  filterIdeas,
   hasActiveFilters,
   IDEA_SORTS,
   NONE,
@@ -43,46 +41,93 @@ import {
   type IdeaSort,
   type IdeaView,
 } from "./idea-model"
-import { IdeaStatusFilter } from "./idea-status-filter"
 import type { IdeaLookups } from "./idea-table"
 import { ideaBankMessages } from "./messages"
 
 const VIEW_ICONS: Record<IdeaView, ViewOption<IdeaView>["icon"]> = { table: Rows3, cards: LayoutGrid, kanban: Columns3 }
 
+/** Facets behind "More" on wider screens (phones show every facet under "Filters"). Facet names stay English. */
+const MORE_FACETS: { key: FacetKey; title: string }[] = [
+  { key: "format", title: "Format" },
+  { key: "goal", title: "Goal" },
+  { key: "priority", title: "Priority" },
+  { key: "source", title: "Source" },
+]
+
 const NoneDot = () => <span aria-hidden className="size-2 shrink-0 rounded-full border border-dashed border-muted-foreground/70" />
 
 type Criteria = Pick<IdeaBankState, "q" | "status" | "facets">
 
-/** Search, status and facet filters (left) with sort and view switches (right). */
+/** Sort and view switches — they sit at the end of the status row (IdeaStatusTabs). */
+export function IdeaViewControls({
+  sort,
+  view,
+  onChange,
+}: {
+  sort: IdeaSort
+  view: IdeaView
+  onChange: (patch: Partial<IdeaBankState>) => void
+}) {
+  const t = useT(ideaBankMessages)
+  const viewOptions = useMemo<ViewOption<IdeaView>[]>(
+    () => (["table", "cards", "kanban"] as const).map((value) => ({ value, label: t(`view_${value}`), icon: VIEW_ICONS[value] })),
+    [t]
+  )
+  const sortLabel = t(`sort_${IDEA_SORTS.includes(sort) ? sort : "score"}`)
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" variant="outline" size="sm" aria-label={t("sort_by_label", { label: sortLabel })}>
+            <ArrowDownUp className="text-muted-foreground" aria-hidden />
+            <span className="hidden sm:inline">{sortLabel}</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel>{t("sort_by")}</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={sort} onValueChange={(next) => onChange({ sort: next as IdeaSort })}>
+            {IDEA_SORTS.map((option) => (
+              <DropdownMenuRadioItem key={option} value={option}>
+                <span className="flex min-w-0 flex-col">
+                  <span>{t(`sort_${option}`)}</span>
+                  <span className="text-xs text-muted-foreground">{t(`sort_${option}_description`)}</span>
+                </span>
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <ViewToggle value={view} onChange={(next) => onChange({ view: next })} options={viewOptions} aria-label={t("view_label")} />
+    </div>
+  )
+}
+
+/** Search and facet filters; status has its own row (IdeaStatusTabs) with sort and view (IdeaViewControls). */
 export function IdeaFilterBar({
   ideas,
   tagIndex,
   lookups,
   criteria,
-  sort,
   view,
+  sort,
   onChange,
 }: {
   ideas: ContentIdea[]
   tagIndex: Map<ID, string[]>
   lookups: IdeaLookups
   criteria: Criteria
-  sort: IdeaSort
   view: IdeaView
+  sort: IdeaSort
   onChange: (patch: Partial<IdeaBankState>) => void
 }) {
   const t = useT(ideaBankMessages)
   const [showFacets, setShowFacets] = useState(false)
-  const viewOptions = useMemo<ViewOption<IdeaView>[]>(
-    () => (["table", "cards", "kanban"] as const).map((value) => ({ value, label: t(`view_${value}`), icon: VIEW_ICONS[value] })),
-    [t]
-  )
+  const [showMore, setShowMore] = useState(false)
 
   const counts = useMemo(
     () => Object.fromEntries(FACET_KEYS.map((key) => [key, facetCounts(ideas, criteria, key, tagIndex)])) as Record<FacetKey, Map<string, number>>,
     [ideas, criteria, tagIndex]
   )
-  const statusCounts = useMemo(() => countByStatus(filterIdeas(ideas, criteria, { tagIndex, ignore: "status" })), [ideas, criteria, tagIndex])
   const used = useMemo(() => {
     const out = { format: new Set<string>(), goal: new Set<string>(), source: new Set<string>() }
     for (const idea of ideas) {
@@ -156,39 +201,10 @@ export function IdeaFilterBar({
 
   const setFacet = (key: FacetKey, values: string[]) => onChange({ facets: { ...criteria.facets, [key]: values } })
   const facetCount = FACET_KEYS.reduce((acc, key) => acc + (criteria.facets[key].length ? 1 : 0), 0)
-  const sortLabel = t(`sort_${IDEA_SORTS.includes(sort) ? sort : "score"}`)
 
   return (
-    <FilterBar
-      actions={
-        <>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button type="button" variant="outline" size="sm" aria-label={t("sort_by_label", { label: sortLabel })}>
-                <ArrowDownUp className="text-muted-foreground" aria-hidden />
-                {sortLabel}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>{t("sort_by")}</DropdownMenuLabel>
-              <DropdownMenuRadioGroup value={sort} onValueChange={(next) => onChange({ sort: next as IdeaSort })}>
-                {IDEA_SORTS.map((option) => (
-                  <DropdownMenuRadioItem key={option} value={option}>
-                    <span className="flex min-w-0 flex-col">
-                      <span>{t(`sort_${option}`)}</span>
-                      <span className="text-xs text-muted-foreground">{t(`sort_${option}_description`)}</span>
-                    </span>
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <ViewToggle value={view} onChange={(next) => onChange({ view: next })} options={viewOptions} aria-label={t("view_label")} />
-        </>
-      }
-    >
+    <FilterBar>
       <SearchInput value={criteria.q} onChange={(q) => onChange({ q })} placeholder={t("search_placeholder")} className="sm:w-56" />
-      <IdeaStatusFilter value={criteria.status} counts={statusCounts} onChange={(status) => onChange({ status })} />
       <Button
         type="button"
         variant="outline"
@@ -205,10 +221,26 @@ export function IdeaFilterBar({
         <FacetFilter title="Pillar" options={options.pillar} value={criteria.facets.pillar} onChange={(v) => setFacet("pillar", v)} />
         <FacetFilter title="Platform" options={options.platform} value={criteria.facets.platform} onChange={(v) => setFacet("platform", v)} />
         <FacetFilter title="Persona" options={options.persona} value={criteria.facets.persona} onChange={(v) => setFacet("persona", v)} />
-        <FacetFilter title="Format" options={options.format} value={criteria.facets.format} onChange={(v) => setFacet("format", v)} />
-        <FacetFilter title="Goal" options={options.goal} value={criteria.facets.goal} onChange={(v) => setFacet("goal", v)} />
-        <FacetFilter title="Priority" options={options.priority} value={criteria.facets.priority} onChange={(v) => setFacet("priority", v)} />
-        <FacetFilter title="Source" options={options.source} value={criteria.facets.source} onChange={(v) => setFacet("source", v)} />
+        {/* Wider screens: the less-used facets wait behind "More" unless one of them is on. */}
+        {MORE_FACETS.map(({ key, title }) => (
+          <span key={key} className={cn("contents", !showMore && !criteria.facets[key].length && "sm:hidden")}>
+            <FacetFilter title={title} options={options[key]} value={criteria.facets[key]} onChange={(v) => setFacet(key, v)} />
+          </span>
+        ))}
+        {MORE_FACETS.some(({ key }) => !criteria.facets[key].length) ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="hidden text-muted-foreground sm:inline-flex"
+            aria-expanded={showMore}
+            aria-label={showMore ? t("fewer_filters") : t("more_filters")}
+            onClick={() => setShowMore((v) => !v)}
+          >
+            {showMore ? t("less") : t("more")}
+            <ChevronDown className={cn("transition-transform", showMore && "rotate-180")} aria-hidden />
+          </Button>
+        ) : null}
       </div>
       <ResetFiltersButton
         show={hasActiveFilters({ ...criteria, view, sort, open: null })}

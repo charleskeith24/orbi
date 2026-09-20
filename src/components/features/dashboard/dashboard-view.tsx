@@ -14,6 +14,7 @@ import { KpiRow } from "./kpi-row"
 import { dashboardMessages } from "./messages"
 import { PillarDistributionCard } from "./pillar-distribution-card"
 import { PillarPerformanceCard } from "./pillar-performance-card"
+import { PipelineRail } from "./pipeline-rail"
 import { PipelineStrip } from "./pipeline-strip"
 import { PlatformGrowthCard } from "./platform-growth-card"
 import { TopPerformersCard } from "./top-performers-card"
@@ -21,8 +22,9 @@ import { useDashboardData } from "./use-dashboard"
 import { WeekStrip } from "./week-strip"
 
 /**
- * Home (Calm UI): a greeting, "Your focus today" — one next action — beside three KPI tiles, and this week's
- * strip. Everything else waits under "More on your week" (remembered per device): the Pipeline, insights, the
+ * Home (Calm UI): a greeting, "Your focus today" — one next action — beside three KPI tiles, this week's strip and,
+ * on desktop, the pipeline row (Idea Bank + stage counts, each a link into the Pipeline). Everything else waits
+ * under "More on your week" (remembered per device): the Pipeline (phones and tablets), insights, the
  * Content Health Score, performance and income. Today's lists live on Today; capture and new content in the top bar.
  * Layout follows the page's own width (container queries): one column on phones, side by side from 768px.
  */
@@ -34,6 +36,7 @@ export function DashboardView() {
   const name = firstName(brand.name)
   const greeting = greetingFor(data.now, lang)
   const firstRun = !data.hasPublished
+  const showWork = !firstRun || data.hasContent
 
   return (
     <PageContainer className="@container gap-6">
@@ -44,6 +47,8 @@ export function DashboardView() {
         {firstRun ? null : <KpiRow data={data} className="@3xl:col-span-5 @3xl:grid-cols-1 @3xl:gap-3 @3xl:self-start" />}
       </div>
       <WeekStrip days={data.weekDays} startKey={data.startKey} />
+      {/* Desktop only: phones and tablets keep Home to about one screen (the counts are under "More on your week"). */}
+      {showWork ? <PipelineRail pipeline={data.pipeline} className="hidden lg:flex" /> : null}
       <Disclosure variant="section" label={t("more_week")} storageKey="home-more-week">
         <MoreOnYourWeek data={data} />
       </Disclosure>
@@ -61,7 +66,8 @@ function MoreOnYourWeek({ data }: { data: DashboardData }) {
   const showWork = !firstRun || data.hasContent
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      {showWork ? <PipelineStrip pipeline={data.pipeline} /> : null}
+      {/* On desktop the pipeline row above the fold already shows these counts. */}
+      {showWork ? <PipelineStrip pipeline={data.pipeline} className="lg:hidden" /> : null}
       <div className="grid min-w-0 grid-cols-1 items-start gap-4 @3xl:grid-cols-12">
         <div className="flex min-w-0 flex-col gap-4 @3xl:col-span-7">
           {firstRun ? (

@@ -1,7 +1,7 @@
 "use client"
 
 import { CalendarClock, ChartColumn, FolderOpen, Layers, Palette, Plug, Unplug, Workflow, type LucideIcon } from "lucide-react"
-import { PlatformIcon, StatusPill, Token } from "@/components/common"
+import { InfoHint, PlatformIcon, StatusPill, Token } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { useT, useUiLang } from "@/lib/i18n"
@@ -42,9 +42,9 @@ export function IntegrationCard({
             <Icon className="size-4 text-muted-foreground" aria-hidden />
           )}
         </span>
-        <div className="min-w-0 flex-1">
-          <h4 className="text-sm leading-5 font-medium">{adapter.name}</h4>
-          <p className="mt-0.5 text-xs text-pretty text-muted-foreground">{integrationText(adapter, lang).description}</p>
+        <div className="flex min-w-0 flex-1 items-center gap-1">
+          <h4 className="min-w-0 text-sm leading-5 font-medium">{adapter.name}</h4>
+          <InfoHint title={adapter.name}>{integrationText(adapter, lang).description}</InfoHint>
         </div>
       </div>
       <div className="flex flex-wrap gap-1" aria-label={t("capabilities_aria")}>
@@ -55,12 +55,14 @@ export function IntegrationCard({
         ))}
       </div>
       <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t pt-3">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <StatusPill tone={status === "connected" ? "good" : status === "error" ? "critical" : "neutral"} icon={Unplug}>
-            {labels.status(status)}
-          </StatusPill>
-          <span className="text-[11px] text-muted-foreground">{t("requires", { auth: labels.auth(adapter.auth) })}</span>
-        </div>
+        <StatusPill
+          tone={status === "connected" ? "good" : status === "error" ? "critical" : "neutral"}
+          icon={Unplug}
+          title={t("requires", { auth: labels.auth(adapter.auth) })}
+        >
+          {labels.status(status)}
+          <span className="sr-only"> — {t("requires", { auth: labels.auth(adapter.auth) })}</span>
+        </StatusPill>
         <Button type="button" variant="outline" size="sm" onClick={onConnect} disabled={pending} aria-label={t("connect_aria", { name: adapter.name })}>
           {pending ? <Spinner /> : <Plug aria-hidden />}
           {t("connect")}

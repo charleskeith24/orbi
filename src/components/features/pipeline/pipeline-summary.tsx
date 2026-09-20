@@ -19,31 +19,52 @@ const BUFFER_TONE: Record<BufferStatus, "good" | "warning" | "critical"> = {
 const formatDays = (days: number) => (Number.isInteger(days) ? formatNumber(days) : days.toFixed(1))
 
 /**
- * The flow at a glance (Calm UI): Idea → … → Published with each group's count, one quiet row. A click jumps to
- * that group's first column. Desktop only — phones pick a stage in the board itself.
+ * The flow at a glance (Calm UI): Idea → … → Published with each group's count, one quiet row. On the Pipeline a
+ * click jumps to that group's first column (`onJump`; desktop only — phones pick a stage in the board itself).
+ * Home passes `hrefFor` instead, so each stage is a link into the Pipeline.
  */
-export function StageRail({ counts, onJump, className }: { counts: PipelineCounts; onJump: (stage: PipelineStage) => void; className?: string }) {
+export function StageRail({
+  counts,
+  onJump,
+  hrefFor,
+  className,
+}: {
+  counts: PipelineCounts
+  onJump?: (stage: PipelineStage) => void
+  /** Render each stage as a link (Home → `/pipeline?stage=…`) instead of an in-page jump. */
+  hrefFor?: (stage: PipelineStage) => string
+  className?: string
+}) {
   const t = useT(pipelineMessages)
   const last = counts.groupList.length - 1
+  const itemClass =
+    "flex h-7 items-center gap-1.5 rounded-md px-1.5 text-xs text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
   return (
     <nav aria-label={t("stages_aria")} className={cn("scrollbar-none -mx-1 min-w-0 overflow-x-auto", className)}>
       <ol className="flex w-max items-center">
         {counts.groupList.map((group, index) => {
           const stage = firstStageOfGroup(group.id)
           const published = group.id === "published"
+          const body = (
+            <>
+              <StageIcon stage={stage} />
+              <span>{group.label}</span>
+              <span className={cn("font-medium num", group.count ? "text-foreground" : "text-muted-foreground")}>{formatNumber(group.count)}</span>
+            </>
+          )
+          const label = `${group.label} ${formatNumber(group.count)}`
+          const title = published ? t("published_window", { days: counts.publishedWindowDays }) : t("show_group", { group: group.label })
           return (
             <li key={group.id} className="flex items-center">
-              <button
-                type="button"
-                onClick={() => onJump(stage)}
-                aria-label={`${group.label} ${formatNumber(group.count)}`}
-                title={published ? t("published_window", { days: counts.publishedWindowDays }) : t("show_group", { group: group.label })}
-                className="flex h-7 items-center gap-1.5 rounded-md px-1.5 text-xs text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
-              >
-                <StageIcon stage={stage} />
-                <span>{group.label}</span>
-                <span className={cn("font-medium num", group.count ? "text-foreground" : "text-muted-foreground")}>{formatNumber(group.count)}</span>
-              </button>
+              {hrefFor ? (
+                <Link href={hrefFor(stage)} aria-label={label} title={title} className={itemClass}>
+                  {body}
+                </Link>
+              ) : (
+                <button type="button" onClick={() => onJump?.(stage)} aria-label={label} title={title} className={itemClass}>
+                  {body}
+                </button>
+              )}
               {index < last ? <ChevronRight className="size-3 shrink-0 text-muted-foreground/40" aria-hidden /> : null}
             </li>
           )

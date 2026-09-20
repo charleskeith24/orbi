@@ -4,8 +4,10 @@ import { defineMessages } from "@/lib/i18n/core"
 export const integrationsMessages = defineMessages({
   en: {
     connections: "Connections",
-    connections_description:
-      "{connected} of {total} connected. Each service needs its own developer app and a server-side OAuth callback; none are set up for this workspace, so nothing syncs automatically — use the CSV import or log posts by hand.",
+    connections_count: "{connected} / {total} connected",
+    connections_info:
+      "Each service needs its own developer app and a server-side OAuth callback. None are set up for this workspace, so nothing syncs automatically — use the CSV import or log posts by hand.",
+    category_info: "About {name}",
     capabilities_aria: "Capabilities",
     requires: "Requires {auth}",
     connect: "Connect",
@@ -19,8 +21,10 @@ export const integrationsMessages = defineMessages({
   },
   tl: {
     connections: "Mga connection",
-    connections_description:
-      "{connected} ng {total} naka-connect. Kailangan ng bawat service ang sariling developer app at server-side OAuth callback; walang naka-setup para sa workspace na ito, kaya walang automatic na sync — gamitin ang CSV import o i-log ang posts manually.",
+    connections_count: "{connected} / {total} naka-connect",
+    connections_info:
+      "Kailangan ng bawat service ang sariling developer app at server-side OAuth callback. Wala pang naka-setup dito, kaya walang automatic na sync — gamitin ang CSV import o i-log ang posts manually.",
+    category_info: "Tungkol sa {name}",
     capabilities_aria: "Mga capability",
     requires: "Kailangan ng {auth}",
     connect: "I-connect",

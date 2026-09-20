@@ -8,8 +8,10 @@ import { toast } from "sonner"
 import {
   ChipToggleGroup,
   chipVariants,
+  Disclosure,
   EmptyState,
   FilterBar,
+  InfoHint,
   OptionSelect,
   PageContainer,
   PageHeader,
@@ -76,7 +78,7 @@ export function AngleLibraryView() {
   const customCount = useMemo(() => angles.filter((a) => !a.is_default).length, [angles])
   const sortOptions = useMemo<SelectOption<AngleSort>[]>(() => ANGLE_SORTS.map((id) => ({ value: id, label: l(`sort_${id}`) })), [l])
   const kindOptions = useMemo(() => ANGLE_KINDS.map((value) => ({ value, label: t(`kind_${value}`) })), [t])
-  const count = (key: "ideas" | "pieces" | "angles" | "defaults" | "custom", n: number) => t.plural(key, n, { count: formatNumber(n) })
+  const count = (key: "ideas" | "pieces" | "angles" | "custom", n: number) => t.plural(key, n, { count: formatNumber(n) })
 
   const angleById = useMemo(() => new Map(angles.map((a) => [a.id, a])), [angles])
   const openAngle = openId ? angleById.get(openId) : undefined
@@ -100,6 +102,7 @@ export function AngleLibraryView() {
   })
   const best = performance.filter((a) => a.measured >= 2 && a.avgViews !== null).sort((a, b) => (b.avgViews ?? 0) - (a.avgViews ?? 0))[0]
   const bestLift = best?.avgViews && overall.avgViews ? best.avgViews / overall.avgViews : null
+  const lead = best && bestLift && bestLift >= 1.1 ? { label: best.label, lift: bestLift } : null
   const [footerBefore, footerAfter] = t("chart_footer", { multiple: bestLift ? formatMultiple(bestLift) : "" }).split("{angle}")
 
   async function remove(angle: ContentAngle) {
@@ -122,7 +125,7 @@ export function AngleLibraryView() {
     <PageContainer>
       <PageHeader
         title="Angle Library"
-        description={t("description")}
+        info={t("info")}
         actions={
           <Button type="button" size="sm" onClick={() => setNewOpen(true)}>
             <Plus aria-hidden />
@@ -140,75 +143,88 @@ export function AngleLibraryView() {
         </div>
       ) : null}
 
-      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:items-start">
-        <ChartFrame
-          title={t("chart_title")}
-          description={l("analytics_scope", { description: l(`metric_${metric}_description`) })}
-          table={{
-            columns: [t("col_angle"), l("posts"), l("avg_views"), l("engagement"), l("leads_per_post")],
-            rows: performance.map((a) => [
-              a.label,
-              a.measured,
-              formatHookMetric(a.avgViews, "views"),
-              formatHookMetric(a.engagementRate, "engagement"),
-              formatHookMetric(a.leadsPerPost, "leads"),
-            ]),
-          }}
-          footer={
-            best && bestLift && bestLift >= 1.1 ? (
-              <p className="text-xs text-muted-foreground">
-                {footerBefore}
-                <span className="font-medium text-foreground">{best.label}</span>
-                {footerAfter}
-              </p>
-            ) : undefined
-          }
+      {angles.length ? (
+        <Disclosure
+          variant="section"
+          label={t("insights")}
+          meta={lead ? t("insight_meta", { angle: lead.label, multiple: formatMultiple(lead.lift) }) : undefined}
+          storageKey="angle-insights"
         >
-          <div className="flex min-w-0 flex-col gap-3">
-            <div className="-mx-1 overflow-x-auto px-1 pb-0.5">
-              <ViewToggle value={metric} onChange={setMetric} options={ANGLE_METRICS.map((m) => ({ value: m, label: l(`metric_${m}`) }))} aria-label={t("rank_by")} />
+        <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:items-start">
+          <ChartFrame
+            title={t("chart_title")}
+            actions={
+              <InfoHint title={t("chart_title")} align="end">
+                {l("analytics_scope", { description: l(`metric_${metric}_description`) })}
+              </InfoHint>
+            }
+            table={{
+              columns: [t("col_angle"), l("posts"), l("avg_views"), l("engagement"), l("leads_per_post")],
+              rows: performance.map((a) => [
+                a.label,
+                a.measured,
+                formatHookMetric(a.avgViews, "views"),
+                formatHookMetric(a.engagementRate, "engagement"),
+                formatHookMetric(a.leadsPerPost, "leads"),
+              ]),
+            }}
+            footer={
+              lead ? (
+                <p className="text-xs text-muted-foreground">
+                  {footerBefore}
+                  <span className="font-medium text-foreground">{lead.label}</span>
+                  {footerAfter}
+                </p>
+              ) : undefined
+            }
+          >
+            <div className="flex min-w-0 flex-col gap-3">
+              <div className="-mx-1 overflow-x-auto px-1 pb-0.5">
+                <ViewToggle value={metric} onChange={setMetric} options={ANGLE_METRICS.map((m) => ({ value: m, label: l(`metric_${m}`) }))} aria-label={t("rank_by")} />
+              </div>
+              <BarList
+                items={chartItems}
+                limit={8}
+                valueFormatter={(value) => formatHookMetric(value, metric)}
+                emptyMessage={t("chart_empty")}
+                aria-label={t("ranked_by", { metric: l(`metric_${metric}`).toLowerCase() })}
+              />
             </div>
-            <BarList
-              items={chartItems}
-              limit={8}
-              valueFormatter={(value) => formatHookMetric(value, metric)}
-              emptyMessage={t("chart_empty")}
-              aria-label={t("ranked_by", { metric: l(`metric_${metric}`).toLowerCase() })}
-            />
-          </div>
-        </ChartFrame>
+          </ChartFrame>
 
-        <SectionCard
-          title={t("rotate_title")}
-          description={untried ? t.plural("rotate_untried", untried, { count: formatNumber(untried) }) : t("rotate_all_used")}
-          icon={Compass}
-        >
-          {rotate.length ? (
-            <ul className="flex flex-wrap gap-1.5">
-              {rotate.map((angle) => {
-                const uses = stats.get(angle.id)?.uses ?? 0
-                const name = angle.name || t("untitled_angle")
-                return (
-                  <li key={angle.id}>
-                    <Link
-                      href={generatorHref(angle.id)}
-                      className={chipVariants({ size: "sm" })}
-                      title={angle.description || undefined}
-                      aria-label={t("rotate_chip", { name, uses: uses ? t.plural("uses", uses, { count: formatNumber(uses) }) : t("never_used") })}
-                    >
-                      <Sparkles className="text-brand" aria-hidden />
-                      {name}
-                      <span className="font-normal text-muted-foreground num">{uses ? formatNumber(uses) : t("new_chip")}</span>
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-          ) : (
-            <p className="text-sm text-pretty text-muted-foreground">{t("rotate_empty")}</p>
-          )}
-        </SectionCard>
-      </div>
+          <SectionCard
+            title={t("rotate_title")}
+            count={rotate.length || null}
+            info={untried ? t.plural("rotate_untried", untried, { count: formatNumber(untried) }) : t("rotate_all_used")}
+          >
+            {rotate.length ? (
+              <ul className="flex flex-wrap gap-1.5">
+                {rotate.map((angle) => {
+                  const uses = stats.get(angle.id)?.uses ?? 0
+                  const name = angle.name || t("untitled_angle")
+                  return (
+                    <li key={angle.id}>
+                      <Link
+                        href={generatorHref(angle.id)}
+                        className={chipVariants({ size: "sm" })}
+                        title={angle.description || undefined}
+                        aria-label={t("rotate_chip", { name, uses: uses ? t.plural("uses", uses, { count: formatNumber(uses) }) : t("never_used") })}
+                      >
+                        <Sparkles className="text-brand" aria-hidden />
+                        {name}
+                        <span className="font-normal text-muted-foreground num">{uses ? formatNumber(uses) : t("new_chip")}</span>
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
+            ) : (
+              <p className="text-sm text-pretty text-muted-foreground">{t("rotate_empty")}</p>
+            )}
+          </SectionCard>
+        </div>
+        </Disclosure>
+      ) : null}
 
       <section aria-label={t("angles_label")} className="flex min-w-0 flex-col gap-3">
         {angles.length ? (
@@ -223,8 +239,7 @@ export function AngleLibraryView() {
               {visible.length === angles.length
                 ? count("angles", angles.length)
                 : t.plural("angles_of", angles.length, { shown: formatNumber(visible.length), count: formatNumber(angles.length) })}
-              {" · "}
-              {count("defaults", angles.length - customCount)} · {count("custom", customCount)}
+              {customCount ? ` · ${count("custom", customCount)}` : ""}
             </p>
             {visible.length ? (
               <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">

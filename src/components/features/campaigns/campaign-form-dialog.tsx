@@ -8,6 +8,7 @@ import {
   FormField,
   FormRow,
   GoalSelect,
+  InfoHint,
   NumberField,
   PersonaSelect,
   PillarSelect,
@@ -195,7 +196,7 @@ function CampaignForm({
           <FormField
             label={t("objective")}
             htmlFor="campaign-objective"
-            description={t("objective_hint")}
+            labelAction={<InfoHint title={t("objective")}>{t("objective_hint")}</InfoHint>}
           >
             <Textarea
               id="campaign-objective"
@@ -207,7 +208,11 @@ function CampaignForm({
             />
           </FormField>
 
-          <FormField label={t("message")} htmlFor="campaign-message" description={t("message_hint")}>
+          <FormField
+            label={t("message")}
+            htmlFor="campaign-message"
+            labelAction={<InfoHint title={t("message")}>{t("message_hint")}</InfoHint>}
+          >
             <Textarea
               id="campaign-message"
               rows={2}
@@ -262,7 +267,7 @@ function CampaignForm({
             <FormField
               label={t("target_posts")}
               htmlFor="campaign-target"
-              description={t("target_hint")}
+              labelAction={<InfoHint title={t("target_posts")}>{t("target_hint")}</InfoHint>}
               error={shown("target")}
             >
               <NumberField
@@ -316,7 +321,7 @@ function CampaignForm({
             <PlatformToggleGroup value={values.platforms} onChange={(next) => set("platforms", next)} aria-label={t("platforms_aria")} />
           </FormField>
 
-          <FormField label={t("colour")} description={t("colour_hint")}>
+          <FormField label={t("colour")} labelAction={<InfoHint title={t("colour")}>{t("colour_hint")}</InfoHint>}>
             <ColorSwatchPicker value={values.color} onChange={(next) => set("color", next)} aria-label={t("colour_aria")} />
           </FormField>
         </div>

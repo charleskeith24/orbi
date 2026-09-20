@@ -125,6 +125,15 @@ export function profileName(displayName: string | null | undefined, fallback: st
   return name || fallback
 }
 
+/**
+ * The first name for tight spots (the sidebar header): the first word, with a nickname in quotes skipped
+ * ("Rafael \"Raf\" Mendoza" → "Rafael"). One-word names and handles come back unchanged.
+ */
+export function firstName(name: string): string {
+  const first = cleanLine(name).split(/\s+/)[0] ?? ""
+  return first.replace(/^["'“”‘’]+|["'“”‘’]+$/g, "") || cleanLine(name)
+}
+
 /** Initials for an avatar without a photo. */
 export function profileInitials(name: string): string {
   return initialsOf(name)

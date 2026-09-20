@@ -31,20 +31,18 @@ export function MonthlyKpis({ report, now }: { report: MonthlyReport; now: Date 
   const t = report.totals
   const d = report.deltas
   const c = report.consistency
-  const vs = m("vs_last_month")
   const status = consistencyStatus(report, now, m)
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 print:grid-cols-4">
-      <StatTile label={m("audience_growth")} icon={UserPlus} value={formatNumber(report.audienceGrowth.total)} delta={d.followers} deltaLabel={vs} />
-      <StatTile label={m("total_reach")} icon={Users} value={formatNumber(report.totalReach)} delta={d.reach} deltaLabel={vs} />
-      <StatTile label={m("total_content")} icon={Send} value={formatNumber(report.totalContent)} delta={d.posts} deltaLabel={vs} />
-      <StatTile label={m("total_views")} icon={Eye} value={formatNumber(t.views)} delta={d.views} deltaLabel={vs} />
+      <StatTile label={m("audience_growth")} icon={UserPlus} value={formatNumber(report.audienceGrowth.total)} delta={d.followers} />
+      <StatTile label={m("total_reach")} icon={Users} value={formatNumber(report.totalReach)} delta={d.reach} />
+      <StatTile label={m("total_content")} icon={Send} value={formatNumber(report.totalContent)} delta={d.posts} />
+      <StatTile label={m("total_views")} icon={Eye} value={formatNumber(t.views)} delta={d.views} />
       <StatTile
         label={m("engagement_rate")}
         icon={Heart}
         value={formatPercent(t.engagementRate)}
         delta={d.engagementRate}
-        deltaLabel={vs}
         sublabel={m("engagements", { count: formatNumber(t.engagements) })}
       />
       <StatTile
@@ -52,7 +50,6 @@ export function MonthlyKpis({ report, now }: { report: MonthlyReport; now: Date 
         icon={Magnet}
         value={formatNumber(t.leads)}
         delta={d.leads}
-        deltaLabel={vs}
         sublabel={t.sales ? r.plural("sales", t.sales, { count: formatNumber(t.sales) }) : undefined}
       />
       <StatTile
@@ -67,7 +64,7 @@ export function MonthlyKpis({ report, now }: { report: MonthlyReport; now: Date 
         icon={status.tone === "neutral" ? CalendarCheck : undefined}
         sublabel={status.label}
       />
-      <StatTile label={m("winners")} icon={Trophy} value={formatNumber(report.winners)} sublabel={m("winners_sublabel")} href="/winners" />
+      <StatTile label={m("winners")} icon={Trophy} value={formatNumber(report.winners)} info={m("winners_info")} href="/winners" />
     </div>
   )
 }

@@ -1,7 +1,8 @@
 "use client"
 
-import { Compass, MessagesSquare } from "lucide-react"
+import { MessagesSquare } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { flushSync } from "react-dom"
 import { toast } from "sonner"
 import { AiButton, PageContainer, PageHeader } from "@/components/common"
 import { Button } from "@/components/ui/button"
@@ -22,8 +23,10 @@ import {
   validateBrand,
   type BrandField,
   type BrandFormValues,
+  type BrandSectionKey,
   type SetBrandValue,
 } from "./brand-model"
+import { focusControl, scrollToElement } from "./brand-focus"
 import { brandHqMessages } from "./brand-messages"
 import { BrandSectionNav, CompletenessCard } from "./brand-nav"
 import { IdentitySection, PositioningSection } from "./brand-sections"
@@ -34,22 +37,19 @@ import { StatementSection } from "./positioning-builder"
 import { PositioningSuggestions, type SuggestionField, type SuggestionValues } from "./positioning-suggestions"
 import { relativeDayInline } from "./relative-day"
 import { SaveBar } from "./save-bar"
-import { StrategyTabs } from "./strategy-tabs"
 import { useNow } from "./use-now"
-import { focusControl, scrollToSection, useScrollSpy } from "./use-scroll-spy"
 
-const SPY_IDS: readonly string[] = [...BRAND_SECTIONS.map((s) => s.key), "voice"]
-
-/** At xl the Brand Voice sits in a sticky side rail, so it never becomes the "current" section. */
-function ignoreRail(el: HTMLElement): boolean {
-  return el.id === "voice" && window.matchMedia("(min-width: 80rem)").matches
-}
+const SECTION_KEYS: ReadonlySet<string> = new Set(BRAND_SECTIONS.map((s) => s.key))
+const isSectionKey = (value: string): value is BrandSectionKey => SECTION_KEYS.has(value)
 
 // Sent to the Content Strategist as the question, so it stays English (the AI follows Brand HQ's language).
 const STRATEGIST_PROMPT =
   "Review my Brand HQ. Is my positioning specific enough, and what would make my point of view more distinctive?"
 
-/** Brand HQ (spec §3, §4, §29): the sectioned brand editor every AI generation reads. */
+/**
+ * Brand HQ (spec §3, §4, §29): the sectioned brand editor every AI generation reads. One section shows at a
+ * time (`/strategy#rules` opens Rules); edits in every section stay in one form with one save bar.
+ */
 export function BrandHqView() {
   const brand = useBrand()
   const db = useDb()
@@ -67,15 +67,29 @@ export function BrandHqView() {
   const errorFields = Object.keys(errors) as BrandField[]
   const completeness = useMemo(() => brandCompleteness(values), [values])
   const dirtySections = useMemo(() => new Set(changed.map(sectionOf)), [changed])
-  const active = useScrollSpy(SPY_IDS, 96, ignoreRail)
+  const [section, setSection] = useState<BrandSectionKey>("niche")
 
   const set = useCallback<SetBrandValue>((key, value) => setEdits((current) => ({ ...current, [key]: value })), [])
+
+  function selectSection(key: BrandSectionKey) {
+    setSection(key)
+    window.history.replaceState(window.history.state, "", `#${key}`)
+    // Scrolled down a long section? Bring the next one's top into view.
+    const top = formRef.current?.getBoundingClientRect().top ?? 0
+    if (top < 0) scrollToElement(key)
+  }
+
+  /** Opens the field's section, then scrolls to and focuses the field. */
+  function goToField(field: BrandField) {
+    flushSync(() => setSection(sectionOf(field)))
+    focusControl(fieldId(field))
+  }
 
   function save(event: React.FormEvent) {
     event.preventDefault()
     if (!dirty) return
     if (errorFields.length) {
-      focusControl(fieldId(errorFields[0]))
+      goToField(errorFields[0])
       return
     }
     updateBrand(brandPatch(values))
@@ -107,12 +121,19 @@ export function BrandHqView() {
     return () => window.removeEventListener("beforeunload", onBeforeUnload)
   }, [dirty])
 
-  // Deep links like /strategy#rules land on the section once the workspace has rendered.
+  // Deep links like /strategy#rules open that section (#voice scrolls to the preview), on load and on hash changes.
   useEffect(() => {
-    const id = window.location.hash.slice(1)
-    if (!id) return
-    const frame = requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: "start" }))
-    return () => cancelAnimationFrame(frame)
+    const apply = () => {
+      const id = window.location.hash.slice(1)
+      if (isSectionKey(id)) setSection(id)
+      else if (id === "voice") document.getElementById(id)?.scrollIntoView({ block: "start" })
+    }
+    const frame = requestAnimationFrame(apply)
+    window.addEventListener("hashchange", apply)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener("hashchange", apply)
+    }
   }, [])
 
   /* ------------------------------ Suggest with AI ----------------------------- */
@@ -172,63 +193,68 @@ export function BrandHqView() {
     <PageContainer>
       <PageHeader
         title="Brand HQ"
-        icon={Compass}
-        description={t("description")}
+        info={t("description")}
         actions={
           <Button type="button" variant="outline" size="sm" onClick={() => uiActions.askStrategist(STRATEGIST_PROMPT)}>
             <MessagesSquare aria-hidden />
             {t("review_with_strategist")}
           </Button>
         }
-      >
-        <StrategyTabs />
-      </PageHeader>
+      />
 
       <div className="grid min-w-0 gap-6 lg:grid-cols-[11rem_minmax(0,1fr)] xl:grid-cols-[11rem_minmax(0,1fr)_19rem]">
         <aside aria-label={t("progress_label")} className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-16 lg:self-start">
-          <CompletenessCard completeness={completeness} onNext={(item) => focusControl(fieldId(item.field))} />
-          <BrandSectionNav active={active} completeness={completeness} dirtySections={dirtySections} onJump={scrollToSection} />
+          <CompletenessCard completeness={completeness} onNext={(item) => goToField(item.field)} />
+          <BrandSectionNav
+            active={section}
+            completeness={completeness}
+            dirtySections={dirtySections}
+            onSelect={selectSection}
+            onVoice={() => scrollToElement("voice")}
+          />
         </aside>
 
-        <form ref={formRef} onSubmit={save} noValidate aria-label="Brand HQ" className="flex min-w-0 flex-col gap-4">
-          <NicheSection {...sectionProps} dirty={dirty} now={now} />
-          <IdentitySection {...sectionProps} />
-          <PositioningSection
-            {...sectionProps}
-            action={
-              <AiButton type="button" size="sm" pending={ai.isPending} onClick={() => void suggest()}>
-                {t("suggest")}
-              </AiButton>
-            }
-            suggestions={
-              panel.open ? (
-                <PositioningSuggestions
-                  key={panel.run}
-                  suggestion={suggestion}
-                  current={current}
-                  provider={ai.provider}
-                  model={ai.model}
-                  pending={ai.isPending}
-                  error={ai.error?.message ?? null}
-                  onApply={applySuggestion}
-                  onRegenerate={() => void suggest()}
-                  onDismiss={dismissSuggestions}
-                />
-              ) : null
-            }
-          />
-          <StatementSection {...sectionProps} />
-          <ExpertiseSection {...sectionProps} />
-          <PersonalitySection {...sectionProps} />
-          <CommunicationSection {...sectionProps} />
-          <RulesSection {...sectionProps} />
+        <form ref={formRef} onSubmit={save} noValidate aria-label="Brand HQ" className="flex min-w-0 scroll-mt-16 flex-col gap-4">
+          {section === "niche" ? <NicheSection {...sectionProps} dirty={dirty} now={now} /> : null}
+          {section === "identity" ? <IdentitySection {...sectionProps} /> : null}
+          {section === "positioning" ? (
+            <PositioningSection
+              {...sectionProps}
+              action={
+                <AiButton type="button" size="sm" pending={ai.isPending} onClick={() => void suggest()}>
+                  {t("suggest")}
+                </AiButton>
+              }
+              suggestions={
+                panel.open ? (
+                  <PositioningSuggestions
+                    key={panel.run}
+                    suggestion={suggestion}
+                    current={current}
+                    provider={ai.provider}
+                    model={ai.model}
+                    pending={ai.isPending}
+                    error={ai.error?.message ?? null}
+                    onApply={applySuggestion}
+                    onRegenerate={() => void suggest()}
+                    onDismiss={dismissSuggestions}
+                  />
+                ) : null
+              }
+            />
+          ) : null}
+          {section === "statement" ? <StatementSection {...sectionProps} /> : null}
+          {section === "expertise" ? <ExpertiseSection {...sectionProps} /> : null}
+          {section === "personality" ? <PersonalitySection {...sectionProps} /> : null}
+          {section === "communication" ? <CommunicationSection {...sectionProps} /> : null}
+          {section === "rules" ? <RulesSection {...sectionProps} /> : null}
           <SaveBar
             dirty={dirty}
             changes={changed.length}
             errorCount={errorFields.length}
             savedLabel={savedLabel}
             onDiscard={discard}
-            onShowErrors={() => errorFields[0] && focusControl(fieldId(errorFields[0]))}
+            onShowErrors={() => errorFields[0] && goToField(errorFields[0])}
           />
         </form>
 
@@ -236,7 +262,7 @@ export function BrandHqView() {
           aria-label={t("voice_label")}
           className="min-w-0 scrollbar-thin lg:col-start-2 xl:sticky xl:top-16 xl:col-start-3 xl:row-start-1 xl:max-h-[calc(100svh-5rem)] xl:self-start xl:overflow-y-auto"
         >
-          <BrandVoicePreview values={values} dirty={dirty} now={now} />
+          <BrandVoicePreview values={values} dirty={dirty} now={now} onEdit={goToField} />
         </aside>
       </div>
     </PageContainer>

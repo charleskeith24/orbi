@@ -1,21 +1,22 @@
 import { Check } from "lucide-react"
 import { useId } from "react"
+import { InfoHint } from "@/components/common"
 import { cn } from "@/lib/utils"
 
 export type StepState = "done" | "current" | "locked"
 
-/** A numbered step of the Inspiration → Original flow. */
+/** A numbered step of the Inspiration → Original flow; what the step does sits behind the title's ⓘ (Calm UI). */
 export function StepCard({
   step,
   title,
-  description,
+  info,
   state,
   action,
   children,
 }: {
   step: number
   title: string
-  description?: string
+  info?: React.ReactNode
   state: StepState
   action?: React.ReactNode
   children: React.ReactNode
@@ -35,12 +36,12 @@ export function StepCard({
         >
           {state === "done" ? <Check className="size-3.5" strokeWidth={3} /> : step}
         </span>
-        <div className="min-w-0 flex-1 basis-48">
+        <div className="flex min-w-0 flex-1 basis-48 items-center gap-1.5">
           <h2 id={headingId} className="text-sm leading-6 font-medium">
             <span className="sr-only">Step {step}: </span>
             {title}
           </h2>
-          {description ? <p className="text-xs text-pretty text-muted-foreground">{description}</p> : null}
+          {info ? <InfoHint title={title}>{info}</InfoHint> : null}
         </div>
         {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
       </header>

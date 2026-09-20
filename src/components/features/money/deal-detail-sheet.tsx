@@ -3,7 +3,7 @@
 import { BadgeCheck, Megaphone, Pencil, Receipt } from "lucide-react"
 import Link from "next/link"
 import { useId } from "react"
-import { ColorDot, DefinitionList, DetailSheet, KeyValue, OptionSelect, PlatformIcon } from "@/components/common"
+import { ColorDot, DefinitionList, DetailSheet, InfoHint, KeyValue, OptionSelect, PlatformIcon } from "@/components/common"
 import { DealCollabs } from "@/components/features/collabs/collab-links"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { PLATFORMS } from "@/lib/constants"
 import { formatDate, formatShortDate } from "@/lib/dates"
 import { useT } from "@/lib/i18n"
-import { dealSourceMessages } from "@/lib/i18n/messages/money"
+import { dealSourceMessages, dealStatusDescriptionMessages } from "@/lib/i18n/messages/money"
 import { dataActions, uiActions, useRow, useTable } from "@/lib/store"
 import type { BrandDeal } from "@/lib/types"
 import { cn, formatMoney } from "@/lib/utils"
@@ -24,11 +24,27 @@ import { markDealPaid, setDealStatus } from "./money-actions"
 import { compareIncome, dealIncome, dealMoney, deliverableProgress, isOpenDeal } from "./money-model"
 import { IncomeStatusBadge, useDealStatusOptions } from "./money-ui"
 
-function Section({ title, action, children, className }: { title: string; action?: React.ReactNode; children: React.ReactNode; className?: string }) {
+function Section({
+  title,
+  info,
+  action,
+  children,
+  className,
+}: {
+  title: string
+  /** Explanation behind an ⓘ next to the title (Calm UI). */
+  info?: React.ReactNode
+  action?: React.ReactNode
+  children: React.ReactNode
+  className?: string
+}) {
   return (
     <section className={cn("flex min-w-0 flex-col gap-2", className)}>
       <div className="flex min-h-7 items-center justify-between gap-2">
-        <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
+        <div className="flex min-w-0 items-center gap-1">
+          <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
+          {info ? <InfoHint title={title}>{info}</InfoHint> : null}
+        </div>
         {action}
       </div>
       {children}
@@ -45,7 +61,10 @@ function Figure({ label, value, muted }: { label: string; value: string; muted?:
   )
 }
 
-/** Deal detail (`/money/deals?open=<id>`): status, money, deliverables, content, contact, terms, media kit. */
+/**
+ * Deal detail (`/money/deals?open=<id>`): status (its meaning and what Mark paid records in an ⓘ), money,
+ * deliverables, content, contact, terms, media kit.
+ */
 export function DealDetailSheet({
   deal,
   open,
@@ -125,6 +144,7 @@ function DealBody({ deal }: { deal: BrandDeal }) {
   const income = useTable("income_entries")
   const campaign = useRow("content_campaigns", deal.campaign_id)
   const statusOptions = useDealStatusOptions()
+  const statusDescription = useT(dealStatusDescriptionMessages)
   const money = dealMoney(deal, income)
   const entries = dealIncome(deal, income).sort(compareIncome)
   const progress = deliverableProgress(deal.deliverables)
@@ -132,17 +152,19 @@ function DealBody({ deal }: { deal: BrandDeal }) {
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <div className="grid min-w-0 gap-3 sm:grid-cols-[12rem_minmax(0,1fr)] sm:items-center">
+      <div className="flex min-w-0 items-center gap-1.5">
         <OptionSelect
           options={statusOptions}
           value={deal.status}
           size="sm"
           aria-label={t("status")}
+          className="w-48 max-w-full"
           onChange={(next) => next && setDealStatus(deal, next)}
         />
-        {isOpenDeal(deal) && money.balance ? (
-          <p className="text-xs text-muted-foreground">{t("mark_paid_help", { amount: fmt(money.balance) })}</p>
-        ) : null}
+        <InfoHint label={t("status_info")}>
+          <p>{statusDescription(deal.status)}</p>
+          {isOpenDeal(deal) && money.balance ? <p>{t("mark_paid_help", { amount: fmt(money.balance) })}</p> : null}
+        </InfoHint>
       </div>
 
       <Section title={t("money")}>
@@ -184,7 +206,7 @@ function DealBody({ deal }: { deal: BrandDeal }) {
         <DealDeliverables deal={deal} />
       </Section>
 
-      <Section title={t("linked_content")}>
+      <Section title={t("linked_content")} info={t("linked_info")}>
         <DealContentSection deal={deal} />
       </Section>
 
@@ -237,12 +259,12 @@ function DealBody({ deal }: { deal: BrandDeal }) {
         </Section>
       ) : null}
 
-      <div className="flex items-center justify-between gap-4 rounded-lg border px-3 py-2.5">
-        <div className="min-w-0">
+      <div className="flex items-center justify-between gap-4 border-t pt-4">
+        <div className="flex min-w-0 items-center gap-1">
           <Label htmlFor={`${id}-kit`} className="text-sm">
             {t("show_in_media_kit")}
           </Label>
-          <p className="text-xs text-muted-foreground">{t("show_in_media_kit_help")}</p>
+          <InfoHint title={t("show_in_media_kit")}>{t("show_in_media_kit_help")}</InfoHint>
         </div>
         <Switch
           id={`${id}-kit`}

@@ -33,7 +33,6 @@ export function LinkedIdeas({ campaign, className }: { campaign: ContentCampaign
         .sort((a, b) => Number(isOpen(b)) - Number(isOpen(a)) || (b.score ?? -1) - (a.score ?? -1) || a.title.localeCompare(b.title)),
     [ideas, campaign.id]
   )
-  const open = linked.filter(isOpen).length
   const shown = expanded ? linked : linked.slice(0, LIMIT)
 
   function convert(idea: ContentIdea) {
@@ -49,7 +48,8 @@ export function LinkedIdeas({ campaign, className }: { campaign: ContentCampaign
     <SectionCard
       className={className}
       title={t("linked_ideas")}
-      description={linked.length ? t("linked_description", { open, closed: linked.length - open }) : t("linked_backlog")}
+      count={linked.length || null}
+      info={t("linked_backlog")}
       action={
         <Button type="button" variant="ghost" size="sm" asChild>
           <Link href="/ideas">

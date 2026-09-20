@@ -73,7 +73,7 @@ export function Disclosure({
         )}
       />
       <span className="truncate">{label ?? t("details")}</span>
-      {meta ? <span className="shrink-0 font-normal text-muted-foreground">{meta}</span> : null}
+      {meta ? <span className="min-w-0 truncate font-normal text-muted-foreground">{meta}</span> : null}
     </CollapsibleTrigger>
   )
 

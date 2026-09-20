@@ -3,7 +3,7 @@
 import { format } from "date-fns"
 import Link from "next/link"
 import { useMemo } from "react"
-import { DataTable, FormatLabel, PillarBadge, PlatformIcon, type DataTableColumn } from "@/components/common"
+import { DataTable, PillarBadge, PlatformIcon, type DataTableColumn } from "@/components/common"
 import { Switch } from "@/components/ui/switch"
 import { DAYS_OF_WEEK, SERIES_FREQUENCY_MAP } from "@/lib/constants"
 import { useT, useUiLang } from "@/lib/i18n"
@@ -17,18 +17,17 @@ import { nextEpisodeInfo, type SeriesSummary } from "./series-summary"
 
 const XL_ONLY = "hidden xl:table-cell"
 
+/** One line: the date; relative day and planned/suggested on hover, "suggested" or "paused" shown when it isn't planned. */
 function NextCell({ summary, now }: { summary: SeriesSummary; now: Date }) {
   const t = useT(seriesMessages)
   const lang = useUiLang()
   const next = nextEpisodeInfo(summary)
   const note = !summary.series.is_active ? t("note_paused") : next.planned ? t("note_planned") : t("note_suggested")
   return (
-    <div className="flex w-28 flex-col">
+    <span className="flex w-32 items-baseline gap-1.5 whitespace-nowrap" title={`${relativeDayLabel(next.date, now, lang)} · ${note}`}>
       <span className="text-sm num">{format(next.date, "EEE, MMM d")}</span>
-      <span className="text-xs text-muted-foreground">
-        {relativeDayLabel(next.date, now, lang)} · {note}
-      </span>
-    </div>
+      {next.planned && summary.series.is_active ? null : <span className="text-xs text-muted-foreground">{note}</span>}
+    </span>
   )
 }
 
@@ -36,10 +35,14 @@ function CadenceCell({ series }: { series: ContentSeries }) {
   const t = useT(seriesMessages)
   const day = series.frequency !== "daily" && series.day_of_week !== null ? DAYS_OF_WEEK.find((d) => d.value === series.day_of_week) : null
   return (
-    <div className="flex w-28 flex-col gap-1">
+    <div className="flex w-44 items-center gap-1.5 whitespace-nowrap">
       <span className="truncate text-sm">{SERIES_FREQUENCY_MAP[series.frequency]?.label ?? series.frequency}</span>
-      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        {day ? <span title={t("day_plural", { day: day.label })}>{day.short}</span> : null}
+      {day ? (
+        <span className="text-xs text-muted-foreground" title={t("day_plural", { day: day.label })}>
+          {day.short}
+        </span>
+      ) : null}
+      <span className="flex items-center gap-1 text-muted-foreground">
         {series.platforms.map((p) => (
           <PlatformIcon key={p} platform={p} label className="size-3.5" />
         ))}
@@ -75,15 +78,13 @@ export function SeriesTable({
             <Link
               href={`/series?open=${r.series.id}`}
               scroll={false}
+              title={r.series.description || undefined}
               className="line-clamp-2 font-medium break-words whitespace-normal outline-none hover:underline focus-visible:underline"
             >
               {r.series.name || t("untitled_series")}
             </Link>
             <p className="text-xs text-pretty whitespace-normal text-muted-foreground lg:hidden">
               {t("cadence_next", { cadence: cadenceLabel(r.series, true, lang), when: relativeDayLabel(nextEpisodeInfo(r).date, now, lang) })}
-            </p>
-            <p className="hidden truncate text-xs text-muted-foreground lg:block" title={r.series.description || undefined}>
-              {r.series.description || t("no_description")}
             </p>
           </div>
         ),
@@ -97,14 +98,11 @@ export function SeriesTable({
       },
       {
         id: "defaults",
-        header: t("col_defaults"),
+        header: t("col_pillar"),
         className: XL_ONLY,
         headerClassName: XL_ONLY,
         cell: (r) => (
-          <div className="flex w-36 flex-col items-start gap-1">
-            <PillarBadge pillarId={r.series.pillar_id} variant="plain" className="max-w-full" />
-            <FormatLabel formatId={r.series.format_id} className="max-w-full" />
-          </div>
+          <PillarBadge pillarId={r.series.pillar_id} variant="plain" className="max-w-36" />
         ),
       },
       {
@@ -113,10 +111,16 @@ export function SeriesTable({
         hideBelow: "sm",
         sortValue: (r) => r.published.length,
         cell: (r) => (
-          <div className="flex w-24 flex-col" title={t.plural("posts_across", r.posts, { count: formatNumber(r.posts) })}>
-            <span className="text-sm num">{t("published_count", { count: r.published.length })}</span>
-            <span className="text-xs text-muted-foreground num">{t("planned_count", { count: r.upcoming.length })}</span>
-          </div>
+          <span
+            className="flex w-16 items-baseline gap-1.5 whitespace-nowrap"
+            title={`${t("published_count", { count: r.published.length })} · ${t("planned_count", { count: r.upcoming.length })} · ${t.plural("posts_across", r.posts, { count: formatNumber(r.posts) })}`}
+          >
+            <span aria-hidden className="text-sm num">{formatNumber(r.published.length)}</span>
+            {r.upcoming.length ? <span aria-hidden className="text-xs text-muted-foreground num">+{formatNumber(r.upcoming.length)}</span> : null}
+            <span className="sr-only">
+              {t("published_count", { count: r.published.length })}, {t("planned_count", { count: r.upcoming.length })}
+            </span>
+          </span>
         ),
       },
       {
@@ -126,10 +130,9 @@ export function SeriesTable({
         sortValue: (r) => r.lastPublished?.date?.getTime() ?? null,
         cell: (r) =>
           r.lastPublished?.date ? (
-            <div className="flex w-24 flex-col">
-              <span className="text-sm num">{format(r.lastPublished.date, "MMM d")}</span>
-              <span className="text-xs text-muted-foreground">{relativeDayLabel(r.lastPublished.date, now, lang)}</span>
-            </div>
+            <span className="block w-16 text-sm whitespace-nowrap num" title={relativeDayLabel(r.lastPublished.date, now, lang)}>
+              {format(r.lastPublished.date, "MMM d")}
+            </span>
           ) : (
             <span className="text-xs text-muted-foreground">{t("none_yet")}</span>
           ),

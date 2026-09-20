@@ -22,8 +22,8 @@ export interface TrayGroup {
 const GROUP_LIMIT = 8
 
 /**
- * Unscheduled tray: Ready to Post and other undated work. Desktop ("dock"): drag a chip onto a day to
- * schedule it; drop a scheduled post here to unschedule it. Phones ("list"): rows with a Schedule button.
+ * Unscheduled tray: Ready to Post and other undated work, with its count. Desktop ("dock"): drag a chip onto a day
+ * to schedule it; drop a scheduled post here to unschedule it. Phones ("list"): rows with a Schedule button.
  */
 export function UnscheduledTray({
   groups,
@@ -50,18 +50,8 @@ export function UnscheduledTray({
   const { setNodeRef, isOver } = useDroppable({ id: TRAY_DROP_ID, disabled: !dnd })
   const [expanded, setExpanded] = useState<TrayGroupId[]>([])
   const total = groups.reduce((n, g) => n + g.items.length, 0)
-  const ready = groups.find((g) => g.id === "ready")?.items.length ?? 0
   const accepting = dragKind === "scheduled"
   const dock = layout === "dock"
-  const summary = accepting
-    ? t("tray_drop")
-    : [
-        ready ? t("tray_ready", { count: ready }) : t("tray_nothing_ready"),
-        t.plural("tray_without_date", total, { count: formatNumber(total) }),
-        dock && total ? t("tray_drag_hint") : "",
-      ]
-        .filter(Boolean)
-        .join(" · ")
 
   const renderGroup = (group: TrayGroup) => {
     // An item opened via ?open= is never hidden behind "Show all".
@@ -139,7 +129,10 @@ export function UnscheduledTray({
         <span id="calendar-tray-title" className="shrink-0 text-sm font-medium">
           {t("tray_title")}
         </span>
-        <span className="min-w-0 truncate text-xs text-muted-foreground">{summary}</span>
+        {/* Calm UI: a count; how the tray works is in the Calendar's ⓘ, each group's meaning in its tooltip. */}
+        <span className="min-w-0 truncate text-sm text-muted-foreground num">
+          {accepting ? <span className="text-xs">{t("tray_drop")}</span> : formatNumber(total)}
+        </span>
         <ChevronDown className={cn("ml-auto size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} aria-hidden />
       </button>
 

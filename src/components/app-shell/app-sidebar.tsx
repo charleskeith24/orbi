@@ -5,6 +5,8 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useMemo } from "react"
 import { OrbiLogo, OrbiMark } from "@/components/app-shell/orbi-logo"
+import { ProfileAvatar } from "@/components/features/profile/profile-avatar"
+import { useMyProfile, usePhotoUrl } from "@/components/features/profile/profile-store"
 import {
   Sidebar,
   SidebarContent,
@@ -20,6 +22,7 @@ import {
 } from "@/components/ui/sidebar"
 import { useDeviceValue, writeDeviceValue } from "@/hooks/use-device-value"
 import { useT } from "@/lib/i18n"
+import { firstName, profileName } from "@/lib/profiles/profile"
 import {
   groupItems,
   isNavActive,
@@ -45,6 +48,10 @@ export function AppSidebar() {
   const brand = useBrand()
   const simpleMode = useSettings().simple_mode
   const t = useT(sidebarMessages)
+  const { me } = useMyProfile()
+  const photoUrl = usePhotoUrl(me?.avatar_path)
+  const workspaceName = brand.brand_name || brand.name || t("brand_fallback")
+  const personName = profileName(me?.display_name, brand.name.trim() || workspaceName)
   const { mode } = useDataStatus()
   const { isMobile, setOpenMobile, state } = useSidebar()
   const nav = useMemo(() => sidebarSections(NAV_SECTIONS, { simpleMode, pathname }), [simpleMode, pathname])
@@ -77,9 +84,10 @@ export function AppSidebar() {
                   <>
                     <OrbiLogo className="h-[22px]! w-auto! text-sidebar-foreground" />
                     <span aria-hidden className="h-4 w-px shrink-0 bg-sidebar-border" />
-                    <span className="min-w-0 truncate text-xs text-muted-foreground">
-                      {brand.brand_name || brand.name || t("brand_fallback")}
-                    </span>
+                    {/* Your photo and first name, not the workspace name — that stays as the link's accessible name. */}
+                    <ProfileAvatar name={personName} photoUrl={photoUrl} className="size-6" fallbackClassName="text-[10px]" />
+                    <span className="min-w-0 truncate text-sm text-sidebar-foreground">{firstName(personName)}</span>
+                    <span className="sr-only">{workspaceName}</span>
                   </>
                 )}
               </Link>

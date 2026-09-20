@@ -1,6 +1,6 @@
 "use client"
 
-import { MapPin, Star } from "lucide-react"
+import { Star } from "lucide-react"
 import Link from "next/link"
 import { ColorDot, Meter, PlatformIcon, StatusPill } from "@/components/common"
 import { PLATFORMS } from "@/lib/constants"
@@ -29,7 +29,7 @@ function StatLink({ href, label, value, detail }: { href: string; label: string;
   return (
     <Link
       href={href}
-      className="relative z-10 flex min-w-0 flex-col gap-0.5 px-3 py-2 outline-none first:rounded-l-md hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/60"
+      className="relative z-10 flex min-w-0 flex-col gap-0.5 rounded-md px-1 py-1 outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/60"
     >
       <span className="truncate text-xs text-muted-foreground">{label}</span>
       <span className="text-base leading-6 font-semibold num">{formatNumber(value)}</span>
@@ -81,8 +81,9 @@ export function PersonaCard({
                 {name}
               </button>
             </h3>
-            {/* Two-line slot so stat rows line up across a row of cards. */}
-            <p className="mt-0.5 line-clamp-2 min-h-8 text-xs text-muted-foreground">{persona.profession}</p>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground" title={meta ? `${persona.profession} · ${meta}` : persona.profession}>
+              {persona.profession || meta}
+            </p>
           </div>
           {persona.is_primary ? (
             <StatusPill icon={Star} title={t("primary_title")}>
@@ -94,16 +95,7 @@ export function PersonaCard({
           </div>
         </div>
 
-        {meta ? (
-          <p className="-mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-            <MapPin className="size-3.5 shrink-0" aria-hidden />
-            <span className="truncate" title={meta}>
-              {meta}
-            </span>
-          </p>
-        ) : null}
-
-        <div className="grid grid-cols-3 divide-x rounded-md border bg-muted/20 dark:bg-input/10">
+        <div className="-mx-1 grid grid-cols-3">
           <StatLink
             href={`/audience/problems?persona=${persona.id}`}
             label={t("problems")}
@@ -122,7 +114,7 @@ export function PersonaCard({
             value={stats.questions}
             detail={stats.questions ? a("open_count", { count: formatNumber(stats.openQuestions) }) : t("none_yet")}
           />
-          <div className="flex min-w-0 flex-col gap-0.5 px-3 py-2" title={t("content_window_title", { days: RECENT_DAYS })}>
+          <div className="flex min-w-0 flex-col gap-0.5 px-1 py-1" title={t("content_window_title", { days: RECENT_DAYS })}>
             <span className="truncate text-xs text-muted-foreground">{t("content_share")}</span>
             <span className="text-base leading-6 font-semibold num">{share === null ? "—" : formatPercent(share, 0)}</span>
             <Meter
@@ -141,13 +133,17 @@ export function PersonaCard({
             {goal ? (
               <>
                 <dt className="text-muted-foreground">{t("wants")}</dt>
-                <dd className="line-clamp-2">{goal}</dd>
+                <dd className="truncate" title={goal}>
+                  {goal}
+                </dd>
               </>
             ) : null}
             {pain ? (
               <>
                 <dt className="text-muted-foreground">{t("struggles")}</dt>
-                <dd className="line-clamp-2">{pain}</dd>
+                <dd className="truncate" title={pain}>
+                  {pain}
+                </dd>
               </>
             ) : null}
           </dl>
@@ -164,9 +160,11 @@ export function PersonaCard({
         ) : (
           <span>{t("no_platforms")}</span>
         )}
-        <span className="ml-auto shrink-0 num" title={t("profile_title")}>
-          {t("profile_pct", { pct: completeness })}
-        </span>
+        {completeness < 100 ? (
+          <span className="ml-auto shrink-0 num" title={t("profile_title")}>
+            {t("profile_pct", { pct: completeness })}
+          </span>
+        ) : null}
       </div>
     </article>
   )

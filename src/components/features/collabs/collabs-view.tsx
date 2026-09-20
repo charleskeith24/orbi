@@ -36,7 +36,8 @@ import { collabsMessages } from "./messages"
 type View = "board" | "table"
 
 /**
- * `/collabs` — the Collab tracker: lift + follow-ups, board by status (drag between statuses) or table.
+ * `/collabs` — the Collab tracker (Calm UI): three compact tiles (lift, in progress, follow-ups), then the board by
+ * status (drag between statuses) or the table. New collabs come from the top bar's ＋ New menu (and the empty state).
  * `?open=<id>` opens a collab, `?new=1` the form (`&campaign=<id>` / `&deal=<id>` pre-link it),
  * `?ideas=1` the Collab ideas panel, `?view=table` the table.
  */
@@ -75,9 +76,12 @@ export function CollabsView() {
   )
   const setOpen = useCallback((id: ID | null) => replaceParams({ open: id }), [replaceParams])
 
-  // `?new=1` (optionally with a campaign or deal) and `?ideas=1` open once, then leave the URL.
+  // `?new=1` (optionally with a campaign or deal) and `?ideas=1` open once, then leave the URL. Once the URL is
+  // clean again the next link opens too — the top bar's ＋ New → New collab pushes `?new=1` while you're here.
+  const wantsLink = wantsNew || wantsIdeas
   const [linkHandled, setLinkHandled] = useState(false)
-  if ((wantsNew || wantsIdeas) && !linkHandled) {
+  if (!wantsLink && linkHandled) setLinkHandled(false)
+  if (wantsLink && !linkHandled) {
     setLinkHandled(true)
     if (wantsNew) {
       const campaign = searchParams.get("campaign")
@@ -90,8 +94,8 @@ export function CollabsView() {
     } else setIdeasOpen(true)
   }
   useEffect(() => {
-    if (wantsNew || wantsIdeas) replaceParams({ new: null, ideas: null, campaign: null, deal: null })
-  }, [wantsNew, wantsIdeas, replaceParams])
+    if (wantsLink) replaceParams({ new: null, ideas: null, campaign: null, deal: null })
+  }, [wantsLink, replaceParams])
 
   // Keep the last collab mounted while the sheet animates out.
   const openCollab = openId ? (collabs.find((c) => c.id === openId) ?? null) : null
@@ -141,16 +145,13 @@ export function CollabsView() {
     [openId, setOpen]
   )
 
+  // "Add collab" lives in the top bar's ＋ New menu (New collab → `?new=1`); the empty state keeps its own.
   const actions = (
     <>
       <AskYourCircleLink />
       <AiButton size="sm" onClick={() => setIdeasOpen(true)}>
         {t("ideas_button")}
       </AiButton>
-      <Button size="sm" onClick={() => setForm({ open: true, collab: null })}>
-        <Plus aria-hidden />
-        {t("add_collab")}
-      </Button>
     </>
   )
 
@@ -172,7 +173,7 @@ export function CollabsView() {
 
   return (
     <PageContainer>
-      <PageHeader title={t("title")} icon={Blend} description={t("description")} actions={actions} />
+      <PageHeader title={t("title")} info={t("description")} actions={actions} />
 
       {openId && !openCollab && collabs.length ? <p className="-mt-2 text-sm text-muted-foreground">{t("not_found")}</p> : null}
 

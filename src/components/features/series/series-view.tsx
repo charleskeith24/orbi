@@ -1,6 +1,5 @@
 "use client"
 
-import { format } from "date-fns"
 import { Plus, Repeat } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
@@ -117,7 +116,7 @@ export function SeriesView() {
     <PageContainer>
       <PageHeader
         title="Series"
-        description={t("description")}
+        info={t("info")}
         actions={
           <Button size="sm" onClick={openCreate}>
             <Plus aria-hidden />
@@ -128,28 +127,28 @@ export function SeriesView() {
 
       {summaries.length ? (
         <>
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatTile
+              size="sm"
               label={t("stat_active")}
               value={formatNumber(stats.active)}
-              sublabel={stats.paused ? t("stat_paused", { count: stats.paused }) : t("stat_none_paused")}
+              sublabel={stats.paused ? t("stat_paused", { count: stats.paused }) : undefined}
             />
             <StatTile
+              size="sm"
               label={t("stat_published")}
               value={formatNumber(stats.published)}
               sublabel={t("stat_recent", { count: formatNumber(stats.recent) })}
             />
             <StatTile
+              size="sm"
               label={t("stat_next")}
               value={stats.next ? capitalize(relativeDayLabel(stats.next.info.date, now, lang)) : "—"}
-              sublabel={
-                stats.next
-                  ? t("stat_next_sub", { name: stats.next.summary.series.name, date: format(stats.next.info.date, "EEE, MMM d") })
-                  : t("stat_no_active")
-              }
+              sublabel={stats.next ? stats.next.summary.series.name : t("stat_no_active")}
               href={stats.next ? `/series?open=${stats.next.summary.series.id}` : undefined}
             />
             <StatTile
+              size="sm"
               label={t("stat_avg_views")}
               value={stats.measured ? formatCompact(stats.views / stats.measured) : "—"}
               sublabel={stats.measured ? t("stat_measured", { count: formatNumber(stats.measured) }) : t("stat_no_analytics")}

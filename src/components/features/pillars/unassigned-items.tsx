@@ -69,7 +69,8 @@ export function UnassignedItems() {
   return (
     <SectionCard
       title={t("unassigned_title")}
-      description={rows.length ? t.plural("unassigned_description", rows.length, { count: formatNumber(rows.length) }) : undefined}
+      count={rows.length || null}
+      info={t("unassigned_info")}
       action={
         suggested.length ? (
           <Button type="button" size="sm" variant="outline" onClick={applySuggestions}>

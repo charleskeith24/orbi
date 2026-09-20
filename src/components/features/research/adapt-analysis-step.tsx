@@ -42,7 +42,7 @@ export function AdaptAnalysisStep({
       step={2}
       state={state}
       title={t("analysis")}
-      description={t("analysis_description")}
+      info={t("analysis_info")}
       action={
         analysis ? (
           <AiButton type="button" size="sm" variant="ghost" pending={pending} pendingLabel={t("analyzing")} disabled={!canAnalyze} onClick={onAnalyze}>

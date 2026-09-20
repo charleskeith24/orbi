@@ -3,6 +3,7 @@
 import { ChartColumn, Table2 } from "lucide-react"
 import { useId, useState, type ReactNode } from "react"
 import { chartMessages } from "@/components/charts/messages"
+import { InfoHint } from "@/components/common/info-hint"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useT } from "@/lib/i18n"
@@ -15,8 +16,12 @@ export interface ChartTable {
 }
 
 export interface ChartFrameProps {
-  title: string
-  description?: string
+  title: ReactNode
+  description?: ReactNode
+  /** Calm UI: the explanation that used to be `description`, behind an ⓘ next to the title. */
+  info?: ReactNode
+  /** Popover heading and the ⓘ's accessible name; defaults to `title` when it's a string. */
+  infoTitle?: string
   /** Toolbar content (e.g. a metric select) placed before the Chart/Table toggle. */
   actions?: ReactNode
   /** When set, a Chart/Table toggle lets every reader get the values without hovering. */
@@ -33,6 +38,8 @@ const numberFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }
 export function ChartFrame({
   title,
   description,
+  info,
+  infoTitle,
   actions,
   table,
   footer,
@@ -54,9 +61,16 @@ export function ChartFrame({
     >
       <header className="flex flex-wrap items-start gap-x-3 gap-y-2">
         <div className="min-w-0 flex-1 basis-48">
-          <h3 id={titleId} className="text-sm leading-5 font-medium">
-            {title}
-          </h3>
+          <div className="flex min-w-0 items-center gap-1">
+            <h3 id={titleId} className="min-w-0 truncate text-sm leading-5 font-medium">
+              {title}
+            </h3>
+            {info ? (
+              <InfoHint title={infoTitle ?? (typeof title === "string" ? title : undefined)} className="-my-1">
+                {info}
+              </InfoHint>
+            ) : null}
+          </div>
           {description ? <p className="mt-0.5 text-xs text-muted-foreground">{description}</p> : null}
         </div>
         {actions || table ? (

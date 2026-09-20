@@ -1,6 +1,6 @@
 "use client"
 
-import { AlarmClock, CalendarCheck, CalendarClock, CalendarDays, ChevronsDown, UserRound, UserRoundX } from "lucide-react"
+import { AlarmClock, CalendarCheck, CalendarClock, CalendarDays, ChevronsDown, ChevronsUp, UserRound, UserRoundX } from "lucide-react"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import {
@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useDeviceValue, writeDeviceValue } from "@/hooks/use-device-value"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { getUiLang, translate, useT, useUiLang } from "@/lib/i18n"
 import { BUFFER_STAGES, PUBLISHED_STAGES } from "@/lib/constants"
@@ -291,13 +292,20 @@ function OwnerChip({ item }: { item: ContentItem }) {
  * format, owner, deadline, schedule) and strategy (pillar, persona, funnel, goal). Phones show
  * the essentials until "All properties" is pressed.
  */
+/** Remembered per device: whether the workspace shows every property chip or the everyday few. */
+const PROPERTIES_KEY = "pbos:studio:properties"
+
+/**
+ * The item's properties as chips (Calm UI): stage, platform, format (desktop), pillar, due date and publish time
+ * by default; priority, owner, persona, funnel stage and goal behind "All properties" (remembered per device).
+ */
 export function PropertyBar({ item, now }: { item: ContentItem; now: Date }) {
   const t = useT(workspaceMessages)
   const isMobile = useIsMobile()
-  const [expanded, setExpanded] = useState(false)
+  const expanded = useDeviceValue(PROPERTIES_KEY) === "all"
+  const setExpanded = (value: boolean) => writeDeviceValue(PROPERTIES_KEY, value ? "all" : null)
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const update = (patch: UpdateRow<"content_items">) => dataActions.update("content_items", item.id, patch)
-  const compact = isMobile && !expanded
 
   function changeStage(stage: PipelineStage) {
     const wasLive = PUBLISHED_STAGES.includes(item.stage)
@@ -310,41 +318,31 @@ export function PropertyBar({ item, now }: { item: ContentItem; now: Date }) {
   }
 
   return (
-    <div role="group" aria-label={t("properties")} className="flex min-w-0 flex-col gap-1.5">
-      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-        <ChipTip label={t("stage")}>
-          <StageSelect value={item.stage} onChange={(stage) => stage && changeStage(stage)} size="sm" aria-label={t("stage")} className={SELECT_CHIP} />
+    <div role="group" aria-label={t("properties")} className="flex min-w-0 flex-wrap items-center gap-1.5">
+      <ChipTip label={t("stage")}>
+        <StageSelect value={item.stage} onChange={(stage) => stage && changeStage(stage)} size="sm" aria-label={t("stage")} className={SELECT_CHIP} />
+      </ChipTip>
+      {expanded ? (
+        <ChipTip label={t("priority")}>
+          <PrioritySelect value={item.priority} onChange={(priority) => priority && update({ priority })} size="sm" aria-label={t("priority")} className={SELECT_CHIP} />
         </ChipTip>
-        {compact ? null : (
-          <ChipTip label={t("priority")}>
-            <PrioritySelect value={item.priority} onChange={(priority) => priority && update({ priority })} size="sm" aria-label={t("priority")} className={SELECT_CHIP} />
-          </ChipTip>
-        )}
-        <ChipTip label={t("platform")}>
-          <PlatformSelect value={item.platform} onChange={(platform) => platform && update({ platform })} size="sm" aria-label={t("platform")} className={SELECT_CHIP} />
+      ) : null}
+      <ChipTip label={t("platform")}>
+        <PlatformSelect value={item.platform} onChange={(platform) => platform && update({ platform })} size="sm" aria-label={t("platform")} className={SELECT_CHIP} />
+      </ChipTip>
+      {expanded || !isMobile ? (
+        <ChipTip label={t("format")}>
+          <FormatSelect value={item.format_id} onChange={(format_id) => update({ format_id })} allowNone size="sm" aria-label={t("format")} className={SELECT_CHIP} />
         </ChipTip>
-        {compact ? null : (
-          <>
-            <ChipTip label={t("format")}>
-              <FormatSelect value={item.format_id} onChange={(format_id) => update({ format_id })} allowNone size="sm" aria-label={t("format")} className={SELECT_CHIP} />
-            </ChipTip>
-            <OwnerChip item={item} />
-          </>
-        )}
-        <DueChip item={item} now={now} />
-        <ScheduleChip item={item} now={now} open={scheduleOpen} onOpenChange={setScheduleOpen} />
-        {compact ? (
-          <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setExpanded(true)}>
-            <ChevronsDown aria-hidden />
-            {t("all_properties")}
-          </Button>
-        ) : null}
-      </div>
-      {compact ? null : (
-        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-          <ChipTip label={t("content_pillar")}>
-            <PillarSelect value={item.pillar_id} onChange={(pillar_id) => update({ pillar_id })} allowNone size="sm" aria-label={t("content_pillar")} className={SELECT_CHIP} />
-          </ChipTip>
+      ) : null}
+      {expanded ? <OwnerChip item={item} /> : null}
+      <ChipTip label={t("content_pillar")}>
+        <PillarSelect value={item.pillar_id} onChange={(pillar_id) => update({ pillar_id })} allowNone size="sm" aria-label={t("content_pillar")} className={SELECT_CHIP} />
+      </ChipTip>
+      <DueChip item={item} now={now} />
+      <ScheduleChip item={item} now={now} open={scheduleOpen} onOpenChange={setScheduleOpen} />
+      {expanded ? (
+        <>
           <ChipTip label={t("target_audience_tip")}>
             <PersonaSelect value={item.persona_id} onChange={(persona_id) => update({ persona_id })} allowNone size="sm" aria-label={t("persona")} className={SELECT_CHIP} />
           </ChipTip>
@@ -354,8 +352,12 @@ export function PropertyBar({ item, now }: { item: ContentItem; now: Date }) {
           <ChipTip label={t("goal")}>
             <GoalSelect value={item.goal_id} onChange={(goal_id) => update({ goal_id })} allowNone size="sm" aria-label={t("goal")} className={SELECT_CHIP} />
           </ChipTip>
-        </div>
-      )}
+        </>
+      ) : null}
+      <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+        {expanded ? <ChevronsUp aria-hidden /> : <ChevronsDown aria-hidden />}
+        {expanded ? t("fewer_properties") : t("all_properties")}
+      </Button>
     </div>
   )
 }

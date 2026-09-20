@@ -114,7 +114,6 @@ function Wheel({ summary }: { summary: FlywheelSummary }) {
 
       <div className="pointer-events-none absolute top-1/2 left-1/2 flex w-[34%] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 text-center">
         <RefreshCw className="size-5 text-brand" aria-hidden />
-        <p className="text-sm leading-5 font-semibold text-balance">{t("flywheel_title")}</p>
         {summary.measured ? (
           <p className="text-xs text-muted-foreground">
             <span className="font-medium text-foreground num">
@@ -176,10 +175,7 @@ function StepList({ summary }: { summary: FlywheelSummary }) {
             href={step.href}
             className="flex min-w-0 flex-1 items-start justify-between gap-3 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
           >
-            <span className="min-w-0">
-              <span className="block text-sm font-medium">{step.label}</span>
-              <span className="block text-xs text-pretty text-muted-foreground">{step.description}</span>
-            </span>
+            <span className="min-w-0 text-sm font-medium">{step.label}</span>
             <span className="flex shrink-0 flex-col items-end">
               <StepValue step={step} />
             </span>
@@ -204,7 +200,18 @@ export function FlywheelCard({ summary }: { summary: FlywheelSummary }) {
   return (
     <SectionCard
       title={t("flywheel_title")}
-      description={t("flywheel_description")}
+      info={
+        <>
+          <p>{t("flywheel_description")}</p>
+          <ol className="flex flex-col gap-0.5">
+            {summary.steps.map((step, i) => (
+              <li key={step.key}>
+                <span className="text-foreground num">{i + 1}.</span> <span className="font-medium text-foreground">{step.label}</span> — {step.description}
+              </li>
+            ))}
+          </ol>
+        </>
+      }
       footer={
         weak || strong ? (
           <p className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">

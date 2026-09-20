@@ -18,7 +18,7 @@ export function PostingHeatmap({ data, className }: { data: PostingHeatmapData; 
     <ChartFrame
       className={className}
       title={t("heatmap_title")}
-      description={t.plural("heatmap_description", data.measured, { count: formatNumber(data.measured) })}
+      info={t.plural("heatmap_info", data.measured, { count: formatNumber(data.measured) })}
       table={{
         columns: ["Slot", "Posts", "Avg views"],
         rows: [...data.slots]

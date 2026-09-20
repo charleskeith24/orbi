@@ -95,11 +95,12 @@ export function PlannerStepper({ step, done, onStep }: { step: number; done: boo
 }
 
 /** Focus, posts planned vs the weekly target, posting slots filled, and whether the plan is saved. */
-export function SummaryCard({ weekText, focus, doc, target, planSaved }: { weekText: string; focus: string; doc: PlanDocument; target: number; planSaved: string | null }) {
+export function SummaryCard({ focus, doc, target, planSaved }: { focus: string; doc: PlanDocument; target: number; planSaved: string | null }) {
   const t = useT(plannerMessages)
   const { planned, notCreated } = planTotals(doc)
+  // The week itself is in the page header's week switcher.
   return (
-    <SectionCard title={t("at_a_glance")} description={weekText}>
+    <SectionCard title={t("at_a_glance")}>
       <dl className="grid min-w-0 gap-3 text-sm">
         <div className="grid gap-0.5">
           <dt className="text-xs text-muted-foreground">{t("focus")}</dt>

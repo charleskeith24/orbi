@@ -1,7 +1,7 @@
 "use client"
 
 import { Lightbulb, Pin, Repeat2 } from "lucide-react"
-import { ContentThumbnail, PillarBadge, PlatformLabel, StatusPill, TierBadge } from "@/components/common"
+import { ContentThumbnail, Disclosure, PillarBadge, PlatformLabel, StatusPill, TierBadge } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { isWinnerTier } from "@/lib/analytics"
 import { useT } from "@/lib/i18n"
@@ -77,14 +77,18 @@ export function WinnerCard({ entry, onOpen }: { entry: WinnerEntry; onOpen: (id:
         </Button>
       </div>
 
-      <dl className="flex flex-col gap-1.5 border-t px-4 py-3">
-        <Detail label={t("hook")} value={item.hook ? `“${item.hook}”` : ""} clamp />
-        <Detail label={t("angle")} value={entry.angle} />
-        <Detail label={t("topic")} value={entry.topic} />
-        <Detail label={t("cta")} value={entry.cta} />
-      </dl>
+      <div className="mt-auto flex min-w-0 flex-col border-t px-4 py-2.5">
+        <Disclosure className="relative z-10">
+          <dl className="flex flex-col gap-1.5 pb-1">
+            <Detail label={t("hook")} value={item.hook ? `“${item.hook}”` : ""} clamp />
+            <Detail label={t("angle")} value={entry.angle} />
+            <Detail label={t("topic")} value={entry.topic} />
+            <Detail label={t("cta")} value={entry.cta} clamp />
+          </dl>
+        </Disclosure>
+      </div>
 
-      <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 border-t px-4 py-2.5 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t px-4 py-2.5 text-xs text-muted-foreground">
         <span>
           <span className="font-medium text-foreground num">{formatCompact(row.views)}</span> {t("views")}
         </span>

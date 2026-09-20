@@ -223,6 +223,7 @@ export function AiLog({ now }: { now: Date }) {
   return (
     <SectionCard
       title={t("log_title")}
+      info={t("log_info")}
       description={
         generations.length
           ? t("log_summary", {
@@ -235,7 +236,7 @@ export function AiLog({ now }: { now: Date }) {
                 .filter(Boolean)
                 .join(" · "),
             })
-          : t("log_empty_description")
+          : undefined
       }
       action={
         generations.length ? (

@@ -116,7 +116,7 @@ export function CampaignsView() {
     <PageContainer>
       <PageHeader
         title="Campaigns"
-        description={t("description")}
+        info={t("description")}
         actions={
           <Button size="sm" onClick={openCreate}>
             <Plus aria-hidden />
@@ -127,19 +127,22 @@ export function CampaignsView() {
 
       {campaigns.length ? (
         <>
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatTile label={t("stat_active")} value={formatNumber(stats.active)} sublabel={statusBreakdown || undefined} />
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+            <StatTile size="sm" label={t("stat_active")} value={formatNumber(stats.active)} sublabel={statusBreakdown || undefined} />
             <StatTile
+              size="sm"
               label={t("stat_published")}
               value={formatNumber(stats.published)}
               sublabel={t("stat_more_planned", { count: formatNumber(stats.planned) })}
             />
             <StatTile
+              size="sm"
               label={t("stat_views")}
               value={formatCompact(stats.views)}
               sublabel={viewsShare === null ? undefined : t("share_views", { pct: viewsShare })}
             />
             <StatTile
+              size="sm"
               label={t("stat_leads")}
               value={formatNumber(stats.leads)}
               sublabel={leadsShare === null ? undefined : t("share_leads", { pct: leadsShare })}

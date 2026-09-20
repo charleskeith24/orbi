@@ -2,7 +2,7 @@
 
 import { formatDistanceStrict } from "date-fns"
 import { useMemo } from "react"
-import { AiNotice, CopyButton, DefinitionList, KeyValue, ProviderBadge, SectionCard, StatusPill } from "@/components/common"
+import { AiNotice, CopyButton, DefinitionList, Disclosure, KeyValue, ProviderBadge, SectionCard, StatusPill } from "@/components/common"
 import { Spinner } from "@/components/ui/spinner"
 import { providerLabel, useAiStatus } from "@/lib/ai"
 import { parseDate } from "@/lib/dates"
@@ -61,7 +61,7 @@ function EngineCard({ now }: { now: Date }) {
 
   return (
     <>
-      <SectionCard title={t("engine_title")} description={t("engine_description")}>
+      <SectionCard title={t("engine_title")} info={t("engine_info")}>
         {status.loading ? (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <Spinner /> {t("checking")}
@@ -96,7 +96,7 @@ function EngineCard({ now }: { now: Date }) {
 
       <SectionCard
         title={live ? t("config_title") : t("enable_title")}
-        description={live ? t("config_live") : t("config_offline")}
+        info={live ? t("config_live_info") : t("config_offline_info")}
       >
         <div className="flex flex-col gap-4">
           {!live ? (
@@ -117,17 +117,19 @@ function EngineCard({ now }: { now: Date }) {
             </pre>
             <CopyButton text={ENV_SNIPPET} successMessage={t("snippet_copied")} className="absolute top-1.5 right-1.5" />
           </div>
-          <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[max-content_minmax(0,1fr)]">
-            {ENV_VARS.map((v) => (
-              <div key={v.name} className="contents">
-                <dt className="flex items-center gap-2">
-                  <code className="font-mono text-xs">{v.name}</code>
-                  {v.required ? <span className="text-xs text-muted-foreground">{t("required")}</span> : null}
-                </dt>
-                <dd className="mb-1 text-xs text-muted-foreground sm:mb-0">{t(v.description)}</dd>
-              </div>
-            ))}
-          </dl>
+          <Disclosure label={t("env_vars")}>
+            <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[max-content_minmax(0,1fr)]">
+              {ENV_VARS.map((v) => (
+                <div key={v.name} className="contents">
+                  <dt className="flex items-center gap-2">
+                    <code className="font-mono text-xs">{v.name}</code>
+                    {v.required ? <span className="text-xs text-muted-foreground">{t("required")}</span> : null}
+                  </dt>
+                  <dd className="mb-1 text-xs text-muted-foreground sm:mb-0">{t(v.description)}</dd>
+                </div>
+              ))}
+            </dl>
+          </Disclosure>
         </div>
       </SectionCard>
     </>

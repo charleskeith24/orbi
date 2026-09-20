@@ -95,7 +95,7 @@ export function QuestionQuickAdd({ defaults, onOpen }: { defaults: QuestionDefau
           onChange={setPlatform}
           className="w-full sm:w-40"
         />
-        <Button type="submit" disabled={!clean}>
+        <Button type="submit" variant="outline" disabled={!clean}>
           <Plus aria-hidden />
           {c("add")}
         </Button>

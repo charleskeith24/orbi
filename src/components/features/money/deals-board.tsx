@@ -18,7 +18,7 @@ import {
   type KeyboardCoordinateGetter,
   type UniqueIdentifier,
 } from "@dnd-kit/core"
-import { AlarmClock } from "lucide-react"
+import { AlarmClock, FileText, ListChecks } from "lucide-react"
 import { memo, useMemo, useState } from "react"
 import { PlatformIcon } from "@/components/common"
 import { DEAL_STATUS_IDS, PLATFORMS } from "@/lib/constants"
@@ -229,13 +229,21 @@ const DealColumn = memo(function DealColumn({
           </li>
         ))}
         {!deals.length ? (
+          // A quiet drop target; what belongs here is its tooltip on desktop, a line on touch screens.
           <li
+            title={statusDescription(status)}
             className={cn(
-              "flex min-h-24 flex-1 items-center justify-center rounded-md border border-dashed px-3 py-4 text-center text-xs text-pretty text-muted-foreground",
+              "flex min-h-20 flex-1 items-center justify-center rounded-md border border-dashed px-3 py-4 text-center text-xs text-pretty text-muted-foreground",
               dragging && "border-brand/40"
             )}
           >
-            {dragging ? t("drop_here", { status: statusLabel(status) }) : filtered && total ? t("no_matches_column") : statusDescription(status)}
+            {dragging ? (
+              t("drop_here", { status: statusLabel(status) })
+            ) : filtered && total ? (
+              t("no_matches_column")
+            ) : (
+              <span className="md:hidden">{statusDescription(status)}</span>
+            )}
           </li>
         ) : null}
       </ul>
@@ -360,8 +368,21 @@ function DealCardBody({
               ))}
             </span>
           ) : null}
-          {progress.total ? <span className="num">{t("deliverables_progress", progress)}</span> : null}
-          {deal.content_item_ids.length ? <span className="num">{t.plural("posts", deal.content_item_ids.length)}</span> : null}
+          {/* Numbers with an icon; the words are for screen readers and the tooltip. */}
+          {progress.total ? (
+            <span className="inline-flex items-center gap-1 num" title={t("deliverables_progress", progress)}>
+              <ListChecks className="size-3" aria-hidden />
+              <span aria-hidden>{`${progress.done}/${progress.total}`}</span>
+              <span className="sr-only">{t("deliverables_progress", progress)}</span>
+            </span>
+          ) : null}
+          {deal.content_item_ids.length ? (
+            <span className="inline-flex items-center gap-1 num" title={t.plural("posts", deal.content_item_ids.length)}>
+              <FileText className="size-3" aria-hidden />
+              <span aria-hidden>{deal.content_item_ids.length}</span>
+              <span className="sr-only">{t.plural("posts", deal.content_item_ids.length)}</span>
+            </span>
+          ) : null}
         </div>
       ) : null}
     </article>

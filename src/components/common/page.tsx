@@ -1,5 +1,6 @@
 import { InfoHint } from "@/components/common/info-hint"
-import type { IconComponent } from "@/components/common/types"
+import { TONE_TEXT } from "@/components/common/tone"
+import type { IconComponent, StatusTone } from "@/components/common/types"
 import { cn, formatNumber } from "@/lib/utils"
 
 const PAGE_WIDTHS = {
@@ -91,6 +92,7 @@ export function PageHeader({
 export function SectionHeader({
   title,
   count,
+  countTone,
   info,
   infoTitle,
   action,
@@ -100,6 +102,8 @@ export function SectionHeader({
 }: {
   title: React.ReactNode
   count?: number | null
+  /** Status tone for the count (e.g. "critical" for overdue work). */
+  countTone?: StatusTone
   info?: React.ReactNode
   infoTitle?: string
   action?: React.ReactNode
@@ -115,7 +119,7 @@ export function SectionHeader({
           {title}
         </Heading>
         {count !== undefined && count !== null ? (
-          <span className="shrink-0 text-sm text-muted-foreground num">{formatNumber(count)}</span>
+          <span className={cn("shrink-0 text-sm num", countTone ? TONE_TEXT[countTone] : "text-muted-foreground")}>{formatNumber(count)}</span>
         ) : null}
         {info ? <InfoHint title={hintTitle}>{info}</InfoHint> : null}
       </div>
@@ -129,7 +133,9 @@ export function PageSection({
   title,
   description,
   count,
+  countTone,
   info,
+  infoTitle,
   action,
   children,
   className,
@@ -139,7 +145,10 @@ export function PageSection({
   /** Legacy description line — prefer `info` (Calm UI). */
   description?: React.ReactNode
   count?: number | null
+  /** Status tone for the count (e.g. "critical" for overdue work). */
+  countTone?: StatusTone
   info?: React.ReactNode
+  infoTitle?: string
   action?: React.ReactNode
   children: React.ReactNode
   className?: string
@@ -149,7 +158,7 @@ export function PageSection({
   return (
     <section id={id} aria-labelledby={headingId} className={cn("flex min-w-0 flex-col gap-3", className)}>
       <div className="min-w-0">
-        <SectionHeader id={headingId} title={title} count={count} info={info} action={action} />
+        <SectionHeader id={headingId} title={title} count={count} countTone={countTone} info={info} infoTitle={infoTitle} action={action} />
         {description ? <p className="text-xs text-pretty text-muted-foreground">{description}</p> : null}
       </div>
       {children}

@@ -1,6 +1,6 @@
 "use client"
 
-import { Meter, Token } from "@/components/common"
+import { Meter } from "@/components/common"
 import { useT } from "@/lib/i18n"
 import { formatCompact, formatNumber, formatPercent } from "@/lib/utils"
 import { MixStatusPill } from "./mix-status"
@@ -9,9 +9,7 @@ import { PillarIconTile } from "./pillar-icons"
 import { pillarMessages } from "./pillar-messages"
 import type { PillarStats } from "./use-pillar-overview"
 
-const MAX_EXAMPLES = 4
-
-/** Visual pillar card: identity, actual vs target share, published performance and example chips. */
+/** Visual pillar card: identity, actual vs target share and published performance (description and examples live in the detail sheet). */
 export function PillarCard({
   stats,
   enoughData,
@@ -42,25 +40,23 @@ export function PillarCard({
   const { pillar, mix, perf } = stats
   const name = pillar.name || t("untitled_pillar")
   const actual = mix?.actualPct ?? 0
-  const examples = pillar.examples.slice(0, MAX_EXAMPLES)
-  const hidden = pillar.examples.length - examples.length
 
   return (
     <article className="relative flex min-w-0 flex-col gap-4 rounded-lg border bg-card p-4 text-card-foreground transition-[border-color,box-shadow] hover:border-foreground/20 hover:shadow-sm has-[[data-card-link]:focus-visible]:border-ring has-[[data-card-link]:focus-visible]:ring-3 has-[[data-card-link]:focus-visible]:ring-ring/50">
-      <header className="flex min-w-0 items-start gap-3">
+      <header className="flex min-w-0 items-center gap-3">
         <PillarIconTile name={pillar.icon} color={pillar.color} />
         <div className="min-w-0 flex-1">
           <h3 className="text-sm leading-5 font-semibold">
             <button
               type="button"
               data-card-link
+              title={pillar.description || undefined}
               onClick={onOpen}
               className="block w-full truncate text-left outline-none after:absolute after:inset-0 after:rounded-lg after:content-['']"
             >
               {name}
             </button>
           </h3>
-          <p className="mt-0.5 line-clamp-2 text-xs text-pretty text-muted-foreground">{pillar.description || t("no_description")}</p>
         </div>
         <PillarActionsMenu
           pillar={pillar}
@@ -100,20 +96,6 @@ export function PillarCard({
         <MiniStat label={t("leads")} value={formatNumber(perf?.leads ?? 0)} />
       </dl>
 
-      {examples.length ? (
-        <div className="mt-auto flex min-w-0 flex-wrap items-center gap-1">
-          {examples.map((example, i) => (
-            <Token key={`${example}-${i}`} title={example} className="max-w-40 font-normal text-foreground/85">
-              <span className="truncate">{example}</span>
-            </Token>
-          ))}
-          {hidden > 0 ? (
-            <span className="text-xs text-muted-foreground" title={pillar.examples.slice(MAX_EXAMPLES).join(", ")}>
-              +{hidden}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
     </article>
   )
 }

@@ -171,7 +171,6 @@ export function IdeasStep({
             {t("add_from_bank")}
           </Button>
         </div>
-        <p className="text-xs text-pretty text-muted-foreground">{t("ranked_by")}</p>
         {available.length ? (
           <ul className="grid min-w-0 gap-1.5">
             {available.map((rec) => {
@@ -257,7 +256,6 @@ export function PlatformsStep({
   }
   return (
     <div className="grid min-w-0 gap-3">
-      <p className="text-xs text-pretty text-muted-foreground">{t("platforms_hint")}</p>
       <ul className="grid min-w-0 gap-2">
         {picks.map((pick) => {
           const none = !pick.entries.length
@@ -338,8 +336,7 @@ export function DeadlinesStep({
   const minDate = toISODate(now)
   return (
     <div className="grid min-w-0 gap-3">
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-        <p className="min-w-0 flex-1 basis-64 text-xs text-pretty text-muted-foreground">{t("deadlines_hint")}</p>
+      <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
         <div className="flex shrink-0 gap-2">
           <Button type="button" size="sm" variant="outline" onClick={() => onAutoFill(false)}>
             <CalendarClock aria-hidden />

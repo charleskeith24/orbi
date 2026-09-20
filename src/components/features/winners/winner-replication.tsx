@@ -183,7 +183,7 @@ export function WinnerReplication({ item, ratio }: { item: ContentItem; ratio: n
     <PageSection
       id="winner-replicate"
       title={t("replicate_title")}
-      description={t("replicate_description")}
+      info={t("replicate_info")}
       action={
         <AiButton size="sm" variant={session ? "outline" : "default"} pending={ai.isPending} onClick={generate}>
           {session ? t("regenerate") : t("generate_ideas")}

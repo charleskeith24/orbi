@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useId, useState } from "react"
 import { toast } from "sonner"
-import { FormField, PageContainer } from "@/components/common"
+import { FormField, InfoHint, PageContainer } from "@/components/common"
 import { useAdminResource as useResource } from "@/components/features/admin/use-admin-resource"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -153,7 +153,7 @@ function JoinForm({ code, name }: { code: string; name: string }) {
       <FormField
         label={t("display_name")}
         htmlFor={`${id}-display`}
-        description={t("display_name_help")}
+        labelAction={<InfoHint title={t("display_name")}>{t("display_name_help")}</InfoHint>}
         error={touched && !valid ? t("error_display_name") : undefined}
         required
       >

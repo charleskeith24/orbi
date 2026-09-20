@@ -5,6 +5,7 @@ import { useId, useState } from "react"
 import {
   AiButton,
   AngleSelect,
+  Disclosure,
   FormatSelect,
   FormField,
   FunnelSelect,
@@ -66,6 +67,8 @@ export function GeneratorBriefForm({
     !brief.formatId &&
     count === EMPTY_BRIEF.count
   const set = (patch: Partial<GeneratorBrief>) => setBrief((current) => ({ ...current, ...patch }))
+  /** Filters behind "More options" that are set — it opens by itself when a loaded brief uses them. */
+  const moreSet = [brief.funnel, brief.angleId, brief.problemId, brief.formatId].filter(Boolean).length
 
   /** A problem that belongs to another persona no longer fits — clear it with the persona change. */
   function setPersona(personaId: ID | null) {
@@ -102,7 +105,7 @@ export function GeneratorBriefForm({
   return (
     <SectionCard
       title={t("brief")}
-      description={t("brief_description")}
+      info={t("brief_info")}
       action={
         <Button
           type="button"
@@ -123,8 +126,8 @@ export function GeneratorBriefForm({
           <PillarSelect
             id={field("pillar")}
             allowNone
-            noneLabel={t("any_pillar")}
-            placeholder={t("any_pillar")}
+            noneLabel={t("any")}
+            placeholder={t("any")}
             value={brief.pillarId}
             onChange={(pillarId) => set({ pillarId })}
           />
@@ -133,8 +136,8 @@ export function GeneratorBriefForm({
           <PersonaSelect
             id={field("persona")}
             allowNone
-            noneLabel={t("any_persona")}
-            placeholder={t("any_persona")}
+            noneLabel={t("any")}
+            placeholder={t("any")}
             value={brief.personaId}
             onChange={setPersona}
           />
@@ -144,8 +147,8 @@ export function GeneratorBriefForm({
             <PlatformSelect
               id={field("platform")}
               allowNone
-              noneLabel={t("any_platform")}
-              placeholder={t("any_platform")}
+              noneLabel={t("any")}
+              placeholder={t("any")}
               value={brief.platform}
               onChange={(platform) => set({ platform })}
             />
@@ -154,14 +157,14 @@ export function GeneratorBriefForm({
             <GoalSelect
               id={field("goal")}
               allowNone
-              noneLabel={t("any_goal")}
-              placeholder={t("any_goal")}
+              noneLabel={t("any")}
+              placeholder={t("any")}
               value={brief.goalId}
               onChange={(goalId) => set({ goalId })}
             />
           </FormField>
         </div>
-        <FormField label={t("topic")} htmlFor={field("topic")} description={t("topic_help")}>
+        <FormField label={t("topic")} htmlFor={field("topic")}>
           <Input
             id={field("topic")}
             value={brief.topic}
@@ -172,55 +175,53 @@ export function GeneratorBriefForm({
             onChange={(event) => set({ topic: event.target.value })}
           />
         </FormField>
-        <div className={PAIR}>
-          <FormField label={t("funnel_stage")} htmlFor={field("funnel")}>
-            <FunnelSelect
-              id={field("funnel")}
+        <Disclosure label={t("more_options")} meta={moreSet ? String(moreSet) : undefined} defaultOpen={moreSet > 0} contentClassName="flex flex-col gap-4 pt-3">
+          <div className={PAIR}>
+            <FormField label={t("funnel_stage")} htmlFor={field("funnel")}>
+              <FunnelSelect
+                id={field("funnel")}
+                allowNone
+                noneLabel={t("any")}
+                placeholder={t("any")}
+                value={brief.funnel}
+                onChange={(funnel) => set({ funnel })}
+              />
+            </FormField>
+            <FormField label={t("angle")} htmlFor={field("angle")}>
+              <AngleSelect
+                id={field("angle")}
+                allowNone
+                noneLabel={t("any")}
+                placeholder={t("any")}
+                value={brief.angleId}
+                onChange={(angleId) => set({ angleId })}
+              />
+            </FormField>
+          </div>
+          <FormField label={t("audience_problem")} htmlFor={field("problem")}>
+            <ProblemSelect
+              id={field("problem")}
+              personaId={brief.personaId}
               allowNone
-              noneLabel={t("any_stage")}
-              placeholder={t("any_stage")}
-              value={brief.funnel}
-              onChange={(funnel) => set({ funnel })}
+              noneLabel={t("any")}
+              placeholder={t("any")}
+              value={brief.problemId}
+              onChange={setProblem}
             />
           </FormField>
-          <FormField label={t("angle")} htmlFor={field("angle")}>
-            <AngleSelect
-              id={field("angle")}
-              allowNone
-              noneLabel={t("any_angle")}
-              placeholder={t("any_angle")}
-              value={brief.angleId}
-              onChange={(angleId) => set({ angleId })}
-            />
-          </FormField>
-        </div>
-        <FormField
-          label={t("audience_problem")}
-          htmlFor={field("problem")}
-          description={brief.personaId ? t("problem_help_persona") : t("problem_help_none")}
-        >
-          <ProblemSelect
-            id={field("problem")}
-            personaId={brief.personaId}
-            allowNone
-            noneLabel={t("any_problem")}
-            placeholder={t("any_problem")}
-            value={brief.problemId}
-            onChange={setProblem}
-          />
-        </FormField>
-        <div className={PAIR}>
           <FormField label={t("format")} htmlFor={field("format")}>
             <FormatSelect
               id={field("format")}
               allowNone
-              noneLabel={t("any_format")}
-              placeholder={t("any_format")}
+              noneLabel={t("any")}
+              placeholder={t("any")}
               value={brief.formatId}
               onChange={(formatId) => set({ formatId })}
             />
           </FormField>
-          <FormField label={t("count_label")} htmlFor={field("count")} error={countOk ? undefined : t("count_error", { min: MIN_COUNT, max: MAX_COUNT })}>
+        </Disclosure>
+        <div className="flex min-w-0 items-end gap-3">
+          <FormField className="w-28 shrink-0" label={t("count_label")} htmlFor={field("count")} error={countOk ? undefined : t("count_error", { min: MIN_COUNT, max: MAX_COUNT })}>
             <NumberField
               id={field("count")}
               integer
@@ -231,10 +232,10 @@ export function GeneratorBriefForm({
               aria-invalid={!countOk || undefined}
             />
           </FormField>
+          <AiButton type="submit" variant="default" pending={pending} disabled={disabled || !countOk} className="min-w-0 flex-1">
+            {countOk ? t.plural("generate", count) : t("generate_ideas")}
+          </AiButton>
         </div>
-        <AiButton type="submit" variant="default" pending={pending} disabled={disabled || !countOk} className="w-full">
-          {countOk ? t.plural("generate", count) : t("generate_ideas")}
-        </AiButton>
         {footer}
       </form>
     </SectionCard>

@@ -3,7 +3,7 @@
 import { AlarmClock, ArrowRight, BellRing, ChartColumn, ExternalLink, Handshake, Megaphone, Pencil, Target } from "lucide-react"
 import Link from "next/link"
 import { useMemo } from "react"
-import { ColorDot, DatePicker, DefinitionList, DetailSheet, KeyValue, OptionSelect, PillarBadge, PlatformIcon } from "@/components/common"
+import { ColorDot, DatePicker, DefinitionList, DetailSheet, InfoHint, KeyValue, OptionSelect, PillarBadge, PlatformIcon } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { collabResults } from "@/lib/analytics"
 import { PLATFORMS, PUBLISHED_STAGES } from "@/lib/constants"
@@ -29,11 +29,27 @@ const NEXT: Partial<Record<CollabStatus, CollabStatus>> = {
   scheduled: "published",
 }
 
-function Section({ title, action, children, className }: { title: string; action?: React.ReactNode; children: React.ReactNode; className?: string }) {
+function Section({
+  title,
+  info,
+  action,
+  children,
+  className,
+}: {
+  title: string
+  /** Explanation behind an ⓘ next to the title (Calm UI). */
+  info?: React.ReactNode
+  action?: React.ReactNode
+  children: React.ReactNode
+  className?: string
+}) {
   return (
     <section className={cn("flex min-w-0 flex-col gap-2", className)}>
       <div className="flex min-h-7 items-center justify-between gap-2">
-        <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
+        <div className="flex min-w-0 items-center gap-1">
+          <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
+          {info ? <InfoHint title={title}>{info}</InfoHint> : null}
+        </div>
         {action}
       </div>
       {children}
@@ -50,7 +66,10 @@ function Figure({ label, value, muted }: { label: string; value: string; muted?:
   )
 }
 
-/** Collab detail (`/collabs?open=<id>`): status, partner, details, your posts, outreach, results and notes. */
+/**
+ * Collab detail (`/collabs?open=<id>`): status (its meaning in an ⓘ), partner, details, your posts, outreach,
+ * results (where they come from in an ⓘ) and notes.
+ */
 export function CollabDetailSheet({
   collab,
   open,
@@ -149,9 +168,16 @@ function CollabBody({ collab, now }: { collab: Collab; now: Date }) {
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <div className="flex min-w-0 flex-col gap-2">
-        <div className="grid min-w-0 gap-3 sm:grid-cols-[12rem_minmax(0,1fr)] sm:items-center">
-          <OptionSelect options={statusOptions} value={collab.status} size="sm" aria-label={t("status")} onChange={(next) => next && setCollabStatus(collab, next)} />
-          <p className="text-xs text-pretty text-muted-foreground">{statusDescription(collab.status)}</p>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <OptionSelect
+            options={statusOptions}
+            value={collab.status}
+            size="sm"
+            aria-label={t("status")}
+            className="w-48 max-w-full"
+            onChange={(next) => next && setCollabStatus(collab, next)}
+          />
+          <InfoHint label={t("status_info")}>{statusDescription(collab.status)}</InfoHint>
         </div>
         {collab.status === "reached_out" || (collab.status === "agreed" && collab.follow_up_on) ? (
           <div
@@ -162,7 +188,9 @@ function CollabBody({ collab, now }: { collab: Collab; now: Date }) {
           >
             {due ? <AlarmClock className="size-4 shrink-0 text-critical-fg" aria-hidden /> : <BellRing className="size-4 shrink-0 text-muted-foreground" aria-hidden />}
             <span className={cn("min-w-0 flex-1", due && "font-medium text-critical-fg")}>
-              {collab.follow_up_on ? (due ? t("follow_up_due", { date: formatDate(collab.follow_up_on, "EEE, MMM d") }) : t("follow_up_on", { date: formatDate(collab.follow_up_on, "EEE, MMM d") })) : t("follow_up_none")}
+              {collab.follow_up_on
+                ? t(due ? "follow_up_due" : "follow_up_on", { date: formatDate(collab.follow_up_on, "EEE, MMM d") })
+                : t("follow_up_none")}
             </span>
             <Button type="button" variant="outline" size="xs" onClick={() => markFollowedUp(collab, now)}>
               <BellRing aria-hidden />
@@ -248,7 +276,7 @@ function CollabBody({ collab, now }: { collab: Collab; now: Date }) {
         </DefinitionList>
       </Section>
 
-      <Section title={t("your_posts")}>
+      <Section title={t("your_posts")} info={t("posts_info")}>
         <CollabContentSection collab={collab} />
       </Section>
 
@@ -257,6 +285,7 @@ function CollabBody({ collab, now }: { collab: Collab; now: Date }) {
       {showResults ? (
         <Section
           title={t("results")}
+          info={!results.posts ? t("results_no_posts") : !results.measured ? t("results_no_metrics") : t("results_note")}
           action={
             unmeasured ? (
               <Button type="button" variant="ghost" size="xs" className="text-muted-foreground" onClick={() => uiActions.openDialog({ type: "add-metrics", itemId: unmeasured })}>
@@ -272,9 +301,6 @@ function CollabBody({ collab, now }: { collab: Collab; now: Date }) {
             <Figure label={t("engagement")} value={results.engagementRate !== null ? formatPercent(results.engagementRate) : "—"} muted={results.engagementRate === null} />
             <Figure label={t("followers_gained")} value={results.measured ? `+${formatNumber(results.followersGained)}` : "—"} muted={!results.measured} />
           </div>
-          <p className="text-xs text-pretty text-muted-foreground">
-            {!results.posts ? t("results_no_posts") : !results.measured ? t("results_no_metrics") : t("results_note")}
-          </p>
           <div className="flex min-w-0 flex-col gap-3 rounded-lg border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 flex-col gap-1">
               <span className="text-sm">{t("your_rating")}</span>

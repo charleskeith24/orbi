@@ -9,7 +9,6 @@ import { PLATFORMS } from "@/lib/constants"
 import { formatRelativeDay } from "@/lib/dates"
 import { useT, useUiLang, type UiLang } from "@/lib/i18n"
 import { uiActions } from "@/lib/store"
-import { formatNumber } from "@/lib/utils"
 import { analyticsMessages } from "./messages"
 
 const VISIBLE = 5
@@ -29,8 +28,9 @@ export function MissingAnalytics({ rows, viewAllHref, now }: { rows: Performance
   return (
     <SectionCard
       icon={ClipboardList}
-      title={t.plural("missing_title", rows.length, { count: formatNumber(rows.length) })}
-      description={t("missing_description")}
+      title={t("missing_title")}
+      count={rows.length}
+      info={t("missing_info")}
       action={
         rows.length > VISIBLE ? (
           <Button asChild variant="ghost" size="sm">

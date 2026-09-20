@@ -40,10 +40,7 @@ export function FunnelTab({ draft, now }: { draft: SettingsDraft<FunnelValues>; 
 
   return (
     <form onSubmit={save} noValidate className="flex min-w-0 flex-col gap-4">
-      <SectionCard
-        title={t("mix_title")}
-        description={t("mix_description")}
-      >
+      <SectionCard title={t("mix_title")} info={t("mix_info")}>
         <SettingRows>
           {FUNNEL_KEYS.map((stage) => {
             const meta = FUNNEL_STAGES[stage]
@@ -57,7 +54,8 @@ export function FunnelTab({ draft, now }: { draft: SettingsDraft<FunnelValues>; 
                     {meta.name}
                   </span>
                 }
-                description={`${meta.goal} — ${meta.examples.slice(0, 4).join(", ").toLowerCase()}.`}
+                info={`${meta.goal} — ${meta.examples.slice(0, 4).join(", ").toLowerCase()}.`}
+                infoTitle={meta.name}
                 error={errors[stage]}
               >
                 <NumberField
@@ -133,7 +131,8 @@ function FunnelPreview({ values, usingSaved, now }: { values: FunnelValues; usin
   return (
     <SectionCard
       title={t("preview_title")}
-      description={usingSaved ? t("preview_saved") : t("preview_live")}
+      description={usingSaved ? t("preview_saved") : undefined}
+      info={t("preview_info")}
       action={
         <Button asChild variant="ghost" size="sm">
           <Link href="/pillars/funnel">Content Funnel</Link>

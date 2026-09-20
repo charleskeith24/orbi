@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, Link2, SearchX, UsersRound } from "lucide-react"
+import { ArrowLeft, Link2, SearchX } from "lucide-react"
 import Link from "next/link"
 import { useMemo } from "react"
 import { EmptyState, PageContainer, PageHeader } from "@/components/common"
@@ -19,7 +19,7 @@ import { CircleWeekSection } from "./circle-week"
 import { CirclesFrame, CirclesLoadError, SampleDataNote, useCircles } from "./circles-client"
 import { circlesMessages, circleWeekMessages } from "./messages"
 
-/** `/circles/<id>` — This week (check-in), Collab asks and Members. */
+/** `/circles/<id>` (Calm UI) — This week (check-in), Collab asks and Members; explanations wait behind ⓘs. */
 export function CircleDetailView({ circleId }: { circleId: ID }) {
   return (
     <CirclesFrame>
@@ -110,27 +110,18 @@ function CircleDetail({ circleId }: { circleId: ID }) {
     <PageContainer>
       <PageHeader
         title={snapshot.circle.name}
-        icon={UsersRound}
         description={subtitle}
-        actions={
-          <Button asChild size="sm" variant="ghost">
-            <Link href="/circles">
-              <ArrowLeft aria-hidden />
-              {t("back")}
-            </Link>
-          </Button>
-        }
       />
       <SampleDataNote />
 
       {week.total <= 1 ? (
-        <div role="note" className="flex items-start gap-3 rounded-lg border border-dashed bg-card/50 p-4">
-          <Link2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-          <div className="min-w-0">
-            <p className="text-sm font-medium">{t("alone_title")}</p>
-            <p className="text-xs text-muted-foreground">{t("alone_body")}</p>
-          </div>
-        </div>
+        <p role="note" className="flex min-w-0 items-center gap-2 text-sm">
+          <Link2 className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <span className="min-w-0 text-pretty">
+            <span className="font-medium">{t("alone_title")}</span>
+            <span className="text-muted-foreground"> — {t("alone_body")}</span>
+          </span>
+        </p>
       ) : null}
 
       <div className="grid min-w-0 items-start gap-6 lg:grid-cols-3" aria-busy={circle.loading || undefined}>

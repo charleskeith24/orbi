@@ -7,7 +7,6 @@ import { defineMessages } from "@/lib/i18n/core"
 
 export const storyVaultMessages = defineMessages({
   en: {
-    description: "Your content memory — the real stories, lessons and beliefs that make every draft sound like you.",
     new_story: "New story",
     missing_link: "The story in this link no longer exists — it may have been deleted.",
     dismiss: "Dismiss",
@@ -22,14 +21,12 @@ export const storyVaultMessages = defineMessages({
     stories_one: "{count} story",
     stories_other: "{count} stories",
     shown_of: "{visible} of {stories}",
-    lessons_one: "{count} lesson",
-    lessons_other: "{count} lessons",
     ideas_one: "{count} idea",
     ideas_other: "{count} ideas",
-    pieces_one: "{count} piece",
-    pieces_other: "{count} pieces",
+    pieces_one: "{count} post",
+    pieces_other: "{count} posts",
     used_in: "used in {ideas}",
-    used_in_content: "used in {ideas} and {pieces} of content",
+    used_in_content: "used in {ideas} · {pieces}",
     not_used_count: "{count} not used yet",
     // Filter bar
     sort_recent: "Most recent",
@@ -84,9 +81,11 @@ export const storyVaultMessages = defineMessages({
     delete_single: "“{title}” will be removed from your Story Vault. The idea created from it stays in your Idea Bank.",
     delete_many: "“{title}” will be removed from your Story Vault. The {count} ideas created from it stay in your Idea Bank.",
     deleted: "Story deleted",
+    info:
+      "Your content memory — the real stories, lessons and beliefs that make every draft sound like you. Open a story to turn it into content angles.",
+    filters: "Filters",
   },
   tl: {
-    description: "Ang content memory mo — mga totoong story, lesson at paniniwala na nagpapatunog ikaw sa bawat draft.",
     new_story: "Bagong story",
     missing_link: "Wala na ang story sa link na 'to — baka na-delete.",
     dismiss: "Isara",
@@ -101,15 +100,13 @@ export const storyVaultMessages = defineMessages({
     stories_one: "{count} story",
     stories_other: "{count} stories",
     shown_of: "{visible} sa {stories}",
-    lessons_one: "{count} lesson",
-    lessons_other: "{count} lessons",
     ideas_one: "{count} idea",
     ideas_other: "{count} ideas",
-    pieces_one: "{count} piece",
-    pieces_other: "{count} pieces",
+    pieces_one: "{count} post",
+    pieces_other: "{count} posts",
     used_in: "ginamit sa {ideas}",
-    used_in_content: "ginamit sa {ideas} at {pieces} ng content",
-    not_used_count: "{count} hindi pa ginamit",
+    used_in_content: "ginamit sa {ideas} · {pieces}",
+    not_used_count: "{count} hindi pa gamit",
     sort_recent: "Pinakabago",
     sort_favorites: "Favourites una",
     sort_used: "Pinakagamit",
@@ -160,6 +157,9 @@ export const storyVaultMessages = defineMessages({
     delete_single: "Mawawala ang “{title}” sa Story Vault mo. Naiwan sa Idea Bank ang idea na ginawa mula dito.",
     delete_many: "Mawawala ang “{title}” sa Story Vault mo. Naiwan sa Idea Bank ang {count} ideas na ginawa mula dito.",
     deleted: "Na-delete ang story",
+    info:
+      "Ang content memory mo — mga totoong story, lesson at paniniwala na nagpapatunog-ikaw sa bawat draft. Buksan ang story para gawing content angles.",
+    filters: "Filters",
   },
 })
 

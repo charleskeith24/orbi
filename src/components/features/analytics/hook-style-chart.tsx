@@ -46,7 +46,7 @@ export function HookStyleChart({ groups }: { groups: HookCategoryAggregate[] }) 
   return (
     <ChartFrame
       title={t("hook_title")}
-      description={t(metric.description)}
+      info={t(metric.description)}
       actions={
         <Select value={metricId} onValueChange={(value) => setMetricId(value as HookMetric)}>
           <SelectTrigger size="sm" className="w-36" aria-label={t("hook_metric_aria")}>

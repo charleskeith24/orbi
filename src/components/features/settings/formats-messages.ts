@@ -49,11 +49,8 @@ export const formatsMessages = defineMessages({
     no_match_title: "No formats match",
     no_match_description: "Try a different search.",
     clear_search: "Clear search",
-    order_note:
-      "Order here is the order formats appear in pickers. Deleting a format keeps content that uses it — it just loses the format.",
     empty_title: "No content formats yet",
-    empty_description:
-      "Formats — Reels, carousels, LinkedIn posts, long-form videos — tell Content Studio which script structure to start from.",
+    empty_description: "Reels, carousels, LinkedIn posts, long-form videos — each starts Content Studio from its own script structure.",
 
     // Dialog
     name_required: "Give the format a name.",
@@ -121,11 +118,8 @@ export const formatsMessages = defineMessages({
     no_match_title: "Walang format na tugma",
     no_match_description: "Subukan ang ibang search.",
     clear_search: "I-clear ang search",
-    order_note:
-      "Ang order dito ay ang order ng formats sa mga picker. Kapag nag-delete ng format, naiiwan ang content na gumagamit nito — mawawala lang ang format.",
     empty_title: "Wala pang content formats",
-    empty_description:
-      "Ang formats — Reels, carousels, LinkedIn posts, long-form videos — ay nagsasabi sa Content Studio kung anong script structure ang simula.",
+    empty_description: "Reels, carousels, LinkedIn posts, long-form videos — bawat isa may sariling script structure sa Content Studio.",
 
     name_required: "Bigyan ng pangalan ang format.",
     name_too_long: "Huwag lampasan ang {max} characters.",

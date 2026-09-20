@@ -1,6 +1,6 @@
 "use client"
 
-import { ChartColumn, Trophy } from "lucide-react"
+import { ChartColumn } from "lucide-react"
 import Link from "next/link"
 import {
   ContentThumbnail,
@@ -31,7 +31,7 @@ function TopPiecesCard({ rows, avgViews }: { rows: TieredRow[]; avgViews: number
   const rest = ranked.slice(1, 1 + RUNNERS_UP)
 
   return (
-    <SectionCard title={t("top_pieces")} description={t("top_pieces_description")} icon={Trophy}>
+    <SectionCard title={t("top_pieces")} info={t("top_pieces_description")}>
       {best ? (
         <div className="flex flex-col gap-3">
           <div className="flex min-w-0 items-start gap-2.5">
@@ -102,7 +102,7 @@ export function CampaignPerformanceSection({ perf }: { perf: CampaignPerformance
 
   if (!perf.published) {
     return (
-      <PageSection title={t("performance")} description={t("performance_empty_description")}>
+      <PageSection title={t("performance")} info={t("performance_empty_description")}>
         <SectionCard>
           <EmptyState
             compact
@@ -130,35 +130,33 @@ export function CampaignPerformanceSection({ perf }: { perf: CampaignPerformance
   return (
     <PageSection
       title={t("performance")}
-      description={t("performance_description", {
+      info={t("performance_description", {
         published: t.plural("published_pieces", perf.published, { count: formatNumber(perf.published) }),
         unmeasured: unmeasured > 0 ? t("unmeasured_suffix", { pieces: pieces(unmeasured) }) : "",
       })}
     >
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
+      {/* Published vs target is the Progress card's; these are the results. */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         <StatTile
-          label={t("published")}
-          value={formatNumber(perf.published)}
-          sublabel={
-            perf.targetPosts ? t("of_target", { target: formatNumber(perf.targetPosts) }) : t("planned", { count: formatNumber(perf.planned) })
-          }
-        />
-        <StatTile
+          size="sm"
           label={t("views")}
           value={formatCompact(totals.views)}
           sublabel={totals.avgViews !== null ? t("avg_per_piece", { value: formatCompact(totals.avgViews) }) : undefined}
         />
         <StatTile
+          size="sm"
           label={t("reach")}
           value={formatCompact(totals.reach)}
           sublabel={t.plural("followers_gained", totals.followersGained, { count: formatNumber(totals.followersGained) })}
         />
         <StatTile
+          size="sm"
           label={t("engagement_rate")}
           value={formatPercent(totals.engagementRate)}
           sublabel={t("engagements", { count: formatCompact(totals.engagements) })}
         />
         <StatTile
+          size="sm"
           label={t("leads")}
           value={formatNumber(totals.leads)}
           sublabel={
@@ -175,7 +173,6 @@ export function CampaignPerformanceSection({ perf }: { perf: CampaignPerformance
         <ChartFrame
           className="lg:col-span-2"
           title={t("views_by_platform")}
-          description={t("views_by_platform_description")}
           table={table}
         >
           <BarList

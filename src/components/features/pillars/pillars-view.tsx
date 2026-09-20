@@ -17,7 +17,6 @@ import { activeTargetTotal, missingPresets } from "./pillar-math"
 import { pillarMessages } from "./pillar-messages"
 import { PillarMixCard } from "./pillar-mix-card"
 import { PillarTargetsDialog } from "./pillar-targets-dialog"
-import { PillarsTabs } from "./pillars-tabs"
 import { PausedPillars } from "./paused-pillars"
 import { RecommendedPillars } from "./recommended-pillars"
 import { windowDays, WindowToggle, type MixWindow } from "./segmented-toggle"
@@ -78,7 +77,7 @@ export function PillarsView() {
     <PageContainer>
       <PageHeader
         title="Content Pillars"
-        description={t("description")}
+        info={t("description")}
         actions={
           <>
             <WindowToggle value={range} onChange={setRange} />
@@ -92,9 +91,7 @@ export function PillarsView() {
             </Button>
           </>
         }
-      >
-        <PillarsTabs />
-      </PageHeader>
+      />
 
       {pillars.length ? (
         <>

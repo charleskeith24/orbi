@@ -3,7 +3,7 @@
 import { Star, TriangleAlert } from "lucide-react"
 import { useMemo } from "react"
 import { MixBar, type MixSegment } from "@/components/charts"
-import { ColorDot, OptionSelect, SectionCard, type SelectOption } from "@/components/common"
+import { ColorDot, InfoHint, OptionSelect, SectionCard, type SelectOption } from "@/components/common"
 import { GOAL_CATEGORIES, GOAL_CATEGORY_IDS } from "@/lib/constants"
 import { useT } from "@/lib/i18n"
 import type { BrandProfile, ID } from "@/lib/types"
@@ -26,12 +26,12 @@ function FocusSlot({
   const id = `focus-${role}`
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      <div className="flex min-w-0 flex-col gap-0.5">
+      <div className="flex min-w-0 items-center gap-1">
         <label htmlFor={id} className="flex items-center gap-1.5 text-sm font-medium">
           <Star className={cn("size-3.5 text-brand", role === "primary" && "fill-current")} aria-hidden />
           {t(`${role}_label`)}
         </label>
-        <p className="text-xs text-muted-foreground">{t(`${role}_hint`)}</p>
+        <InfoHint title={t(`${role}_label`)}>{t(`${role}_hint`)}</InfoHint>
       </div>
       <OptionSelect
         id={id}
@@ -115,11 +115,7 @@ export function GoalFocusCard({
   }
 
   return (
-    <SectionCard
-      title={t("title")}
-      description={t("description")}
-      contentClassName="flex flex-col gap-4"
-    >
+    <SectionCard title={t("title")} info={t("description")} contentClassName="flex flex-col gap-4">
       <div className="grid min-w-0 gap-4 md:grid-cols-2">
         <FocusSlot role="primary" row={primary} options={options} onChange={onChange} />
         <FocusSlot role="secondary" row={secondary} options={options} onChange={onChange} />

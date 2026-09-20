@@ -36,7 +36,12 @@ export function UpcomingCard({ settings, now, unsaved }: { settings: ReminderSet
   }, [settings, slots, items, now, tz, lang, t])
 
   return (
-    <SectionCard title={t("upcoming_title")} description={unsaved ? t("upcoming_unsaved") : t("upcoming_description")} contentClassName={rows.length ? "px-0 pb-0" : undefined}>
+    <SectionCard
+      title={t("upcoming_title")}
+      description={unsaved ? t("upcoming_unsaved") : undefined}
+      info={t("upcoming_info")}
+      contentClassName={rows.length ? "px-0 pb-0" : undefined}
+    >
       {rows.length ? (
         <ol className="divide-y border-t">
           {rows.map(({ reminder, when, message }) => {

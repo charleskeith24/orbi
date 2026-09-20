@@ -5,14 +5,14 @@ export const remindersMessages = defineMessages({
   en: {
     // What to remind you about
     schedule_title: "What to remind you about",
-    schedule_description: "The same reminders go to your calendar file and to push notifications.",
+    schedule_info: "The same reminders go to your calendar file and to push notifications.",
     timezone_note: "Times follow your time zone, {zone}.",
     change_timezone: "Change",
     daily_label: "Daily digest",
-    daily_description: "Every morning: posts scheduled today, what's due or overdue, and today's posting slot.",
+    daily_info: "Every morning: posts scheduled today, what's due or overdue, and today's posting slot.",
     daily_time: "Digest time",
     slot_label: "Posting slot heads-up",
-    slot_description: "A nudge before each slot in your Posting Schedule, with the post that's ready for it.",
+    slot_info: "A nudge before each slot in your Posting Schedule, with the post that's ready for it.",
     slot_lead: "Minutes before the slot",
     slot_lead_suffix: "min before",
     slots_timed_one: "{count} slot a week has a time.",
@@ -22,7 +22,7 @@ export const remindersMessages = defineMessages({
     slots_none: "Your Posting Schedule has no active slots yet.",
     open_schedule: "Open Posting Schedule",
     review_label: "Weekly review",
-    review_description: "Once a week: how many posts went out, and a link to the Weekly Report.",
+    review_info: "Once a week: how many posts went out, and a link to the Weekly Report.",
     review_day: "Review day",
     review_time: "Review time",
     on: "On",
@@ -33,7 +33,7 @@ export const remindersMessages = defineMessages({
 
     // Coming up
     upcoming_title: "Coming up",
-    upcoming_description: "Your next reminders, with the text they'd show right now.",
+    upcoming_info: "Your next reminders, with the text they'd show right now.",
     upcoming_empty: "Switch on a reminder to see what's coming.",
     upcoming_unsaved: "Preview of your unsaved changes.",
     kind_daily: "Daily digest",
@@ -45,7 +45,7 @@ export const remindersMessages = defineMessages({
     // Calendar file
     calendar_title: "Calendar file",
     calendar_badge: "Works everywhere",
-    calendar_description:
+    calendar_info:
       "No account needed. Add the reminders to Google Calendar, Apple Calendar or Outlook and your calendar app sends the alerts, on any phone.",
     calendar_download: "Add to my calendar",
     calendar_hint_phone: "On a phone, open the downloaded file and tap Add. On a computer, import it in your calendar's settings.",
@@ -59,7 +59,7 @@ export const remindersMessages = defineMessages({
     // Push
     push_title: "Push notifications",
     push_badge: "Online version",
-    push_description: "Reminders pop up on this device, even when Orbi is closed.",
+    push_info: "Reminders pop up on this device, even when Orbi is closed.",
     push_checking: "Checking this device…",
     push_local: "Needs the online version",
     push_local_body:
@@ -106,14 +106,14 @@ export const remindersMessages = defineMessages({
   },
   tl: {
     schedule_title: "Ano ang ipapaalala",
-    schedule_description: "Parehong reminders sa calendar file at sa push notifications.",
+    schedule_info: "Parehong reminders sa calendar file at sa push notifications.",
     timezone_note: "Ang oras ay naka-base sa time zone mo, {zone}.",
     change_timezone: "Palitan",
     daily_label: "Daily digest",
-    daily_description: "Tuwing umaga: mga post naka-schedule ngayon, ano ang due o overdue, at ang posting slot ngayon.",
+    daily_info: "Tuwing umaga: mga post naka-schedule ngayon, ano ang due o overdue, at ang posting slot ngayon.",
     daily_time: "Oras ng digest",
     slot_label: "Heads-up bago ang posting slot",
-    slot_description: "Paalala bago ang bawat slot sa Posting Schedule mo, kasama ang post na ready para rito.",
+    slot_info: "Paalala bago ang bawat slot sa Posting Schedule mo, kasama ang post na ready para rito.",
     slot_lead: "Minuto bago ang slot",
     slot_lead_suffix: "min bago",
     slots_timed_one: "{count} slot kada linggo ay may oras.",
@@ -123,7 +123,7 @@ export const remindersMessages = defineMessages({
     slots_none: "Walang active na slot pa sa Posting Schedule mo.",
     open_schedule: "Buksan ang Posting Schedule",
     review_label: "Weekly review",
-    review_description: "Minsan kada linggo: ilang post na-publish, at link sa Weekly Report.",
+    review_info: "Minsan kada linggo: ilang post na-publish, at link sa Weekly Report.",
     review_day: "Araw ng review",
     review_time: "Oras ng review",
     on: "On",
@@ -133,7 +133,7 @@ export const remindersMessages = defineMessages({
     saved: "Na-save ang reminder settings",
 
     upcoming_title: "Mga susunod",
-    upcoming_description: "Ang mga susunod na reminders, at ang text na ipapakita nila ngayon.",
+    upcoming_info: "Ang mga susunod na reminders, at ang text na ipapakita nila ngayon.",
     upcoming_empty: "I-on ang isang reminder para makita ang mga susunod.",
     upcoming_unsaved: "Preview ng mga changes na hindi pa naka-save.",
     kind_daily: "Daily digest",
@@ -144,7 +144,7 @@ export const remindersMessages = defineMessages({
 
     calendar_title: "Calendar file",
     calendar_badge: "Gumagana everywhere",
-    calendar_description:
+    calendar_info:
       "Walang account needed. Idagdag ang reminders sa Google Calendar, Apple Calendar o Outlook, at ang calendar app mo ang magpapadala ng alerts, sa kahit anong phone.",
     calendar_download: "Idagdag sa calendar ko",
     calendar_hint_phone: "Sa phone, buksan ang na-download na file at i-tap ang Add. Sa computer, i-import ito sa settings ng calendar mo.",
@@ -157,7 +157,7 @@ export const remindersMessages = defineMessages({
 
     push_title: "Push notifications",
     push_badge: "Online version",
-    push_description: "Lalabas ang reminders sa device na ito, kahit naka-close ang Orbi.",
+    push_info: "Lalabas ang reminders sa device na ito, kahit naka-close ang Orbi.",
     push_checking: "Tinitingnan ang device…",
     push_local: "Kailangan ang online version",
     push_local_body:

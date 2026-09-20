@@ -1,5 +1,6 @@
 import { InfoHint } from "@/components/common/info-hint"
-import type { IconComponent } from "@/components/common/types"
+import { TONE_TEXT } from "@/components/common/tone"
+import type { IconComponent, StatusTone } from "@/components/common/types"
 import { cn, formatNumber } from "@/lib/utils"
 
 /**
@@ -11,7 +12,9 @@ export function SectionCard({
   title,
   description,
   count,
+  countTone,
   info,
+  infoTitle,
   icon: Icon,
   action,
   footer,
@@ -24,8 +27,12 @@ export function SectionCard({
   description?: React.ReactNode
   /** Count after the title. */
   count?: number | null
+  /** Status tone for the count (e.g. "critical" for overdue work). */
+  countTone?: StatusTone
   /** Explanation in an ⓘ popover next to the title. */
   info?: React.ReactNode
+  /** Popover heading and the ⓘ's accessible name; defaults to `title` when it's a string. */
+  infoTitle?: string
   icon?: IconComponent
   action?: React.ReactNode
   footer?: React.ReactNode
@@ -48,9 +55,11 @@ export function SectionCard({
                 <div className="flex min-w-0 items-center gap-1.5">
                   <h3 className="min-w-0 text-sm leading-5 font-medium">{title}</h3>
                   {count !== undefined && count !== null ? (
-                    <span className="shrink-0 text-sm leading-5 text-muted-foreground num">{formatNumber(count)}</span>
+                    <span className={cn("shrink-0 text-sm leading-5 num", countTone ? TONE_TEXT[countTone] : "text-muted-foreground")}>
+                      {formatNumber(count)}
+                    </span>
                   ) : null}
-                  {info ? <InfoHint title={typeof title === "string" ? title : undefined}>{info}</InfoHint> : null}
+                  {info ? <InfoHint title={infoTitle ?? (typeof title === "string" ? title : undefined)}>{info}</InfoHint> : null}
                 </div>
               ) : null}
               {description ? <p className="mt-0.5 text-xs text-pretty text-muted-foreground">{description}</p> : null}

@@ -11,6 +11,7 @@ import {
   FunnelSelect,
   GoalSelect,
   HookCategorySelect,
+  InfoHint,
   ListEditor,
   OptionSelect,
   PersonaSelect,
@@ -31,12 +32,12 @@ import { IdeaHookField } from "./idea-hook-field"
 
 const SOURCE_OPTIONS: SelectOption<IdeaSource>[] = IDEA_SOURCES.map((s) => ({ value: s.id, label: s.label }))
 
-function FieldGroup({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+function FieldGroup({ title, info, children }: { title: string; info?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="flex min-w-0 flex-col gap-4">
-      <div className="border-b pb-1.5">
+      <div className="flex items-center gap-1.5 border-b pb-1.5">
         <h3 className="text-sm font-medium">{title}</h3>
-        {description ? <p className="mt-0.5 text-xs text-pretty text-muted-foreground">{description}</p> : null}
+        {info ? <InfoHint title={title}>{info}</InfoHint> : null}
       </div>
       {children}
     </section>
@@ -70,8 +71,8 @@ export function IdeaFields({ idea }: { idea: ContentIdea }) {
 
   return (
     <div className="flex min-w-0 flex-col gap-7">
-      <FieldGroup title={t("group_idea")}>
-        <FormField label={t("core_topic")} htmlFor={`${id}-topic`} description={t("core_topic_help")}>
+      <FieldGroup title={t("group_idea")} info={t("idea_info")}>
+        <FormField label={t("core_topic")} htmlFor={`${id}-topic`}>
           <AutosaveInput
             id={`${id}-topic`}
             value={idea.core_topic}
@@ -115,7 +116,7 @@ export function IdeaFields({ idea }: { idea: ContentIdea }) {
         <FormField label={t("cta")} htmlFor={`${id}-cta`}>
           <AutosaveInput id={`${id}-cta`} value={idea.cta} placeholder={t("cta_placeholder")} onCommit={(cta) => set({ cta })} />
         </FormField>
-        <FormField label={t("why")} htmlFor={`${id}-why`} description={t("why_help")}>
+        <FormField label={t("why")} htmlFor={`${id}-why`}>
           <AutosaveTextarea
             id={`${id}-why`}
             rows={2}
@@ -124,7 +125,7 @@ export function IdeaFields({ idea }: { idea: ContentIdea }) {
             onCommit={(why_it_matters) => set({ why_it_matters })}
           />
         </FormField>
-        <FormField label={t("inspiration")} htmlFor={`${id}-inspiration`} description={t("inspiration_help")}>
+        <FormField label={t("inspiration")} htmlFor={`${id}-inspiration`}>
           <AutosaveTextarea
             id={`${id}-inspiration`}
             rows={2}
@@ -135,7 +136,7 @@ export function IdeaFields({ idea }: { idea: ContentIdea }) {
         </FormField>
       </FieldGroup>
 
-      <FieldGroup title={t("group_strategy")} description={t("strategy_help")}>
+      <FieldGroup title={t("group_strategy")} info={t("strategy_info")}>
         <FormRow>
           <FormField label="Content Pillar" htmlFor={`${id}-pillar`}>
             <PillarSelect id={`${id}-pillar`} allowNone value={idea.pillar_id} onChange={(pillar_id) => set({ pillar_id })} />
@@ -144,11 +145,7 @@ export function IdeaFields({ idea }: { idea: ContentIdea }) {
             <PersonaSelect id={`${id}-persona`} allowNone value={idea.persona_id} onChange={setPersona} />
           </FormField>
         </FormRow>
-        <FormField
-          label={t("audience_problem")}
-          htmlFor={`${id}-problem`}
-          description={idea.persona_id ? t("problem_help_persona") : t("problem_help_none")}
-        >
+        <FormField label={t("audience_problem")} htmlFor={`${id}-problem`}>
           <ProblemSelect id={`${id}-problem`} personaId={idea.persona_id} allowNone value={idea.problem_id} onChange={setProblem} />
         </FormField>
         <FormRow>

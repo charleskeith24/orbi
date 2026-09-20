@@ -19,14 +19,14 @@ export interface HistoryEntry {
 /** Saved reviews, newest first; each opens its period. */
 export function ReviewHistory({
   title,
-  description,
+  info,
   entries,
   emptyTitle,
   emptyDescription,
   className,
 }: {
   title: string
-  description?: string
+  info?: string
   entries: HistoryEntry[]
   emptyTitle: string
   emptyDescription: string
@@ -35,7 +35,7 @@ export function ReviewHistory({
   return (
     <SectionCard
       title={title}
-      description={description}
+      info={info}
       icon={History}
       className={cn("print:hidden", className)}
       contentClassName={entries.length ? "px-2 pt-2 pb-2" : undefined}

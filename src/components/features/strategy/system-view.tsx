@@ -1,13 +1,11 @@
 "use client"
 
-import { Orbit } from "lucide-react"
 import { useMemo } from "react"
 import { PageContainer, PageHeader } from "@/components/common"
 import { useT, useUiLang } from "@/lib/i18n"
 import { useBrand, useDb, useSettings } from "@/lib/store"
 import { brandCompleteness, brandFormValues } from "./brand-model"
 import { FlywheelCard } from "./flywheel"
-import { StrategyTabs } from "./strategy-tabs"
 import { systemMessages } from "./system-messages"
 import { flywheel, principleMetrics } from "./system-model"
 import { coreLoop, rhythmEvidence } from "./system-rhythm"
@@ -31,13 +29,7 @@ export function SystemView() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Flywheel & System"
-        icon={Orbit}
-        description={t("description")}
-      >
-        <StrategyTabs />
-      </PageHeader>
+      <PageHeader title="Flywheel & System" info={t("description")} />
       <FlywheelCard summary={wheel} />
       <PrinciplesList metrics={principles} />
       <OperatingRhythm evidence={rhythm} />

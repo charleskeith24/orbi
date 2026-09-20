@@ -9,21 +9,20 @@ import { defineMessages } from "@/lib/i18n/core"
 export const monthlyReviewMessages = defineMessages({
   en: {
     // Page
-    empty_page_description: "Your month in growth, reach, content and leads — and what to change next.",
     empty_title: "No monthly review yet",
-    empty_description:
-      "Your first Monthly Review appears after your first month of publishing — audience growth, reach, your top 10 posts, leads and strategic recommendations, all from the analytics you log.",
+    empty_description: "After your first month of publishing: growth, reach, your top 10 posts, leads and recommendations — all from the analytics you log.",
     month_to_date: " · month to date",
-    in_progress_note: "This month is still in progress — totals run through today and changes compare the same days of last month.",
+    page_info: "Posts are ranked by {metric}. Changes compare with the previous month.",
+    in_progress_note: "This month is still in progress: totals run through today and changes compare the same days last month.",
     best_content: "Best Content",
     nothing_published: "Nothing published this month",
-    log_this_month: "Log views and engagement for this month's posts to find your best content.",
+    log_this_month: "Log this month's views and engagement to find your best content.",
     top_10: "Top 10 Posts",
-    measured_ranked: "Measured posts ranked by {metric}",
+    measured_ranked_info: "Measured posts, ranked by {metric}.",
     no_measured: "No measured posts this month",
     appear_when_logged: "Posts appear here once their analytics are logged.",
     log_to_build: "Log what you published to build the review.",
-    history_description: "Monthly reviews, newest first",
+    history_info: "Monthly reviews, newest first.",
     history_empty: "Save this month's recommendations to start your history.",
 
     // KPI tiles
@@ -31,7 +30,6 @@ export const monthlyReviewMessages = defineMessages({
     on_target_most: "On target most weeks",
     missed_some: "Missed some weeks",
     missed_most: "Missed most weeks",
-    vs_last_month: "vs last month",
     audience_growth: "Audience growth",
     total_reach: "Total reach",
     total_content: "Total content",
@@ -43,14 +41,14 @@ export const monthlyReviewMessages = defineMessages({
     weeks_one: "{count} week",
     weeks_other: "{count} weeks",
     winners: "Winners",
-    winners_sublabel: "Winner or Breakout posts",
+    winners_info: "Posts that reached the Winner or Breakout tier this month.",
 
     // Growth
     col_date: "Date",
     followers_gained: "Followers gained",
     col_cumulative: "Cumulative",
     follower_growth: "Follower Growth",
-    follower_growth_description: "Followers gained from this month's posts, cumulative by publish date",
+    follower_growth_info: "Followers gained from this month's posts, cumulative by publish date.",
     no_follower_gains: "No follower gains logged for this month's posts yet.",
     follower_growth_aria: "Cumulative followers gained this month",
     audience_growth_title: "Audience Growth",
@@ -78,7 +76,7 @@ export const monthlyReviewMessages = defineMessages({
     by_dimension: "{metric} by {dimension}",
     no_published_month: "No published posts this month.",
     performance: "Performance",
-    performance_description: "How each platform, pillar, topic and format performed this month",
+    performance_info: "How each platform, pillar, topic and format performed this month.",
     performance_metric: "Performance metric",
 
     // Leads and business
@@ -97,7 +95,7 @@ export const monthlyReviewMessages = defineMessages({
     leads_by_platform: "Leads by platform",
     no_leads: "No leads logged for this month's posts.",
     business: "Business Opportunities",
-    business_description: "Conversion (BOFU) content and what it produced",
+    business_info: "Conversion (BOFU) content and what it produced.",
     top_conversion_aria: "Top conversion posts by leads",
     no_bofu_analytics: "No analytics logged on this month's BOFU posts yet.",
     no_conversion: "No conversion content this month",
@@ -110,20 +108,16 @@ export const monthlyReviewMessages = defineMessages({
     hint_empty: "Draft it from this month's numbers with AI, or write it yourself.",
     hint_final: "Saved as final, with this month's numbers frozen alongside.",
     recommendations: "Monthly Strategic Recommendations",
-    recommendations_description: "Continue · Increase · Reduce · Stop · Experiment — grounded in this month's numbers.",
+    recommendations_info:
+      "Grounded in this month's numbers. Continue what's working, Increase what deserves more slots, Reduce until it improves, Stop what to cut or change completely, Experiment with tests for next month.",
     recommendations_error: "Couldn't draft the recommendations.",
     summary: "Summary",
     summary_placeholder: "The month in 3–4 sentences, with the numbers that matter.",
     add: "Add",
-    description_continue_doing: "Working — keep doing it.",
     placeholder_continue_doing: "Keep… (cite the numbers)",
-    description_increase: "Deserves more slots.",
     placeholder_increase: "More…",
-    description_reduce: "Fewer slots until it improves.",
     placeholder_reduce: "Less…",
-    description_stop: "Cut it or change it completely.",
     placeholder_stop: "Stop…",
-    description_experiment: "Tests to run next month.",
     placeholder_experiment: "Test… (and the metric to watch)",
 
     // Experiment recommendations
@@ -137,22 +131,20 @@ export const monthlyReviewMessages = defineMessages({
   },
   tl: {
     // Page
-    empty_page_description: "Ang buwan mo sa growth, reach, content at leads — at ano ang dapat baguhin.",
     empty_title: "Wala pang Monthly Review",
-    empty_description:
-      "Lalabas ang una mong Monthly Review pagkatapos ng una mong buwan ng pag-publish — audience growth, reach, top 10 posts, leads at strategic recommendations, mula sa analytics na ni-log mo.",
+    empty_description: "After ng una mong buwan ng pag-publish: growth, reach, top 10 posts, leads at recommendations — galing sa analytics na ni-log mo.",
     month_to_date: " · buwan hanggang ngayon",
-    in_progress_note:
-      "Hindi pa tapos ang buwang 'to — ang totals ay hanggang ngayon, at ang changes ay ikinukumpara sa parehong mga araw ng nakaraang buwan.",
+    page_info: "Naka-rank ang posts ayon sa {metric}. Ikinukumpara ang changes sa nakaraang buwan.",
+    in_progress_note: "Hindi pa tapos ang buwang 'to: hanggang ngayon ang totals, at parehong araw ng nakaraang buwan ang kumparahan.",
     best_content: "Best Content",
     nothing_published: "Walang na-publish sa buwang 'to",
-    log_this_month: "I-log ang views at engagement ng posts sa buwang 'to para hanapin ang best content mo.",
+    log_this_month: "I-log ang views at engagement ng buwang 'to para makita ang best content mo.",
     top_10: "Top 10 Posts",
-    measured_ranked: "Measured posts naka-rank ayon sa {metric}",
+    measured_ranked_info: "Measured posts, naka-rank ayon sa {metric}.",
     no_measured: "Walang measured posts sa buwang 'to",
     appear_when_logged: "Lalabas dito ang posts kapag naka-log ang analytics nito.",
     log_to_build: "I-log ang mga na-publish para buuin ang review.",
-    history_description: "Monthly reviews, pinakabago sa taas",
+    history_info: "Monthly reviews, pinakabago sa taas.",
     history_empty: "I-save ang recommendations ng buwang 'to para simulan ang history mo.",
 
     // KPI tiles
@@ -160,7 +152,6 @@ export const monthlyReviewMessages = defineMessages({
     on_target_most: "On target sa maraming linggo",
     missed_some: "Na-miss ang ilang linggo",
     missed_most: "Na-miss ang maraming linggo",
-    vs_last_month: "vs nakaraang buwan",
     audience_growth: "Audience growth",
     total_reach: "Total reach",
     total_content: "Total content",
@@ -172,14 +163,14 @@ export const monthlyReviewMessages = defineMessages({
     weeks_one: "{count} linggo",
     weeks_other: "{count} linggo",
     winners: "Winners",
-    winners_sublabel: "Winner o Breakout posts",
+    winners_info: "Mga post na umabot sa Winner o Breakout tier sa buwang 'to.",
 
     // Growth
     col_date: "Petsa",
     followers_gained: "Followers na nadagdag",
     col_cumulative: "Cumulative",
     follower_growth: "Follower Growth",
-    follower_growth_description: "Followers na nadagdag mula sa posts ng buwang 'to, cumulative ayon sa publish date",
+    follower_growth_info: "Followers na nadagdag mula sa posts ng buwang 'to, cumulative ayon sa publish date.",
     no_follower_gains: "Wala pang naka-log na follower gains para sa posts ng buwang 'to.",
     follower_growth_aria: "Cumulative na followers na nadagdag sa buwang 'to",
     audience_growth_title: "Audience Growth",
@@ -209,7 +200,7 @@ export const monthlyReviewMessages = defineMessages({
     by_dimension: "{metric} per {dimension}",
     no_published_month: "Walang published posts sa buwang 'to.",
     performance: "Performance",
-    performance_description: "Paano nag-perform ang bawat platform, pillar, topic at format sa buwang 'to",
+    performance_info: "Paano nag-perform ang bawat platform, pillar, topic at format sa buwang 'to.",
     performance_metric: "Metric ng performance",
 
     // Leads and business
@@ -228,7 +219,7 @@ export const monthlyReviewMessages = defineMessages({
     leads_by_platform: "Leads per platform",
     no_leads: "Walang naka-log na leads para sa posts ng buwang 'to.",
     business: "Business Opportunities",
-    business_description: "Conversion (BOFU) content at ang resulta nito",
+    business_info: "Conversion (BOFU) content at ang resulta nito.",
     top_conversion_aria: "Top conversion posts ayon sa leads",
     no_bofu_analytics: "Wala pang naka-log na analytics sa BOFU posts ng buwang 'to.",
     no_conversion: "Walang conversion content sa buwang 'to",
@@ -241,20 +232,16 @@ export const monthlyReviewMessages = defineMessages({
     hint_empty: "I-draft gamit ang AI mula sa numbers ng buwang 'to, o isulat ito mismo.",
     hint_final: "Naka-save bilang final, kasama ang naka-freeze na numbers ng buwang 'to.",
     recommendations: "Monthly Strategic Recommendations",
-    recommendations_description: "Continue · Increase · Reduce · Stop · Experiment — base sa numbers ng buwang 'to.",
+    recommendations_info:
+      "Base sa numbers ng buwang 'to. Continue ang gumagana, Increase ang dapat dagdagan ng slots, Reduce hanggang mag-improve, Stop ang tatanggalin o babaguhin nang buo, Experiment ang mga test para next month.",
     recommendations_error: "Hindi na-draft ang recommendations.",
     summary: "Summary",
     summary_placeholder: "Ang buwan sa 3–4 na sentences, kasama ang numbers na mahalaga.",
     add: "Idagdag",
-    description_continue_doing: "Gumagana — ituloy.",
     placeholder_continue_doing: "Ituloy… (isama ang numbers)",
-    description_increase: "Dapat magkaroon ng mas maraming slots.",
     placeholder_increase: "Mas…",
-    description_reduce: "Bawasan ang slots hanggang mag-improve.",
     placeholder_reduce: "Bawasan…",
-    description_stop: "Tanggalin o baguhin nang buo.",
     placeholder_stop: "Itigil…",
-    description_experiment: "Mga test para sa susunod na buwan.",
     placeholder_experiment: "I-test… (at ang metric na bantayan)",
 
     // Experiment recommendations

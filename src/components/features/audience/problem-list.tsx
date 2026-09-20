@@ -144,10 +144,9 @@ function ProblemRow({
             <Lightbulb aria-hidden />
             <span className="max-md:sr-only">{a("create_idea")}</span>
           </Button>
-          <Button type="button" variant="ghost" size="sm" className="max-md:size-7 max-md:px-0" asChild>
-            <Link href={generatorHref(problem)}>
+          <Button type="button" variant="ghost" size="icon-sm" title={a("generate_ideas")} asChild>
+            <Link href={generatorHref(problem)} aria-label={a("generate_ideas")}>
               <Sparkles className="text-brand" aria-hidden />
-              <span className="max-md:sr-only">{a("generate_ideas")}</span>
             </Link>
           </Button>
         </div>

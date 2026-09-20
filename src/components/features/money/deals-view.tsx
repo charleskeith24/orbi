@@ -144,7 +144,7 @@ export function DealsView() {
 
   return (
     <PageContainer>
-      <PageHeader title={t("title")} icon={Handshake} description={t("description")} actions={addButton} />
+      <PageHeader title={t("title")} info={t("description")} actions={addButton} />
 
       {openId && !openDeal && deals.length ? <p className="-mt-2 text-sm text-muted-foreground">{t("not_found")}</p> : null}
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { PenLine, Plus, SearchX } from "lucide-react"
+import { SearchX } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useMemo, useState } from "react"
 import { EmptyState, PageContainer, PageHeader, PageSection, SearchInput, SectionCard } from "@/components/common"
@@ -28,8 +28,9 @@ function setQueryParam(value: string) {
 const newContent = () => uiActions.openDialog({ type: "new-content" })
 
 /**
- * Content Studio home: format quick-starts, what's in progress, the ideas ready to become content
- * and what just went live. `?q=` searches every piece (`?open=<id>` is redirected by the page).
+ * Content Studio home (Calm UI): format quick-starts, what's in progress, the ideas ready to become content
+ * and what just went live. `?q=` searches every piece (`?open=<id>` is redirected by the page). New content is
+ * the top bar's ＋ New (and the "From scratch" tile); the page's explanation is the title's ⓘ.
  */
 export function StudioHomeView() {
   const t = useT(studioHomeMessages)
@@ -88,11 +89,7 @@ export function StudioHomeView() {
       .sort((a, b) => PIPELINE_STAGE_ORDER[a.stage] - PIPELINE_STAGE_ORDER[b.stage] || b.updated_at.localeCompare(a.updated_at))
   }, [db.content_items, query])
 
-  const summary = [
-    t.plural("pieces_in_progress", inProgress.length, { count: formatNumber(inProgress.length) }),
-    overdue ? t("overdue", { count: overdue }) : "",
-    t.plural("ideas_ready", ideas.length, { count: formatNumber(ideas.length) }),
-  ]
+  const summary = [t("in_progress", { count: formatNumber(inProgress.length) }), overdue ? t("overdue", { count: overdue }) : ""]
     .filter(Boolean)
     .join(" · ")
 
@@ -105,24 +102,13 @@ export function StudioHomeView() {
     <PageContainer>
       <PageHeader
         title="Content Studio"
-        icon={PenLine}
-        description={t("description", { summary })}
-        actions={
-          <>
-            <SearchInput value={query} onChange={search} placeholder={t("search_placeholder")} aria-label={t("search_label")} />
-            <Button type="button" size="sm" onClick={newContent}>
-              <Plus aria-hidden />
-              {t("new_content")}
-            </Button>
-          </>
-        }
+        info={t("info")}
+        description={<span className="num">{summary}</span>}
+        actions={<SearchInput value={query} onChange={search} placeholder={t("search_placeholder")} aria-label={t("search_label")} />}
       />
 
       {query.trim() ? (
-        <SectionCard
-          title={t("results_for", { query: query.trim() })}
-          description={t.plural("pieces", results.length, { count: formatNumber(results.length) })}
-        >
+        <SectionCard title={t("results_for", { query: query.trim() })} count={results.length}>
           {results.length ? (
             <ul className="flex flex-col">
               {results.map((item) => (
@@ -147,7 +133,7 @@ export function StudioHomeView() {
         </SectionCard>
       ) : (
         <>
-          <PageSection title={t("start_new")} description={t("start_new_description")}>
+          <PageSection title={t("start_new")} info={t("start_new_info")}>
             <QuickStartGrid
               onStart={(format) => setDialog((current) => ({ format, open: true, key: (current?.key ?? 0) + 1 }))}
               onScratch={newContent}

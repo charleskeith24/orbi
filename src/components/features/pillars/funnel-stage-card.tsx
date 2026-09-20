@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { SeriesKey } from "@/components/charts"
-import { FunnelBadge, Meter, PlatformIcon, Token } from "@/components/common"
+import { Disclosure, FunnelBadge, InfoHint, Meter, PlatformIcon } from "@/components/common"
 import { funnelGoalMessages } from "@/components/common/messages"
 import type { FunnelAggregate, FunnelMixRow } from "@/lib/analytics"
 import { FUNNEL_STAGES } from "@/lib/constants"
@@ -15,7 +15,7 @@ import { FUNNEL_COLORS, type StageContent } from "./funnel-utils"
 import { MixStatusPill } from "./mix-status"
 import { pillarMessages } from "./pillar-messages"
 
-/** One funnel stage: its job, examples, share vs target, published performance and recent pieces. */
+/** One funnel stage: its job (examples behind the ⓘ), share vs target, published performance and recent pieces. */
 export function FunnelStageCard({
   stage,
   mix,
@@ -50,6 +50,12 @@ export function FunnelStageCard({
             <SeriesKey color={FUNNEL_COLORS[stage]} />
             <h3 className="text-sm leading-5 font-semibold">{meta.name}</h3>
             <FunnelBadge stage={stage} />
+            <InfoHint title={meta.name} label={t("examples_aria", { label: meta.label })}>
+              <p>{goal(stage)}</p>
+              <p>
+                <span className="font-medium text-foreground">{t("examples")}</span> {meta.examples.join(", ")}
+              </p>
+            </InfoHint>
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">{goal(stage)}</p>
         </div>
@@ -81,37 +87,28 @@ export function FunnelStageCard({
         <MiniStat label={p("leads")} value={formatNumber(perf?.leads ?? 0)} />
       </dl>
 
-      <div className="flex min-w-0 flex-wrap gap-1" aria-label={t("examples_aria", { label: meta.label })}>
-        {meta.examples.map((example) => (
-          <Token key={example} className="font-normal text-foreground/85">
-            {example}
-          </Token>
-        ))}
-      </div>
-
-      <div className="mt-auto flex flex-col gap-1 border-t pt-3">
-        <div className="flex items-center justify-between gap-2 text-xs">
-          <span className="font-medium text-muted-foreground">{t("recently_published")}</span>
-          <span className="num text-muted-foreground">{t("in_production", { count: formatNumber(content.inProduction) })}</span>
-        </div>
+      <div className="mt-auto flex min-w-0 items-start justify-between gap-2 border-t pt-2.5">
         {content.recent.length ? (
-          <ul className="-mx-2 flex flex-col">
-            {content.recent.map((item) => (
-              <li key={item.id}>
-                <Link
-                  href={`/studio/${item.id}`}
-                  className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1 outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50"
-                >
-                  <PlatformIcon platform={item.platform} label className="size-3.5 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate text-sm">{item.title || p("untitled_content")}</span>
-                  <span className="num shrink-0 text-xs text-muted-foreground">{formatShortDate(contentItemDate(item))}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <Disclosure label={t("recently_published")} meta={`· ${content.recent.length}`} className="min-w-0 flex-1">
+            <ul className="-mx-2 flex flex-col">
+              {content.recent.map((item) => (
+                <li key={item.id}>
+                  <Link
+                    href={`/studio/${item.id}`}
+                    className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1 outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50"
+                  >
+                    <PlatformIcon platform={item.platform} label className="size-3.5 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 flex-1 truncate text-sm">{item.title || p("untitled_content")}</span>
+                    <span className="num shrink-0 text-xs text-muted-foreground">{formatShortDate(contentItemDate(item))}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Disclosure>
         ) : (
-          <p className="py-1 text-xs text-muted-foreground">{t("nothing_published")}</p>
+          <p className="py-0.5 text-xs text-muted-foreground">{t("nothing_published")}</p>
         )}
+        <span className="num shrink-0 py-0.5 text-xs text-muted-foreground">{t("in_production", { count: formatNumber(content.inProduction) })}</span>
       </div>
     </article>
   )

@@ -3,6 +3,7 @@
 import { CircleCheck, Scale, TriangleAlert } from "lucide-react"
 import Link from "next/link"
 import { ChartFrame, MixBar, type ChartTable } from "@/components/charts"
+import { InfoHint } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { MIN_MIX_SAMPLE, type PillarMix } from "@/lib/analytics"
 import { useT, useUiLang } from "@/lib/i18n"
@@ -40,7 +41,6 @@ export function PillarMixCard({
     ]),
   }
   const description = [
-    t("mix_window", { window: windowLabel }),
     t.plural("items", mix.total, { count: formatNumber(mix.total) }),
     mix.unassigned ? t("without_pillar", { count: mix.unassigned }) : null,
   ]
@@ -50,17 +50,20 @@ export function PillarMixCard({
   return (
     <ChartFrame
       title={t("mix_title")}
+      actions={
+        <InfoHint title={t("mix_title")} align="end">
+          <p>{t("mix_window", { window: windowLabel })}.</p>
+          <p>
+            {t("tolerance_note", { tolerance })}{" "}
+            <Link href="/settings?tab=general" className="font-medium text-foreground underline-offset-2 hover:underline">
+              {t("tolerance_link")}
+            </Link>
+          </p>
+        </InfoHint>
+      }
       description={description}
       table={table}
       className={className}
-      footer={
-        <>
-          {t("tolerance_note", { tolerance })}{" "}
-          <Link href="/settings" className="underline-offset-4 hover:text-foreground hover:underline">
-            {t("tolerance_link")}
-          </Link>
-        </>
-      }
     >
       <div className="flex flex-col gap-4">
         <MixBar

@@ -46,31 +46,6 @@ export function ScoreToken({ s }: { s: Suggestion }) {
   )
 }
 
-/** "Today's best content" eyebrow (or the option number), score, whether it's already on the board, and an optional right-hand action. */
-export function SuggestionEyebrow({
-  s,
-  position,
-  total,
-  action,
-}: {
-  s: Suggestion
-  position: number
-  total: number
-  action?: React.ReactNode
-}) {
-  const t = useT(whatToPostMessages)
-  return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2">
-      <span className="text-xs font-medium text-muted-foreground">
-        {position === 0 ? t("todays_best") : t("option_of", { n: position + 1, total })}
-      </span>
-      <ScoreToken s={s} />
-      {s.kind === "item" ? <span className="text-xs text-muted-foreground">{t("already_in_pipeline")}</span> : null}
-      {action ? <span className="-my-1 ml-auto flex shrink-0 items-center">{action}</span> : null}
-    </div>
-  )
-}
-
 /** Platform · format · angle · pillar. */
 export function SuggestionMeta({ s, className }: { s: Suggestion; className?: string }) {
   const format = useRow("content_formats", s.formatId)
@@ -208,7 +183,7 @@ export function OpenIdeaButton({
   )
 }
 
-/** The rest of the ranking; choosing one makes it the current suggestion. */
+/** The rest of the ranking (inside the "Alternatives" disclosure); choosing one makes it the current suggestion. */
 export function Alternatives({
   list,
   position,
@@ -222,29 +197,26 @@ export function Alternatives({
   const others = list.map((s, index) => ({ s, index })).filter(({ index }) => index !== position)
   if (!others.length) return null
   return (
-    <div className="flex flex-col gap-1.5 border-t pt-3">
-      <h5 className="text-xs font-medium text-muted-foreground">{t("alternatives")}</h5>
-      <ul className="-mx-2 flex flex-col">
-        {others.map(({ s, index }) => (
-          <li key={s.key}>
-            <button
-              type="button"
-              onClick={() => onSelect(index)}
-              className="flex w-full min-w-0 items-center gap-2.5 rounded-md px-2 py-1.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50"
-            >
-              <span className="w-3 shrink-0 text-xs text-muted-foreground num">{index + 1}</span>
-              <PlatformIcon platform={s.platform} label className="size-3.5 shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1 truncate text-sm">{s.title}</span>
-              {s.score !== null ? (
-                <span className="shrink-0 text-xs text-muted-foreground num" title={t("score_title")}>
-                  {s.score}
-                </span>
-              ) : null}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <ul className="-mx-2 flex flex-col">
+      {others.map(({ s, index }) => (
+        <li key={s.key}>
+          <button
+            type="button"
+            onClick={() => onSelect(index)}
+            className="flex w-full min-w-0 items-center gap-2.5 rounded-md px-2 py-1.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50"
+          >
+            <span className="w-3 shrink-0 text-xs text-muted-foreground num">{index + 1}</span>
+            <PlatformIcon platform={s.platform} label className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className="min-w-0 flex-1 truncate text-sm">{s.title}</span>
+            {s.score !== null ? (
+              <span className="shrink-0 text-xs text-muted-foreground num" title={t("score_title")}>
+                {s.score}
+              </span>
+            ) : null}
+          </button>
+        </li>
+      ))}
+    </ul>
   )
 }
 

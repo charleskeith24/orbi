@@ -17,7 +17,6 @@ import { GoalFocusCard } from "./goal-focus"
 import { GoalFormDialog, type GoalDialogTarget } from "./goal-form-dialog"
 import { goalsMessages } from "./goals-messages"
 import { focusPatch, goalPace, goalReferences, goalsSummary, type GoalRole } from "./goals-model"
-import { StrategyTabs } from "./strategy-tabs"
 import { useNow } from "./use-now"
 
 function listJoin(parts: string[], and: string): string {
@@ -138,31 +137,25 @@ export function GoalsView() {
     <PageContainer>
       <PageHeader
         title="Goals"
-        icon={Target}
-        description={t("description")}
+        info={t("description")}
         actions={
           <Button type="button" size="sm" onClick={() => startCreate("awareness")}>
             <Plus aria-hidden />
             {t("new_goal")}
           </Button>
         }
-      >
-        <StrategyTabs />
-      </PageHeader>
+      />
 
       {summary.rows.length ? (
         <>
           <GoalFocusCard summary={summary} brand={brand} onChange={setRole} />
           <PageSection
             title={t("your_goals")}
-            description={
+            count={activeCount}
+            info={
               started
-                ? t.plural("summary_started", activeCount, {
-                    count: formatNumber(activeCount),
-                    onPace: withTargets.length - behind,
-                    withTarget: withTargets.length,
-                  })
-                : t.plural("summary_new", activeCount, { count: formatNumber(activeCount) })
+                ? t("summary_started", { onPace: withTargets.length - behind, withTarget: withTargets.length })
+                : t("summary_new")
             }
           >
             <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -197,7 +190,7 @@ export function GoalsView() {
         />
       )}
 
-      <GoalCategoryTiles goals={db.content_goals} onAdd={startCreate} />
+      <GoalCategoryTiles goals={db.content_goals} onAdd={startCreate} defaultOpen={!summary.rows.length} />
 
       <GoalFormDialog
         open={target !== null}

@@ -26,7 +26,6 @@ import { comboCount, generateCombinations, type MatrixCombo } from "./matrix-eng
 import { matrixIdeaValues } from "./matrix-idea"
 import { matrixMessages } from "./matrix-messages"
 import { MatrixResults } from "./matrix-results"
-import { PillarsTabs } from "./pillars-tabs"
 
 interface Generated {
   combos: MatrixCombo[]
@@ -133,12 +132,7 @@ function MatrixWorkspace({ params }: { params: { pillar: string | null; format: 
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Content Matrix"
-        description={t("description")}
-      >
-        <PillarsTabs />
-      </PageHeader>
+      <PageHeader title="Content Matrix" info={t("description")} />
 
       {prerequisites.length ? (
         <EmptyState
@@ -164,6 +158,7 @@ function MatrixWorkspace({ params }: { params: { pillar: string | null; format: 
             total={total}
             stale={stale}
             isDefault={signature === defaultSignature}
+            defaultOpen={Boolean(params.pillar || params.format || params.persona)}
           />
           <div id="matrix-results" className="scroll-mt-4">
             <MatrixResults

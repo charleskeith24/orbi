@@ -3,7 +3,7 @@
 import { BookmarkPlus, Check, Library, Star, TriangleAlert, X } from "lucide-react"
 import { useId, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { AiButton, AiNotice, FormField, HookCategorySelect, ProviderBadge } from "@/components/common"
+import { AiButton, AiNotice, FormField, HookCategorySelect, InfoHint, ProviderBadge } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Input } from "@/components/ui/input"
@@ -59,9 +59,12 @@ export function HookField({ item, mainMessage, onSaved }: { item: ContentItem; m
     <FormField
       label={t("hook")}
       htmlFor={inputId}
-      description={t("hook_description")}
       labelAction={
         <div className="flex items-center gap-1">
+          {/* Why the hook matters is an ⓘ, not a help line (Calm UI). */}
+          <InfoHint title={t("hook")} align="end">
+            {t("hook_description")}
+          </InfoHint>
           <HookLibraryPicker onPick={(hook) => applyHook(hook.text, hook.category, hook.id, t("hook_library"))} />
           <AiButton type="button" variant="ghost" size="xs" pending={ai.isPending} pendingLabel={t("writing")} onClick={() => void generate()}>
             {t("generate_hooks")}

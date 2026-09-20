@@ -8,8 +8,8 @@ import { defineMessages } from "@/lib/i18n/core"
 export const calendarMessages = defineMessages({
   en: {
     // Page
-    description: "What goes out when — scheduled, published and due content with your posting targets as lanes. Drag to reschedule.",
-    new_content: "New content",
+    info: "What goes out when: scheduled, published and due content, with your posting targets as lanes. Drag a post to another day to reschedule it, drag from Unscheduled onto a day to schedule it, or drop a scheduled post back on Unscheduled. New content is in New in the top bar.",
+    filters: "Filters",
     stat_published: "{count} published",
     stat_scheduled: "{count} scheduled",
     stat_due: "{count} due",
@@ -17,10 +17,9 @@ export const calendarMessages = defineMessages({
     stat_open_slots_other: "{count} open slots",
     stat_missed: "{count} missed",
     stat_all_filled: "all slots filled",
-    no_targets: "No posting targets yet — set up your weekly Posting Schedule so every day shows what to post.",
+    no_targets: "No posting targets yet. Set them once and every day shows what to post.",
     setup_schedule: "Set up Posting Schedule",
-    nothing_yet:
-      "Nothing on the calendar yet — your Posting Schedule shows as open slots. Click + on an upcoming slot to fill your first one, or plan the whole week at once.",
+    nothing_yet: "Nothing on the calendar yet. Your posting targets show as open slots — fill one with +, or plan the week.",
     plan_week: "Plan the week",
 
     // Toolbar and filters
@@ -104,15 +103,10 @@ export const calendarMessages = defineMessages({
     // Unscheduled tray
     tray_title: "Unscheduled",
     tray_drop: "Drop here to unschedule",
-    tray_ready: "{count} ready to post",
-    tray_nothing_ready: "Nothing ready to post",
-    tray_without_date_one: "{count} item without a date",
-    tray_without_date_other: "{count} items without a date",
-    tray_drag_hint: "drag onto a day to schedule",
     tray_schedule: "Schedule",
     show_fewer: "Show fewer",
     show_all: "Show all {count}",
-    tray_empty: "Everything in production has a date. Approved content lands here until it gets a publish time.",
+    tray_empty: "Everything has a date. Approved content waits here for a publish time.",
     group_ready: "Ready to post",
     group_ready_hint: "Approved — give it a publish time",
     group_production: "In production",
@@ -152,8 +146,8 @@ export const calendarMessages = defineMessages({
   },
   tl: {
     // Page
-    description: "Kailan lalabas ang bawat post — scheduled, published at due content, kasama ang posting targets mo bilang lanes. I-drag para i-reschedule.",
-    new_content: "Bagong content",
+    info: "Kailan lalabas ang bawat post: scheduled, published at due content, kasama ang posting targets mo bilang lanes. I-drag ang post sa ibang araw para i-reschedule, i-drag mula sa Unscheduled papunta sa araw para i-schedule, o ibalik sa Unscheduled para i-unschedule. Nasa Bago sa top bar ang bagong content.",
+    filters: "Filters",
     stat_published: "{count} published",
     stat_scheduled: "{count} scheduled",
     stat_due: "{count} due",
@@ -161,10 +155,9 @@ export const calendarMessages = defineMessages({
     stat_open_slots_other: "{count} open slots",
     stat_missed: "{count} na-miss",
     stat_all_filled: "napuno ang lahat ng slots",
-    no_targets: "Wala pang posting targets — i-setup ang weekly Posting Schedule mo para makita sa bawat araw kung ano ang i-post.",
+    no_targets: "Wala pang posting targets. I-set once para makita sa bawat araw kung ano ang i-post.",
     setup_schedule: "I-setup ang Posting Schedule",
-    nothing_yet:
-      "Wala pang nasa calendar — makikita ang Posting Schedule mo bilang open slots. I-click ang + sa paparating na slot para punan ang una, o i-plan ang buong week nang sabay.",
+    nothing_yet: "Wala pang nasa calendar. Open slots ang posting targets mo — punan gamit ang +, o i-plan ang week.",
     plan_week: "I-plan ang week",
 
     // Toolbar and filters
@@ -248,15 +241,10 @@ export const calendarMessages = defineMessages({
     // Unscheduled tray
     tray_title: "Unscheduled",
     tray_drop: "I-drop dito para i-unschedule",
-    tray_ready: "{count} ready to post",
-    tray_nothing_ready: "Walang ready to post",
-    tray_without_date_one: "{count} item na walang date",
-    tray_without_date_other: "{count} items na walang date",
-    tray_drag_hint: "i-drag sa isang araw para i-schedule",
     tray_schedule: "I-schedule",
     show_fewer: "Ipakita ang mas kaunti",
     show_all: "Ipakita ang lahat ({count})",
-    tray_empty: "May date na ang lahat ng nasa production. Dito mapupunta ang approved content hanggang may publish time.",
+    tray_empty: "May date na lahat. Dito naghihintay ang approved content ng publish time.",
     group_ready: "Ready to post",
     group_ready_hint: "Approved — bigyan ng publish time",
     group_production: "Nasa production",

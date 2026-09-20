@@ -2,7 +2,7 @@
 
 import { CalendarDays, CalendarRange, ChevronRight, MessagesSquare, RotateCcw, Sun, type LucideIcon } from "lucide-react"
 import Link from "next/link"
-import { PageSection, SectionCard, StatusPill } from "@/components/common"
+import { InfoHint, PageSection, SectionCard, StatusPill } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { OPERATING_RHYTHM, SYSTEM_PRINCIPLES } from "@/lib/constants"
 import { useT, useUiLang } from "@/lib/i18n"
@@ -21,11 +21,7 @@ export function PrinciplesList({ metrics }: { metrics: PrincipleMetric[] }) {
   const principleText = (i: number, key: "title" | "description", english: string) =>
     lang === "en" || i >= 10 ? english : tk(`principle_${(i + 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10}_${key}`)
   return (
-    <SectionCard
-      title={t("principles_title")}
-      description={t("principles_description")}
-      contentClassName="p-0"
-    >
+    <SectionCard title={t("principles_title")} info={t("principles_description")} contentClassName="p-0">
       <ol className="divide-y">
         {SYSTEM_PRINCIPLES.map((principle, i) => {
           const metric = metrics[i]
@@ -33,10 +29,12 @@ export function PrinciplesList({ metrics }: { metrics: PrincipleMetric[] }) {
           return (
             <li key={principle.title} className="grid gap-x-4 gap-y-2 px-4 py-3 md:grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)] md:items-start">
               <span className="text-xs leading-5 font-medium text-muted-foreground num">{String(i + 1).padStart(2, "0")}</span>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-pretty">{principleText(i, "title", principle.title)}</p>
-                <p className="text-xs text-pretty text-muted-foreground">{principleText(i, "description", principle.description)}</p>
-              </div>
+              <p className="min-w-0 text-sm font-medium text-pretty">
+                {principleText(i, "title", principle.title)}
+                <InfoHint label={principleText(i, "title", principle.title)} className="ml-1 -mt-0.5">
+                  {principleText(i, "description", principle.description)}
+                </InfoHint>
+              </p>
               <div className="flex min-w-0 flex-col gap-1 md:items-end md:text-right">
                 <p className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 md:justify-end">
                   <span className="text-lg leading-6 font-semibold num">{metric.value}</span>
@@ -68,12 +66,28 @@ export function OperatingRhythm({ evidence }: { evidence: Record<RhythmKey, stri
   const tk = useT(systemKnowledgeMessages)
   const lang = useUiLang()
   return (
-    <PageSection title={t("rhythm_title")} description={t("rhythm_description")}>
+    <PageSection title={t("rhythm_title")} info={t("rhythm_description")}>
       <div className="grid min-w-0 gap-4 lg:grid-cols-3">
         {RHYTHM_KEYS.map((key) => {
           const rhythm = OPERATING_RHYTHM[key]
+          const describe = (i: number, english: string) =>
+            lang === "en" || i >= 5 ? english : tk(`rhythm_${key}_${(i + 1) as 1 | 2 | 3 | 4 | 5}`)
           return (
-            <SectionCard key={key} title={rhythm.label} icon={RHYTHM_ICONS[key]} contentClassName="px-0 pb-1.5">
+            <SectionCard
+              key={key}
+              title={rhythm.label}
+              icon={RHYTHM_ICONS[key]}
+              info={
+                <ol className="flex flex-col gap-0.5">
+                  {rhythm.steps.map((step, i) => (
+                    <li key={step.label}>
+                      <span className="font-medium text-foreground">{step.label}</span> — {describe(i, step.description)}
+                    </li>
+                  ))}
+                </ol>
+              }
+              contentClassName="px-0 pb-1.5"
+            >
               <ol className="flex flex-col">
                 {rhythm.steps.map((step, i) => (
                   <li key={step.label}>
@@ -89,10 +103,9 @@ export function OperatingRhythm({ evidence }: { evidence: Record<RhythmKey, stri
                           <span className="text-sm font-medium">{step.label}</span>
                           <ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform group-hover/step:translate-x-0.5" aria-hidden />
                         </span>
-                        <span className="block text-xs text-pretty text-muted-foreground">
-                          {lang === "en" || i >= 5 ? step.description : tk(`rhythm_${key}_${(i + 1) as 1 | 2 | 3 | 4 | 5}`)}
-                        </span>
-                        {evidence[key][i] ? <span className="mt-0.5 block text-xs font-medium text-foreground/85">{evidence[key][i]}</span> : null}
+                        {evidence[key][i] ? (
+                          <span className="block text-xs text-pretty text-muted-foreground">{evidence[key][i]}</span>
+                        ) : null}
                       </span>
                     </Link>
                   </li>
@@ -115,7 +128,7 @@ export function CoreLoop({ steps }: { steps: LoopStep[] }) {
   return (
     <SectionCard
       title={t("loop_title")}
-      description={t("loop_description")}
+      info={t("loop_description")}
       action={
         <Button type="button" variant="outline" size="sm" onClick={() => uiActions.askStrategist(STRATEGIST_PROMPT)}>
           <MessagesSquare aria-hidden />

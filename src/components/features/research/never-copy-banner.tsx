@@ -1,19 +1,25 @@
 "use client"
 
 import { ShieldCheck } from "lucide-react"
+import { InfoHint } from "@/components/common"
 import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { researchMessages } from "./messages"
 
-/** The Research Library principle: study why content works, then make your own. */
+/**
+ * The Research Library principle in one line (Calm UI): study why content works, then make your own — never copy.
+ * The full rule and what happens to pasted text sit behind its ⓘ. Inline (a span), so it can be a page subtitle.
+ */
 export function NeverCopyBanner({ className }: { className?: string }) {
   const t = useT(researchMessages)
   return (
-    <div role="note" className={cn("flex items-start gap-2.5 rounded-lg border bg-card px-3 py-2.5 text-sm", className)}>
-      <ShieldCheck className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
-      <p className="min-w-0 text-pretty">
-        <span className="font-medium">{t("never_copy")}</span> <span className="text-muted-foreground">{t("never_copy_detail")}</span>
-      </p>
-    </div>
+    <span role="note" className={cn("inline-flex max-w-full items-center gap-1.5 align-middle", className)}>
+      <ShieldCheck className="size-3.5 shrink-0 text-brand" aria-hidden />
+      <span className="min-w-0">{t("never_copy_short")}</span>
+      <InfoHint title={t("never_copy_title")}>
+        <p>{t("never_copy")}</p>
+        <p>{t("never_copy_detail")}</p>
+      </InfoHint>
+    </span>
   )
 }
