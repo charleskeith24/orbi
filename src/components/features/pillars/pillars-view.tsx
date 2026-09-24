@@ -5,9 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useMemo, useState } from "react"
 import { EmptyState, PageContainer, PageHeader } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { ReadOnlyNotice } from "@/components/features/team/team-ui"
 import { PILLAR_PRESETS } from "@/lib/constants"
 import { useT } from "@/lib/i18n"
-import { useSettings } from "@/lib/store"
+import { useCanWrite, useSettings } from "@/lib/store"
 import type { ContentPillar } from "@/lib/types"
 import { addPresetPillars, movePillar, setPillarActive } from "./pillar-actions"
 import { PillarCard } from "./pillar-card"
@@ -26,6 +27,7 @@ import { usePillarOverview } from "./use-pillar-overview"
 /** Content Pillars (spec §6): pillar cards with target vs actual mix, performance, CRUD, reorder and targets. */
 export function PillarsView() {
   const t = useT(pillarMessages)
+  const canWrite = useCanWrite("content_pillars")
   const router = useRouter()
   const searchParams = useSearchParams()
   const settings = useSettings()
@@ -81,17 +83,19 @@ export function PillarsView() {
         actions={
           <>
             <WindowToggle value={range} onChange={setRange} />
-            <Button type="button" size="sm" variant="outline" onClick={openTargets} disabled={!activePillars.length}>
+            <Button type="button" size="sm" variant="outline" onClick={openTargets} disabled={!activePillars.length || !canWrite}>
               <Scale aria-hidden />
               {t("set_targets")}
             </Button>
-            <Button type="button" size="sm" onClick={openCreate}>
+            <Button type="button" size="sm" onClick={openCreate} disabled={!canWrite}>
               <Plus aria-hidden />
               {t("new_pillar")}
             </Button>
           </>
         }
       />
+
+      <ReadOnlyNotice table="content_pillars" />
 
       {pillars.length ? (
         <>

@@ -10,7 +10,8 @@ import { newMenuMessages } from "@/components/app-shell/new-menu-messages"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { useT } from "@/lib/i18n"
 import { isNavActive, NAV_SECTIONS, sidebarSections } from "@/lib/navigation"
-import { updateSettings, useDataStatus, useSettings } from "@/lib/store"
+import { updateSettings, useCanSeeMoney, useDataStatus, useSettings } from "@/lib/store"
+import { teamMessages } from "@/lib/team/messages"
 import { cn } from "@/lib/utils"
 import { bottomBarMessages } from "./bottom-tab-bar-messages"
 
@@ -105,6 +106,7 @@ const SHEET = "max-h-[85dvh] gap-0 overflow-y-auto rounded-t-xl pb-[calc(0.75rem
 
 function NewSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const n = useT(newMenuMessages)
+  const team = useT(teamMessages)
   const actions = useNewActions()
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -112,6 +114,7 @@ function NewSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (open: 
         <SheetHeader className="px-4 pt-4 pb-2">
           <SheetTitle>{n("new")}</SheetTitle>
         </SheetHeader>
+        {actions.length === 0 ? <p className="px-4 pb-4 text-sm text-muted-foreground">{team("refused_viewer")}</p> : null}
         <ul className="flex flex-col px-2">
           {actions.map((action) => {
             const Icon = action.icon
@@ -143,8 +146,9 @@ function MoreSheet({ open, onOpenChange, pathname }: { open: boolean; onOpenChan
   const t = useT(bottomBarMessages)
   const s = useT(sidebarMessages)
   const simpleMode = useSettings().simple_mode
+  const moneyAccess = useCanSeeMoney()
   const { mode } = useDataStatus()
-  const nav = useMemo(() => sidebarSections(NAV_SECTIONS, { simpleMode, pathname }), [simpleMode, pathname])
+  const nav = useMemo(() => sidebarSections(NAV_SECTIONS, { simpleMode, pathname, moneyAccess }), [simpleMode, pathname, moneyAccess])
   const close = () => onOpenChange(false)
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

@@ -8,6 +8,7 @@
  *   node scripts/click-audit.mjs /pipeline --fast        (one page, Escape/back between clicks)
  *   node scripts/click-audit.mjs /admin/users --admin    (dev-only admin fixture: sample data)
  *   node scripts/click-audit.mjs /circles --circles      (dev-only Circles fixture: sample circles)
+ *   node scripts/click-audit.mjs /settings?tab=team --team   (dev-only Team fixture: sample members)
  *
  * Default mode isolates every click in a fresh browser context (fresh demo
  * workspace), so destructive actions can't affect later clicks.
@@ -56,6 +57,9 @@ const LANG = args.lang ? String(args.lang) : ""
 const ADMIN = Boolean(args.admin)
 // --circles turns on the dev-only Circles fixture (sample circles; Circles need the online version otherwise).
 const CIRCLES = Boolean(args.circles)
+// --team turns on the dev-only Team fixture (sample members and invites; team workspaces need the online
+// version otherwise). --team=editor|editor-money|viewer also opens the sample workspace in that role.
+const TEAM = args.team ? (args.team === true ? "fixture" : String(args.team)) : ""
 const newContextRaw = browser.newContext.bind(browser)
 browser.newContext = async (options) => {
   const context = await newContextRaw(options)
@@ -78,6 +82,14 @@ browser.newContext = async (options) => {
       if (!localStorage.getItem("pbos:dev-circles")) localStorage.setItem("pbos:dev-circles", "fixture")
     })
   }
+  if (TEAM) {
+    await context.addInitScript(
+      (mode) => {
+        if (!localStorage.getItem("pbos:dev-team")) localStorage.setItem("pbos:dev-team", mode)
+      },
+      TEAM
+    )
+  }
   return context
 }
 
@@ -99,8 +111,8 @@ async function openPage() {
   await page
     .waitForFunction(() => !document.querySelector('[aria-label="Loading workspace"]'), null, { timeout: 45000 })
     .catch(() => errors.push("timeout: workspace never finished loading"))
-  // The admin and Circles screens load their (fixture) data after the page: wait until nothing is busy.
-  if (ADMIN || CIRCLES) {
+  // The admin, Circles and Team screens load their (fixture) data after the page: wait until nothing is busy.
+  if (ADMIN || CIRCLES || TEAM) {
     await page
       .waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 45000 })
       .catch(() => errors.push("timeout: admin screen never finished loading"))

@@ -4,8 +4,9 @@ import { Crosshair, MessageCircleQuestion, Plus, Users } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 import { EmptyState, PageContainer, PageHeader, StatTile } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { ReadOnlyNotice } from "@/components/features/team/team-ui"
 import { useT } from "@/lib/i18n"
-import { useTable } from "@/lib/store"
+import { useCanWrite, useTable } from "@/lib/store"
 import type { ID } from "@/lib/types"
 import { formatNumber } from "@/lib/utils"
 import {
@@ -33,6 +34,7 @@ const URL_KEYS = ["open"] as const
  */
 export function PersonasView() {
   const t = useT(personaMessages)
+  const canWrite = useCanWrite("audience_personas")
   const [url, setUrl] = useUrlState(URL_KEYS)
   const personas = useTable("audience_personas")
   const problems = useTable("audience_problems")
@@ -103,12 +105,14 @@ export function PersonasView() {
         title="Audience HQ"
         info={t("description")}
         actions={
-          <Button type="button" size="sm" onClick={() => setCreating(true)}>
+          <Button type="button" size="sm" onClick={() => setCreating(true)} disabled={!canWrite}>
             <Plus aria-hidden />
             {t("new_persona")}
           </Button>
         }
       />
+
+      <ReadOnlyNotice table="audience_personas" />
 
       {url.open && !openPersona ? <MissingLinkNotice entity="persona" onDismiss={() => setOpen(null)} /> : null}
 

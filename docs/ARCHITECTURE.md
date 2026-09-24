@@ -60,6 +60,7 @@ src/
     admin/                     admin & access (§14): contract types, form schema, gate (pages), guard (API), server/* (data access)
     circles/                   Collab Circles (§15): client contract, pure logic, in-memory fake
     profiles/                  Profiles (§16): client contract, link rules, crop math, local + fixture clients
+    team/                      Team workspaces (§17): permissions (the RLS mirror), the active workspace and personal prefs, contract, messages, in-memory fake
     dates.ts  utils.ts  scoring.ts  navigation.ts
 supabase/migrations/           SQL schema, RLS, triggers
 docs/                          this file + setup guides
@@ -103,6 +104,9 @@ Key relationships:
 - Collabs: `collabs` = one collaboration with another creator (status `idea → reached_out → agreed → scheduled → published → reviewed`, or `declined`; `type` duet/stitch, guesting, joint Live, shoutout swap, giveaway, co-created, group brand deal, other). Partner fields are free text (no link to another account); `content_item_ids` = the creator's posts made for it (`array_remove`, like `brand_deals`); optional `pillar_id` / `goal_id` / `campaign_id` / `brand_deal_id` (set null). Results come only from the latest snapshot of linked posts (`collabResults`); **Collab lift** (`collabLift` in `src/lib/analytics/collabs.ts`) compares collab vs solo posts on the same platform over the last 90 days (medians; needs ≥ 3 collab and ≥ 5 solo posts with analytics, otherwise it says what's missing). Writes go through `features/collabs/collab-actions.ts`; `uiActions.openDialog({ type: "new-content", defaults, collabId })` links the created items to a collab.
 - `app_settings` also holds the UI language (`ui_language`), `simple_mode`, the default `currency`, the `reminders_*` preferences and `first_week_dismissed`; `brand_profiles` holds the media-kit contact fields (`contact_email`, `website`, `media_kit_bio`).
 
+### Which workspace is loaded
+A workspace is every row with one `user_id`: the owner's account. Since team workspaces (§17) a person can be in more than one, so **the adapter names the workspace** rather than trusting RLS to scope it: every load filters `.eq("user_id", ownerId)` and every insert stamps `user_id: ownerId` (never `auth.uid()`). `useDataStore` holds `ownerId` and `access` alongside `userId`; both are the signed-in account in your own workspace and in local mode.
+
 ### Reading
 ```ts
 import { useTable, useRow, useLookup, useBrand, useSettings, useDb, useEntityTags } from "@/lib/store"
@@ -137,7 +141,7 @@ Use `new Date()` at the call site (`now`) and pass it into pure analytics functi
 - **Sub-pages are tabs, not sidebar links.** A module's sub-pages (`NavItem.children` in `src/lib/navigation.ts`) keep their own routes and render as route-linked tabs under the top bar (`ModuleTabs` → `HubTabs`, e.g. Ideas: Idea Bank · Generator · Hooks · Angles). Each child has a full `title` (⌘K, breadcrumb) and a short `tab` label. The sidebar has one link per module, active on every sub-route. `?open=`, ⌘K, bookmarks and links keep working because tabs are plain links. Adding a sub-page = adding a child; nothing else.
 - Content item detail lives at **`/studio/<itemId>`**; campaign detail at **`/campaigns/<id>`**.
 - Entity → page map (for links): idea `/ideas?open=`, item `/studio/<id>`, hook `/ideas/hooks?open=`, angle `/ideas/angles?open=`, persona `/audience?open=`, problem `/audience/problems?open=`, question `/audience/questions?open=`, pillar `/pillars?open=`, story `/stories?open=`, research `/research?open=`, series `/series?open=`, experiment `/experiments?open=`, campaign `/campaigns/<id>`, brand deal `/money/deals?open=`, income entry `/money/income?open=`, collab `/collabs?open=` (`/collabs?new=1&campaign=<id>` or `&deal=<id>` opens the form pre-linked; `/collabs?ideas=1` opens Collab ideas). Rate cards are edited on `/money/media-kit`.
-- Settings tabs: `profile`, `general`, `performance`, `funnel`, `formats`, `tags`, `engagement`, `reminders`, `ai`, `integrations`, `data` (`settingsHref(tab)` in `features/settings/tabs.ts`). `/settings` with no tab still opens `general`; the account menu's **Profile** item opens `/settings?tab=profile`.
+- Settings tabs: `profile`, `general`, `team`, `performance`, `funnel`, `formats`, `tags`, `engagement`, `reminders`, `ai`, `integrations`, `data` (`settingsHref(tab)` in `features/settings/tabs.ts`). `/settings` with no tab still opens `general`; the account menu's **Profile** item opens `/settings?tab=profile`.
 - Admin area (Supabase mode, admins only, §14): `/admin` (Overview), `/admin/requests`, `/admin/users`, `/admin/feedback`, `/admin/audit`, `/admin/security` (2-step verification). Never in `NAV_SECTIONS`; the entry is the account menu and ⌘K, for admins only.
 - Collab Circles (§15, online version; local mode shows a notice): `/circles` (list), `/circles/<id>` (a circle; `#asks` jumps to Collab asks), `/circles/join/<code>` (invite link; signed-out visitors go through `/login?next=`).
 - Public pages (no sign-in in Supabase mode): `/login`, `/signup` (Request access), `/privacy`, `/terms` (`PUBLIC_PAGES` in `features/auth/auth-paths.ts`). Both legal pages show `NEXT_PUBLIC_CONTACT_EMAIL` when it's set (`src/app/privacy/contact-email.ts`) and say honestly when it isn't; `?preview=contact` fakes one in development only.
@@ -232,7 +236,7 @@ Phase 4 integrations (Meta, TikTok, YouTube, LinkedIn, Google Drive, Canva, Buff
 
 ## 9. Terminology (use exactly)
 
-Brand HQ · Audience HQ · Persona · Problem Bank · Question Bank · Content Pillar · Content Matrix · Content Funnel (TOFU/MOFU/BOFU) · Idea Bank · Quick Capture · Idea Generator · Hook Library · Angle Library · Content Studio · Content Brief · Script · Content Score · Pipeline · Calendar · Posting Schedule · Weekly Planner · Campaign · Series · Story Vault · Research Library · Analytics · Winner detection (Normal / Good / Winner / Breakout) · Winning Content Library · Repurposing Engine · Content Tree · Experiments · Weekly Report · Monthly Review · Content Strategist · Content Health Score · Content Buffer · Collab tracker · Collab lift · Collab Circles · Your first week.
+Brand HQ · Audience HQ · Persona · Problem Bank · Question Bank · Content Pillar · Content Matrix · Content Funnel (TOFU/MOFU/BOFU) · Idea Bank · Quick Capture · Idea Generator · Hook Library · Angle Library · Content Studio · Content Brief · Script · Content Score · Pipeline · Calendar · Posting Schedule · Weekly Planner · Campaign · Series · Story Vault · Research Library · Analytics · Winner detection (Normal / Good / Winner / Breakout) · Winning Content Library · Repurposing Engine · Content Tree · Experiments · Weekly Report · Monthly Review · Content Strategist · Content Health Score · Content Buffer · Collab tracker · Collab lift · Collab Circles · Your first week · Team workspace (Owner / Editor / Viewer) · Money access.
 
 ## 10. Definition of done (every feature)
 
@@ -327,6 +331,7 @@ The online version has a platform admin (the owner, plus anyone they promote) an
 
   New, repeat and existing emails all get the same `201 { ok: true }`. No IP address is read or stored. The `/signup` server component reads `getAccessRequestState()` (`src/lib/admin/server/settings.ts`).
 - **Emails.** Approve and invite use `auth.admin.inviteUserByEmail`, password resets use `resetPasswordForEmail`, and both land on `/set-password` through the token-hash email templates (DEPLOY.md step 5). Reject sends no email. Disable is a long `ban_duration`, and enable is `"none"`.
+- **Team workspaces change nothing here (§17).** No admin policy touches `workspace_members` or `workspace_invites`, `service_role` has no grants on them, and admin code still selects counts and account metadata only — never a workspace's content, whoever is in it.
 - **Tests.**
   - `src/lib/admin/admin-migration.pglite.test.ts`: the SQL on Postgres.
   - `src/lib/admin/guard.test.ts`: every gate and guard branch.
@@ -387,3 +392,43 @@ Every account has a personal profile — the **person** using Orbi, not the bran
   - `features/profile/api/supabase-api.pglite.test.ts`: the browser client end to end, Storage through `src/lib/profiles/testing/pglite-storage.ts`.
   - `src/lib/profiles/*.test.ts`: link rules (and their agreement with the SQL CHECK), draft validation, crop math, photo paths, the local and fixture clients.
   - `src/app/api/admin/routes.test.ts`: photo removal, its audit row, and photo cleanup on account deletion.
+
+## 17. Team workspaces
+
+A creator (the **Owner**) invites people into their workspace — a VA or editor, a manager or a client (docs/TEAM_WORKSPACES.md for the brief). **Online version only**; local mode has no accounts and shows an honest notice (the `/admin` pattern). This is the one change that rewrites row-level security on every workspace table, so the database is the contract and the UI only mirrors it.
+
+- **A workspace is still every row with one `user_id`.** That id is the owner's account; owning a workspace is `user_id = auth.uid()`, which nobody can forge. Membership is a row in `workspace_members` — never an "owner" row.
+
+| Role | Reads | Writes |
+|---|---|---|
+| **Owner** | everything | everything |
+| **Editor** (VA / editor) | everything they can see | the content work: ideas, hooks, angles, items, briefs, scripts, calendar, metrics, experiments, repurposing, stories, research, series, campaigns, tags, reviews, AI log, engagement, collabs |
+| **Viewer** (manager / client) | everything they can see | nothing |
+
+  **Money** (`brand_deals`, `income_entries`, `rate_cards`) is invisible to a member until the owner turns on **Money access**; an Editor with access may also write it. Brand HQ, goals, platforms, pillars, audience, formats and `app_settings` are **read-only for every member** — the owner writes them.
+
+- **Schema.** `supabase/migrations/20260921000000_team.sql`: `workspace_members` (owner_id, user_id, role `editor|viewer`, money_access) and `workspace_invites` (owner_id, email, role, money_access). Both are server-only tables (`SERVER_ONLY_TABLES`), not workspace tables.
+  - `workspace_members` has **no insert, update or delete grant** for anyone — every change goes through a `security definer` function that checks `auth.uid()`. A member can't escalate because there is nothing to write.
+  - `workspace_invites` grants the owner `select` and `delete` on their own rows; creating and answering go through functions. The invitee never reads the table: `my_workspace_invites()` matches their account email inside the function.
+  - **Three helpers are the only place each rule lives** (`stable`, `security definer`, `set search_path = ''`): `workspace_role(owner) → owner|editor|viewer|null`, `can_edit_workspace(owner)`, `has_money_access(owner)`. The policy DO-block builds all 132 policies from them and from three table lists; `src/lib/team/permissions.ts` holds the same lists for the UI and `permissions.test.ts` parses the SQL so they can't drift.
+  - Functions: `invite_to_workspace`, `my_workspace_invites`, `respond_to_invite`, `set_workspace_member`, `remove_workspace_member`, `leave_workspace`, `my_workspaces`. Errors are raised as short codes (`workspace_full`, `not_member`, `self_invite`, …) and mapped by `toTeamError`.
+  - `can_see_profile()` (§16) gains "shares a workspace with you" — in that one place, so `get_profiles()` and the avatars storage policy follow.
+- **The adapter names the workspace** (§3). RLS returns every workspace a person may see, so the Supabase adapter filters each load with `.eq("user_id", ownerId)` and stamps each insert with `user_id: ownerId` — never `auth.uid()`, which for a member would quietly create rows in their own workspace. Deletes and updates go by id, protected by RLS. Tables the role can't read are never requested. `replaceAll` (import, start fresh, move local → cloud) is owner-only.
+- **Personal preferences stay personal.** `PERSONAL_SETTING_FIELDS` in `src/lib/team/workspace.ts` = `ui_language` and `simple_mode`. In someone else's workspace the adapter reads them from the member's **own** `app_settings` row, lays them over the workspace's settings in memory, and writes them back to their own row (`savePersonal`). The owner's row is never touched — RLS forbids it anyway. Reminders are **not** personal overrides: reminders and push go to the workspace's owner only, so Settings → Reminders is owner-only and a member's own reminders live in their own workspace.
+- **Owner-only operations:** Settings → Data (import, start fresh, move local → cloud, export — the export contains Money), Settings → Integrations, AI settings, team management and deleting the workspace. Members get `OwnerOnlyTab` instead of the controls.
+- **The UI mirrors, never decides.** `src/lib/team/permissions.ts` (`can(action, table, access)`, `canRead`, `canWrite`, `denialReason`, `canSeeMoney`, `canManageWorkspace`) is the one helper; `useWorkspaceAccess()`, `useWorkspaceRole()`, `useCanWrite(table)`, `useCanSeeMoney()` expose it. The data store refuses a write the role can't make with a toast before it reaches the network; Postgres is still the guard.
+  - Viewers: the ＋ New button is disabled and says why, the Pipeline's cards aren't draggable and its columns have no "＋", and create buttons are disabled rather than hidden where that would confuse.
+  - Editors: Brand HQ, Goals, Platform Strategy, Pillars and Audience show a one-line `ReadOnlyNotice` with the reason behind an ⓘ.
+  - Money is dropped from the sidebar, the phone More sheet and ⌘K without Money access (`NavItem.money`), and `/money/*` shows an honest notice (`MoneyAccessGate`).
+- **Client.** `TeamApi` (`src/lib/team/types.ts`) has two implementations: `features/team/api/supabase-api.ts` (the browser client: RLS reads and RPCs; no API routes, no secret key) and `src/lib/team/fixture-api.ts` (an in-memory fake with the same rules). `<TeamSync />` in the app shell picks one; `features/team/team-store.ts` holds the memberships, the invites addressed to you and your own team, and reloads after every change.
+- **Switching.** The account menu's **Workspace** submenu lists "My workspace" plus each workspace you're a member of, with the owner's brand name and your role. `switchWorkspace()` (in `data-provider.tsx`) remembers the choice per device (`pbos:workspace`) and reloads the store from that workspace, so nothing of the old one is left in memory. On the next visit the provider asks `my_workspaces()` first and falls back to your own workspace, with a toast, if you're no longer a member. A one-line **"You're in Kapihan Roasters · Editor"** strip sits under the top bar.
+- **Invites.** By email, from **Settings → Team**. Beta rule: the invitee must already have an Orbi account (accounts only come through the admin waitlist, §14) — the UI says "If they have an account, they'll see your invite in the app" and offers the `/signup` link to share. The invite is stored either way, so the owner never learns who is signed up. The invitee sees a one-line banner with **Accept / Decline**. Limits: **5 members per workspace** during the beta (pending invites take a seat), and 10 workspaces a person can be a member of.
+- **Concurrent edits.** Writes are per row and the last write wins. A tab that comes back after two minutes away reloads the workspace, and Settings → Team has a manual **Refresh**. Two people editing the same post at the same time can overwrite each other; realtime sync is a later step, and the UI says so behind a Disclosure.
+- **Onboarding.** A member landing in someone else's workspace never sees Quick setup for it (`isFirstRun` is false for a guest). Their own workspace still has its own first run.
+- **Admins are unchanged (§14).** No admin policy touches `workspace_members` or `workspace_invites`, and `service_role` has no grants on them. Admins still see counts and account metadata only.
+- **Local mode is unchanged.** Settings → Team shows an honest notice; a dev-only fixture (`localStorage["pbos:dev-team"]` = `fixture` | `editor` | `editor-money` | `viewer`, the scripts' `--team` flag) loads a sample team, and the role modes also open a sample workspace so an Editor's and a Viewer's screens can be seen locally. Same production guard as §15: `createTeamFixture` throws in a production build.
+- **Tests.**
+  - `src/lib/team/team-migration.pglite.test.ts`: the whole RLS matrix on Postgres (every role × every workspace table × select/insert/update/delete), the membership and invite rules, and the profile visibility rule.
+  - `src/lib/team/workspace-scoping.pglite.test.ts`: the real adapter through the PostgREST stand-in — loads filter by owner, inserts stamp it, a member of two workspaces never mixes rows, and personal preferences round-trip to their own row.
+  - `src/lib/team/permissions.test.ts`: the helper against the same matrix, and against the table lists parsed out of the migration.
+  - `src/lib/team/workspace.test.ts`: the personal-preference split and the remembered workspace.

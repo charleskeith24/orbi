@@ -7,6 +7,7 @@ import { ContentCard, EmptyState, OptionSelect, StageIcon, type SelectOption } f
 import { Button } from "@/components/ui/button"
 import { useT } from "@/lib/i18n"
 import { PIPELINE_STAGE_MAP } from "@/lib/constants"
+import { useCanWrite } from "@/lib/store"
 import type { ContentItem, ID, PerformanceTier, PipelineStage } from "@/lib/types"
 import { cn, formatNumber } from "@/lib/utils"
 import {
@@ -57,6 +58,8 @@ export function MobileBoard({
   onResetFilters,
 }: MobileBoardProps) {
   const t = useT(pipelineMessages)
+  // Viewers create nothing, so the stage's "Add" isn't offered (§10: no dead buttons).
+  const canWrite = useCanWrite("content_items")
   const column = columns[stage]
   const { prev, next } = adjacentStages(stage)
   const options = useMemo<SelectOption<PipelineStage>[]>(
@@ -120,7 +123,7 @@ export function MobileBoard({
         </div>
       ) : null}
 
-      {QUICK_ADD_STAGES.includes(stage) ? (
+      {QUICK_ADD_STAGES.includes(stage) && canWrite ? (
         quickAdd === stage ? (
           <QuickAddForm stage={stage} defaults={quickAddDefaults} onClose={() => onQuickAdd(null)} />
         ) : (
@@ -183,7 +186,9 @@ function MobileCard({
 }) {
   const t = useT(pipelineMessages)
   const actions = usePipelineActions()
-  const { prev, next } = adjacentStages(item.stage)
+  // Moving a card writes the item, so a Viewer gets the card without the stage buttons (§17).
+  const canWrite = useCanWrite("content_items")
+  const { prev, next } = canWrite ? adjacentStages(item.stage) : { prev: null, next: null }
   return (
     <div
       id={cardDomId(item.id)}

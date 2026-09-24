@@ -3,6 +3,10 @@ import { create } from "zustand"
 import type { DataAdapter, DataMode } from "@/lib/data/adapter"
 import { buildRow, emptyDatabase, normalizeDatabase } from "@/lib/data/defaults"
 import { planDelete } from "@/lib/data/relations"
+import { translate, uiLangOf } from "@/lib/i18n/core"
+import { canWrite, denialReason, OWNER_ACCESS, type WorkspaceAccess } from "@/lib/team/permissions"
+import { isPersonalOnly } from "@/lib/team/workspace"
+import { teamMessages } from "@/lib/team/messages"
 import type { Database, ID, InsertRow, Row, TableName, UpdateRow } from "@/lib/types"
 
 export type DataStatus = "idle" | "loading" | "ready" | "error"
@@ -12,7 +16,12 @@ export interface DataState {
   status: DataStatus
   error: string | null
   mode: DataMode
+  /** The signed-in account. */
   userId: string
+  /** The workspace that is open: every row's `user_id`. Equal to `userId` in your own workspace. */
+  ownerId: string
+  /** What the signed-in person may do in the open workspace (ARCHITECTURE §17). */
+  access: WorkspaceAccess
   isFirstRun: boolean
   adapter: DataAdapter | null
 
@@ -39,6 +48,21 @@ const TABLE_LABELS: Partial<Record<TableName, string>> = {
   app_settings: "settings",
 }
 const labelFor = (table: TableName) => TABLE_LABELS[table] ?? table.replace(/_/g, " ")
+
+/**
+ * Team workspaces: a write the open role can't make is refused here, so the UI never fires a request
+ * row-level security would reject. This mirrors the policies (src/lib/team/permissions.ts); Postgres is
+ * still the guard. The one exception is `app_settings`, where a member may save their own personal
+ * preferences — the adapter routes those to their own row.
+ */
+function refuseWrite(table: TableName, access: WorkspaceAccess, patch?: Record<string, unknown>): boolean {
+  if (canWrite(table, access)) return false
+  if (table === "app_settings" && patch && isPersonalOnly(patch)) return false
+  const lang = uiLangOf(useDataStore.getState().db.app_settings[0])
+  const reason = denialReason(table, access) ?? "viewer"
+  toast.error(translate(teamMessages, lang, `refused_${reason}`), { id: `team-refused-${reason}` })
+  return true
+}
 
 type AnyRow = Row<TableName>
 type RowsOf = (db: Database, table: TableName) => AnyRow[]
@@ -68,17 +92,29 @@ export const useDataStore = create<DataState>()((set, get) => {
     error: null,
     mode: "local",
     userId: "",
+    ownerId: "",
+    access: OWNER_ACCESS,
     isFirstRun: false,
     adapter: null,
 
     async init(adapter) {
       set({ status: "loading", error: null, adapter, mode: adapter.mode })
       try {
-        const { db, userId, isFirstRun } = await adapter.load()
-        set({ db, userId, isFirstRun: Boolean(isFirstRun), status: "ready" })
+        const { db, userId, isFirstRun, ownerId, access } = await adapter.load()
+        set({
+          db,
+          userId,
+          ownerId: ownerId ?? userId,
+          access: access ?? OWNER_ACCESS,
+          isFirstRun: Boolean(isFirstRun),
+          status: "ready",
+        })
         // Guarantee singleton rows exist so `useBrand()` / `useSettings()` are always updatable.
-        if (!db.app_settings.length) get().insert("app_settings", {})
-        if (!db.brand_profiles.length) get().insert("brand_profiles", {})
+        // A member can't create them in someone else's workspace, and doesn't need to: the owner has them.
+        if (canWrite("app_settings", get().access)) {
+          if (!db.app_settings.length) get().insert("app_settings", {})
+          if (!db.brand_profiles.length) get().insert("brand_profiles", {})
+        }
       } catch (err) {
         set({ status: "error", error: err instanceof Error ? err.message : String(err) })
       }
@@ -94,9 +130,13 @@ export const useDataStore = create<DataState>()((set, get) => {
     },
 
     insertMany(table, values) {
-      const { db, userId, adapter } = get()
+      const { db, ownerId, adapter, access } = get()
       const now = new Date()
-      const rows = values.map((v) => buildRow(table, v, userId, now))
+      // Rows belong to the workspace that is open, not to the signed-in account.
+      const rows = values.map((v) => buildRow(table, v, ownerId, now))
+      // Refused: the rows are built so callers that read the returned id don't crash, but nothing is
+      // committed to the store and nothing is sent. The toast has already said why.
+      if (refuseWrite(table, access)) return rows
       if (!rows.length) return rows
       commit(withRows(db, table, [...rowsOf(db, table), ...(rows as AnyRow[])]))
       if (adapter) {
@@ -118,7 +158,8 @@ export const useDataStore = create<DataState>()((set, get) => {
     },
 
     updateMany(table, updates) {
-      const { db, adapter } = get()
+      const { db, adapter, access } = get()
+      if (updates.some((u) => refuseWrite(table, access, u.patch as Record<string, unknown>))) return
       const nowIso = new Date().toISOString()
       const patches = new Map(updates.map((u) => [u.id, u.patch as Record<string, unknown>]))
       const previous = new Map<ID, AnyRow>()
@@ -147,7 +188,8 @@ export const useDataStore = create<DataState>()((set, get) => {
     remove(table, idOrIds) {
       const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds]
       if (!ids.length) return
-      const { db, adapter } = get()
+      const { db, adapter, access } = get()
+      if (refuseWrite(table, access)) return
       const plan = planDelete(db, table, ids)
       const nowIso = new Date().toISOString()
       const removed = new Map<TableName, AnyRow[]>()
@@ -193,11 +235,12 @@ export const useDataStore = create<DataState>()((set, get) => {
     },
 
     async replaceWorkspace(db) {
-      const { adapter, userId } = get()
+      const { adapter, ownerId, access } = get()
       if (!adapter) throw new Error("Workspace is not loaded yet")
+      if (access.role !== "owner") throw new Error("Only the owner of a workspace can replace its data.")
       const normalized = normalizeDatabase(db)
       for (const table of Object.keys(normalized) as TableName[]) {
-        for (const row of rowsOf(normalized, table)) (row as { user_id: string }).user_id = userId
+        for (const row of rowsOf(normalized, table)) (row as { user_id: string }).user_id = ownerId
       }
       await writeQueue
       await adapter.replaceAll(normalized)

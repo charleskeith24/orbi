@@ -6,12 +6,13 @@
  * in production throws.
  */
 import { isCirclesFixtureEnabled } from "@/components/features/circles/api/dev-fixture"
+import { isTeamFixtureEnabled } from "@/components/features/team/api/dev-fixture"
 import type { ProfilesApi } from "@/lib/profiles/types"
 
-/** True only in development, with the Circles fixture on in this browser. */
+/** True only in development, with the Circles or the Team fixture on in this browser. */
 export function isProfilesFixtureEnabled(): boolean {
   if (process.env.NODE_ENV === "production") return false
-  return isCirclesFixtureEnabled()
+  return isCirclesFixtureEnabled() || isTeamFixtureEnabled()
 }
 
 let fixture: { base: ProfilesApi; api: Promise<ProfilesApi> } | null = null

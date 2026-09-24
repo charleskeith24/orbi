@@ -13,6 +13,8 @@
  * - analytics from the numbers people add: content_metrics are logged or imported (no platform is connected, §8)
  * - money tools: brand_deals, income_entries, rate_cards (records only)
  * - collab partner details: `collabs` partner fields are free text in the creator's workspace; Circles: docs/CIRCLES.md
+ * - who you invite: team workspaces (ARCHITECTURE §17) — the owner picks each member's role and Money access
+ *   (supabase/migrations/20260921000000_team.sql), and removing a member revokes access immediately
  * - disable: admin `POST /api/admin/users/:id/disable` (a long ban; the workspace is untouched)
  * - profile photos: admin `DELETE /api/admin/users/:id/photo` (moderation, audited as `profile_photo_removed`)
  * - export: Settings → Data → Export workspace; deletion + contact: ../privacy/legal-shell.tsx
@@ -43,7 +45,7 @@ export function TermsView({ showRequestAccess, contactEmail }: { showRequestAcce
         <LegalList items={list(["beta_changes", "beta_bugs", "beta_as_is", "beta_end"])} />
       </LegalSection>
       <LegalSection title={t("who_title")}>
-        <LegalList items={list(["who_age", "who_invite", "who_personal"])} />
+        <LegalList items={list(["who_age", "who_invite", "who_personal", "who_team"])} />
       </LegalSection>
       <LegalSection title={t("own_title")}>
         <LegalList items={[t("own_yours"), withPrivacy("own_store")]} />

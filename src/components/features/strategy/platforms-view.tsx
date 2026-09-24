@@ -14,6 +14,7 @@ import {
   type MultiSelectOption,
 } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { ReadOnlyNotice } from "@/components/features/team/team-ui"
 import { translate, useT } from "@/lib/i18n"
 import { getUiLang } from "@/lib/i18n/ui-lang"
 import { dataActions, useDb, useSettings } from "@/lib/store"
@@ -86,6 +87,8 @@ export function PlatformsView() {
   return (
     <PageContainer>
       <PageHeader title="Platform Strategy" info={t("description")} />
+
+      <ReadOnlyNotice table="content_platforms" />
 
       <PlatformPlanSummary plan={plan} />
 

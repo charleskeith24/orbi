@@ -6,6 +6,7 @@ import { flushSync } from "react-dom"
 import { toast } from "sonner"
 import { AiButton, PageContainer, PageHeader } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { ReadOnlyNotice } from "@/components/features/team/team-ui"
 import { positioningStatement, useAiTask } from "@/lib/ai"
 import { useT, useUiLang } from "@/lib/i18n"
 import { uiActions, updateBrand, useBrand, useDb } from "@/lib/store"
@@ -201,6 +202,8 @@ export function BrandHqView() {
           </Button>
         }
       />
+
+      <ReadOnlyNotice table="brand_profiles" />
 
       <div className="grid min-w-0 gap-6 lg:grid-cols-[11rem_minmax(0,1fr)] xl:grid-cols-[11rem_minmax(0,1fr)_19rem]">
         <aside aria-label={t("progress_label")} className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-16 lg:self-start">

@@ -38,9 +38,14 @@ export const privacyMessages = defineMessages({
     control_profile:
       "Your profile: change or clear any field in Settings → Profile, and “Remove photo” deletes your photo. Deleting your account deletes your profile and photo too.",
 
+    stores_team_title: "Your team — only if you invite someone",
+    stores_team:
+      "The email addresses you invite into your workspace, and who joined with which role. Nothing else: we don't copy a member's own workspace into yours, or yours into theirs.",
     stores_circles_title: "Collab Circles — only if you join one",
     stores_circles:
       "The circles you create or join, the name you use in each, your weekly check-ins (the number of posts you choose to share and an optional note), collab asks and interests, and the contact you choose to share. Leaving a circle deletes what you wrote in it.",
+    see_team:
+      "People you invite into your workspace see what their role allows: an Editor can read everything you can see and write the content work; a Viewer can only read. Brand HQ, audience and pillars stay read-only for both. Money (brand deals, income, rate cards) is hidden until you turn on Money access for that person. Remove them and their access stops at once. You and your members can see each other's profiles.",
     see_circles:
       "Members of a circle see its names, check-ins and asks. Your contact is shown only to a member linked to you by an accepted collab ask, and theirs only to you. Admins can't see circles.",
 
@@ -101,9 +106,14 @@ export const privacyMessages = defineMessages({
     control_profile:
       "Ang profile mo: baguhin o burahin ang kahit anong field sa Settings → Profile, at ide-delete ng “Tanggalin ang photo” ang photo mo. Kapag na-delete ang account mo, kasama nang mabubura ang profile at photo mo.",
 
+    stores_team_title: "Ang team mo — kung mag-iinvite ka lang",
+    stores_team:
+      "Ang mga email na ini-invite mo sa workspace mo, at kung sino ang sumali at anong role. Wala nang iba: hindi namin kinokopya ang sariling workspace ng member papunta sa'yo, o ang sa'yo papunta sa kanila.",
     stores_circles_title: "Collab Circles — kung sasali ka lang",
     stores_circles:
       "Ang mga circle na ginawa o sinalihan mo, ang pangalang gamit mo sa bawat isa, ang weekly check-ins mo (ang bilang ng posts na pinili mong i-share at optional na note), collab asks at interests, at ang contact na pinili mong i-share. Kapag umalis ka sa circle, buburahin ang mga isinulat mo roon.",
+    see_team:
+      "Ang mga ini-invite mo sa workspace mo ay nakakakita ayon sa role nila: ang Editor ay nababasa lahat ng nakikita mo at nagsusulat ng content work; ang Viewer ay puro tingin lang. Read-only sa kanilang dalawa ang Brand HQ, audience at pillars. Nakatago ang Money (brand deals, income, rate cards) hangga't hindi mo binubuksan ang Money access para sa kanila. Kapag na-remove mo sila, tigil agad ang access. Magkita-kita kayo ng profiles ninyo.",
     see_circles:
       "Nakikita ng mga miyembro ng circle ang mga pangalan, check-ins at asks doon. Ipinapakita lang ang contact mo sa miyembrong naka-link sa'yo sa isang na-accept na collab ask, at ang sa kanila sa'yo lang. Hindi nakikita ng admins ang circles.",
 

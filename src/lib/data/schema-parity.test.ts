@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest"
 import { TABLE_DEFAULTS, TABLE_NAMES } from "@/lib/data/defaults"
 import { REFERENCES } from "@/lib/data/relations"
 import { createDemoDatabase } from "@/lib/data/seed"
+import { readTeamPolicyExpressions, readTeamTableGroups } from "@/lib/team/testing/team-sql"
 import type { TableName } from "@/lib/types"
 
 const MIGRATIONS_DIR = new URL("../../../supabase/migrations/", import.meta.url)
@@ -60,6 +61,9 @@ const SERVER_ONLY_TABLES = [
   "circle_checkins",
   "circle_asks",
   "circle_ask_interests",
+  // Team workspaces (20260921000000_team.sql)
+  "workspace_members",
+  "workspace_invites",
 ]
 
 /* ------------------------------ SQL parsing ------------------------------ */
@@ -545,28 +549,54 @@ describe("schema parity: supabase/migrations vs src/lib", () => {
     expect(has("tags", ["user_id", "lower(name)"], true)).toBe(true)
   })
 
-  it("enables row-level security with own-row policies on every table", () => {
-    const policies = [
-      ...SQL.matchAll(/create policy "[^"]+" on public\.(\w+)\s+for (select|insert|update|delete) to (\w+)\s+([\s\S]*?);/gi),
-    ].map((m) => ({ table: m[1], command: m[2], role: m[3], body: m[4] }))
-    const expectPolicies = (table: string, owner: string, commands: string[]) => {
-      expect(SQL, table).toContain(`alter table public.${table} enable row level security;`)
-      const own = `(select auth.uid()) = ${owner}`
-      const found = policies.filter((p) => p.table === table)
-      expect(sorted(found.map((p) => p.command)), table).toEqual(sorted(commands))
-      for (const p of found) {
-        expect(p.role, `${table} ${p.command}`).toBe("authenticated")
-        if (p.command !== "insert") expect(p.body, `${table} ${p.command} using`).toContain(`using (${own})`)
-        if (p.command === "insert" || p.command === "update") {
-          expect(p.body, `${table} ${p.command} check`).toContain(`with check (${own})`)
-        }
-      }
-    }
+  it("enables row-level security and grants the four commands on every workspace table", () => {
     for (const table of TABLE_NAMES) {
-      expectPolicies(table, "user_id", ["select", "insert", "update", "delete"])
+      expect(SQL, table).toContain(`alter table public.${table} enable row level security;`)
       expect(SQL, table).toContain(`grant select, insert, update, delete on table public.${table} to authenticated;`)
     }
-    expectPolicies("users", "id", ["select", "insert", "update"])
+  })
+
+  /**
+   * Team workspaces (20260921000000_team.sql) replaced the init migration's own-row policies with three
+   * groups built in one DO block, so the policies are no longer literal `create policy` statements per
+   * table. What this test can still check from the SQL text is that every workspace table is in exactly
+   * one group and that each group's expression is the right rule; `src/lib/team/team-migration.pglite.test.ts`
+   * then runs the whole matrix against real Postgres.
+   */
+  it("scopes every workspace table through the team policy groups", () => {
+    const groups = readTeamTableGroups()
+    const all = [...groups.owner, ...groups.editor, ...groups.money]
+    expect(new Set(all).size, "a table in two groups").toBe(all.length)
+    expect(sorted(all)).toEqual(sorted(TABLE_NAMES))
+
+    const e = readTeamPolicyExpressions()
+    // Members read; only the owner writes Brand HQ, audience, pillars, formats and settings.
+    expect(e.ownerRead).toBe("public.workspace_role(user_id) is not null")
+    expect(e.ownerWrite).toBe("(select auth.uid()) = user_id")
+    // Members read; the owner and editors write the content work.
+    expect(e.editorRead).toBe("public.workspace_role(user_id) is not null")
+    expect(e.editorWrite).toBe("public.can_edit_workspace(user_id)")
+    // Money is invisible without Money access, and writing it also needs a writing role.
+    expect(e.moneyRead).toBe("public.has_money_access(user_id)")
+    expect(e.moneyWrite).toBe("public.has_money_access(user_id) and public.can_edit_workspace(user_id)")
+
+    // brand_profiles and app_settings must be in the owner-writes group, whatever else moves.
+    expect(groups.owner).toContain("brand_profiles")
+    expect(groups.owner).toContain("app_settings")
+    expect(sorted(groups.money)).toEqual(sorted(["brand_deals", "income_entries", "rate_cards"]))
+  })
+
+  it("keeps public.users an own-row table (it holds the email)", () => {
+    const policies = [
+      ...SQL.matchAll(/create policy "[^"]+" on public\.users\s+for (select|insert|update) to (\w+)\s+([\s\S]*?);/gi),
+    ].map((m) => ({ command: m[1], role: m[2], body: m[3] }))
+    expect(SQL).toContain("alter table public.users enable row level security;")
+    expect(sorted(policies.map((p) => p.command))).toEqual(sorted(["select", "insert", "update"]))
+    for (const p of policies) {
+      expect(p.role, p.command).toBe("authenticated")
+      if (p.command !== "insert") expect(p.body, `${p.command} using`).toContain("using ((select auth.uid()) = id)")
+      if (p.command !== "select") expect(p.body, `${p.command} check`).toContain("with check ((select auth.uid()) = id)")
+    }
   })
 
   it("stamps updated_at and documents every table", () => {

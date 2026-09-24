@@ -33,6 +33,8 @@ export const termsMessages = defineMessages({
     who_age: "You must be 18 or older.",
     who_invite: "Accounts are by invitation: an admin approves your access request or invites you directly.",
     who_personal: "Your account is just for you. Don't share it or let anyone else use it.",
+    who_team:
+      "If you invite people into your workspace, you're responsible for who you invite and for what they do there. Give the smallest role that works, turn on Money access only when you mean to, and remove anyone who no longer needs access.",
 
     own_title: "Your content is yours",
     own_yours: "You own what you put into Orbi: your brand, ideas, scripts, posts, analytics and money records.",
@@ -100,6 +102,8 @@ export const termsMessages = defineMessages({
     who_age: "Dapat 18 years old ka pataas.",
     who_invite: "By invitation ang accounts: ina-approve ng admin ang access request mo, o direkta ka niyang ini-invite.",
     who_personal: "Para sa'yo lang ang account mo. Huwag itong i-share o ipagamit sa iba.",
+    who_team:
+      "Kung mag-iinvite ka ng tao sa workspace mo, ikaw ang responsable kung sino ang ini-invite mo at kung ano ang ginagawa nila roon. Ibigay ang pinakamaliit na role na kaya nang gawin ang trabaho, buksan ang Money access kapag talagang kailangan, at i-remove ang hindi na kailangan ng access.",
 
     own_title: "Sa'yo ang content mo",
     own_yours: "Sa'yo ang lahat ng inilalagay mo sa Orbi: brand, ideas, scripts, posts, analytics at money records mo.",

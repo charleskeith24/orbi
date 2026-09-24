@@ -75,7 +75,7 @@ import {
 import { Kbd } from "@/components/ui/kbd"
 import { translator, useT, useUiLang, type UiLang } from "@/lib/i18n"
 import { ALL_PAGES, NAV_SECTIONS } from "@/lib/navigation"
-import { uiActions, useTable, useUIStore } from "@/lib/store"
+import { uiActions, useCanSeeMoney, useTable, useUIStore } from "@/lib/store"
 
 const SEARCH_MIN_LENGTH = 2
 const RESULTS_PER_GROUP = 6
@@ -111,7 +111,7 @@ interface PaletteEntry {
   keywords: string[]
 }
 
-const PAGES: (PaletteEntry & { href: string; section: string })[] = (() => {
+const PAGES: (PaletteEntry & { href: string; section: string; money?: true })[] = (() => {
   const meta = new Map<string, { icon: LucideIcon; description: string }>()
   for (const section of NAV_SECTIONS) {
     for (const item of section.items) {
@@ -268,6 +268,7 @@ function PaletteContent({ onClose }: { onClose: () => void }) {
   const t = useT(paletteMessages)
   const index = useSearchIndex(lang)
   const isAdmin = useIsAdmin()
+  const moneyAccess = useCanSeeMoney()
   const [query, setQuery] = useState("")
 
   const trimmed = query.trim()
@@ -356,7 +357,9 @@ function PaletteContent({ onClose }: { onClose: () => void }) {
       : []),
   ]
   const matchedActions = trimmed ? rankEntries(actions, trimmed) : actions
-  const matchedPages = trimmed ? rankEntries(PAGES, trimmed).slice(0, RESULTS_PER_GROUP) : PAGES
+  // Money is not listed for a member of somebody else's workspace without Money access (ARCHITECTURE §17).
+  const pages = moneyAccess ? PAGES : PAGES.filter((page) => !page.money)
+  const matchedPages = trimmed ? rankEntries(pages, trimmed).slice(0, RESULTS_PER_GROUP) : pages
 
   const actionItem = (action: PaletteAction) => (
     <CommandItem key={action.id} value={`action:${action.id}`} onSelect={action.perform}>
@@ -413,7 +416,7 @@ function PaletteContent({ onClose }: { onClose: () => void }) {
           <>
             <CommandGroup heading={t("group_actions")}>{actions.map(actionItem)}</CommandGroup>
             {recent.length ? <CommandGroup heading={t("group_recent")}>{recent.map((doc) => docItem(doc, "recent:"))}</CommandGroup> : null}
-            <CommandGroup heading={t("group_pages")}>{PAGES.map(pageItem)}</CommandGroup>
+            <CommandGroup heading={t("group_pages")}>{pages.map(pageItem)}</CommandGroup>
           </>
         )}
       </CommandList>

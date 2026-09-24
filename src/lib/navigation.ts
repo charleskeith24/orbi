@@ -40,6 +40,11 @@ export interface NavItem {
   children?: NavChild[]
   /** One of the everyday modules the sidebar keeps in Simple mode (`app_settings.simple_mode`). */
   simple?: true
+  /**
+   * Money (ARCHITECTURE §17): hidden from the sidebar, the phone sheet and ⌘K for a member of somebody
+   * else's workspace who wasn't given Money access. The database hides the rows too.
+   */
+  money?: true
 }
 
 export type NavSectionKey = "start" | "plan" | "create" | "grow" | "measure" | "end"
@@ -214,6 +219,7 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: Wallet,
         description: "Brand deals, income and your media kit",
         simple: true,
+        money: true,
         children: [
           { title: "Money", tab: "Overview", href: "/money" },
           { title: "Brand Deals", tab: "Deals", href: "/money/deals" },
@@ -227,14 +233,19 @@ export const NAV_SECTIONS: NavSection[] = [
 ]
 
 /** Every navigable page (for the command palette) — Simple mode never hides anything here. */
-export const ALL_PAGES: { title: string; href: string; section: string }[] = NAV_SECTIONS.flatMap((section) =>
+export const ALL_PAGES: { title: string; href: string; section: string; money?: true }[] = NAV_SECTIONS.flatMap((section) =>
   section.items.flatMap((item) => [
-    { title: item.title, href: item.href, section: section.label ?? "General" },
+    { title: item.title, href: item.href, section: section.label ?? "General", ...(item.money ? { money: true as const } : {}) },
     ...(item.children ?? [])
       .filter((c) => c.href !== item.href)
-      .map((c) => ({ title: c.title, href: c.href, section: item.title })),
+      .map((c) => ({ title: c.title, href: c.href, section: item.title, ...(item.money ? { money: true as const } : {}) })),
   ])
 ).concat([{ title: "Content Strategist", href: "/strategist", section: "AI" }])
+
+/** ⌘K's pages: everything, minus Money when this person has no Money access here (ARCHITECTURE §17). */
+export function commandPalettePages(moneyAccess: boolean): typeof ALL_PAGES {
+  return moneyAccess ? ALL_PAGES : ALL_PAGES.filter((page) => !page.money)
+}
 
 /** Exact match for "/" ; prefix match for everything else. */
 export function isNavActive(pathname: string, href: string): boolean {
@@ -266,12 +277,15 @@ export function moduleTabsFor(pathname: string): { module: NavItem; tabs: { titl
  */
 export function sidebarSections(
   sections: NavSection[],
-  { simpleMode, pathname }: { simpleMode: boolean; pathname: string }
+  { simpleMode, pathname, moneyAccess = true }: { simpleMode: boolean; pathname: string; moneyAccess?: boolean }
 ): { sections: NavSection[]; hidden: number } {
-  if (!simpleMode) return { sections, hidden: 0 }
+  // Money without access is not "hidden for now" but "not yours": it never counts towards `hidden`, and
+  // Simple mode can't bring it back.
+  const allowed = moneyAccess ? sections : sections.map((s) => ({ ...s, items: s.items.filter((item) => !item.money) })).filter((s) => s.items.length)
+  if (!simpleMode) return { sections: allowed, hidden: 0 }
   let hidden = 0
   const visible: NavSection[] = []
-  for (const section of sections) {
+  for (const section of allowed) {
     const items = section.items.filter((item) => item.simple || isNavActive(pathname, item.href))
     hidden += section.items.length - items.length
     if (items.length) visible.push({ ...section, items })

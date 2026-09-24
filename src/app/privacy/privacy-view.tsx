@@ -12,6 +12,8 @@
  *   others read it only through `get_profiles()` (yourself + circle-mates, never the email); photos re-encoded in the
  *   browser (features/profile/photo-encode.ts, strips EXIF) and shown through 1-hour signed URLs; admins get name +
  *   photo (`AdminUserRow.photo_url`) and `DELETE /api/admin/users/:id/photo`; local mode: `pbos:local-profile`
+ * - team: supabase/migrations/20260921000000_team.sql (workspace_members / workspace_invites; the role
+ *   matrix and Money access are RLS, ARCHITECTURE §17)
  * - circles: supabase/migrations/20260919000000_circles.sql (members-only RLS; contacts only via
  *   `circle_contact()` after an accepted interest; leaving deletes the member's rows; no admin access)
  * - admins: metadata + counts only (src/lib/admin/types.ts `AdminUserRow`), audit log `admin_audit_log`
@@ -38,6 +40,7 @@ export function PrivacyView({ showRequestAccess, contactEmail }: { showRequestAc
     ["stores_requests_title", "stores_requests"],
     ["stores_feedback_title", "stores_feedback"],
     ["stores_usage_title", "stores_usage"],
+    ["stores_team_title", "stores_team"],
     ["stores_circles_title", "stores_circles"],
   ]
 
@@ -55,7 +58,7 @@ export function PrivacyView({ showRequestAccess, contactEmail }: { showRequestAc
       </LegalSection>
 
       <LegalSection title={t("see_title")}>
-        <LegalList items={list(["see_you", "see_profile", "see_admins", "see_admins_read", "see_audit", "see_circles"])} />
+        <LegalList items={list(["see_you", "see_team", "see_profile", "see_admins", "see_admins_read", "see_audit", "see_circles"])} />
       </LegalSection>
       <LegalSection title={t("hosting_title")}>
         <LegalList items={list(["hosting_supabase", "hosting_vercel", "hosting_ai"])} />

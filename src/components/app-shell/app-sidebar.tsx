@@ -32,7 +32,7 @@ import {
   type NavItem,
   type NavSectionKey,
 } from "@/lib/navigation"
-import { updateSettings, useBrand, useDataStatus, useSettings } from "@/lib/store"
+import { updateSettings, useBrand, useCanSeeMoney, useDataStatus, useSettings } from "@/lib/store"
 import { sidebarMessages } from "./app-sidebar-messages"
 
 /** This device's folded sidebar groups (`parseCollapsedGroups`). */
@@ -47,6 +47,7 @@ export function AppSidebar() {
   const pathname = usePathname()
   const brand = useBrand()
   const simpleMode = useSettings().simple_mode
+  const moneyAccess = useCanSeeMoney()
   const t = useT(sidebarMessages)
   const { me } = useMyProfile()
   const photoUrl = usePhotoUrl(me?.avatar_path)
@@ -54,7 +55,7 @@ export function AppSidebar() {
   const personName = profileName(me?.display_name, brand.name.trim() || workspaceName)
   const { mode } = useDataStatus()
   const { isMobile, setOpenMobile, state } = useSidebar()
-  const nav = useMemo(() => sidebarSections(NAV_SECTIONS, { simpleMode, pathname }), [simpleMode, pathname])
+  const nav = useMemo(() => sidebarSections(NAV_SECTIONS, { simpleMode, pathname, moneyAccess }), [simpleMode, pathname, moneyAccess])
   const collapsedValue = useDeviceValue(COLLAPSED_KEY)
   const collapsed = useMemo(() => parseCollapsedGroups(collapsedValue), [collapsedValue])
   // The icon rail has no group headers to unfold, so it always lists every module.

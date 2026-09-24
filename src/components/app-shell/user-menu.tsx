@@ -11,6 +11,7 @@ import { describeUser, useAuthUser } from "@/components/features/auth/use-auth-u
 import { FeedbackDialog } from "@/components/features/feedback/feedback-dialog"
 import { m as feedbackMessages } from "@/components/features/feedback/messages"
 import { ProfileAvatar } from "@/components/features/profile/profile-avatar"
+import { WorkspaceSwitcher } from "@/components/features/team/workspace-switcher"
 import { useMyProfile, usePhotoUrl } from "@/components/features/profile/profile-store"
 import { useInstallOrbi } from "@/components/features/pwa/install-orbi"
 import { Button } from "@/components/ui/button"
@@ -171,6 +172,7 @@ function ProfileMenuView({
               </Link>
             </DropdownMenuItem>
           ) : null}
+          <WorkspaceSwitcher />
           <DropdownMenuSeparator />
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>

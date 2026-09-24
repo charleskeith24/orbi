@@ -6,9 +6,10 @@ import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { EmptyState, PageContainer, PageHeader, PageSection, useConfirm } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { ReadOnlyNotice } from "@/components/features/team/team-ui"
 import { hasPublishedContent } from "@/components/features/dashboard/first-run"
 import { useT } from "@/lib/i18n"
-import { dataActions, updateBrand, useBrand, useDataStore, useDb, useSettings } from "@/lib/store"
+import { dataActions, updateBrand, useBrand, useCanWrite, useDataStore, useDb, useSettings } from "@/lib/store"
 import type { ContentGoal, GoalCategory, ID } from "@/lib/types"
 import { formatNumber } from "@/lib/utils"
 import { GoalCard } from "./goal-card"
@@ -35,6 +36,7 @@ export function GoalsView() {
   const now = useNow()
   const [confirm, confirmDialog] = useConfirm()
   const t = useT(goalsMessages)
+  const canWrite = useCanWrite("content_goals")
 
   const summary = useMemo(() => goalsSummary(db, now, settings), [db, now, settings])
   const withTargets = summary.rows.filter((r) => r.goal.is_active && r.progress.target !== null)
@@ -139,12 +141,14 @@ export function GoalsView() {
         title="Goals"
         info={t("description")}
         actions={
-          <Button type="button" size="sm" onClick={() => startCreate("awareness")}>
+          <Button type="button" size="sm" onClick={() => startCreate("awareness")} disabled={!canWrite}>
             <Plus aria-hidden />
             {t("new_goal")}
           </Button>
         }
       />
+
+      <ReadOnlyNotice table="content_goals" />
 
       {summary.rows.length ? (
         <>

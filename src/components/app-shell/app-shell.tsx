@@ -10,6 +10,9 @@ import { GlobalDialogs } from "@/components/app-shell/global-dialogs"
 import { ModuleTabs } from "@/components/app-shell/module-tabs"
 import { WorkspaceBanner } from "@/components/app-shell/workspace-banner"
 import { ProfilesSync } from "@/components/features/profile/profiles-sync"
+import { InviteBanner } from "@/components/features/team/invite-banner"
+import { TeamSync } from "@/components/features/team/team-sync"
+import { WorkspaceStrip } from "@/components/features/team/workspace-strip"
 import { StrategistPanel } from "@/components/features/strategist/strategist-panel"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
@@ -26,6 +29,8 @@ export function AppShell({ children, defaultOpen = true }: { children: React.Rea
       <SidebarInset className="min-w-0">
         <AppTopbar />
         <WorkspaceBanner />
+        <WorkspaceStrip />
+        <InviteBanner />
         <ModuleTabs />
         <div className={cn("flex min-w-0 flex-1 flex-col", BOTTOM_BAR_PADDING)}>
           <DataGate>{children}</DataGate>
@@ -34,6 +39,7 @@ export function AppShell({ children, defaultOpen = true }: { children: React.Rea
       <BottomTabBar />
       <GlobalDialogs />
       <ProfilesSync />
+      <TeamSync />
       <CommandPalette />
       <StrategistPanel />
     </SidebarProvider>

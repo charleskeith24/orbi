@@ -12,6 +12,9 @@ export const settingsMessages = defineMessages({
     tab_general_label: "General",
     tab_general_description:
       "App language, Simple mode, currency, posting target, week start, timezone, default owner and how strictly the content mix is checked.",
+    tab_team_label: "Team",
+    tab_team_description:
+      "The people in your workspace: invite a VA, editor, manager or client, set what each one can do, and decide who sees Money.",
     tab_performance_label: "Performance",
     tab_performance_description: "How Winner detection compares posts, and when the Content Buffer counts as healthy.",
     tab_funnel_label: "Funnel",
@@ -76,6 +79,9 @@ export const settingsMessages = defineMessages({
     tab_general_label: "General",
     tab_general_description:
       "App language, Simple mode, currency, posting target, simula ng linggo, timezone, default owner at gaano strikto ang pag-check sa content mix.",
+    tab_team_label: "Team",
+    tab_team_description:
+      "Ang mga tao sa workspace mo: mag-invite ng VA, editor, manager o client, i-set ang pwede nilang gawin, at pumili kung sino ang makakakita ng Money.",
     tab_performance_label: "Performance",
     tab_performance_description: "Paano ikinukumpara ng Winner detection ang posts, at kailan healthy ang Content Buffer.",
     tab_funnel_label: "Funnel",

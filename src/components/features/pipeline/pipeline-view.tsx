@@ -7,6 +7,7 @@ import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } fro
 import { toast } from "sonner"
 import { EmptyState, PageContainer, PageHeader } from "@/components/common"
 import { Button } from "@/components/ui/button"
+import { ReadOnlyNotice } from "@/components/features/team/team-ui"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { computeTiers, contentBuffer, pipelineCounts } from "@/lib/analytics"
 import { getUiLang, translate, useT, useUiLang } from "@/lib/i18n"
@@ -229,6 +230,8 @@ function PipelineScreen() {
       >
         {isMobile || items.length === 0 ? null : <StageRail counts={counts} onJump={jumpToStage} />}
       </PageHeader>
+
+      <ReadOnlyNotice table="content_items" />
 
       {items.length === 0 ? (
         <EmptyState

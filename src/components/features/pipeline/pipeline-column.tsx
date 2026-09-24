@@ -8,6 +8,7 @@ import { StageIcon } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { useT, type Translator } from "@/lib/i18n"
 import { PIPELINE_STAGE_MAP } from "@/lib/constants"
+import { useCanWrite } from "@/lib/store"
 import type { ID, PerformanceTier, PipelineStage } from "@/lib/types"
 import { cn, formatNumber } from "@/lib/utils"
 import {
@@ -64,6 +65,8 @@ export const PipelineColumn = memo(function PipelineColumn({
   const { stage, items, total, overdue } = column
   const meta = PIPELINE_STAGE_MAP[stage]
   const { setNodeRef, isOver } = useDroppable({ id: droppableId(stage), data: { stage } })
+  // Viewers create nothing, so the column's "＋" isn't offered at all (§10: no dead buttons).
+  const canWrite = useCanWrite("content_items")
   const count = items.length
   const countText = filtered && count !== total ? t("count_of", { count: formatNumber(count), total: formatNumber(total) }) : formatNumber(count)
   const surface = isOver ? "border-brand/50 bg-brand-soft" : "bg-muted/40 dark:bg-muted/20"
@@ -99,7 +102,7 @@ export const PipelineColumn = memo(function PipelineColumn({
   }
 
   const titleId = `${columnDomId(stage)}-title`
-  const canQuickAdd = QUICK_ADD_STAGES.includes(stage)
+  const canQuickAdd = QUICK_ADD_STAGES.includes(stage) && canWrite
 
   return (
     <section

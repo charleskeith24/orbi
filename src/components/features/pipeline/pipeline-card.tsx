@@ -1,6 +1,7 @@
 "use client"
 
 import { useDraggable } from "@dnd-kit/core"
+import { useCanWrite } from "@/lib/store"
 import { memo } from "react"
 import { ContentCard } from "@/components/common"
 import type { ContentItem, PerformanceTier } from "@/lib/types"
@@ -20,9 +21,12 @@ interface PipelineCardProps {
  * after 6px of movement). Keyboard and touch: the "⋯" button is the drag handle.
  */
 export const PipelineCard = memo(function PipelineCard({ item, now, tier, highlighted }: PipelineCardProps) {
+  // Viewers can't move content, so the card isn't draggable at all (ARCHITECTURE §17).
+  const canMove = useCanWrite("content_items")
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } = useDraggable({
     id: item.id,
     data: { stage: item.stage },
+    disabled: !canMove,
   })
 
   return (

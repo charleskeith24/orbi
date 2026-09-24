@@ -34,7 +34,7 @@ import {
 import { useT } from "@/lib/i18n"
 import { PIPELINE_STAGES, PUBLISHED_STAGES } from "@/lib/constants"
 import { formatDate } from "@/lib/dates"
-import { uiActions, useSettings } from "@/lib/store"
+import { uiActions, useCanWrite, useSettings } from "@/lib/store"
 import type { ContentItem } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { dueDateShortcuts, NONE } from "./board-model"
@@ -58,6 +58,9 @@ export function CardActions({ item, drag, className }: { item: ContentItem; drag
   const [open, setOpen] = useState(false)
   const actions = usePipelineActions()
   const settings = useSettings()
+  // Every item in this menu changes the card (move, schedule, duplicate, delete), so a Viewer gets none
+  // of it — the card still opens in the Content Studio (ARCHITECTURE §17).
+  const canWrite = useCanWrite("content_items")
   const now = useNow()
   const title = item.title.trim() || t("untitled")
   const live = PUBLISHED_STAGES.includes(item.stage)
@@ -86,6 +89,8 @@ export function CardActions({ item, drag, className }: { item: ContentItem; drag
         },
       }
     : {}
+
+  if (!canWrite) return null
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>

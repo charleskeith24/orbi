@@ -48,6 +48,7 @@ The database design lives in the project folder `supabase/migrations/`. **Run ev
 | 4 | `20260918000000_admin.sql` | The admin area and the "Request access" waitlist (`admin_users`, `access_requests`, `admin_audit_log`, `platform_settings`) |
 | 5 | `20260919000000_circles.sql` | Collab Circles: small invite-only creator groups (`circles`, `circle_members`, `circle_contacts`, `circle_checkins`, `circle_asks`, `circle_ask_interests`) |
 | 6 | `20260920000000_profiles.sql` | Profiles: photo, name, headline, location and links on each account (`public.users`), who may see them (`get_profiles()`), and the private **`avatars`** photo bucket in Storage |
+| 7 | `20260921000000_team.sql` | Team workspaces: invite a VA, editor, manager or client into your workspace (`workspace_members`, `workspace_invites`). **This one rewrites the access rules of every workspace table**, so run it even if you don't plan to invite anyone — without it nothing changes, with it everything keeps working exactly as before for a workspace of one |
 | … | any newer file | whatever that feature needs |
 
 If new files appear in that folder later (after you pull an update), run just the new ones, in order.
@@ -200,7 +201,7 @@ If you start charging other creators for Orbi, re-read both plans' terms.
 
 ## What has been tested — and what hasn't
 
-The database migrations are tested automatically on a real Postgres engine (PGlite, Postgres compiled to WebAssembly): every file applies cleanly in order, the whole sample workspace goes in, every delete rule matches the app, `updated_at` stamps itself, and row-level security keeps two accounts apart. Orbi's Supabase data code is also run against that database. The admin rules are tested the same way: nobody can make themselves admin, signed-in users can't read the waitlist, the audit log can't be edited, and admin read access needs 2-step verification.
+The database migrations are tested automatically on a real Postgres engine (PGlite, Postgres compiled to WebAssembly): every file applies cleanly in order, the whole sample workspace goes in, every delete rule matches the app, `updated_at` stamps itself, and row-level security keeps two accounts apart. Team workspaces add a full matrix on top: owner, editor, viewer, a member with Money access and a stranger, checked table by table for reading, creating, editing and deleting, plus the rules that a member can't change their own role and that removing someone cuts their access immediately. Orbi's Supabase data code is also run against that database. The admin rules are tested the same way: nobody can make themselves admin, signed-in users can't read the waitlist, the audit log can't be edited, and admin read access needs 2-step verification.
 
 That proves the SQL. It does not prove the hosted parts of Supabase — the Data API (PostgREST), Auth and its emails, Storage, and your project's dashboard settings — or Vercel. Do a quick check after deploying: create an account, finish onboarding, add an idea on your phone and see it on your laptop, then delete it. For the admin area: request access from a private window, approve it in **Admin → Requests**, open the invite email and set a password.
 

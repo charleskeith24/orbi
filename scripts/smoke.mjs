@@ -7,6 +7,8 @@
  *   node scripts/smoke.mjs /ideas --out=/tmp/ideas.png --width=390 --height=844 --dark --full
  *   node scripts/smoke.mjs /admin/users --admin --lang=tl        (dev-only admin fixture: sample data)
  *   node scripts/smoke.mjs /circles --circles --lang=tl          (dev-only Circles fixture: sample circles)
+ *   node scripts/smoke.mjs /settings?tab=team --team              (dev-only Team fixture: sample members)
+ *   node scripts/smoke.mjs /strategy --team=editor                (… and open the sample workspace as Editor)
  *   node scripts/smoke.mjs /ideas --actions='[{"click":"text=Add idea"},{"wait":400},{"fill":["input[name=title]","Test"]},{"press":"Enter"},{"screenshot":"/tmp/after.png"}]'
  *
  * Each run uses a fresh browser profile → empty localStorage → the demo workspace is seeded.
@@ -44,6 +46,9 @@ const LANG = args.lang ? String(args.lang) : ""
 const ADMIN = Boolean(args.admin)
 // --circles turns on the dev-only Circles fixture (sample circles; Circles need the online version otherwise).
 const CIRCLES = Boolean(args.circles)
+// --team turns on the dev-only Team fixture (sample members and invites; team workspaces need the online
+// version otherwise). --team=editor|editor-money|viewer also opens the sample workspace in that role.
+const TEAM = args.team ? (args.team === true ? "fixture" : String(args.team)) : ""
 const newContextRaw = browser.newContext.bind(browser)
 browser.newContext = async (options) => {
   const context = await newContextRaw(options)
@@ -65,6 +70,14 @@ browser.newContext = async (options) => {
     await context.addInitScript(() => {
       if (!localStorage.getItem("pbos:dev-circles")) localStorage.setItem("pbos:dev-circles", "fixture")
     })
+  }
+  if (TEAM) {
+    await context.addInitScript(
+      (mode) => {
+        if (!localStorage.getItem("pbos:dev-team")) localStorage.setItem("pbos:dev-team", mode)
+      },
+      TEAM
+    )
   }
   return context
 }

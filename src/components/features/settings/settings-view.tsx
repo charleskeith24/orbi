@@ -4,8 +4,11 @@ import { useSearchParams } from "next/navigation"
 import { useState } from "react"
 import { PageContainer, PageHeader, SectionHeader } from "@/components/common"
 import { useT } from "@/lib/i18n"
+import { useCanManageWorkspace } from "@/lib/store"
 import { ProfileTab } from "@/components/features/profile/profile-tab"
 import { RemindersTab } from "@/components/features/reminders/reminders-tab"
+import { TeamTab } from "@/components/features/team/team-tab"
+import { OwnerOnlyTab, OWNER_ONLY_SETTINGS_TABS } from "@/components/features/team/owner-only-tab"
 import { AiTab } from "./ai-tab"
 import { DataTab } from "./data-tab"
 import { EngagementTab } from "./engagement-tab"
@@ -27,6 +30,9 @@ export function SettingsView() {
   const openId = searchParams.get("open")
   const [now] = useState(() => new Date())
   const t = useT(settingsMessages)
+  // Import/export, Integrations, AI keys and Reminders are the owner's (ARCHITECTURE §17).
+  const canManage = useCanManageWorkspace()
+  const ownerOnly = !canManage && OWNER_ONLY_SETTINGS_TABS.includes(tab)
 
   // Drafts live here so unsaved edits survive switching tabs.
   const general = useSettingsDraft(generalFromSettings)
@@ -43,17 +49,19 @@ export function SettingsView() {
         <section aria-labelledby="settings-section-title" className="flex min-w-0 flex-col gap-4">
           {/* Calm UI: the section's explanation waits behind its ⓘ. */}
           <SectionHeader id="settings-section-title" title={t(`tab_${tab}_label`)} info={t(`tab_${tab}_description`)} />
+          {ownerOnly ? <OwnerOnlyTab /> : null}
           {tab === "profile" ? <ProfileTab /> : null}
           {tab === "general" ? <GeneralTab draft={general} now={now} /> : null}
+          {tab === "team" ? <TeamTab now={now} /> : null}
           {tab === "performance" ? <PerformanceTab draft={performance} now={now} /> : null}
           {tab === "funnel" ? <FunnelTab draft={funnel} now={now} /> : null}
           {tab === "formats" ? <FormatsTab openId={openId} now={now} /> : null}
           {tab === "tags" ? <TagsTab openId={openId} /> : null}
           {tab === "engagement" ? <EngagementTab draft={engagement} now={now} /> : null}
-          {tab === "reminders" ? <RemindersTab /> : null}
-          {tab === "ai" ? <AiTab now={now} /> : null}
-          {tab === "integrations" ? <IntegrationsTab now={now} /> : null}
-          {tab === "data" ? <DataTab now={now} /> : null}
+          {tab === "reminders" && !ownerOnly ? <RemindersTab /> : null}
+          {tab === "ai" && !ownerOnly ? <AiTab now={now} /> : null}
+          {tab === "integrations" && !ownerOnly ? <IntegrationsTab now={now} /> : null}
+          {tab === "data" && !ownerOnly ? <DataTab now={now} /> : null}
         </section>
       </div>
     </PageContainer>

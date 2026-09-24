@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { DataAdapter } from "@/lib/data/adapter"
 import { normalizeDatabase, TABLE_DEFAULTS, TABLE_NAMES } from "@/lib/data/defaults"
+import { canRead, canWrite, OWNER_ACCESS } from "@/lib/team/permissions"
+import { PERSONAL_SETTING_FIELDS, personalPart, type PersonalSettings, type WorkspaceTarget } from "@/lib/team/workspace"
 import type { ContentItem, Database, ID, TableName } from "@/lib/types"
 
 const PAGE_SIZE = 1000
@@ -77,13 +79,39 @@ function parentsFirst(rows: ContentItem[]): ContentItem[] {
 }
 
 /**
- * Postgres-backed adapter. Row-level security scopes every query to the signed-in
- * user, so selects need no explicit user filter. Foreign keys handle
- * ON DELETE CASCADE / SET NULL; this adapter only sends the effects Postgres
- * can't express (array-reference cleanup and polymorphic tag links).
+ * Postgres-backed adapter, scoped to ONE workspace.
+ *
+ * Row-level security decides what the signed-in user may touch, but since team workspaces (ARCHITECTURE
+ * §17) a person can be in more than one workspace, so RLS alone would return every workspace's rows at
+ * once. The workspace is therefore explicit here: every select filters by `user_id = ownerId` and every
+ * insert stamps `user_id = ownerId` — never `auth.uid()`, which for a member would silently create rows in
+ * their own workspace. Updates and deletes go by id and are protected by RLS.
+ *
+ * `workspace` is omitted for your own workspace (`ownerId = userId`, full access). In someone else's, the
+ * tables the role can't read are not requested at all, writes the role can't make fail fast with
+ * `forbidden`, and the personal preferences (UI language, Simple mode) are read from and written to the
+ * signed-in person's OWN app_settings row.
+ *
+ * Foreign keys handle ON DELETE CASCADE / SET NULL; this adapter only sends the effects Postgres can't
+ * express (array-reference cleanup and polymorphic tag links).
  */
-export function createSupabaseAdapter(client: SupabaseClient, userId: string): SupabaseDataAdapter {
+export function createSupabaseAdapter(client: SupabaseClient, userId: string, workspace?: WorkspaceTarget): SupabaseDataAdapter {
   const listeners = new Set<(progress: ReplaceProgress) => void>()
+  const ownerId = workspace?.ownerId ?? userId
+  const access = workspace?.access ?? OWNER_ACCESS
+  /** True in someone else's workspace. */
+  const isGuest = ownerId !== userId
+
+  /** A write this role can't make: refuse before the request, so the reason is legible. */
+  function requireWrite(table: TableName) {
+    if (!canWrite(table, access)) {
+      throw new SupabaseDataError(`You don't have permission to change ${table.replace(/_/g, " ")} in this workspace.`, "forbidden")
+    }
+  }
+
+  function requireOwner(what: string) {
+    if (isGuest) throw new SupabaseDataError(`${what} is only available in your own workspace.`, "forbidden")
+  }
 
   async function fetchAll(table: TableName): Promise<Record_[]> {
     const rows: Record_[] = []
@@ -91,6 +119,9 @@ export function createSupabaseAdapter(client: SupabaseClient, userId: string): S
       const { data, error } = await client
         .from(table)
         .select("*")
+        // The active workspace, never "every row RLS lets me see": a member of two workspaces must
+        // never load the wrong one's rows (docs/TEAM_WORKSPACES.md, non-negotiable 1).
+        .eq("user_id", ownerId)
         .order("created_at", { ascending: true })
         // Rows imported together share created_at; a unique tiebreaker keeps pages from overlapping.
         .order("id", { ascending: true })
@@ -103,8 +134,21 @@ export function createSupabaseAdapter(client: SupabaseClient, userId: string): S
   }
 
   async function fetchWorkspace(): Promise<Record<TableName, Record_[]>> {
-    const entries = await Promise.all(TABLE_NAMES.map(async (t) => [t, await fetchAll(t)] as const))
+    // Tables this role can't read (Money without Money access) are not requested at all.
+    const entries = await Promise.all(TABLE_NAMES.map(async (t) => [t, canRead(t, access) ? await fetchAll(t) : []] as const))
     return Object.fromEntries(entries) as Record<TableName, Record_[]>
+  }
+
+  /** The signed-in person's own personal preferences (their own app_settings row), in someone else's workspace. */
+  async function fetchPersonal(): Promise<PersonalSettings | null> {
+    const { data, error } = await client
+      .from("app_settings")
+      .select(["id", ...PERSONAL_SETTING_FIELDS].join(", "))
+      .eq("user_id", userId)
+    if (error) fail("app_settings", "Loading your preferences from", error)
+    const row = (data ?? [])[0] as Partial<PersonalSettings> | undefined
+    if (!row) return null
+    return { ui_language: row.ui_language!, simple_mode: row.simple_mode! }
   }
 
   /** `raw` rows came from Postgres (a restore) and are written back untouched. */
@@ -113,7 +157,7 @@ export function createSupabaseAdapter(client: SupabaseClient, userId: string): S
     for (let i = 0; i < ordered.length; i += WRITE_CHUNK) {
       const chunk = ordered
         .slice(i, i + WRITE_CHUNK)
-        .map((r) => (options.raw ? { ...r, user_id: userId } : { ...toColumns(table, r), user_id: userId }))
+        .map((r) => (options.raw ? { ...r, user_id: ownerId } : { ...toColumns(table, r), user_id: ownerId }))
       const { error } = await client.from(table).insert(chunk)
       if (error) fail(table, "Saving", error)
       options.onChunk?.(chunk.length)
@@ -130,7 +174,7 @@ export function createSupabaseAdapter(client: SupabaseClient, userId: string): S
   /** Children first, so no foreign key ever points at a row that is already gone. */
   async function clearAccount() {
     for (const t of [...TABLE_NAMES].reverse()) {
-      const { error } = await client.from(t).delete().eq("user_id", userId)
+      const { error } = await client.from(t).delete().eq("user_id", ownerId)
       if (error) fail(t, "Clearing", error)
     }
   }
@@ -139,12 +183,30 @@ export function createSupabaseAdapter(client: SupabaseClient, userId: string): S
     mode: "supabase",
     async load() {
       const db = normalizeDatabase((await fetchWorkspace()) as unknown as Partial<Database>)
-      return { db, userId, isFirstRun: db.brand_profiles.length === 0 }
+      const personal = isGuest ? await fetchPersonal() : null
+      // A member experiences the workspace with their own language and Simple mode.
+      if (personal && db.app_settings[0]) db.app_settings = db.app_settings.map((s, i) => (i === 0 ? { ...s, ...personal } : s))
+      return {
+        db,
+        userId,
+        ownerId,
+        access,
+        personal,
+        // A member landing in someone else's workspace never sees Quick setup for it.
+        isFirstRun: !isGuest && db.brand_profiles.length === 0,
+      }
     },
     async insert(table, rows) {
+      requireWrite(table)
       if (rows.length) await insertRows(table, rows as unknown as Record_[])
     },
     async update(table, id, patch) {
+      // Personal preferences belong to the person: in someone else's workspace they go to their own row.
+      if (table === "app_settings" && isGuest) {
+        await this.savePersonal!(personalPart(patch))
+        return
+      }
+      requireWrite(table)
       const values = toColumns(table, patch)
       delete values.id
       delete values.user_id
@@ -157,6 +219,7 @@ export function createSupabaseAdapter(client: SupabaseClient, userId: string): S
       }
     },
     async remove(table, ids, plan) {
+      requireWrite(table)
       for (const [t, patches] of plan.patches) {
         for (const [id, patch] of patches) {
           const arrayPatch = Object.fromEntries(Object.entries(patch).filter(([, v]) => Array.isArray(v)))
@@ -176,6 +239,7 @@ export function createSupabaseAdapter(client: SupabaseClient, userId: string): S
      * Postgres rejects never leaves the account half-empty.
      */
     async replaceAll(db) {
+      requireOwner("Replacing a workspace")
       const total = TABLE_NAMES.reduce((sum, t) => sum + db[t].length, 0)
       let done = 0
       const report = (phase: ReplaceProgress["phase"], table: TableName | null) => {
@@ -210,6 +274,17 @@ export function createSupabaseAdapter(client: SupabaseClient, userId: string): S
           )
         }
         throw new SupabaseDataError(`${messageOf(error)} Nothing was changed — your previous workspace is back.`, code)
+      }
+    },
+    async savePersonal(patch) {
+      const values = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined))
+      if (!Object.keys(values).length) return
+      const { data, error } = await client.from("app_settings").update(values).eq("user_id", userId).select("id")
+      if (error) fail("app_settings", "Saving your preferences to", error)
+      // A brand-new account invited before finishing its own first run has no settings row yet.
+      if (!data?.length) {
+        const { error: insertError } = await client.from("app_settings").insert({ ...values, user_id: userId })
+        if (insertError) fail("app_settings", "Saving your preferences to", insertError)
       }
     },
     trackReplace(listener) {
