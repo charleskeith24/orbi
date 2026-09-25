@@ -123,9 +123,9 @@ Supabase → **Authentication → URL Configuration**:
 
 Then **Authentication → Sign In / Providers → Email**: keep Email enabled. **Confirm email** on means new accounts click a link before their first sign-in (recommended).
 
-**Emails.** Supabase's built-in email sender is for testing: it's rate-limited and may only deliver to your own team's addresses. Before inviting other people, set up custom SMTP under **Authentication → Emails → SMTP Settings** with an email provider (for example Resend or Brevo — check their free tiers).
+**Emails.** Supabase's built-in email sender is for testing: it's rate-limited and only delivers to the addresses of your own Supabase team, so invites to other creators never arrive. Before inviting other people, set up custom SMTP under **Authentication → Emails → SMTP Settings** with an email provider (for example Resend or Brevo — check their free tiers). **Supabase only lets you edit the email templates once custom SMTP is set up** (until then the Emails page says "Set up custom SMTP to edit templates" and sends its defaults), so do SMTP first, then the template below.
 
-**Invites that land on "Set a password"** (for beta testers): **Authentication → Emails → Invite user** → replace the link in the template with
+**Invites that land on "Set a password"** (for beta testers, after custom SMTP): **Authentication → Emails → Invite user** → replace the link in the template with
 
 ```text
 {{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=invite&next=/set-password

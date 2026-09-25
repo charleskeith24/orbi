@@ -60,7 +60,7 @@ Dashboard → **Authentication**:
 2. **URL Configuration**:
    - **Site URL**: `http://localhost:3000` locally, your production URL once deployed.
    - **Redirect URLs**: `http://localhost:3000/**`, `https://<your-domain>/**` (and your `*.vercel.app` address). Email links go to `/auth/callback?next=<page>`; the `/**` pattern allows the query string.
-3. **Emails / SMTP** (before inviting anyone): the built-in sender is rate-limited and may only deliver to your team's addresses. Configure custom SMTP for real use.
+3. **Emails / SMTP** (before inviting anyone): the built-in sender is rate-limited and only delivers to your Supabase team's addresses. Configure custom SMTP for real use — Supabase also keeps the email templates below read-only until custom SMTP is set up.
 
 ## 4. Add the environment variables
 

@@ -50,7 +50,7 @@ People you invite, and everyone who already has an account, can still sign in. T
 
 **Check your email templates too.** They decide where the emails the admin area sends will land. Set them as in DEPLOY.md step 5:
 
-- **Invite user.** The invite link opens **Set a password**. Without this template, invited people land on the sign-in page with "link invalid".
+- **Invite user.** The invite link opens **Set a password**. Without this template, invited people land on the sign-in page with "link invalid". Supabase only lets you edit it after custom SMTP is set up (DEPLOY.md step 5), and the built-in sender can't reach people outside your Supabase team anyway — so set up SMTP before you approve anyone.
 - **Reset Password.** Needed for **Send password reset**. The link format is in [SUPABASE.md](SUPABASE.md), under "Email links that work across devices".
 
 ## 3. Set up 2-step verification
