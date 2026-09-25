@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useScreenLang, useScreenT } from "@/components/app-shell/device-ui-lang"
 import { AuthCard, AuthDivider, AuthNotice, EmailSentence } from "@/components/features/auth/auth-card"
-import { authPageHref, describeAuthError, emailRedirectUrl, type AuthErrorLike } from "@/components/features/auth/auth-client"
+import { authPageHref, describeAuthError, emailRedirectUrl, isNoAccountError, type AuthErrorLike } from "@/components/features/auth/auth-client"
 import { authSchemas, fieldErrors } from "@/components/features/auth/auth-schemas"
 import { authLinkClass, LegalLinks } from "@/components/features/auth/legal-links"
 import { authMessages } from "@/components/features/auth/messages"
@@ -61,10 +61,10 @@ export function LoginForm({ next, errorCode }: { next: string; errorCode?: strin
     setFormError(null)
     const { error } = await getSupabaseBrowserClient().auth.signInWithOtp({
       email: result.data.email,
-      options: { emailRedirectTo: emailRedirectUrl(next) },
+      options: { emailRedirectTo: emailRedirectUrl(next), shouldCreateUser: false },
     })
     setPending(null)
-    if (error) setFormError(error)
+    if (error && !isNoAccountError(error)) setFormError(error)
     else setLinkSentTo(result.data.email)
   }
 

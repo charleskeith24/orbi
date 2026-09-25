@@ -49,6 +49,16 @@ export function describeAuthError(error: AuthErrorLike | null | undefined, lang:
   return error.message || t("generic")
 }
 
+/**
+ * Magic links only sign in existing accounts (`shouldCreateUser: false` — accounts come from the waitlist). For an
+ * email without one, Supabase answers `otp_disabled`, or `signup_disabled` when it would have created the account
+ * but sign-ups are off. The form treats both like a sent link, as the password form's single "don't match" message
+ * does, so the page never reveals who has an account — and never tells a visitor to turn sign-ups on.
+ */
+export function isNoAccountError(error: AuthErrorLike | null | undefined): boolean {
+  return error?.code === "otp_disabled" || error?.code === "signup_disabled"
+}
+
 /** Where Supabase sends people from confirmation and magic-link emails. */
 export function emailRedirectUrl(next: string): string {
   const url = new URL("/auth/callback", window.location.origin)
