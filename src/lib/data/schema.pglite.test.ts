@@ -115,13 +115,18 @@ describe("migrations on a real Postgres engine", () => {
     expect(problems).toEqual([])
   })
 
-  it("don't let an account delete its public.users profile (no delete policy)", async () => {
-    const deleted = await withRole(db, "authenticated", A, async (tx) => {
+  it("don't let an account delete its public.users profile (no delete grant, no delete policy)", async () => {
+    const attempt = withRole(db, "authenticated", A, async (tx) => {
       const result = await tx.query("delete from public.users where id = $1", [A])
       await tx.rollback()
       return result.affectedRows
     })
-    expect(deleted).toBe(0)
+    // New projects have no DELETE grant at all; older ones grant it by default and row-level security stops it.
+    await attempt.then(
+      (deleted) => expect(deleted).toBe(0),
+      (error: unknown) => expect(String(error)).toMatch(/permission denied for table users/)
+    )
+    expect(await db.query("select id from public.users where id = $1", [A]).then((r) => r.rows)).toHaveLength(1)
   })
 })
 

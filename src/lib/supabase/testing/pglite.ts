@@ -9,8 +9,9 @@
  * - the `storage` schema's `buckets` and `objects` tables (row-level security on, the platform's grants),
  *   so storage policies can be tested as SQL;
  * - the `anon`, `authenticated` and `service_role` roles;
- * - Supabase's default privileges on `public` (every new table granted to all three roles, which is
- *   why the migrations revoke `anon` explicitly).
+ * - no default privileges on `public`, like a new hosted project: every grant the app needs must be in a
+ *   migration. `PGLITE_DEFAULT_PRIVILEGES=on` adds the older projects' defaults (every new table granted to
+ *   all three roles, which is why the migrations revoke `anon` explicitly), to check they still apply there.
  *
  * Proves the SQL: tables, types, CHECKs, foreign keys, triggers, grants and row-level security.
  * Doesn't prove PostgREST, Supabase Auth or hosted-project settings.
@@ -23,6 +24,17 @@ export const MIGRATIONS_DIR = new URL("../../../../supabase/migrations/", import
 export type Queryable = Pick<Transaction, "query" | "exec">
 export type RequestRole = "anon" | "authenticated" | "service_role"
 export type JsonRow = Record<string, unknown>
+
+/**
+ * Older hosted projects' default privileges on `public`: every new table, function and sequence granted to all
+ * three roles. Newer projects don't hand these out (at least not to service_role), so nothing may depend on
+ * them — the harness leaves them out unless `PGLITE_DEFAULT_PRIVILEGES=on`.
+ */
+const DEFAULT_PRIVILEGES_SQL = `
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+`
 
 export const SUPABASE_STUB_SQL = `
 create schema if not exists auth;
@@ -94,10 +106,7 @@ grant usage on schema auth to anon, authenticated, service_role;
 grant execute on all functions in schema auth to anon, authenticated, service_role;
 grant usage on schema public to anon, authenticated, service_role;
 grant usage on schema extensions to anon, authenticated, service_role;
-alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
-alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
-alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
-
+${process.env.PGLITE_DEFAULT_PRIVILEGES === "on" ? DEFAULT_PRIVILEGES_SQL : ""}
 set timezone to 'UTC';
 `
 

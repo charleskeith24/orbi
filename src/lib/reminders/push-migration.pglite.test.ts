@@ -13,6 +13,11 @@ import { SUPABASE_STUB_SQL, withRole } from "@/lib/supabase/testing/pglite"
 vi.setConfig({ testTimeout: 60_000, hookTimeout: 120_000 })
 
 const MIGRATION = readFileSync(new URL("../../../supabase/migrations/20260914000200_push.sql", import.meta.url), "utf8")
+/** What 20260925000000_server_grants.sql gives the reminders job on push_subscriptions (new projects have no defaults). */
+const SERVER_GRANTS = readFileSync(new URL("../../../supabase/migrations/20260925000000_server_grants.sql", import.meta.url), "utf8")
+  .split(";")
+  .filter((statement) => /^\s*grant\b[^;]*public\.push_subscriptions/m.test(statement.replace(/^\s*--.*$/gm, "")))
+  .join(";\n")
 const U1 = "11111111-1111-4111-8111-111111111111"
 const U2 = "22222222-2222-4222-8222-222222222222"
 const EP1 = "https://fcm.googleapis.com/fcm/send/device-one"
@@ -28,6 +33,7 @@ beforeAll(async () => {
       as $$ begin new.updated_at = now(); return new; end; $$;
   `)
   await db.exec(MIGRATION)
+  await db.exec(`${SERVER_GRANTS};`)
   await db.exec(`insert into auth.users (id, email) values ('${U1}', 'a@test.local'), ('${U2}', 'b@test.local')`)
 })
 

@@ -331,10 +331,12 @@ The online version has a platform admin (the owner, plus anyone they promote) an
 
   New, repeat and existing emails all get the same `201 { ok: true }`. No IP address is read or stored. The `/signup` server component reads `getAccessRequestState()` (`src/lib/admin/server/settings.ts`).
 - **Emails.** Approve and invite use `auth.admin.inviteUserByEmail`, password resets use `resetPasswordForEmail`, and both land on `/set-password` through the token-hash email templates (DEPLOY.md step 5). Reject sends no email. Disable is a long `ban_duration`, and enable is `"none"`.
+- **The secret key's grants are explicit** (`20260925000000_server_grants.sql`). `service_role` bypasses row-level security, so its grants are its only limit: everything is revoked first (older Supabase projects grant it every table; newer ones grant nothing, and the admin area broke on "permission denied"), then only what the server code uses comes back — column grants, never a creator's text. The admin counts come from `admin_user_stats()` / `admin_onboarding_funnel()`, which are security definer, so the key needs no grant on content tables. A new server query needs its grant in a migration and a line in `server-grants.pglite.test.ts`. The PGlite harness has no default privileges, like a new project (`PGLITE_DEFAULT_PRIVILEGES=on` adds the older defaults).
 - **Admins skip Quick setup.** An admin whose own workspace isn't set up lands on `/admin`, not `/onboarding` (`firstRunDestination` in `app-shell/first-run-destination.ts`, used by `DataGate`, which waits for `useAdminCheck()` before redirecting a first run). Admin's "Back to my workspace" links to `/?from=admin`, which opens Quick setup instead of bouncing back.
 - **Team workspaces change nothing here (§17).** No admin policy touches `workspace_members` or `workspace_invites`, `service_role` has no grants on them, and admin code still selects counts and account metadata only — never a workspace's content, whoever is in it.
 - **Tests.**
   - `src/lib/admin/admin-migration.pglite.test.ts`: the SQL on Postgres.
+  - `src/lib/supabase/server-grants.pglite.test.ts`: every server query as `service_role`, and what stays out of its reach.
   - `src/lib/admin/guard.test.ts`: every gate and guard branch.
   - `src/app/api/admin/routes.test.ts` and `src/app/api/access-requests/route.test.ts`: every handler and error code, against the in-memory fake in `src/lib/admin/testing/fake-supabase.ts`.
 

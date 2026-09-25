@@ -49,6 +49,7 @@ The database design lives in the project folder `supabase/migrations/`. **Run ev
 | 5 | `20260919000000_circles.sql` | Collab Circles: small invite-only creator groups (`circles`, `circle_members`, `circle_contacts`, `circle_checkins`, `circle_asks`, `circle_ask_interests`) |
 | 6 | `20260920000000_profiles.sql` | Profiles: photo, name, headline, location and links on each account (`public.users`), who may see them (`get_profiles()`), and the private **`avatars`** photo bucket in Storage |
 | 7 | `20260921000000_team.sql` | Team workspaces: invite a VA, editor, manager or client into your workspace (`workspace_members`, `workspace_invites`). **This one rewrites the access rules of every workspace table**, so run it even if you don't plan to invite anyone — without it nothing changes, with it everything keeps working exactly as before for a workspace of one |
+| 8 | `20260925000000_server_grants.sql` | Exactly what the server's secret key may read and write: the admin area's counts, the Request access form and the reminders job. Newer Supabase projects don't grant it anything by default (the admin Overview says "The server hit an error" without this file); older ones grant it every table — this file takes that away, so the secret key can never read a creator's content |
 | … | any newer file | whatever that feature needs |
 
 If new files appear in that folder later (after you pull an update), run just the new ones, in order.

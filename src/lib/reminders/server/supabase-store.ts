@@ -11,7 +11,11 @@ import type { ReminderItem, ReminderSlot } from "../schedule"
 const PAGE = 1000
 const USER_CHUNK = 100
 
-const SETTINGS_COLUMNS = [
+/**
+ * The columns the job reads. The service_role grants in supabase/migrations/20260925000000_server_grants.sql are
+ * exactly these; server-grants.pglite.test.ts runs them, so a new column here fails the test until it's granted.
+ */
+export const SETTINGS_COLUMNS = [
   "user_id",
   "timezone",
   "week_starts_on",
@@ -25,6 +29,9 @@ const SETTINGS_COLUMNS = [
   "reminders_review_day",
   "reminders_review_time",
 ].join(", ")
+export const SUBSCRIPTION_COLUMNS = "id, user_id, endpoint, p256dh, auth, created_at, failure_count"
+export const CALENDAR_COLUMNS = "id, user_id, day_of_week, label, platforms, time, is_active, sort_order"
+export const ITEM_COLUMNS = "id, user_id, title, stage, scheduled_at, due_date, published_at"
 
 export function createServiceClient(secretKey: string, url = SUPABASE_URL): SupabaseClient {
   return createClient(url, secretKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } })
@@ -47,7 +54,7 @@ export function createSupabaseReminderStore(supabase: SupabaseClient): ReminderS
       for (let from = 0; ; from += PAGE) {
         const { data, error } = await supabase
           .from("push_subscriptions")
-          .select("id, user_id, endpoint, p256dh, auth, created_at, failure_count")
+          .select(SUBSCRIPTION_COLUMNS)
           .order("id")
           .range(from, from + PAGE - 1)
         if (error) fail("list subscriptions", error)
@@ -63,7 +70,7 @@ export function createSupabaseReminderStore(supabase: SupabaseClient): ReminderS
           supabase.from("app_settings").select(SETTINGS_COLUMNS).in("user_id", ids),
           supabase
             .from("content_calendar")
-            .select("id, user_id, day_of_week, label, platforms, time, is_active, sort_order")
+            .select(CALENDAR_COLUMNS)
             .in("user_id", ids)
             .eq("is_active", true),
         ])
@@ -85,7 +92,7 @@ export function createSupabaseReminderStore(supabase: SupabaseClient): ReminderS
         for (let from = 0; ; from += PAGE) {
           const { data, error } = await supabase
             .from("content_items")
-            .select("id, user_id, title, stage, scheduled_at, due_date, published_at")
+            .select(ITEM_COLUMNS)
             .in("user_id", ids)
             .or(`stage.not.in.${published},published_at.gte.${publishedSince.toISOString()}`)
             .order("id")
