@@ -104,7 +104,7 @@ npx supabase db push
    > Only variables that start with `NEXT_PUBLIC_` are visible in the browser, and only the publishable key belongs there — row-level security protects the data. The **secret key**, `VAPID_PRIVATE_KEY`, `CRON_SECRET` and `ANTHROPIC_API_KEY` must never get a `NEXT_PUBLIC_` name and must never be committed to GitHub.
 
 5. **Deploy.** After a few minutes you get an address like `https://orbi-yourname.vercel.app`. Copy it.
-6. Optional but recommended: **Project → Settings → Functions → Function Region** → pick **Singapore**, so the server sits next to your database. Redeploy afterwards (**Deployments → ⋯ → Redeploy**).
+6. The server already runs in **Singapore**: `vercel.json` sets `"regions": ["sin1"]`, next to the Singapore database, so every sign-in check stays in the region. If you chose a different Supabase region in step 2, change `sin1` to the Vercel region closest to it (vercel.com/docs/regions) and redeploy — `vercel.json` wins over **Settings → Functions → Function Region**.
 
 `NEXT_PUBLIC_…` values are built into the site. **Whenever you add or change an environment variable, redeploy** — otherwise the site keeps the old values.
 
