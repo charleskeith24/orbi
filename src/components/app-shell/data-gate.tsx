@@ -3,6 +3,8 @@
 import { CircleAlert, RotateCcw } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useSyncExternalStore } from "react"
+import { firstRunDestination } from "@/components/app-shell/first-run-destination"
+import { useAdminCheck } from "@/components/features/admin/use-is-admin"
 import { dataGateMessages } from "@/components/features/settings/data-messages"
 import { MoveLocalPrompt } from "@/components/features/settings/data-move-local"
 import { Button } from "@/components/ui/button"
@@ -14,11 +16,13 @@ import { useBrand, useDataStatus, useDataStore } from "@/lib/store"
 const RESTORE_TAB = "data"
 const noopSubscribe = () => () => {}
 const readSettingsTab = () => new URLSearchParams(window.location.search).get("tab")
+/** Read when the redirect runs, after navigation has updated the URL. */
+const readFrom = () => new URLSearchParams(window.location.search).get("from")
 
 /**
  * Renders children once the workspace is loaded.
  * `app` mode also sends first-time users (no completed onboarding) to /onboarding — except to
- * Settings → Data, where a backup can be restored.
+ * Settings → Data, where a backup can be restored — and admins to /admin (`firstRunDestination`).
  * Online version: offers once to move this browser's local workspace into an empty account.
  */
 export function DataGate({ children, mode = "app" }: { children: React.ReactNode; mode?: "app" | "onboarding" }) {
@@ -31,10 +35,12 @@ export function DataGate({ children, mode = "app" }: { children: React.ReactNode
   const settingsTab = useSyncExternalStore(noopSubscribe, readSettingsTab, () => null)
   const restoring = pathname === "/settings" && settingsTab === RESTORE_TAB
   const needsOnboarding = mode === "app" && status === "ready" && !brand.onboarding_completed && !restoring
+  const isAdmin = useAdminCheck()
 
   useEffect(() => {
-    if (needsOnboarding && !pathname.startsWith("/onboarding")) router.replace("/onboarding")
-  }, [needsOnboarding, pathname, router])
+    const destination = firstRunDestination({ needsOnboarding, isAdmin, from: readFrom() })
+    if (destination && !pathname.startsWith(destination)) router.replace(destination)
+  }, [needsOnboarding, isAdmin, pathname, router])
 
   if (status === "error") {
     return (

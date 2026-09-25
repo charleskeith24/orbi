@@ -51,12 +51,15 @@ export async function resolveIsAdmin(supabase: SupabaseClient, storage: SessionS
 }
 
 let known = false
+/** Whether `known` is the answer yet (local mode answers `false` at once). */
+let resolved = false
 let started = false
 const listeners = new Set<() => void>()
 
 function publish(value: boolean) {
-  if (value === known) return
+  if (resolved && value === known) return
   known = value
+  resolved = true
   for (const listener of listeners) listener()
 }
 
@@ -73,12 +76,22 @@ function sessionStore(): SessionStore | null {
   }
 }
 
+function startAdminCheck() {
+  if (started) return
+  started = true
+  if (!isSupabaseConfigured) return publish(false)
+  resolveIsAdmin(getSupabaseBrowserClient(), sessionStore()).then(publish, () => publish(false))
+}
+
 export function useIsAdmin(): boolean {
   const value = useSyncExternalStore(subscribe, () => known, () => false)
-  useEffect(() => {
-    if (!isSupabaseConfigured || started) return
-    started = true
-    resolveIsAdmin(getSupabaseBrowserClient(), sessionStore()).then(publish, () => publish(false))
-  }, [])
+  useEffect(startAdminCheck, [])
+  return value
+}
+
+/** The same answer, or `null` while it's still being asked — for decisions that must wait for it (DataGate). */
+export function useAdminCheck(): boolean | null {
+  const value = useSyncExternalStore(subscribe, () => (resolved ? known : null), () => null)
+  useEffect(startAdminCheck, [])
   return value
 }

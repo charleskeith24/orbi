@@ -63,6 +63,8 @@ The admin area only opens after a second check: a 6-digit code from your phone. 
 
 From then on, Orbi asks for a fresh code each time you sign in and open Admin. Other admins set up their own the same way the first time they open `/admin`.
 
+**An admin doesn't have to do Quick setup.** As long as your own creator workspace isn't set up, opening the site takes you to **Admin** instead of Quick setup. If you also want to create content with Orbi, use **Back to my workspace** in Admin: it opens Quick setup, and after that the site opens on your Home as usual (Admin stays in the account menu).
+
 **Lost your phone?** Another admin can't remove your 2-step verification from the app. In Supabase → **SQL Editor**, run this with your email:
 
 ```sql

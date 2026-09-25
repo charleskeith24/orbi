@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
+import { FROM_ADMIN } from "@/components/app-shell/first-run-destination"
 import { cn } from "@/lib/utils"
 import { useAdmin } from "./admin-context"
 import { adminMessages } from "./messages"
@@ -65,11 +66,14 @@ function AdminHeaderBar({ children }: { children?: React.ReactNode }) {
   )
 }
 
+/** An admin without a creator workspace lands on Admin; this opens Quick setup instead of bouncing back. */
+const WORKSPACE_HREF = `/?from=${FROM_ADMIN}`
+
 function BackToWorkspace() {
   const t = useScreenT(adminMessages)
   return (
     <Button asChild variant="ghost" size="sm">
-      <Link href="/" aria-label={t("back_to_workspace")}>
+      <Link href={WORKSPACE_HREF} aria-label={t("back_to_workspace")}>
         <ArrowLeft aria-hidden />
         <span className="hidden sm:inline">{t("back_to_workspace")}</span>
         <span className="sm:hidden">{t("back_short")}</span>
@@ -133,7 +137,7 @@ function AdminAccountMenu() {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <Link href="/">
+            <Link href={WORKSPACE_HREF}>
               <ArrowLeft aria-hidden /> {t("back_to_workspace")}
             </Link>
           </DropdownMenuItem>
