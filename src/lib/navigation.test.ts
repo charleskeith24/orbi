@@ -9,12 +9,12 @@ import {
   sidebarSections,
 } from "@/lib/navigation"
 
-const SIMPLE = ["Home", "Today", "Ideas", "Content Studio", "Calendar", "Analytics", "Money", "Settings"]
+const SIMPLE = ["Home", "Today", "Ideas", "Content Studio", "Calendar", "Analytics", "Money", "Settings", "Help"]
 const titles = (sections: typeof NAV_SECTIONS) => sections.flatMap((s) => s.items.map((i) => i.title))
 const group = (key: string) => NAV_SECTIONS.find((s) => s.key === key)!
 
 describe("navigation", () => {
-  it("has Home and Today, four groups, then Money and Settings — one link per module", () => {
+  it("has Home and Today, four groups, then Money, Settings and Help — one link per module", () => {
     expect(NAV_SECTIONS.map((s) => s.label)).toEqual([null, "Plan", "Create", "Grow", "Measure", null])
     expect(titles(NAV_SECTIONS)).toEqual([
       "Home",
@@ -38,6 +38,7 @@ describe("navigation", () => {
       "Experiments",
       "Money",
       "Settings",
+      "Help",
     ])
   })
 

@@ -10,6 +10,7 @@ import {
   FlaskConical,
   House,
   Library,
+  LifeBuoy,
   Lightbulb,
   Megaphone,
   PenLine,
@@ -58,7 +59,7 @@ export interface NavSection {
 
 /**
  * Primary navigation (Calm UI): Home and Today, four collapsible groups — Plan, Create, Grow, Measure — then
- * Money and Settings. One sidebar link per module; a module's sub-pages are tabs. Every href must resolve to
+ * Money, Settings and Help. One sidebar link per module; a module's sub-pages are tabs. Every href must resolve to
  * a real page. Module, page and group names are product terms (ARCHITECTURE §9) and stay English in both UI
  * languages.
  */
@@ -228,6 +229,7 @@ export const NAV_SECTIONS: NavSection[] = [
         ],
       },
       { title: "Settings", href: "/settings", icon: Settings, description: "Targets, thresholds, data and AI", simple: true },
+      { title: "Help", href: "/help", icon: LifeBuoy, description: "Guides, answers and shortcuts", simple: true },
     ],
   },
 ]

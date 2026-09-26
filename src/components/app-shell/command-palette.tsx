@@ -74,6 +74,7 @@ import {
 } from "@/components/ui/command"
 import { Kbd } from "@/components/ui/kbd"
 import { translator, useT, useUiLang, type UiLang } from "@/lib/i18n"
+import { HELP_TOPICS_PER_SEARCH, helpText, searchHelp } from "@/components/features/help/help-topics"
 import { ALL_PAGES, NAV_SECTIONS } from "@/lib/navigation"
 import { uiActions, useCanSeeMoney, useTable, useUIStore } from "@/lib/store"
 
@@ -360,6 +361,8 @@ function PaletteContent({ onClose }: { onClose: () => void }) {
   // Money is not listed for a member of somebody else's workspace without Money access (ARCHITECTURE §17).
   const pages = moneyAccess ? PAGES : PAGES.filter((page) => !page.money)
   const matchedPages = trimmed ? rankEntries(pages, trimmed).slice(0, RESULTS_PER_GROUP) : pages
+  // Help guides only answer a search; `/help?open=` opens the one picked.
+  const matchedHelp = trimmed ? searchHelp(trimmed).slice(0, HELP_TOPICS_PER_SEARCH) : []
 
   const actionItem = (action: PaletteAction) => (
     <CommandItem key={action.id} value={`action:${action.id}`} onSelect={action.perform}>
@@ -395,6 +398,15 @@ function PaletteContent({ onClose }: { onClose: () => void }) {
           <>
             {matchedActions.length ? <CommandGroup heading={t("group_actions")}>{matchedActions.map(actionItem)}</CommandGroup> : null}
             {matchedPages.length ? <CommandGroup heading={t("group_pages")}>{matchedPages.map(pageItem)}</CommandGroup> : null}
+            {matchedHelp.length ? (
+              <CommandGroup heading={t("group_help")}>
+                {matchedHelp.map((topic) => (
+                  <CommandItem key={topic.id} value={`help:${topic.id}`} onSelect={() => go(`/help?open=${topic.id}`)}>
+                    <Row icon={topic.icon} title={helpText(topic, lang).title} tokens={tokens} hint={t("group_help")} />
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ) : null}
             {results.map((group) => (
               <CommandGroup key={group.kind} heading={group.heading}>
                 {group.docs.map((doc) => docItem(doc))}

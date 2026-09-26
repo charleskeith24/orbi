@@ -144,6 +144,7 @@ Use `new Date()` at the call site (`now`) and pass it into pure analytics functi
 - Settings tabs: `profile`, `general`, `team`, `performance`, `funnel`, `formats`, `tags`, `engagement`, `reminders`, `ai`, `integrations`, `data` (`settingsHref(tab)` in `features/settings/tabs.ts`). `/settings` with no tab still opens `general`; the account menu's **Profile** item opens `/settings?tab=profile`.
 - Admin area (Supabase mode, admins only, §14): `/admin` (Overview), `/admin/requests`, `/admin/users`, `/admin/feedback`, `/admin/audit`, `/admin/security` (2-step verification). Never in `NAV_SECTIONS`; the entry is the account menu and ⌘K, for admins only.
 - Collab Circles (§15, online version; local mode shows a notice): `/circles` (list), `/circles/<id>` (a circle; `#asks` jumps to Collab asks), `/circles/join/<code>` (invite link; signed-out visitors go through `/login?next=`).
+- **Help** (`/help`): a guide for every part of Orbi, grouped like the sidebar, in English and Taglish (`features/help/help-topics.ts`). `?open=<topic id>` opens and scrolls to one guide; ⌘K lists up to three matching guides under **Help**, linking there. Search matches both languages.
 - Public pages (no sign-in in Supabase mode): `/login`, `/signup` (Request access), `/privacy`, `/terms` (`PUBLIC_PAGES` in `features/auth/auth-paths.ts`). Both legal pages show `NEXT_PUBLIC_CONTACT_EMAIL` when it's set (`src/app/privacy/contact-email.ts`) and say honestly when it isn't; `?preview=contact` fakes one in development only.
 
 Global actions (callable from anywhere):
@@ -208,7 +209,7 @@ Numbers, short labels and one obvious next action; explanations exist but wait u
 - `StatTile size="sm"` — the compact tile.
 - Shell: `NewMenu`/`useNewActions`, `UserMenu` (account avatar: Profile, Settings, Theme, Feedback, Install), `BottomTabBar`, `ModuleTabs`, the one-line `WorkspaceBanner`.
 
-**Shell.** Top bar: location, search (⌘K), **＋ New**, Content Strategist, account avatar. Sidebar: Home and Today; **Plan · Create · Grow · Measure** (group headers fold, remembered per device in `pbos:sidebar:collapsed`; a folded group still shows the module you're on; the icon rail lists everything); Money and Settings. Phones (below `md`): the sidebar trigger and New give way to a bottom bar — Home · Today · ＋ · Calendar · More (＋ = the New menu as a sheet, More = every module as a sheet). The bar sets `--bottom-bar` (height + safe area) on phones: the shell pads page content with it, and anything sticky to the bottom uses `bottom-[calc(var(--bottom-bar,0px)+…)]` (save bars) or `bottom-[var(--bottom-bar,0px)]`; toasts sit above it too.
+**Shell.** Top bar: location, search (⌘K), **＋ New**, Content Strategist, account avatar. Sidebar: Home and Today; **Plan · Create · Grow · Measure** (group headers fold, remembered per device in `pbos:sidebar:collapsed`; a folded group still shows the module you're on; the icon rail lists everything); Money, Settings and Help. Phones (below `md`): the sidebar trigger and New give way to a bottom bar — Home · Today · ＋ · Calendar · More (＋ = the New menu as a sheet, More = every module as a sheet). The bar sets `--bottom-bar` (height + safe area) on phones: the shell pads page content with it, and anything sticky to the bottom uses `bottom-[calc(var(--bottom-bar,0px)+…)]` (save bars) or `bottom-[var(--bottom-bar,0px)]`; toasts sit above it too.
 
 ## 6. Chart rules (data-viz method)
 
@@ -247,6 +248,7 @@ Brand HQ · Audience HQ · Persona · Problem Bank · Question Bank · Content P
 5. `npx tsc --noEmit -p .` clean for your files; `npx eslint <files>` clean; tests pass.
 6. Smoke test passes: `node scripts/smoke.mjs <route> --out=/tmp/x.png` (then look at the screenshot). The dev server is already running on :3000 — never start another one and never run `next build` while others are working.
 7. Every new user-facing string goes through `defineMessages` with English and Taglish (§11).
+8. **Help stays true.** When a feature changes how something is done — a button, a menu path, a step — update its guide in `features/help/help-topics.ts` in both languages (`help-topics.test.ts` checks the two match and every link is a real page).
 
 ## 11. Language (English / Taglish)
 
@@ -279,9 +281,9 @@ toast.success(translate(m, getUiLang(), "saved"))
 
 ## 12. Simple mode
 
-- `app_settings.simple_mode` (new workspaces: on). The sidebar shows only the `NavItem.simple` modules — Home, Today, Ideas, Content Studio, Calendar, Analytics, Money, Settings — plus the module of the current page (`sidebarSections()` in `src/lib/navigation.ts`). The footer toggle ("Show all modules (N hidden)" / "Back to Simple mode") and Settings → General flip it.
+- `app_settings.simple_mode` (new workspaces: on). The sidebar shows only the `NavItem.simple` modules — Home, Today, Ideas, Content Studio, Calendar, Analytics, Money, Settings, Help — plus the module of the current page (`sidebarSections()` in `src/lib/navigation.ts`). The footer toggle ("Show all modules (N hidden)" / "Back to Simple mode") and Settings → General flip it.
 - Simple mode only trims the sidebar: ⌘K (`ALL_PAGES`), links and URLs reach every page. Don't hide features inside pages based on it.
-- With the Calm UI groups: Simple mode leaves Home and Today, **Create** (Ideas, Content Studio, Calendar), **Measure** (Analytics), then Money and Settings; groups with nothing left disappear. A folded group and Simple mode both keep the current page's module visible. The phone **More** sheet follows the same rules and has the same toggle. Module tabs (§4) always show every sub-page — Simple mode never trims tabs.
+- With the Calm UI groups: Simple mode leaves Home and Today, **Create** (Ideas, Content Studio, Calendar), **Measure** (Analytics), then Money, Settings and Help; groups with nothing left disappear. A folded group and Simple mode both keep the current page's module visible. The phone **More** sheet follows the same rules and has the same toggle. Module tabs (§4) always show every sub-page — Simple mode never trims tabs.
 - Adding a module: add it to `NAV_SECTIONS`; set `simple: true` only if a new creator needs it every day.
 
 ## 13. Feedback & usage analytics (privacy rules)

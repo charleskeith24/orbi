@@ -27,7 +27,7 @@ const args = Object.fromEntries(
 const DEFAULT_ROUTES = [
   "/", "/today", "/strategy", "/audience", "/pillars", "/ideas", "/studio", "/pipeline", "/calendar",
   "/campaigns", "/collabs", "/series", "/stories", "/research", "/analytics", "/winners", "/experiments",
-  "/reports", "/money", "/settings?tab=profile", "/settings?tab=general", "/strategist",
+  "/reports", "/money", "/settings?tab=profile", "/settings?tab=general", "/strategist", "/help",
 ]
 const routes = args.routes ? String(args.routes).split(",") : DEFAULT_ROUTES
 const width = Number(args.width ?? 1440)
