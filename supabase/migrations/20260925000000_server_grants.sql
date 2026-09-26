@@ -21,9 +21,10 @@
 -- default privileges, and checks what stays out of reach.
 
 -- ----------------------------------------------------------------------------
--- Start from nothing: every table in public, except the admin tables, which already grant exactly what the admin
--- routes use (20260918000000_admin.sql). Column grants go too: revoking a table privilege revokes its column
--- privileges, so running this file again ends in the same state.
+-- Start from nothing: every table in public, except those whose own migration already grants service_role
+-- exactly what it needs — the admin tables (20260918000000_admin.sql) and ai_keys (20260926000000_ai_keys.sql),
+-- so running this file again later never takes the server's access to them away. Column grants go too:
+-- revoking a table privilege revokes its column privileges, so running this file again ends in the same state.
 -- ----------------------------------------------------------------------------
 
 do $$
@@ -36,7 +37,7 @@ begin
       join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'public'
        and c.relkind in ('r', 'p')
-       and c.relname not in ('admin_users', 'platform_settings', 'access_requests', 'admin_audit_log')
+       and c.relname not in ('admin_users', 'platform_settings', 'access_requests', 'admin_audit_log', 'ai_keys')
   loop
     execute format('revoke all on table public.%I from service_role', t);
   end loop;

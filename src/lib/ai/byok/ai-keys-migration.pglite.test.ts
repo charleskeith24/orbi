@@ -1,7 +1,7 @@
 /** `public.ai_keys` (20260926000000_ai_keys.sql) on Postgres: server only, one key per account, gone with it. */
 import type { PGlite } from "@electric-sql/pglite"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import { createAuthUser, createSupabaseTestDb, withRole, type RequestRole } from "@/lib/supabase/testing/pglite"
+import { createAuthUser, createSupabaseTestDb, readMigrations, withRole, type RequestRole } from "@/lib/supabase/testing/pglite"
 
 const A = "a1000000-0000-4000-8000-0000000000a1"
 const B = "b1000000-0000-4000-8000-0000000000b2"
@@ -53,6 +53,14 @@ describe("ai_keys", () => {
     await expect(insertKey(A, "mistral")).rejects.toThrow(/check constraint/)
     await expect(insertKey(A, "openai", "sk-plain-text-key")).rejects.toThrow(/check constraint/)
     await as("service_role", null, "delete from public.ai_keys where user_id = $1", [B])
+  })
+
+  it("keeps the server's access when the server-grants migration runs again later", async () => {
+    const grants = readMigrations().find((m) => m.file === "20260925000000_server_grants.sql")!
+    await db.exec(grants.sql)
+    await insertKey(A)
+    expect(await as("service_role", null, "select provider from public.ai_keys where user_id = $1", [A])).toEqual([{ provider: "gemini" }])
+    await as("service_role", null, "delete from public.ai_keys where user_id = $1", [A])
   })
 
   it("stamps updated_at and goes away with the account", async () => {
