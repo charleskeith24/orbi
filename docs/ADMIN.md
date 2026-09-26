@@ -124,6 +124,7 @@ Creators put unpublished ideas, scripts, income and brand deals into Orbi. They 
 |---|---|
 | Email, name, profile photo, account status, sign-up and last sign-in dates | Ideas, scripts, captions, hooks, stories, research |
 | | The rest of a profile: headline, location, links, niche |
+| | Anyone's AI key: it's encrypted, and the admin area has no way to read or show it |
 | Whether setup is finished | Brand HQ, audience, pillars, strategy |
 | How many ideas, content items and published posts | Titles or text of any of them |
 | Feedback people sent with the Feedback button (it was written *to* you) | Brand deals, income, rate cards |

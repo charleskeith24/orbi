@@ -41,6 +41,7 @@ export function PrivacyView({ showRequestAccess, contactEmail }: { showRequestAc
     ["stores_feedback_title", "stores_feedback"],
     ["stores_usage_title", "stores_usage"],
     ["stores_team_title", "stores_team"],
+    ["stores_ai_title", "stores_ai"],
     ["stores_circles_title", "stores_circles"],
   ]
 

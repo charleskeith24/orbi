@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useT, type Translator } from "@/lib/i18n"
+import { isSupabaseConfigured } from "@/lib/supabase/config"
 import type { GeneratedBy } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -57,7 +58,12 @@ const PROVIDER_COPY: Record<GeneratedBy, { icon: typeof Sparkles; explain: (t: A
     icon: Sparkles,
     explain: (t, model) => t("explain_openai", { model: model ? ` (${model})` : "" }),
   },
-  offline: { icon: Cpu, explain: (t) => t("explain_offline") },
+  gemini: {
+    icon: Sparkles,
+    explain: (t, model) => t("explain_gemini", { model: model ? ` (${model})` : "" }),
+  },
+  // Online, everyone brings their own key; locally, the server's ANTHROPIC_API_KEY decides.
+  offline: { icon: Cpu, explain: (t) => t(isSupabaseConfigured ? "explain_offline" : "explain_offline_local") },
   manual: { icon: PenLine, explain: (t) => t("explain_manual") },
 }
 
@@ -65,6 +71,7 @@ function providerLabel(t: AiTranslator, provider: GeneratedBy, model?: string): 
   const pretty = prettyModelName(model)
   if (provider === "anthropic") return pretty ? `Claude ${pretty}` : "Claude"
   if (provider === "openai") return model ? `OpenAI · ${model}` : "OpenAI"
+  if (provider === "gemini") return model ? `Gemini · ${model.replace(/^(models\/)?gemini-/i, "")}` : "Gemini"
   if (provider === "offline") return t("offline_templates")
   return t("written_manually")
 }
@@ -93,7 +100,7 @@ export function ProviderBadge({
             className
           )}
         >
-          <Icon className={cn("size-3 shrink-0", (provider === "anthropic" || provider === "openai") && "text-brand")} aria-hidden />
+          <Icon className={cn("size-3 shrink-0", (provider === "anthropic" || provider === "openai" || provider === "gemini") && "text-brand")} aria-hidden />
           {label}
         </span>
       </TooltipTrigger>

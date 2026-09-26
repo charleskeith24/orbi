@@ -41,6 +41,9 @@ export const privacyMessages = defineMessages({
     stores_team_title: "Your team — only if you invite someone",
     stores_team:
       "The email addresses you invite into your workspace, and who joined with which role. Nothing else: we don't copy a member's own workspace into yours, or yours into theirs.",
+    stores_ai_title: "Your AI key — only if you add one",
+    stores_ai:
+      "If you connect your own Claude, OpenAI or Gemini key, we keep it encrypted (it's never shown again, not even to you), with its last four characters and the model you picked. It's only used to send the AI requests you ask for to that provider, whose own terms then apply — on Google's free tier, Google may use what you send to improve its products. Removing the key, or your account, deletes it.",
     stores_circles_title: "Collab Circles — only if you join one",
     stores_circles:
       "The circles you create or join, the name you use in each, your weekly check-ins (the number of posts you choose to share and an optional note), collab asks and interests, and the contact you choose to share. Leaving a circle deletes what you wrote in it.",
@@ -109,6 +112,9 @@ export const privacyMessages = defineMessages({
     stores_team_title: "Ang team mo — kung mag-iinvite ka lang",
     stores_team:
       "Ang mga email na ini-invite mo sa workspace mo, at kung sino ang sumali at anong role. Wala nang iba: hindi namin kinokopya ang sariling workspace ng member papunta sa'yo, o ang sa'yo papunta sa kanila.",
+    stores_ai_title: "Ang AI key mo — kung maglalagay ka lang",
+    stores_ai:
+      "Kapag ikinonekta mo ang sarili mong Claude, OpenAI o Gemini key, naka-encrypt namin itong itatabi (hindi na ito ipapakita ulit, kahit sa'yo), kasama ang huling apat na character nito at ang model na pinili mo. Gagamitin lang ito para ipadala sa provider na 'yon ang mga AI request na hihilingin mo, at ang sariling terms nila ang masusunod — sa libreng tier ng Google, pwedeng gamitin ng Google ang ipinapadala mo para pagandahin ang mga produkto nila. Mabubura ito kapag inalis mo ang key, o ang account mo.",
     stores_circles_title: "Collab Circles — kung sasali ka lang",
     stores_circles:
       "Ang mga circle na ginawa o sinalihan mo, ang pangalang gamit mo sa bawat isa, ang weekly check-ins mo (ang bilang ng posts na pinili mong i-share at optional na note), collab asks at interests, at ang contact na pinili mong i-share. Kapag umalis ka sa circle, buburahin ang mga isinulat mo roon.",

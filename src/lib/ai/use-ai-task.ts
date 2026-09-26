@@ -71,13 +71,16 @@ export function useAiTask<N extends AiTaskName>(task: N) {
 export interface AiStatus {
   provider: AiProviderId
   model: string
-  /** A live model (API key) is configured on the server. */
+  /** A live model is configured: the person's own key online, the server's key locally. */
   configured: boolean
   reason: string
+  /** Whose key: the server's (local mode), the person's own (online), or none (offline templates). */
+  source?: "server" | "user" | "none"
 }
 
 let statusCache: AiStatus | null = null
 let statusRequest: Promise<AiStatus | null> | null = null
+const statusListeners = new Set<(status: AiStatus | null) => void>()
 
 /** GET /api/ai/status once per session (successful results are cached; failures retry next time). */
 export function fetchAiStatus(): Promise<AiStatus | null> {
@@ -86,7 +89,13 @@ export function fetchAiStatus(): Promise<AiStatus | null> {
     .then((r) => (r.ok ? (r.json() as Promise<Partial<AiStatus>>) : null))
     .then((s) => {
       if (!s || typeof s.provider !== "string") return null
-      statusCache = { provider: s.provider as AiProviderId, model: s.model ?? "", configured: Boolean(s.configured), reason: s.reason ?? "" }
+      statusCache = {
+        provider: s.provider as AiProviderId,
+        model: s.model ?? "",
+        configured: Boolean(s.configured),
+        reason: s.reason ?? "",
+        ...(s.source ? { source: s.source } : {}),
+      }
       return statusCache
     })
     .catch(() => null)
@@ -96,21 +105,34 @@ export function fetchAiStatus(): Promise<AiStatus | null> {
   return statusRequest
 }
 
+/** Ask again (after the person saves, switches or removes their own AI key); every useAiStatus updates. */
+export function refreshAiStatus(): void {
+  statusCache = null
+  void fetchAiStatus().then((s) => {
+    for (const listener of statusListeners) listener(s)
+  })
+}
+
 /** Which engine the gateway will use — for ProviderBadge and "Offline mode" notices. */
 export function useAiStatus(): AiStatus & { loading: boolean } {
   const [status, setStatus] = useState<AiStatus | null>(statusCache)
   const [loading, setLoading] = useState(statusCache === null)
 
   useEffect(() => {
-    if (statusCache) return
-    let active = true
-    void fetchAiStatus().then((s) => {
-      if (!active) return
+    const listener = (s: AiStatus | null) => {
       setStatus(s)
       setLoading(false)
-    })
+    }
+    statusListeners.add(listener)
+    let active = true
+    if (!statusCache) {
+      void fetchAiStatus().then((s) => {
+        if (active) listener(s)
+      })
+    }
     return () => {
       active = false
+      statusListeners.delete(listener)
     }
   }, [])
 

@@ -49,7 +49,7 @@ export interface OnboardingDraft {
   updatedAt: string
 }
 
-const PROVIDERS: AiProviderId[] = ["anthropic", "openai", "offline"]
+const PROVIDERS: AiProviderId[] = ["anthropic", "openai", "gemini", "offline"]
 const MODES: WizardMode[] = ["first", "rerun", "niche"]
 const storageKey = (userId: string) => `pbos:onboarding:v2:${userId || "local"}`
 

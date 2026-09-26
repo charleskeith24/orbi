@@ -30,6 +30,8 @@ export interface ProviderStatus {
   configured: boolean
   /** Human-readable explanation for the UI. */
   reason: string
+  /** Whose key: the server's (local mode), the person's own (online), or none (offline templates). */
+  source?: "server" | "user" | "none"
 }
 
 function hasAnthropicCredentials(env: Env): boolean {
@@ -52,7 +54,7 @@ export function providerStatus(env: Env = process.env): ProviderStatus {
   if (!configured) {
     return { provider: "offline", model: OFFLINE_MODEL, configured: false, reason: "No ANTHROPIC_API_KEY on the server — using the offline template engine." }
   }
-  return { provider: "anthropic", model, configured: true, reason: `Using ${model} via the Anthropic API.` }
+  return { provider: "anthropic", model, configured: true, reason: `Using ${model} via the Anthropic API.`, source: "server" }
 }
 
 let cached: { key: string; provider: AiProvider } | null = null

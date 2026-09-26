@@ -88,6 +88,19 @@ describe("service_role runs every server query", () => {
     expect(await asService("select count(*)::int as n from public.access_requests where email = 'mika@example.com'")).toEqual([{ n: 0 }])
   })
 
+  it("your own AI key: stored, read, switched and forgotten by the server (20260926000000_ai_keys.sql)", async () => {
+    const columns = "provider, model, model_meta, key_hint, key_ciphertext, verified_at"
+    expect(
+      await affected(
+        "insert into public.ai_keys (user_id, provider, model, model_meta, key_hint, key_ciphertext, verified_at) values ($1, 'gemini', 'gemini-2.5-flash', '{}', 'abcd', 'v1.aXY.Ym9keQ.dGFn', now()) on conflict (user_id) do update set model = excluded.model",
+        [A]
+      )
+    ).toBe(1)
+    expect(await asService(`select ${columns} from public.ai_keys where user_id = $1`, [A])).toHaveLength(1)
+    expect(await affected("update public.ai_keys set model = 'gemini-2.5-pro', model_meta = '{}' where user_id = $1", [A])).toBe(1)
+    expect(await affected("delete from public.ai_keys where user_id = $1", [A])).toBe(1)
+  })
+
   it("the reminders job: its columns, delivery bookkeeping and stale devices", async () => {
     expect(await asService(`select ${SUBSCRIPTION_COLUMNS} from public.push_subscriptions`)).toHaveLength(1)
     expect(await asService(`select ${SETTINGS_COLUMNS} from public.app_settings where user_id = any($1::uuid[])`, [[A]])).toHaveLength(1)

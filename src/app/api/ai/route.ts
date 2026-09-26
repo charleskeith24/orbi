@@ -1,11 +1,14 @@
 /**
  * POST /api/ai — the only place AI runs. Body: { task, input, context }.
  * 200 → { output, provider, model, durationMs }; failures → { error, provider, code } with 400/401/413/429/5xx.
- * Keys stay server-side; error messages never include keys or stack traces.
+ * Keys stay server-side; error messages never include keys or stack traces. Online, each person's own key
+ * writes for them (bring your own key, `providerForUser`); without one, the offline templates do.
  * Runs on the Node.js runtime (the default).
  */
+import { providerForUser } from "@/lib/ai/byok/resolve"
 import { AiError, toAiError } from "@/lib/ai/errors"
 import { providerStatus } from "@/lib/ai/providers"
+import type { AiProvider } from "@/lib/ai/providers/types"
 import { executeAiTask, MAX_REQUEST_CHARS, type AiGatewayFailure } from "@/lib/ai/server"
 import { isSupabaseConfigured } from "@/lib/supabase/config"
 
@@ -19,13 +22,16 @@ function failure(status: number, body: AiGatewayFailure): Response {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const provider = providerStatus().provider
+  let provider = providerStatus().provider
   try {
+    let engine: AiProvider | undefined
     if (isSupabaseConfigured) {
       const { createSupabaseServerClient } = await import("@/lib/supabase/server")
       const supabase = await createSupabaseServerClient()
       const { data } = await supabase.auth.getUser()
       if (!data.user) return failure(401, { error: "Sign in to use the AI features.", provider, code: "unauthorized" })
+      engine = await providerForUser(data.user.id)
+      provider = engine.id
     }
 
     const raw = await request.text()
@@ -39,7 +45,7 @@ export async function POST(request: Request): Promise<Response> {
       return failure(400, { error: "Request body must be valid JSON.", provider, code: "invalid_request" })
     }
 
-    const result = await executeAiTask(body, { signal: request.signal })
+    const result = await executeAiTask(body, { signal: request.signal, provider: engine })
     return Response.json(result, { headers: NO_STORE })
   } catch (err) {
     const error = toAiError(err, provider)

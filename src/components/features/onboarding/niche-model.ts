@@ -170,7 +170,7 @@ export interface NicheResult {
   notes: string[]
 }
 
-const PROVIDERS: AiProviderId[] = ["anthropic", "openai", "offline"]
+const PROVIDERS: AiProviderId[] = ["anthropic", "openai", "gemini", "offline"]
 
 export function sanitizeNicheResult(raw: unknown): NicheResult | null {
   if (!raw || typeof raw !== "object") return null

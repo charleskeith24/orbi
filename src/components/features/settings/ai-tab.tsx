@@ -1,13 +1,16 @@
 "use client"
 
 import { formatDistanceStrict } from "date-fns"
-import { useMemo } from "react"
+import { useMemo, useSyncExternalStore } from "react"
 import { AiNotice, CopyButton, DefinitionList, Disclosure, KeyValue, ProviderBadge, SectionCard, StatusPill } from "@/components/common"
 import { Spinner } from "@/components/ui/spinner"
 import { providerLabel, useAiStatus } from "@/lib/ai"
 import { parseDate } from "@/lib/dates"
 import { type Translator, type UiLang, useT, useUiLang } from "@/lib/i18n"
 import { useTable } from "@/lib/store"
+import { isSupabaseConfigured } from "@/lib/supabase/config"
+import { AiKeyCard } from "./ai-key/ai-key-card"
+import { aiKeyFixtureMode } from "./ai-key/dev-fixture"
 import { AiLog } from "./ai-log"
 import { aiMessages } from "./ai-messages"
 import { BrandContextCard } from "./brand-context-card"
@@ -33,8 +36,22 @@ function statusReason(reason: string, model: string, lang: UiLang, t: Translator
   if (reason.startsWith("No ANTHROPIC_API_KEY")) return t("reason_no_key")
   if (reason.startsWith("Couldn't reach")) return t("reason_unreachable")
   if (reason.startsWith("Using ") && reason.endsWith(" via the Anthropic API.")) return t("reason_using", { model })
+  if (reason.startsWith("No AI key yet")) return t("reason_no_key_online")
+  if (reason.startsWith("AI keys aren't set up")) return t("reason_not_ready")
+  if (reason.startsWith("Your saved AI key can't be read")) return t("reason_unreadable")
+  const yours = /^Using your (\S+) key \((.+)\)\.$/.exec(reason)
+  if (yours) return t("reason_using_yours", { provider: yours[1], model: yours[2] })
   return reason
 }
+
+const noSubscribe = () => () => {}
+/** Online — or, in development, the AI key fixture: the card for your own key replaces the server setup. */
+function useOwnKeys(): boolean {
+  const fixture = useSyncExternalStore(noSubscribe, aiKeyFixtureMode, () => null)
+  return isSupabaseConfigured || fixture !== null
+}
+
+const ENGINE_LABELS = { anthropic: "engine_claude", openai: "engine_openai", gemini: "engine_gemini", offline: "engine_offline" } as const
 
 export function AiTab({ now }: { now: Date }) {
   return (
@@ -55,7 +72,8 @@ function EngineCard({ now }: { now: Date }) {
     () => generations.reduce<(typeof generations)[number] | null>((best, g) => (!best || g.created_at > best.created_at ? g : best), null),
     [generations]
   )
-  const live = status.provider === "anthropic" && status.configured
+  const ownKeys = useOwnKeys()
+  const live = status.provider !== "offline" && status.configured
   const unreachable = !status.loading && !live && status.reason.startsWith("Couldn't reach")
   const lastAt = parseDate(last?.created_at)
 
@@ -71,15 +89,17 @@ function EngineCard({ now }: { now: Date }) {
             <div className="flex flex-wrap items-center gap-2">
               <ProviderBadge provider={status.provider} model={status.model} />
               <StatusPill tone={live ? "good" : unreachable ? "warning" : "neutral"}>
-                {live ? t("claude_connected") : unreachable ? t("unreachable") : t("offline_mode")}
+                {live ? (status.source === "user" ? t("own_key_connected") : t("claude_connected")) : unreachable ? t("unreachable") : t("offline_mode")}
               </StatusPill>
             </div>
             <DefinitionList>
-              <KeyValue label={t("kv_engine")}>{live ? t("engine_claude") : t("engine_offline")}</KeyValue>
+              <KeyValue label={t("kv_engine")}>{t(ENGINE_LABELS[live ? status.provider : "offline"])}</KeyValue>
               <KeyValue label={t("kv_model")}>
                 <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{status.model || "—"}</code>
               </KeyValue>
-              <KeyValue label={t("kv_api_key")}>{status.configured ? t("key_configured") : t("key_not_set")}</KeyValue>
+              <KeyValue label={t("kv_api_key")}>
+                {status.source === "user" ? t("key_yours") : status.configured ? t("key_configured") : t("key_not_set")}
+              </KeyValue>
               <KeyValue label={t("kv_status")}>{statusReason(status.reason, status.model, lang, t) || "—"}</KeyValue>
               <KeyValue label={t("kv_last")}>
                 {last && lastAt
@@ -87,13 +107,14 @@ function EngineCard({ now }: { now: Date }) {
                   : t("none_yet")}
               </KeyValue>
             </DefinitionList>
-            {!live ? (
-              <AiNotice>{t("offline_notice")}</AiNotice>
-            ) : null}
+            {!live ? <AiNotice>{ownKeys ? t("offline_notice_online") : t("offline_notice")}</AiNotice> : null}
           </div>
         )}
       </SectionCard>
 
+      {ownKeys ? (
+        <AiKeyCard now={now} />
+      ) : (
       <SectionCard
         title={live ? t("config_title") : t("enable_title")}
         info={live ? t("config_live_info") : t("config_offline_info")}
@@ -132,6 +153,7 @@ function EngineCard({ now }: { now: Date }) {
           </Disclosure>
         </div>
       </SectionCard>
+      )}
     </>
   )
 }

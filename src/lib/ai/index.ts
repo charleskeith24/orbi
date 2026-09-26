@@ -3,7 +3,7 @@
  * never a provider directly. Server-only code (providers, gateway) is not exported here.
  */
 export { providerLabel, runAiTask, trimForLog, type AiRunResult, type RunAiTaskOptions } from "./client"
-export { fetchAiStatus, useAiStatus, useAiTask, type AiStatus } from "./use-ai-task"
+export { fetchAiStatus, refreshAiStatus, useAiStatus, useAiTask, type AiStatus } from "./use-ai-task"
 export { AiError, isAiError, toAiError, type AiErrorCode } from "./errors"
 export {
   buildAnalyticsSnapshot,

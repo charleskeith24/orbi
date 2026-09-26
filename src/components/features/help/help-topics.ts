@@ -727,26 +727,30 @@ export const HELP_TOPICS: HelpTopic[] = [
     group: "account",
     icon: Sparkles,
     href: "/strategist",
-    keywords: ["content strategist", "claude", "generate", "offline templates", "chat"],
+    keywords: ["content strategist", "claude", "openai", "chatgpt", "gemini", "api key", "own key", "generate", "offline templates", "chat"],
     en: {
       title: "AI in Orbi",
-      summary: "Idea Generator, script drafts and the Content Strategist — written from your brand.",
+      summary: "Idea Generator, script drafts and the Content Strategist — written from your brand, with your own AI key.",
       steps: [
+        "Connect your own AI in **Settings → AI**: choose Claude, OpenAI or Gemini, paste your API key and choose **Save and test**. Gemini has a free tier.",
         "AI reads your Brand HQ, audience, pillars, stories and past winners — the more you fill in, the more it sounds like you.",
         "Ask the **Content Strategist** anything about your content: **⌘J** (Ctrl+J).",
-        "Each result names the engine that wrote it: Claude, or Offline templates (built in, no AI service).",
+        "Each result names the engine that wrote it — your Claude, OpenAI or Gemini, or Offline templates (built in, no AI service).",
         "Edit every draft into your own words before you post.",
       ],
+      tips: ["The provider bills your own account for what you use. Orbi never charges for AI, and your key is never shown again."],
     },
     tl: {
       title: "AI sa Orbi",
-      summary: "Idea Generator, script drafts at Content Strategist — isinulat mula sa brand mo.",
+      summary: "Idea Generator, script drafts at Content Strategist — isinulat mula sa brand mo, gamit ang sarili mong AI key.",
       steps: [
+        "Ikonekta ang sarili mong AI sa **Settings → AI**: piliin ang Claude, OpenAI o Gemini, i-paste ang API key mo at piliin ang **I-save at i-test**. May libreng tier ang Gemini.",
         "Binabasa ng AI ang Brand HQ, audience, pillars, stories at dating winners mo — habang mas kumpleto, mas tunog-ikaw.",
         "Itanong sa **Content Strategist** ang kahit ano tungkol sa content mo: **⌘J** (Ctrl+J).",
-        "Nakasulat sa bawat resulta kung aling engine ang gumawa: Claude, o Offline templates (built-in, walang AI service).",
+        "Nakasulat sa bawat resulta kung aling engine ang gumawa — ang Claude, OpenAI o Gemini mo, o Offline templates (built-in, walang AI service).",
         "I-edit ang bawat draft sa sarili mong salita bago i-post.",
       ],
+      tips: ["Sa sarili mong account naniningil ang provider para sa gagamitin mo. Hindi naniningil ang Orbi para sa AI, at hindi na ipapakita ulit ang key mo."],
     },
   },
   {
@@ -865,11 +869,11 @@ export const HELP_TOPICS: HelpTopic[] = [
     keywords: ["offline templates", "ai", "claude", "engine"],
     en: {
       title: "What does “Offline templates” mean?",
-      summary: "That result came from Orbi's built-in templates instead of Claude. It still uses your brand, but it's simpler. Every result says which engine made it.",
+      summary: "That result came from Orbi's built-in templates, because no AI key is connected yet. It still uses your brand, but it's simpler. Add your own Claude, OpenAI or Gemini key in **Settings → AI** for AI-written drafts.",
     },
     tl: {
       title: "Ano ang ibig sabihin ng “Offline templates”?",
-      summary: "Galing ang resultang 'yon sa built-in templates ng Orbi, hindi kay Claude. Ginagamit pa rin nito ang brand mo, pero mas simple. Nakasulat sa bawat resulta kung aling engine ang gumawa.",
+      summary: "Galing ang resultang 'yon sa built-in templates ng Orbi, dahil wala pang nakakonektang AI key. Ginagamit pa rin nito ang brand mo, pero mas simple. Ilagay ang sarili mong Claude, OpenAI o Gemini key sa **Settings → AI** para AI ang magsulat ng drafts.",
     },
   },
   {

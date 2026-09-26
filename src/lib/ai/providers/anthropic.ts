@@ -1,5 +1,6 @@
 /**
- * Anthropic provider — server only (reads the API key from the environment).
+ * Anthropic provider — server only. The key is the person's own (bring your own key, online) or the server's
+ * ANTHROPIC_API_KEY (local mode), and error messages point at the right place to fix it.
  *
  * Claude Opus 5 by default, adaptive thinking (the model default — no `thinking` param, no sampling
  * params), effort via `output_config.effort`, structured output via `output_config.format` built with
@@ -28,8 +29,13 @@ export interface AnthropicProviderOptions {
   effort?: AiEffort | null
   /** Server-side refusal fallbacks (`fallbacks: "default"`). */
   fallbacks?: boolean
+  /** The person's own key (bring your own key). Without it the SDK reads ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN. */
+  apiKey?: string
   client?: Anthropic
 }
+
+/** Whose key a request used — decides where an error message sends people to fix it. */
+export type KeyOwner = "server" | "user"
 
 type JsonSchema = Record<string, unknown>
 
@@ -87,9 +93,26 @@ export function outputFormatFor(schema: z.ZodType): { type: "json_schema"; schem
 }
 
 /** Typed SDK errors → friendly AiError (never includes keys or raw provider payloads). */
-export function mapAnthropicError(err: unknown): AiError {
+export function mapAnthropicError(err: unknown, owner: KeyOwner = "server", model: string = DEFAULT_ANTHROPIC_MODEL): AiError {
   if (err instanceof AiError) return err
   const provider = "anthropic" as const
+  if (owner === "user") {
+    if (err instanceof Anthropic.AuthenticationError) {
+      return new AiError("Your Claude key was rejected. Check it — or add a new one — in Settings → AI.", { status: 502, code: "provider_auth", provider })
+    }
+    if (err instanceof Anthropic.PermissionDeniedError) {
+      return new AiError(`Your Claude key can't use ${model}. Pick another model in Settings → AI.`, { status: 502, code: "provider_auth", provider })
+    }
+    if (err instanceof Anthropic.RateLimitError) {
+      return new AiError("Your Claude key is rate-limited right now. Wait a minute and try again.", { status: 429, code: "rate_limited", provider, retryable: true })
+    }
+    if (err instanceof Anthropic.NotFoundError) {
+      return new AiError(`${model} isn't available to your Claude key. Pick another model in Settings → AI.`, { status: 502, code: "provider_error", provider })
+    }
+    if (err instanceof Anthropic.BadRequestError) {
+      return new AiError("Claude rejected the request — a shorter input may help. If it keeps happening, check your Claude Console credit or pick another model in Settings → AI.", { status: 502, code: "provider_error", provider })
+    }
+  }
   if (err instanceof Anthropic.APIUserAbortError) return new AiError("The request was cancelled.", { status: 499, code: "aborted", provider })
   if (err instanceof Anthropic.APIConnectionTimeoutError) {
     return new AiError("Claude took too long to respond. Try again, or ask for something shorter.", { status: 504, code: "timeout", provider, retryable: true })
@@ -127,8 +150,12 @@ export function createAnthropicProvider(options: AnthropicProviderOptions = {}):
   const model = options.model || DEFAULT_ANTHROPIC_MODEL
   const effort = options.effort === undefined ? "high" : options.effort
   const fallbacks = options.fallbacks ?? true
-  // Credentials come from ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN (read by the SDK).
-  const client = options.client ?? new Anthropic({ timeout: REQUEST_TIMEOUT_MS, maxRetries: 1 })
+  const owner: KeyOwner = options.apiKey ? "user" : "server"
+  // A person's own key, or ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN read by the SDK. With a person's key the
+  // server's auth token must not ride along.
+  const client =
+    options.client ??
+    new Anthropic({ timeout: REQUEST_TIMEOUT_MS, maxRetries: 1, ...(options.apiKey ? { apiKey: options.apiKey, authToken: null } : {}) })
   const formats = new WeakMap<z.ZodType, ReturnType<typeof outputFormatFor>>()
 
   return {
@@ -154,7 +181,7 @@ export function createAnthropicProvider(options: AnthropicProviderOptions = {}):
           { signal: opts.signal }
         )
       } catch (err) {
-        const mapped = mapAnthropicError(err)
+        const mapped = mapAnthropicError(err, owner, model)
         if (mapped.code !== "aborted") console.error(`[ai] ${opts.taskName}: Anthropic request failed (${mapped.code})`, err instanceof Error ? err.message : "")
         throw mapped
       }

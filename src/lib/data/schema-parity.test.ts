@@ -64,6 +64,8 @@ const SERVER_ONLY_TABLES = [
   // Team workspaces (20260921000000_team.sql)
   "workspace_members",
   "workspace_invites",
+  // Your own AI key (20260926000000_ai_keys.sql)
+  "ai_keys",
 ]
 
 /* ------------------------------ SQL parsing ------------------------------ */

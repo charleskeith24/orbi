@@ -20,7 +20,7 @@ Content is never created in isolation from strategy (Brand HQ, audience, pillars
 | Icons | lucide-react 1.x | **No brand icons** in lucide — use `PlatformIcon` from `@/components/common/platform-icon`. |
 | Dates | date-fns 4 + `@/lib/dates` | |
 | Validation | zod 4 | |
-| AI | Provider abstraction in `src/lib/ai` → `/api/ai` | Anthropic (`claude-opus-5`) when `ANTHROPIC_API_KEY` is set, otherwise the honest offline template engine. |
+| AI | Provider abstraction in `src/lib/ai` → `/api/ai` | Online: each person's own key — Claude (`claude-opus-5` by default), OpenAI or Gemini — set in Settings → AI (§7). Local mode: Anthropic when `ANTHROPIC_API_KEY` is set. Otherwise the honest offline template engine. |
 | Tests | Vitest (`npm test`), `scripts/smoke.mjs` (headless Chrome) | |
 
 ---
@@ -54,7 +54,7 @@ src/
     data/                      defaults, relations (FK rules), adapters, seed
     store/                     zustand store, hooks, domain operations, UI store
     analytics/                 pure analytics functions (metrics, tiers, health, buffer, reports, recommendations)
-    ai/                        AI tasks, prompts, providers, offline engine, client hook
+    ai/                        AI tasks, prompts, providers (Anthropic, OpenAI, Gemini, offline), offline engine, client hook; byok/ = your own AI key (catalog, crypto, store, resolve)
     i18n/                      UI language: core (pure), useT, getUiLang, shared messages (§11)
     supabase/                  config, browser + server clients, secret-key client (admin.ts — server only)
     admin/                     admin & access (§14): contract types, form schema, gate (pages), guard (API), server/* (data access)
@@ -225,8 +225,13 @@ Numbers, short labels and one obvious next action; explanations exist but wait u
 ## 7. AI
 
 - Call AI **only** through `src/lib/ai` (`runAiTask` / `useAiTask`). Never call a provider from a component. Keys stay server-side in `/api/ai`.
+- **Bring your own key (online).** Each person connects their own Claude, OpenAI or Gemini key in **Settings → AI** (`features/settings/ai-key/`, `/api/ai/key`), so AI is billed to them — never to the site owner. `providerForUser` (`lib/ai/byok/resolve.ts`) picks their engine per request; without a key it's the offline templates. The server's `ANTHROPIC_API_KEY` is **never** used for anyone online; it only powers local mode.
+  - A key is checked before it's saved by listing the provider's models (no tokens spent). That list is also the model picker: `catalogModels` keeps chat models only (Claude: those with structured outputs), `defaultModel` starts Claude on `claude-opus-5`, OpenAI on its newest flagship, Gemini on the newest stable Flash. Claude's `effort` goes only to models whose capabilities say they support it; refusal `fallbacks` only to the Opus 5 / Fable 5 lines.
+  - Stored in `public.ai_keys` (server only: no grants for signed-in users, not even their own row), AES-256-GCM with `AI_KEY_SECRET` (server env) and the account id as associated data (`lib/ai/byok/crypto.ts`). The browser never gets a key back — only its last four characters. Without `AI_KEY_SECRET` the card says the owner must finish setup.
+  - OpenAI and Gemini have no constrained decoding: JSON mode plus the task's JSON Schema in the system prompt (`providers/json-output.ts`), validated with `parseLoose` like Claude. Their errors point at Settings → AI, never at server config, and never include a key.
+  - In a team workspace (§17), the person generating uses their own key.
 - Every generation includes the Brand Context (Brand HQ, audience, pillars, goals, platforms, winners, stories). Output must sound like the user — specific, personal, opinionated — never generic corporate copy.
-- Show which engine produced the output (`ProviderBadge`: "Claude Opus 5" vs "Offline templates").
+- Show which engine produced the output (`ProviderBadge`: "Claude Opus 5", "OpenAI · gpt-5", "Gemini · 2.5-flash" or "Offline templates").
 - The Content Score is a **quality evaluation**, never a virality prediction. Say so in the UI.
 - Research → original content analyzes structure/angle/hook/psychology; it **never reproduces** the reference.
 - Offline mode must still be genuinely useful and must be labelled honestly.

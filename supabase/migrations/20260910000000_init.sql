@@ -887,7 +887,7 @@ create table public.content_scripts (
   hashtags text[] not null default '{}',
   version integer not null default 1,
   is_current boolean not null default true,
-  generated_by text not null default 'manual' check (generated_by in ('anthropic', 'openai', 'offline', 'manual')),
+  generated_by text not null default 'manual' check (generated_by in ('anthropic', 'openai', 'gemini', 'offline', 'manual')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -1300,7 +1300,7 @@ create table public.weekly_reviews (
   test_next text not null default '',
   planned_item_ids uuid[] not null default '{}',
   status text not null default 'draft' check (status in ('draft', 'final')),
-  generated_by text check (generated_by in ('anthropic', 'openai', 'offline', 'manual')),
+  generated_by text check (generated_by in ('anthropic', 'openai', 'gemini', 'offline', 'manual')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -1345,7 +1345,7 @@ create table public.monthly_reviews (
   stop text[] not null default '{}',
   experiment text[] not null default '{}',
   status text not null default 'draft' check (status in ('draft', 'final')),
-  generated_by text check (generated_by in ('anthropic', 'openai', 'offline', 'manual')),
+  generated_by text check (generated_by in ('anthropic', 'openai', 'gemini', 'offline', 'manual')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -1380,7 +1380,7 @@ create table public.ai_generations (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
   task text not null default '',
-  provider text not null default 'offline' check (provider in ('anthropic', 'openai', 'offline')),
+  provider text not null default 'offline' check (provider in ('anthropic', 'openai', 'gemini', 'offline')),
   model text not null default '',
   input jsonb,
   output jsonb,

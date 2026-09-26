@@ -52,6 +52,7 @@ The database design lives in the project folder `supabase/migrations/`. **Run ev
 | 6 | `20260920000000_profiles.sql` | Profiles: photo, name, headline, location and links on each account (`public.users`), who may see them (`get_profiles()`), and the private **`avatars`** photo bucket in Storage |
 | 7 | `20260921000000_team.sql` | Team workspaces: invite a VA, editor, manager or client into your workspace (`workspace_members`, `workspace_invites`). **This one rewrites the access rules of every workspace table**, so run it even if you don't plan to invite anyone — without it nothing changes, with it everything keeps working exactly as before for a workspace of one |
 | 8 | `20260925000000_server_grants.sql` | Exactly what the server's secret key may read and write: the admin area's counts, the Request access form and the reminders job. Newer Supabase projects don't grant it anything by default (the admin Overview says "The server hit an error" without this file); older ones grant it every table — this file takes that away, so the secret key can never read a creator's content |
+| 9 | `20260926000000_ai_keys.sql` | Each person's own AI key (Settings → AI), encrypted and readable only by the server (`ai_keys`); lets Gemini-written drafts be saved |
 | … | any newer file | whatever that feature needs |
 
 If new files appear in that folder later (after you pull an update), run just the new ones, in order.
@@ -99,7 +100,8 @@ npx supabase db push
 
    | Name | When you need it |
    |---|---|
-   | `ANTHROPIC_API_KEY` (+ `AI_MODEL`, `AI_EFFORT`) | Claude-powered AI. Without it, AI features use the offline templates (clearly labelled). |
+   | `AI_KEY_SECRET` | Lets each person connect **their own** Claude, OpenAI or Gemini key in Settings → AI — the site never pays for anyone's AI. Encrypts those keys before they're stored. Generate a random value with `openssl rand -base64 32`, add it as a **Secret**, and don't change it later (changing it makes saved keys unreadable; people would re-add them). Without it, AI uses the offline templates. |
+   | `ANTHROPIC_API_KEY` (+ `AI_MODEL`, `AI_EFFORT`) | **Local mode only** (no accounts). Online it is never used for anyone — each person brings their own key. |
    | `SUPABASE_SECRET_KEY` | The admin area and the "Request access" form (step 7), and server jobs such as push reminders. Supabase → API Keys → **Secret key**. Add it now if you'll run a beta. |
    | `NEXT_PUBLIC_CONTACT_EMAIL` | The email people can write to, shown as "Email us at …" on `/privacy` and `/terms` — including for deleting an account or an access request when they don't have an account. **Set it before real people sign up.** It's public, so use an inbox you're happy to publish (e.g. a support address). Without it, those pages say no contact email is set up yet. |
    | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET` | Push reminders on phones (optional). Key generation, the free 15-minute scheduler (Supabase Cron) and testing are in [REMINDERS.md](REMINDERS.md). Without them, **Add to my calendar** reminders still work. |
@@ -179,7 +181,7 @@ Supabase and Vercel both have free plans that are enough to run Orbi for yoursel
 - Vercel pricing: vercel.com/pricing — look at what the Hobby plan allows (including whether commercial use is allowed) and cron job frequency.
 - GitHub private repositories are free for personal accounts.
 - A custom domain costs money (a yearly fee at your registrar); custom SMTP providers have their own free tiers.
-- Claude (`ANTHROPIC_API_KEY`) is paid per use; Orbi works without it.
+- AI is paid per use by each person, on their own Claude, OpenAI or Gemini account (Gemini has a free tier). Orbi works without it: the offline templates write drafts.
 
 If you start charging other creators for Orbi, re-read both plans' terms.
 

@@ -7,6 +7,7 @@
  *   node scripts/smoke.mjs /ideas --out=/tmp/ideas.png --width=390 --height=844 --dark --full
  *   node scripts/smoke.mjs /admin/users --admin --lang=tl        (dev-only admin fixture: sample data)
  *   node scripts/smoke.mjs /circles --circles --lang=tl          (dev-only Circles fixture: sample circles)
+ *   node scripts/smoke.mjs "/settings?tab=ai" --ai-key[=saved]   (dev-only AI key fixture: the online "Your AI key" card)
  *   node scripts/smoke.mjs /settings?tab=team --team              (dev-only Team fixture: sample members)
  *   node scripts/smoke.mjs /strategy --team=editor                (… and open the sample workspace as Editor)
  *   node scripts/smoke.mjs /ideas --actions='[{"click":"text=Add idea"},{"wait":400},{"fill":["input[name=title]","Test"]},{"press":"Enter"},{"screenshot":"/tmp/after.png"}]'
@@ -49,6 +50,9 @@ const CIRCLES = Boolean(args.circles)
 // --team turns on the dev-only Team fixture (sample members and invites; team workspaces need the online
 // version otherwise). --team=editor|editor-money|viewer also opens the sample workspace in that role.
 const TEAM = args.team ? (args.team === true ? "fixture" : String(args.team)) : ""
+// --ai-key turns on the dev-only AI key fixture (the online "Your AI key" card, no key yet); --ai-key=saved
+// starts with a saved Gemini key. Keys containing "bad" are refused like a wrong key.
+const AI_KEY = args["ai-key"] ? (args["ai-key"] === true ? "fixture" : String(args["ai-key"])) : ""
 const newContextRaw = browser.newContext.bind(browser)
 browser.newContext = async (options) => {
   const context = await newContextRaw(options)
@@ -65,6 +69,11 @@ browser.newContext = async (options) => {
     await context.addInitScript(() => {
       if (!localStorage.getItem("pbos:dev-admin")) localStorage.setItem("pbos:dev-admin", "fixture")
     })
+  }
+  if (AI_KEY) {
+    await context.addInitScript((mode) => {
+      if (!localStorage.getItem("pbos:dev-ai-key")) localStorage.setItem("pbos:dev-ai-key", mode)
+    }, AI_KEY)
   }
   if (CIRCLES) {
     await context.addInitScript(() => {

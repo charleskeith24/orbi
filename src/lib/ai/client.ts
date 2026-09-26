@@ -31,7 +31,7 @@ const MAX_LOG_INPUT_CHARS = 4096
 const MAX_LOG_OUTPUT_CHARS = 8192
 /** Results restored from the log (the Idea Generator's "Recent generations") keep a whole batch. */
 const MAX_LOG_OUTPUT_CHARS_BY_TASK: Partial<Record<string, number>> = { generate_ideas: 24_000 }
-const PROVIDERS: AiProviderId[] = ["anthropic", "openai", "offline"]
+const PROVIDERS: AiProviderId[] = ["anthropic", "openai", "gemini", "offline"]
 
 let lastProvider: AiProviderId = "offline"
 
