@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# QA screenshots written to an unset --out path (a JS `undefined` in a file path)
+/undefined/
