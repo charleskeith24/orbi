@@ -3,6 +3,11 @@
   "regions": [
     "sin1"
   ],
+  "git": {
+    "deploymentEnabled": {
+      "feat/personal-brand-os": false
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/reminders",

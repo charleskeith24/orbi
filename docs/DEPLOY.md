@@ -26,6 +26,8 @@ You don't need to be a developer. Set aside about an hour and follow the steps i
 
 Every time you change code later: commit in GitHub Desktop, then **Push origin**. Vercel redeploys automatically.
 
+In this repository, `main` is production: a push to `main` goes live on its own. The working branch `feat/personal-brand-os` doesn't deploy at all (`git.deploymentEnabled` in `vercel.json`), so a push there never builds a second copy — changes go live when `main` catches up with it.
+
 ## 2. Create the Supabase project (Singapore)
 
 1. Go to supabase.com → **Start your project** → sign in (GitHub sign-in is fine).
